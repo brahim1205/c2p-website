@@ -1,7 +1,10 @@
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 const DEFAULT_TIMEOUT_MS = 12000;
+const GET_CACHE_TTL_MS = 1500;
 let lastRequestId: string | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
+const responseCache = new Map<string, { expiresAt: number; data: unknown }>();
+const inflightGetRequests = new Map<string, Promise<unknown>>();
 
 export interface ApiError {
   message: string;
@@ -29,8 +32,10 @@ function isAuthRefreshCandidate(path: string) {
     '/auth/login',
     '/auth/register',
     '/auth/verify-2fa',
+    '/auth/resend-2fa',
     '/auth/refresh',
     '/auth/forgot-password',
+    '/auth/reset-password',
   ].includes(path);
 }
 
@@ -90,56 +95,99 @@ export async function apiRequest<T>(
   init: RequestInit = {},
   options: { retryOnAuth?: boolean; timeoutMs?: number } = {},
 ): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const method = (init.method || 'GET').toUpperCase();
+  const isSafeGet = method === 'GET';
+  const cacheKey = isSafeGet ? `${method}:${path}` : null;
   const csrfToken = isUnsafeMethod(method) ? readCookie('c2p_csrf') : null;
 
-  try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      credentials: 'include',
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        'X-Requested-With': 'XMLHttpRequest',
-        ...(lastRequestId ? { 'X-Request-Id': lastRequestId } : {}),
-        ...(init.headers ?? {}),
-      },
-    });
-
-    lastRequestId = response.headers.get('x-request-id');
-
-    if (response.status === 401 && options.retryOnAuth !== false && isAuthRefreshCandidate(path)) {
-      const refreshed = await refreshSession();
-      if (refreshed) {
-        return apiRequest<T>(path, init, { ...options, retryOnAuth: false });
-      }
+  if (cacheKey) {
+    const cached = responseCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data as T;
     }
 
-    if (!response.ok) {
-      throw await parseApiError(response);
+    const inflight = inflightGetRequests.get(cacheKey);
+    if (inflight) {
+      return inflight as Promise<T>;
     }
-
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json() as Promise<T>;
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw {
-        message: 'La requete a expire. Veuillez reessayer.',
-        status: 408,
-        requestId: lastRequestId,
-      } satisfies ApiError;
-    }
-    throw toApiError(error);
-  } finally {
-    clearTimeout(timeout);
   }
+
+  const executeRequest = async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...init,
+        credentials: 'include',
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(lastRequestId ? { 'X-Request-Id': lastRequestId } : {}),
+          ...(init.headers ?? {}),
+        },
+      });
+
+      lastRequestId = response.headers.get('x-request-id');
+
+      if (response.status === 401 && options.retryOnAuth !== false && isAuthRefreshCandidate(path)) {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          return apiRequest<T>(path, init, { ...options, retryOnAuth: false });
+        }
+      }
+
+      if (!response.ok) {
+        throw await parseApiError(response);
+      }
+
+      if (response.status === 204) {
+        if (isUnsafeMethod(method)) {
+          responseCache.clear();
+        }
+        return undefined as T;
+      }
+
+      const data = await response.json() as T;
+      if (isUnsafeMethod(method)) {
+        responseCache.clear();
+      }
+      return data;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw {
+          message: 'La requete a expire. Veuillez reessayer.',
+          status: 408,
+          requestId: lastRequestId,
+        } satisfies ApiError;
+      }
+      throw toApiError(error);
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  if (cacheKey) {
+    const requestPromise = executeRequest()
+      .then((data) => {
+        responseCache.set(cacheKey, {
+          expiresAt: Date.now() + GET_CACHE_TTL_MS,
+          data,
+        });
+        return data;
+      })
+      .finally(() => {
+        inflightGetRequests.delete(cacheKey);
+      });
+
+    inflightGetRequests.set(cacheKey, requestPromise);
+    return requestPromise as Promise<T>;
+  }
+
+  return executeRequest();
 }
 
 export function toApiError(error: unknown): ApiError {

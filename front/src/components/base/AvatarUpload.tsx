@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/useToast';
-import { backendClient } from '@/lib/backendClient';
+import { uploadImageToCloudinary } from '@/lib/uploadApi';
 
 // Singleton backend client
 
@@ -50,26 +50,11 @@ export default function AvatarUpload({
       setIsUploading(true);
 
       try {
-        // Generate unique filename
-        const fileExt = file.name.split('.').pop();
-        const fileName = `avatars/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-        // Upload to backend Storage
-        const { data: uploadData, error: uploadError } = await backendClient.storage
-          .from('avatars')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: true,
-          });
-
-        if (uploadError) {
-          throw uploadError;
-        }
-
-        // Get public URL
-        const { data: { publicUrl } } = backendClient.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
+        const publicId = `avatar-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const publicUrl = await uploadImageToCloudinary(file, {
+          folder: 'c2p/avatars',
+          publicId,
+        });
 
         setPreview(publicUrl);
         onChange?.(publicUrl);
@@ -88,14 +73,18 @@ export default function AvatarUpload({
     fileInputRef.current?.click();
   };
 
+  useEffect(() => {
+    setPreview(src || null);
+  }, [src]);
+
   return (
     <div className="relative inline-block">
       <div
-        className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center bg-teal-100 text-teal-700 font-bold select-none ${isUploading ? 'opacity-60' : ''}`}
+        className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center bg-teal-100 text-teal-700 font-bold select-none ${isUploading ? 'opacity-60' : ''} ${editable ? 'cursor-pointer' : 'cursor-default'}`}
         onMouseEnter={() => editable && setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
         onClick={editable ? triggerFileInput : undefined}
-        style={{ cursor: editable ? 'pointer' : 'default' }}
+        role={editable ? 'button' : undefined}
       >
         {preview ? (
           <img

@@ -715,11 +715,18 @@ function filterRowsForActor(table: string, rows: Row[], user: AuthUser | null) {
 
   switch (table) {
     case 'providers':
-    case 'provider_services':
-    case 'provider_reviews':
-    case 'courses':
+      return rows;
     case 'projects':
+      return rows;
+    case 'courses':
+      if (user.role === 'formateur') {
+        return rows.filter((row) => String(row.instructor_id) === user.id);
+      }
+      return rows;
     case 'virtual_classes':
+      if (user.role === 'formateur') {
+        return rows.filter((row) => String(row.instructor_id) === user.id || courseIds.includes(String(row.course_id)));
+      }
       return rows;
     case 'notifications':
     case 'payment_transactions':
@@ -738,7 +745,10 @@ function filterRowsForActor(table: string, rows: Row[], user: AuthUser | null) {
       }
       return [];
     case 'provider_services':
-      return rows.filter((row) => user.role === 'prestataire' ? providerIds.includes(String(row.provider_id)) : true);
+      if (user.role === 'prestataire') {
+        return rows.filter((row) => providerIds.includes(String(row.provider_id)));
+      }
+      return rows;
     case 'provider_reviews':
       if (user.role === 'client') {
         return rows.filter((row) => String(row.client_id) === user.id);

@@ -84,8 +84,16 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  forgotPassword(@Body() payload: { email?: string }) {
-    return this.authService.forgotPassword(payload);
+  forgotPassword(@Body() payload: { email?: string }, @Req() request: AuthenticatedRequest) {
+    return this.authService.forgotPassword(payload, request);
+  }
+
+  @Post('reset-password')
+  resetPassword(
+    @Body() payload: { email?: string; code?: string; newPassword?: string },
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.authService.resetPassword(payload, request);
   }
 
   @Get('users')

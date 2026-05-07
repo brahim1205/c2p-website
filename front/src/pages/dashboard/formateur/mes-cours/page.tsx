@@ -5,6 +5,7 @@ import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
 import { backendClient } from '@/lib/backendClient';
+import ImageUploadField from '@/components/base/ImageUploadField';
 
 
 interface Course {
@@ -128,6 +129,7 @@ export default function FormateurCoursPage() {
           duration: editForm.duration,
           modules: editForm.modules,
           price: editForm.price,
+          thumbnail: editForm.thumbnail || selectedCourse.thumbnail,
           updated_at: new Date().toISOString(),
         })
         .eq('id', selectedCourse.id);
@@ -464,16 +466,13 @@ export default function FormateurCoursPage() {
                     <option value="published">Publiée</option>
                   </select>
                 </div>
-                <div className="dashboard-form-wide">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URL de la miniature</label>
-                  <input
-                    type="url"
-                    value={createForm.thumbnail || ''}
-                    onChange={(e) => setCreateForm({ ...createForm, thumbnail: e.target.value })}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
-                  />
-                </div>
+                <ImageUploadField
+                  label="Miniature de la formation"
+                  value={createForm.thumbnail || ''}
+                  onChange={(url) => setCreateForm({ ...createForm, thumbnail: url })}
+                  folder="c2p/courses"
+                  helper="Importez la miniature de la formation ou collez une URL publique."
+                />
               </div>
               <div className="flex gap-3 justify-end mt-6">
                 <button
@@ -615,6 +614,13 @@ export default function FormateurCoursPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
                   />
                 </div>
+                <ImageUploadField
+                  label="Miniature de la formation"
+                  value={editForm.thumbnail || selectedCourse.thumbnail || ''}
+                  onChange={(url) => setEditForm({ ...editForm, thumbnail: url })}
+                  folder="c2p/courses"
+                  helper="Ce visuel sera utilise dans le catalogue et sur la fiche formation."
+                />
               </div>
               <div className="flex gap-3 justify-end mt-6">
                 <button

@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/useToast';
 import { SkeletonCard } from '@/components/base/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProviderByUserId } from '@/lib/providerApi';
+import ImageUploadField from '@/components/base/ImageUploadField';
 
 
 interface Service {
@@ -176,6 +177,7 @@ export default function PrestataireServicesPage() {
         description: editService.description || selectedService.description,
         price: editService.price || selectedService.price,
         location: editService.location || selectedService.location,
+        image: editService.image || selectedService.image,
       })
       .eq('id', selectedService.id);
     if (err) {
@@ -183,7 +185,14 @@ export default function PrestataireServicesPage() {
       return;
     }
     setServices(prev => prev.map(s => s.id === selectedService.id
-      ? { ...s, title: editService.title || s.title, description: editService.description || s.description, price: editService.price || s.price, location: editService.location || s.location }
+      ? {
+          ...s,
+          title: editService.title || s.title,
+          description: editService.description || s.description,
+          price: editService.price || s.price,
+          location: editService.location || s.location,
+          image: editService.image || s.image,
+        }
       : s
     ));
     success('Service mis à jour', `"${editService.title || selectedService.title}" a été modifié.`);
@@ -444,6 +453,13 @@ export default function PrestataireServicesPage() {
                   />
                   <p className="text-xs text-gray-500 mt-1">{(newService.description || '').length}/500 caractères</p>
                 </div>
+                <ImageUploadField
+                  label="Image du service"
+                  value={newService.image || ''}
+                  onChange={(url) => setNewService({ ...newService, image: url })}
+                  folder="c2p/services"
+                  helper="Importez une image claire de votre service ou collez une URL publique."
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Prix *</label>
@@ -511,6 +527,13 @@ export default function PrestataireServicesPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm resize-none"
                   />
                 </div>
+                <ImageUploadField
+                  label="Image du service"
+                  value={editService.image || selectedService.image || ''}
+                  onChange={(url) => setEditService((prev) => ({ ...prev, image: url }))}
+                  folder="c2p/services"
+                  helper="Mettez a jour le visuel affiche dans votre catalogue."
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Prix</label>

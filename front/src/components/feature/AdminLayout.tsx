@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import LiveNotifications from './LiveNotifications';
 import DarkModeToggle from '@/components/base/DarkModeToggle';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const adminNavItems = [
   { label: 'Tableau de bord', icon: 'ri-dashboard-line', path: '/admin/dashboard' },
@@ -25,6 +26,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { notifications } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
@@ -34,7 +36,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="admin-layout h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-      <LiveNotifications />
+      <LiveNotifications notifications={notifications} />
       {/* Top Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16">
         <div className="h-full px-4 lg:px-6 flex items-center justify-between">
@@ -144,8 +146,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* Main Content */}
         <main
-          className="h-full min-w-0 overflow-y-auto overscroll-contain lg:ml-64"
-          style={{ scrollbarGutter: 'stable' }}
+          className="h-full min-w-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] lg:ml-64"
         >
           <div className="min-h-full p-4 lg:p-8">
             {children}

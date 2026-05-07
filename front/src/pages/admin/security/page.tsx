@@ -11,7 +11,7 @@ type AuditLog = { id: string; admin?: string; action: string; target?: string; t
 export default function AdminSecurityPage() {
   const { success, error } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'backups' | 'settings'>('overview');
-  const [securityStats, setSecurityStats] = useState({ totalUsers: 0, activeUsers: 0, suspendedAccounts: 0, failedLogins: 0, twoFactorEnabled: 0, securityAlerts: 0 });
+  const [securityStats, setSecurityStats] = useState({ totalUsers: 0, activeUsers: 0, suspendedAccounts: 0, failedLogins: 0, passwordResetProtected: 0, securityAlerts: 0 });
   const [securityAlerts, setSecurityAlerts] = useState<AdminSecurityAlert[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [backups, setBackups] = useState<AdminBackup[]>([]);
@@ -116,7 +116,7 @@ export default function AdminSecurityPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {[
                 { label: 'Utilisateurs actifs', value: securityStats.activeUsers, color: 'bg-teal-100', icon: 'ri-user-line text-teal-600' },
-                { label: '2FA activee', value: securityStats.twoFactorEnabled, color: 'bg-green-100', icon: 'ri-shield-check-line text-green-600' },
+                { label: 'Reset SMS protege', value: securityStats.passwordResetProtected, color: 'bg-green-100', icon: 'ri-shield-check-line text-green-600' },
                 { label: 'Alertes actives', value: securityStats.securityAlerts, color: 'bg-red-100', icon: 'ri-alert-line text-red-600' },
                 { label: 'Connexions echouees', value: securityStats.failedLogins, color: 'bg-yellow-100', icon: 'ri-error-warning-line text-yellow-600' },
                 { label: 'Comptes suspendus', value: securityStats.suspendedAccounts, color: 'bg-orange-100', icon: 'ri-user-forbid-line text-orange-600' },

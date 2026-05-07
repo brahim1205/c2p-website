@@ -69,8 +69,7 @@ export default function ApprenantProgressionPage() {
   const [editGoal, setEditGoal] = useState('');
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(timer);
+    setLoading(false);
   }, []);
 
   const handleSaveProgression = () => {

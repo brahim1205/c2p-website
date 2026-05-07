@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/useToast';
 import { changeAccountPassword, fetchProfile, fetchSecurity, updateProfile } from '@/lib/accountApi';
 import { ROLE_LABELS } from '@/lib/roles';
 import { formatDateTime } from '@/lib/formatters';
+import AvatarUpload from '@/components/base/AvatarUpload';
 
 export default function AdminProfilePage() {
   const { user, updateUser } = useAuth();
@@ -63,6 +64,22 @@ export default function AdminProfilePage() {
     loadProfile();
   }, [loadProfile]);
 
+  const handleAvatarChange = async (url: string) => {
+    if (!user?.id) return;
+
+    setFormData((prev) => ({ ...prev, avatar: url }));
+    updateUser({ avatar: url });
+
+    try {
+      await updateProfile(user.id, { avatar: url });
+    } catch (err) {
+      console.error(err);
+      error('Erreur', 'La photo de profil administrateur n a pas pu etre enregistree.');
+    }
+  };
+
+  const userInitials = `${formData.firstName.slice(0, 1)}${formData.lastName.slice(0, 1)}`.toUpperCase() || 'A';
+
   const handleSave = async () => {
     if (!user?.id) return;
     try {
@@ -119,13 +136,13 @@ export default function AdminProfilePage() {
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <section className="bg-white rounded-2xl border border-gray-200 p-6">
             <div className="flex items-center gap-4 pb-6 border-b border-gray-100">
-              {formData.avatar ? (
-                <img src={formData.avatar} alt={formData.firstName} className="h-20 w-20 rounded-full object-cover" />
-              ) : (
-                <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center text-2xl font-semibold text-gray-700">
-                  {formData.firstName.slice(0, 1)}{formData.lastName.slice(0, 1)}
-                </div>
-              )}
+              <AvatarUpload
+                src={formData.avatar || null}
+                initials={userInitials}
+                size="lg"
+                editable={isEditing}
+                onChange={handleAvatarChange}
+              />
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">{formData.firstName} {formData.lastName}</h2>
                 <p className="text-gray-600">{formData.email}</p>

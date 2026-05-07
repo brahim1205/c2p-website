@@ -45,6 +45,7 @@ export interface PendingTwoFactorChallenge {
   id: string;
   userId: string;
   codeHash: string;
+  purpose?: 'login-2fa' | 'password-reset';
   createdAt: string;
   expiresAt: string;
   attempts: number;

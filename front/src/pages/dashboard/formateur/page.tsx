@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
 import GlobalSearch from '../components/GlobalSearch';
 import { backendClient } from '@/lib/backendClient';
@@ -26,16 +27,24 @@ interface Enrollment {
 }
 
 export default function FormateurDashboardPage() {
+  const { user } = useAuth();
   const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Enrollment[]>([]);
 
   const loadData = useCallback(async () => {
+    if (!user?.id) {
+      setCourses([]);
+      setStudents([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const [coursesRes, studentsRes] = await Promise.all([
-        backendClient.from('courses').select('*').order('updated_at', { ascending: false }).limit(4),
+        backendClient.from('courses').select('*').eq('instructor_id', user.id).order('updated_at', { ascending: false }).limit(4),
         backendClient.from('course_enrollments').select('*, courses(title)').order('last_active', { ascending: false }).limit(4),
       ]);
 
@@ -56,7 +65,7 @@ export default function FormateurDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [error, user?.id]);
 
   useEffect(() => {
     loadData();

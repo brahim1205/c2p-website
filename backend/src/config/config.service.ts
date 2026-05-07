@@ -6,6 +6,14 @@ import { EnvironmentVariables } from './config.validation.js';
 export class ConfigService {
   constructor(private readonly configService: NestConfigService<EnvironmentVariables>) {}
 
+  get nodeEnv(): string {
+    return String(this.configService.get('NODE_ENV') ?? 'development');
+  }
+
+  get isProduction(): boolean {
+    return this.nodeEnv === 'production';
+  }
+
   get<T extends keyof EnvironmentVariables>(key: T) {
     return this.configService.get(key);
   }
@@ -49,10 +57,35 @@ export class ConfigService {
   }
 
   get appOrigins(): string[] {
-    return String(this.configService.get('APP_ORIGINS') ?? '')
+    const configuredOrigins = String(this.configService.get('APP_ORIGINS') ?? '')
       .split(',')
       .map((value) => value.trim())
       .filter(Boolean);
+
+    if (configuredOrigins.length > 0) {
+      return configuredOrigins;
+    }
+
+    if (this.isProduction) {
+      return [];
+    }
+
+    return [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3001',
+      'http://localhost:3002',
+      'http://127.0.0.1:3002',
+      'http://localhost:3003',
+      'http://127.0.0.1:3003',
+      'http://localhost:3004',
+      'http://127.0.0.1:3004',
+      'http://localhost:3005',
+      'http://127.0.0.1:3005',
+      'http://localhost:3006',
+      'http://127.0.0.1:3006',
+    ];
   }
 
   get cookieDomain(): string | undefined {
@@ -142,6 +175,25 @@ export class ConfigService {
 
   get sendTextTimeoutMs(): number {
     return Number(this.configService.get('SENDTEXT_TIMEOUT_MS') ?? '10000');
+  }
+
+  get cloudinaryCloudName(): string | undefined {
+    const value = this.configService.get('CLOUDINARY_CLOUD_NAME');
+    return value ? String(value) : undefined;
+  }
+
+  get cloudinaryApiKey(): string | undefined {
+    const value = this.configService.get('CLOUDINARY_API_KEY');
+    return value ? String(value) : undefined;
+  }
+
+  get cloudinaryApiSecret(): string | undefined {
+    const value = this.configService.get('CLOUDINARY_API_SECRET');
+    return value ? String(value) : undefined;
+  }
+
+  get cloudinaryUploadFolder(): string {
+    return String(this.configService.get('CLOUDINARY_UPLOAD_FOLDER') ?? 'c2p');
   }
 
   get dexPayEnabled(): boolean {

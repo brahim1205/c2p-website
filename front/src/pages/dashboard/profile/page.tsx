@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
@@ -9,22 +8,23 @@ import BadgeShowcase from './components/BadgeShowcase';
 import LearningStats from './components/LearningStats';
 import CertificateViewer, { CertificateData } from './components/CertificateViewer';
 import LevelSystem from './components/LevelSystem';
+import { changeAccountPassword, fetchProfile, updateProfile } from '@/lib/accountApi';
 import {
   loadCourseHistory,
 } from '../apprenant/cours/[id]/storage';
 
 export default function ProfilePage() {
-  const { success, info } = useToast();
+  const { success, info, error } = useToast();
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [certificate, setCertificate] = useState<CertificateData | null>(null);
 
   const [formData, setFormData] = useState({
@@ -47,32 +47,96 @@ export default function ProfilePage() {
   const [skillInput, setSkillInput] = useState('');
   const [langInput, setLangInput] = useState('');
 
-  const handleSave = () => {
-    if (user) {
-      updateUser({
+  const loadProfile = useCallback(async () => {
+    if (!user?.id) {
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      const profile = await fetchProfile(user.id);
+      setFormData((prev) => ({
+        ...prev,
+        firstName: profile.firstName || prev.firstName,
+        lastName: profile.lastName || prev.lastName,
+        email: profile.email || prev.email,
+        phone: profile.phone || '',
+        bio: profile.bio || '',
+        location: profile.location || '',
+      }));
+      updateUser(profile);
+    } catch (err) {
+      console.error(err);
+      error('Erreur', 'Impossible de charger votre profil.');
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [error, updateUser, user?.id]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  const handleSave = async () => {
+    if (!user?.id) return;
+
+    try {
+      const updated = await updateProfile(user.id, {
         firstName: formData.firstName,
         lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        bio: formData.bio,
+        location: formData.location,
       });
+
+      updateUser(updated);
+      success('Profil mis a jour', 'Vos informations ont ete enregistrees avec succes.');
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+      error('Erreur', err instanceof Error ? err.message : 'Le profil n a pas pu etre mis a jour.');
     }
-    success('Profil mis à jour', 'Vos informations ont été enregistrées avec succès.');
-    setIsEditing(false);
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
+    if (!user?.id) return;
+
     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
       info('Champs requis', 'Veuillez remplir tous les champs du mot de passe.');
       return;
     }
-    if (passwordData.newPassword.length < 8) {
-      info('Mot de passe trop court', 'Le nouveau mot de passe doit contenir au moins 8 caractères.');
+    if (passwordData.newPassword.length < 10) {
+      info('Mot de passe trop court', 'Le nouveau mot de passe doit contenir au moins 10 caracteres.');
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       info('Mots de passe différents', 'Le nouveau mot de passe et sa confirmation ne correspondent pas.');
       return;
     }
-    success('Mot de passe mis à jour', 'Votre mot de passe a été changé avec succès.');
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+
+    try {
+      await changeAccountPassword(user.id, passwordData.currentPassword, passwordData.newPassword);
+      success('Mot de passe mis a jour', 'Votre mot de passe a ete change avec succes.');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      await loadProfile();
+    } catch (err) {
+      console.error(err);
+      error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n a pas pu etre modifie.');
+    }
+  };
+
+  const handleAvatarChange = async (url: string) => {
+    if (!user?.id) return;
+
+    updateUser({ avatar: url });
+    try {
+      await updateProfile(user.id, { avatar: url });
+    } catch (err) {
+      console.error(err);
+      error('Erreur', 'La photo de profil n a pas pu etre enregistree.');
+    }
   };
 
   const addSkill = () => {
@@ -130,7 +194,7 @@ export default function ProfilePage() {
                   initials={userInitials}
                   size="xl"
                   editable={true}
-                  onChange={(url) => updateUser({ avatar: url })}
+                  onChange={handleAvatarChange}
                 />
               </div>
               <div>
@@ -138,6 +202,7 @@ export default function ProfilePage() {
                   {user ? `${user.firstName} ${user.lastName}` : `${formData.firstName} ${formData.lastName}`}
                 </h1>
                 <p className="text-gray-600 text-sm mb-2">{formData.profession} @ {formData.company}</p>
+                {profileLoading && <p className="text-xs text-gray-400 mb-2">Synchronisation du profil...</p>}
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
                     <div className="w-2 h-2 bg-teal-500 rounded-full mr-2"></div>
@@ -542,7 +607,7 @@ export default function ProfilePage() {
                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                         className="block w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Minimum 8 caractères</p>
+                      <p className="text-xs text-gray-500 mt-1">Minimum 10 caracteres avec majuscule, minuscule, chiffre et caractere special</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -564,45 +629,16 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* 2FA */}
+                {/* Password reset protection */}
                 <div className="border-t border-gray-200 pt-6">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="rounded-xl border border-teal-100 bg-teal-50/70 p-5">
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-2">Authentification à deux facteurs</h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Ajoutez une couche de sécurité supplémentaire à votre compte
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">Reinitialisation securisee</h3>
+                      <p className="text-sm text-gray-600">
+                        La verification par code SMS est reservee a la procedure "mot de passe oublie". La connexion normale au dashboard ne demande plus de code supplementaire.
                       </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setTwoFAEnabled(!twoFAEnabled);
-                        success(
-                          twoFAEnabled ? '2FA désactivé' : '2FA activé',
-                          twoFAEnabled ? 'L\'authentification à deux facteurs est maintenant désactivée.' : 'L\'authentification à deux facteurs est maintenant active sur votre compte.'
-                        );
-                      }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
-                        twoFAEnabled
-                          ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
-                          : 'bg-teal-600 text-white hover:bg-teal-700'
-                      }`}
-                    >
-                      {twoFAEnabled ? 'Désactiver' : 'Activer'}
-                    </button>
                   </div>
-                  {twoFAEnabled && (
-                    <div className="mt-4 p-4 bg-teal-50 rounded-lg border border-teal-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-5 h-5 flex items-center justify-center">
-                          <i className="ri-shield-check-line text-teal-600"></i>
-                        </div>
-                        <span className="text-sm font-medium text-teal-800">2FA est activé</span>
-                      </div>
-                      <p className="text-xs text-teal-700">
-                        Vous recevrez un code de vérification à chaque connexion.
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 {/* Delete Account */}

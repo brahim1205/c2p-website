@@ -16,6 +16,8 @@ import { PaymentsController } from './payments/payments.controller.js';
 import { DexPayService } from './payments/dexpay.service.js';
 import { CommunicationsController } from './communications/communications.controller.js';
 import { SmsService } from './communications/sms.service.js';
+import { UploadsController } from './uploads/uploads.controller.js';
+import { UploadsService } from './uploads/uploads.service.js';
 
 @Module({
   imports: [ConfigModule, DatabaseModule, CacheModule, UserModule],
@@ -27,6 +29,7 @@ import { SmsService } from './communications/sms.service.js';
     PublicController,
     PaymentsController,
     CommunicationsController,
+    UploadsController,
   ],
   providers: [
     AppService,
@@ -35,6 +38,7 @@ import { SmsService } from './communications/sms.service.js';
     PublicIntakeService,
     DexPayService,
     SmsService,
+    UploadsService,
   ],
 })
 export class AppModule {}

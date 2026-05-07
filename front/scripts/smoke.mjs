@@ -231,6 +231,13 @@ function attachDiagnostics(page, errors) {
 
 async function bootstrapSession(page, email, landingPath) {
   await page.goto(`${FRONT_URL}${landingPath}`, { waitUntil: 'domcontentloaded' });
+
+  if (new URL(page.url()).pathname === '/auth/login') {
+    await page.locator('input[type="email"]').first().fill(email);
+    await page.locator('input[type="password"]').first().fill(PASSWORD);
+    await page.getByRole('button', { name: 'Se connecter', exact: false }).click();
+  }
+
   await waitForRoute(page, landingPath);
   await page.waitForTimeout(800);
 }

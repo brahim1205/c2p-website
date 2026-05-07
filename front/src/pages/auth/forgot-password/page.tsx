@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/useToast';
 import { apiRequest, toApiError } from '@/lib/api';
 
@@ -7,10 +7,10 @@ const inputClass =
   'block w-full rounded-2xl border border-white/10 bg-black/30 py-3 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-white/35 focus:border-[#d5b46f] focus:ring-2 focus:ring-[#d5b46f]/20 disabled:opacity-60';
 
 export default function ForgotPasswordPage() {
+  const navigate = useNavigate();
   const { success, error } = useToast();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSent, setIsSent] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -33,8 +33,13 @@ export default function ForgotPasswordPage() {
         method: 'POST',
         body: JSON.stringify({ email: normalizedEmail }),
       });
-      setIsSent(true);
-      success('Demande envoyee', 'Si un compte existe, un lien de reinitialisation sera envoye.');
+      success('Code envoye', 'Si un compte existe, un code de verification a ete envoye.');
+      navigate('/auth/two-factor', {
+        state: {
+          mode: 'password-reset',
+          email: normalizedEmail,
+        },
+      });
     } catch (requestError) {
       const apiError = toApiError(requestError);
       error('Demande impossible', apiError.message);
@@ -58,12 +63,12 @@ export default function ForgotPasswordPage() {
             Reprenez l&apos;acces a votre espace C2P.
           </h1>
           <p className="mt-6 text-lg leading-8 text-white/62">
-            Recevez un lien de reinitialisation et revenez a vos prestations, formations ou projets sans perdre le fil.
+            Un code SMS protege maintenant la reinitialisation du mot de passe avant le retour a vos prestations, formations ou projets.
           </p>
           <div className="mt-10 grid max-w-xl grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/12 bg-white/12">
             {[
-              ['Email', 'verification'],
-              ['Lien', 'securise'],
+              ['SMS', 'verification'],
+              ['Code', 'securise'],
               ['Acces', 'restaure'],
             ].map(([value, label]) => (
               <div key={label} className="bg-black/30 p-5 text-center">
@@ -84,67 +89,43 @@ export default function ForgotPasswordPage() {
             </div>
             <h2 className="mt-5 text-3xl font-semibold text-white">Mot de passe oublie</h2>
             <p className="mt-2 text-sm leading-6 text-white/58">
-              Saisissez l&apos;email associe a votre compte. Nous vous indiquerons la suite par email.
+              Saisissez l&apos;email associe a votre compte. Si le profil existe, un code SMS sera envoye sur le numero lie au compte.
             </p>
           </div>
 
-          {isSent ? (
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-[#d5b46f]/25 bg-[#d5b46f]/10 p-5">
-                <div className="flex items-start gap-3">
-                  <i className="ri-mail-check-line mt-0.5 text-2xl text-[#d5b46f]"></i>
-                  <div>
-                    <h3 className="font-semibold text-white">Verification de votre boite mail</h3>
-                    <p className="mt-2 text-sm leading-6 text-white/62">
-                      Si un compte correspond a <span className="text-[#d5b46f]">{email}</span>, un lien de reinitialisation sera envoye.
-                    </p>
-                  </div>
-                </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="mb-2 block text-sm font-medium text-white/72">Adresse email</label>
+              <div className="relative">
+                <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-white/38"></i>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className={inputClass}
+                  placeholder="votre@email.com"
+                  disabled={isLoading}
+                />
               </div>
-
-              <button
-                type="button"
-                onClick={() => setIsSent(false)}
-                className="w-full rounded-full border border-white/12 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:border-[#d5b46f] hover:text-[#d5b46f]"
-              >
-                Utiliser une autre adresse
-              </button>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="email" className="mb-2 block text-sm font-medium text-white/72">Adresse email</label>
-                <div className="relative">
-                  <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-white/38"></i>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className={inputClass}
-                    placeholder="votre@email.com"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full rounded-full bg-[#d5b46f] px-6 py-3.5 text-sm font-semibold text-[#111] transition-all hover:bg-white disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/45"
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center">
-                    <i className="ri-loader-4-line mr-2 animate-spin"></i>
-                    Envoi en cours...
-                  </span>
-                ) : (
-                  'Recevoir le lien'
-                )}
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded-full bg-[#d5b46f] px-6 py-3.5 text-sm font-semibold text-[#111] transition-all hover:bg-white disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/45"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <i className="ri-loader-4-line mr-2 animate-spin"></i>
+                  Envoi en cours...
+                </span>
+              ) : (
+                'Recevoir le code'
+              )}
+            </button>
+          </form>
 
           <div className="mt-7 grid gap-3 text-center text-sm">
             <Link to="/auth/login" className="font-medium text-[#d5b46f] transition-colors hover:text-white">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import DashboardLayout from './components/DashboardLayout';
 import NotificationCenter from './components/NotificationCenter';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -7,12 +7,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { useBackendMessaging } from '@/hooks/useBackendMessaging';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
 import StatCard from '@/components/base/StatCard';
+import { ROLE_DASHBOARD_PATHS } from '@/lib/roles';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { totalUnread } = useBackendMessaging();
   const [showNotifications, setShowNotifications] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  if (user?.role) {
+    return <Navigate to={ROLE_DASHBOARD_PATHS[user.role]} replace />;
+  }
 
   const userType = (user?.role ?? 'client') as 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'porteur' | 'partenaire';
 

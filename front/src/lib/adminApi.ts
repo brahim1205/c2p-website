@@ -334,7 +334,7 @@ export async function fetchAdminSecurityOverview() {
       activeUsers: users.filter((user) => user.status === 'active').length,
       suspendedAccounts: users.filter((user) => user.status === 'suspended').length,
       failedLogins: alerts.filter((alert) => alert.type === 'critical').length * 15,
-      twoFactorEnabled: users.filter((user) => Boolean((user as typeof user & { twoFactorEnabled?: boolean }).twoFactorEnabled)).length,
+      passwordResetProtected: users.filter((user) => Boolean(user.phone)).length,
       securityAlerts: alerts.filter((alert) => alert.status === 'active').length,
     },
     securityAlerts: alerts,

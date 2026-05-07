@@ -5,8 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import {
   changeAccountPassword,
-  disable2FA,
-  enable2FA,
   fetchSecurity,
   revokeAccountSession,
   revokeOtherAccountSessions,
@@ -21,8 +19,6 @@ export default function SecurityPage() {
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<SecuritySession[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [showBackupCodes, setShowBackupCodes] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -40,8 +36,7 @@ export default function SecurityPage() {
       const payload = await fetchSecurity(user.id);
       setSessions(payload.sessions);
       setAuditLogs(payload.auditLogs);
-      setBackupCodes(payload.backupCodes);
-      updateUser({ is2FAEnabled: payload.user.is2FAEnabled });
+      updateUser({ is2FAEnabled: false });
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de charger les informations de sécurité.');
@@ -79,29 +74,6 @@ export default function SecurityPage() {
     }
   };
 
-  const handleToggle2FA = async () => {
-    if (!user?.id) return;
-
-    try {
-      if (user.is2FAEnabled) {
-        const payload = await disable2FA(user.id);
-        updateUser({ is2FAEnabled: payload.user.is2FAEnabled });
-        setBackupCodes([]);
-        success('2FA desactivee', 'L authentification a deux facteurs a ete retiree.');
-      } else {
-        const payload = await enable2FA(user.id);
-        updateUser({ is2FAEnabled: payload.user.is2FAEnabled });
-        setBackupCodes(payload.backupCodes);
-        setShowBackupCodes(true);
-        success('2FA activee', 'Les codes de secours ont ete generes.');
-      }
-      loadSecurity();
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de modifier l etat de la double authentification.');
-    }
-  };
-
   const handleRevokeSession = async (sessionId: string) => {
     if (!user?.id) return;
     try {
@@ -133,7 +105,7 @@ export default function SecurityPage() {
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Securite du compte</h1>
-          <p className="text-gray-600">Mot de passe, double authentification, sessions actives et journal d acces.</p>
+          <p className="text-gray-600">Mot de passe, reinitialisation securisee, sessions actives et journal d acces.</p>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -141,41 +113,15 @@ export default function SecurityPage() {
             <section className="bg-white border border-gray-200 rounded-2xl p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Double authentification</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">Reinitialisation securisee</h2>
                   <p className="text-sm text-gray-600 mt-1">
-                    {user?.is2FAEnabled
-                      ? 'Le compte demande un code supplementaire a la connexion.'
-                      : 'Ajoutez une verification supplementaire sur ce compte.'}
+                    En cas d oubli du mot de passe, un code SMS est desormais demande avant toute reinitialisation.
                   </p>
                 </div>
-                <button
-                  onClick={handleToggle2FA}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    user?.is2FAEnabled
-                      ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
-                      : 'bg-[#14B8A6] text-white hover:bg-[#0D9488]'
-                  }`}
-                >
-                  {user?.is2FAEnabled ? 'Desactiver la 2FA' : 'Activer la 2FA'}
-                </button>
+                <span className="inline-flex items-center rounded-full bg-[#14B8A6]/10 px-3 py-1.5 text-xs font-semibold text-[#0D9488] border border-[#14B8A6]/20">
+                  Verification SMS active
+                </span>
               </div>
-
-              {user?.is2FAEnabled && backupCodes.length > 0 && (
-                <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-amber-900">Codes de secours disponibles</p>
-                      <p className="text-sm text-amber-800 mt-1">Conservez-les hors ligne. Chaque code ne peut etre utilise qu une fois.</p>
-                    </div>
-                    <button
-                      onClick={() => setShowBackupCodes(true)}
-                      className="px-3 py-1.5 rounded-lg bg-white border border-amber-200 text-amber-900 text-sm font-medium hover:bg-amber-100"
-                    >
-                      Afficher
-                    </button>
-                  </div>
-                </div>
-              )}
             </section>
 
             <section className="bg-white border border-gray-200 rounded-2xl p-6">
@@ -301,25 +247,6 @@ export default function SecurityPage() {
         </div>
       </div>
 
-      {showBackupCodes && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-gray-900">Codes de secours</h3>
-              <button onClick={() => setShowBackupCodes(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100">
-                <i className="ri-close-line text-xl text-gray-500"></i>
-              </button>
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              {backupCodes.map((code) => (
-                <div key={code} className="rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm text-gray-900">
-                  {code}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 }

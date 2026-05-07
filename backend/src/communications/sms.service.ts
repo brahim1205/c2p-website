@@ -71,7 +71,7 @@ export class SmsService {
       this.logger.log(JSON.stringify({
         level: 'info',
         provider: 'mock',
-        phone,
+        phone: this.maskPhone(phone),
         purpose: payload.purpose,
         userId: payload.userId ?? null,
         providerMessageId,
@@ -163,6 +163,13 @@ export class SmsService {
     if (digits.startsWith('221')) return digits;
     if (/^\d{9}$/.test(digits)) return `221${digits}`;
     return /^\d{12}$/.test(digits) ? digits : null;
+  }
+
+  private maskPhone(phone: string) {
+    if (phone.length <= 4) {
+      return '****';
+    }
+    return `${phone.slice(0, 3)}****${phone.slice(-2)}`;
   }
 
   private extractMessageId(body: unknown) {

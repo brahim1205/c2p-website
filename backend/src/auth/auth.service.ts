@@ -158,17 +158,73 @@ export class AuthService {
     return `${Math.floor(100000 + Math.random() * 900000)}`;
   }
 
-  private async deliverTwoFactorCode(user: StoredUser, code: string) {
+  private async deliverSecurityCode(
+    user: StoredUser,
+    code: string,
+    purpose: 'two-factor' | 'password-reset',
+  ) {
     if (!user.phone) {
       throw new BadRequestException('Aucun numero de telephone n est associe a ce compte.');
     }
 
     await this.smsService.send({
       phone: user.phone,
-      message: `Votre code de verification C2P est ${code}. Il expire dans 10 minutes.`,
-      purpose: 'two-factor',
+      message: purpose === 'password-reset'
+        ? `Votre code de reinitialisation C2P est ${code}. Il expire dans 10 minutes.`
+        : `Votre code de verification C2P est ${code}. Il expire dans 10 minutes.`,
+      purpose,
       userId: user.id,
     });
+  }
+
+  private normalizeIp(ip?: string | null) {
+    const value = String(ip ?? '').trim();
+    if (!value) return 'Adresse masquee';
+    if (['::1', '127.0.0.1', '::ffff:127.0.0.1', 'localhost'].includes(value)) {
+      return 'Environnement local';
+    }
+    return value;
+  }
+
+  private summarizeUserAgent(userAgent?: string | null) {
+    const value = String(userAgent ?? '').trim();
+    if (!value) return 'Navigateur Web';
+    if (
+      /^Navigateur /i.test(value)
+      || /^(Google Chrome|Microsoft Edge|Mozilla Firefox|Safari) sur /i.test(value)
+    ) {
+      return value;
+    }
+
+    const browser = /HeadlessChrome/i.test(value)
+      ? 'Navigateur de test'
+      : /Edg\//i.test(value)
+        ? 'Microsoft Edge'
+        : /Chrome\//i.test(value)
+          ? 'Google Chrome'
+          : /Firefox\//i.test(value)
+            ? 'Mozilla Firefox'
+            : /Safari\//i.test(value) && !/Chrome\//i.test(value)
+              ? 'Safari'
+              : 'Navigateur Web';
+
+    const platform = /Windows/i.test(value)
+      ? 'Windows'
+      : /Mac OS X|Macintosh/i.test(value)
+        ? 'macOS'
+        : /Android/i.test(value)
+          ? 'Android'
+          : /iPhone|iPad|iOS/i.test(value)
+            ? 'iOS'
+            : /Linux/i.test(value)
+              ? 'Linux'
+              : '';
+
+    if (browser === 'Navigateur de test') {
+      return 'Navigateur local de test';
+    }
+
+    return platform ? `${browser} sur ${platform}` : browser;
   }
 
   private addMinutes(baseIso: string, minutes: number) {
@@ -205,9 +261,9 @@ export class AuthService {
     return {
       id: session.id,
       userId: session.userId,
-      device: session.device,
+      device: this.summarizeUserAgent(session.device),
       location: session.location,
-      ip: session.ip,
+      ip: this.normalizeIp(session.ip),
       lastActive: session.lastActive,
       current: session.current,
       tokenHash: base.tokenHash ?? '',
@@ -221,7 +277,7 @@ export class AuthService {
   }
 
   private ensureDevice(meta: RequestMeta) {
-    return meta.userAgent ? meta.userAgent.slice(0, 120) : 'Navigateur Web';
+    return meta.userAgent || 'Navigateur Web';
   }
 
   private ensureLocation() {
@@ -419,6 +475,11 @@ export class AuthService {
   private listAuditLogsForUser(userId: string, auditLogs: AuditLog[]) {
     return auditLogs
       .filter((entry) => entry.userId === userId)
+      .map((entry) => ({
+        ...entry,
+        device: this.summarizeUserAgent(entry.device),
+        ip: this.normalizeIp(entry.ip),
+      }))
       .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp));
   }
 
@@ -437,15 +498,15 @@ export class AuthService {
       action,
       status,
       timestamp: overrides.timestamp ?? new Date().toISOString(),
-      ip: overrides.ip ?? latestSession?.ip ?? '127.0.0.1',
-      device: overrides.device ?? latestSession?.device ?? 'Navigateur Web',
+      ip: this.normalizeIp(overrides.ip ?? latestSession?.ip ?? '127.0.0.1'),
+      device: this.summarizeUserAgent(overrides.device ?? latestSession?.device ?? 'Navigateur Web'),
     });
   }
 
   private getRequestMeta(request: Pick<AuthenticatedRequest, 'ip' | 'headers' | 'requestId'>): RequestMeta {
     return {
-      ip: request.ip || '127.0.0.1',
-      userAgent: String(request.headers['user-agent'] ?? 'Navigateur Web'),
+      ip: this.normalizeIp(request.ip || '127.0.0.1'),
+      userAgent: this.summarizeUserAgent(String(request.headers['user-agent'] ?? 'Navigateur Web')),
       requestId: String(request.requestId ?? request.headers['x-request-id'] ?? this.createId('req')),
     };
   }
@@ -587,7 +648,11 @@ export class AuthService {
   }
 
   private buildPublicSessions(sessions: AccessSession[]): UserSession[] {
-    return sessions.map(({ tokenHash: _tokenHash, csrfToken: _csrfToken, createdAt: _createdAt, expiresAt: _expiresAt, absoluteExpiresAt: _absoluteExpiresAt, revokedAt: _revokedAt, userAgent: _userAgent, ...session }) => session);
+    return sessions.map(({ tokenHash: _tokenHash, csrfToken: _csrfToken, createdAt: _createdAt, expiresAt: _expiresAt, absoluteExpiresAt: _absoluteExpiresAt, revokedAt: _revokedAt, userAgent: _userAgent, ...session }) => ({
+      ...session,
+      device: this.summarizeUserAgent(session.device),
+      ip: this.normalizeIp(session.ip),
+    }));
   }
 
   private getActor(request: AuthenticatedRequest) {
@@ -674,7 +739,7 @@ export class AuthService {
     const email = payload.email?.trim().toLowerCase();
     const password = payload.password ?? '';
     const meta = this.getRequestMeta(request);
-    const { users, sessions, refreshTokens, pendingChallenges, auditLogs } = await this.loadSnapshot();
+    const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
     const user = email ? this.findUserByEmail(email, users) : undefined;
 
     if (!user) {
@@ -710,36 +775,6 @@ export class AuthService {
     user.lockedUntil = null;
     user.lastLoginAt = new Date().toISOString();
 
-    if (user.is2FAEnabled) {
-      const challengeId = this.createId('2fa');
-      const code = process.env.NODE_ENV === 'production' ? this.randomNumericCode() : '123456';
-      pendingChallenges.unshift({
-        id: challengeId,
-        userId: user.id,
-        codeHash: this.hashToken(code),
-        createdAt: new Date().toISOString(),
-        expiresAt: this.addMinutes(new Date().toISOString(), 10),
-        attempts: 0,
-      });
-      await this.deliverTwoFactorCode(user, code);
-      this.appendAuditLog(auditLogs, sessions, user.id, 'Challenge 2FA emis', 'success', {
-        ip: meta.ip,
-        device: this.ensureDevice(meta),
-      });
-      await Promise.all([
-        this.saveUsers(users),
-        this.savePendingChallenges(pendingChallenges),
-        this.saveAuditLogs(auditLogs),
-      ]);
-
-      return {
-        user: publicUser(user),
-        requires2FA: true,
-        challengeId,
-        devCodePreview: process.env.NODE_ENV === 'production' ? undefined : code,
-      };
-    }
-
     const issued = this.issueSession(user, sessions, refreshTokens, meta);
     this.appendAuditLog(auditLogs, sessions, user.id, 'Connexion reussie', 'success', {
       ip: meta.ip,
@@ -762,98 +797,19 @@ export class AuthService {
     request: AuthenticatedRequest,
     response: Response,
   ): Promise<LoginResult> {
-    const challengeId = payload.challengeId?.trim();
-    const code = payload.code?.trim() ?? '';
-    if (!challengeId || !/^\d{6}$/.test(code)) {
-      throw new UnauthorizedException('Code invalide.');
-    }
-
-    const meta = this.getRequestMeta(request);
-    const { users, sessions, refreshTokens, pendingChallenges, auditLogs } = await this.loadSnapshot();
-    const challenge = pendingChallenges.find((candidate) => candidate.id === challengeId);
-    if (!challenge || this.isExpired(challenge.expiresAt)) {
-      throw new UnauthorizedException('Session 2FA expiree.');
-    }
-    const user = this.findUserById(challenge.userId, users);
-    if (!user) {
-      throw new UnauthorizedException('Session 2FA expiree.');
-    }
-
-    challenge.attempts += 1;
-    if (challenge.codeHash !== this.hashToken(code) || challenge.attempts > 5) {
-      this.appendAuditLog(auditLogs, sessions, user.id, 'Echec verification 2FA', 'failed', {
-        ip: meta.ip,
-        device: this.ensureDevice(meta),
-      });
-      await Promise.all([this.savePendingChallenges(pendingChallenges), this.saveAuditLogs(auditLogs)]);
-      throw new UnauthorizedException('Code invalide.');
-    }
-
-    const filteredChallenges = pendingChallenges.filter((candidate) => candidate.id !== challenge.id);
-    const issued = this.issueSession(user, sessions, refreshTokens, meta);
-    this.appendAuditLog(auditLogs, sessions, user.id, 'Verification 2FA', 'success', {
-      ip: meta.ip,
-      device: this.ensureDevice(meta),
-    });
-
-    await Promise.all([
-      this.savePendingChallenges(filteredChallenges),
-      this.saveSessions(sessions),
-      this.saveRefreshTokens(refreshTokens),
-      this.saveAuditLogs(auditLogs),
-    ]);
-
-    this.setAuthCookies(response, issued);
-    return { user: publicUser(user), csrfToken: issued.csrfToken };
+    void payload;
+    void request;
+    void response;
+    throw new BadRequestException('La verification secondaire n est plus utilisee pour la connexion.');
   }
 
   async resendTwoFactor(
     payload: { challengeId?: string },
     request: AuthenticatedRequest,
   ) {
-    const challengeId = payload.challengeId?.trim();
-    if (!challengeId) {
-      throw new BadRequestException('Challenge 2FA invalide.');
-    }
-
-    const meta = this.getRequestMeta(request);
-    const { users, sessions, pendingChallenges, auditLogs } = await this.loadSnapshot();
-    const challenge = pendingChallenges.find((candidate) => candidate.id === challengeId);
-    if (!challenge || this.isExpired(challenge.expiresAt)) {
-      throw new UnauthorizedException('Session 2FA expiree.');
-    }
-
-    const user = this.findUserById(challenge.userId, users);
-    if (!user) {
-      throw new UnauthorizedException('Session 2FA expiree.');
-    }
-
-    const createdAtMs = Date.parse(challenge.createdAt);
-    if (Number.isFinite(createdAtMs) && (Date.now() - createdAtMs) < 30_000) {
-      throw new BadRequestException('Veuillez patienter avant de renvoyer un nouveau code.');
-    }
-
-    const code = process.env.NODE_ENV === 'production' ? this.randomNumericCode() : '123456';
-    challenge.codeHash = this.hashToken(code);
-    challenge.createdAt = new Date().toISOString();
-    challenge.expiresAt = this.addMinutes(challenge.createdAt, 10);
-    challenge.attempts = 0;
-
-    await this.deliverTwoFactorCode(user, code);
-    this.appendAuditLog(auditLogs, sessions, user.id, 'Renvoi challenge 2FA', 'success', {
-      ip: meta.ip,
-      device: this.ensureDevice(meta),
-    });
-
-    await Promise.all([
-      this.savePendingChallenges(pendingChallenges),
-      this.saveAuditLogs(auditLogs),
-    ]);
-
-    return {
-      success: true,
-      devCodePreview: process.env.NODE_ENV === 'production' ? undefined : code,
-    };
+    void payload;
+    void request;
+    throw new BadRequestException('La verification secondaire n est plus utilisee pour la connexion.');
   }
 
   async refresh(request: AuthenticatedRequest, response: Response): Promise<RefreshResult> {
@@ -988,14 +944,130 @@ export class AuthService {
     return { user: publicUser(user), csrfToken: issued.csrfToken };
   }
 
-  forgotPassword(payload: { email?: string }) {
+  async forgotPassword(payload: { email?: string }, request: AuthenticatedRequest) {
     const email = payload.email?.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new BadRequestException('Adresse email invalide.');
     }
 
+    const meta = this.getRequestMeta(request);
+    const { users, sessions, pendingChallenges, auditLogs } = await this.loadSnapshot();
+    const user = this.findUserByEmail(email, users);
+
+    if (user && user.status === 'active' && user.phone) {
+      const code = process.env.NODE_ENV === 'production' ? this.randomNumericCode() : '123456';
+      const createdAt = new Date().toISOString();
+
+      const remainingChallenges = pendingChallenges.filter((challenge) => !(
+        challenge.userId === user.id
+        && (challenge.purpose ?? 'login-2fa') === 'password-reset'
+      ));
+
+      remainingChallenges.unshift({
+        id: this.createId('pwd-reset'),
+        userId: user.id,
+        codeHash: this.hashToken(code),
+        purpose: 'password-reset',
+        createdAt,
+        expiresAt: this.addMinutes(createdAt, 10),
+        attempts: 0,
+      });
+
+      await this.deliverSecurityCode(user, code, 'password-reset');
+      this.appendAuditLog(auditLogs, sessions, user.id, 'Demande de reinitialisation du mot de passe', 'success', {
+        ip: meta.ip,
+        device: this.ensureDevice(meta),
+      });
+
+      await Promise.all([
+        this.savePendingChallenges(remainingChallenges),
+        this.saveAuditLogs(auditLogs),
+      ]);
+    }
+
     return {
-      message: 'Si un compte existe, un lien de reinitialisation sera envoye.',
+      message: 'Si un compte existe, un code de reinitialisation sera envoye.',
+    };
+  }
+
+  async resetPassword(
+    payload: { email?: string; code?: string; newPassword?: string },
+    request: AuthenticatedRequest,
+  ) {
+    const email = payload.email?.trim().toLowerCase();
+    const code = payload.code?.trim() ?? '';
+    const newPassword = payload.newPassword ?? '';
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('Adresse email invalide.');
+    }
+    if (!/^\d{6}$/.test(code)) {
+      throw new BadRequestException('Code de verification invalide.');
+    }
+
+    const meta = this.getRequestMeta(request);
+    const { users, sessions, refreshTokens, pendingChallenges, auditLogs } = await this.loadSnapshot();
+    const user = this.findUserByEmail(email, users);
+    if (!user) {
+      throw new UnauthorizedException('Code de verification invalide.');
+    }
+
+    const challenge = pendingChallenges
+      .filter((candidate) => candidate.userId === user.id && (candidate.purpose ?? 'login-2fa') === 'password-reset')
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
+
+    if (!challenge || this.isExpired(challenge.expiresAt)) {
+      throw new UnauthorizedException('Code de verification expire.');
+    }
+
+    challenge.attempts += 1;
+    if (challenge.codeHash !== this.hashToken(code) || challenge.attempts > 5) {
+      this.appendAuditLog(auditLogs, sessions, user.id, 'Echec de reinitialisation du mot de passe', 'failed', {
+        ip: meta.ip,
+        device: this.ensureDevice(meta),
+      });
+      await Promise.all([
+        this.savePendingChallenges(pendingChallenges),
+        this.saveAuditLogs(auditLogs),
+      ]);
+      throw new UnauthorizedException('Code de verification invalide.');
+    }
+
+    await this.validatePasswordPolicy(newPassword, [user.passwordHash ?? '', ...(user.passwordHistory ?? [])].filter(Boolean));
+    const passwordHash = await argon2.hash(newPassword, { type: argon2.argon2id });
+    user.passwordHash = passwordHash;
+    user.passwordHistory = [passwordHash, ...(user.passwordHistory ?? []).filter(Boolean)].slice(0, 5);
+    user.lastPasswordChangeAt = new Date().toISOString();
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = null;
+    delete user.password;
+
+    const activeSessions = sessions.filter((session) => session.userId === user.id && !session.revokedAt);
+    for (const session of activeSessions) {
+      await this.revokeSessionChain(session.id, sessions, refreshTokens);
+    }
+
+    const remainingChallenges = pendingChallenges.filter((candidate) => !(
+      candidate.userId === user.id
+      && (candidate.purpose ?? 'login-2fa') === 'password-reset'
+    ));
+
+    this.appendAuditLog(auditLogs, sessions, user.id, 'Reinitialisation du mot de passe', 'success', {
+      ip: meta.ip,
+      device: this.ensureDevice(meta),
+    });
+
+    await Promise.all([
+      this.saveUsers(users),
+      this.saveSessions(sessions),
+      this.saveRefreshTokens(refreshTokens),
+      this.savePendingChallenges(remainingChallenges),
+      this.saveAuditLogs(auditLogs),
+    ]);
+
+    return {
+      success: true,
+      message: 'Le mot de passe a ete reinitialise. Vous pouvez vous reconnecter.',
     };
   }
 
@@ -1139,50 +1211,13 @@ export class AuthService {
   }
 
   async activateTwoFactor(request: AuthenticatedRequest, payload: { userId?: string }) {
-    const actor = this.requireSelfOrAdmin(request, payload.userId ?? '');
-    if (!payload.userId) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
-
-    const { users, sessions, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserById(payload.userId, users);
-    if (!user) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
-
-    user.is2FAEnabled = true;
-    user.backupCodes = Array.from({ length: 8 }, () => this.randomCode('C2P'));
-    this.appendAuditLog(auditLogs, sessions, actor.id, 'Activation 2FA', 'success');
-
-    await Promise.all([
-      this.saveUsers(users),
-      this.saveAuditLogs(auditLogs),
-    ]);
-
-    return { user: publicUser(user), backupCodes: [...user.backupCodes] };
+    this.requireSelfOrAdmin(request, payload.userId ?? '');
+    throw new BadRequestException('La verification forte est reservee a la reinitialisation du mot de passe.');
   }
 
   async deactivateTwoFactor(request: AuthenticatedRequest, payload: { userId?: string }) {
-    const actor = this.requireSelfOrAdmin(request, payload.userId ?? '');
-    if (!payload.userId) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
-
-    const { users, sessions, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserById(payload.userId, users);
-    if (!user) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
-
-    user.is2FAEnabled = false;
-    this.appendAuditLog(auditLogs, sessions, actor.id, 'Desactivation 2FA', 'success');
-
-    await Promise.all([
-      this.saveUsers(users),
-      this.saveAuditLogs(auditLogs),
-    ]);
-
-    return { user: publicUser(user) };
+    this.requireSelfOrAdmin(request, payload.userId ?? '');
+    throw new BadRequestException('La verification forte est reservee a la reinitialisation du mot de passe.');
   }
 
   async deleteSession(request: AuthenticatedRequest, sessionId: string, userId?: string) {

@@ -107,9 +107,9 @@ const getActiveNavPath = (
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout } = useAuth();
   const { totalUnread: messageUnread } = useBackendMessaging();
-  const { unreadCount: notifUnread } = useNotifications();
+  const { notifications, unreadCount: notifUnread } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = user && roleNavOverrides[user.role]
@@ -123,10 +123,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate('/');
   };
 
-  const handleAvatarChange = (dataUrl: string) => {
-    updateUser({ avatar: dataUrl });
-  };
-
   const userInitials = user
     ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
     : '?';
@@ -136,7 +132,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="dashboard-layout h-screen overflow-hidden bg-[#f8f9fa]">
-      <LiveNotifications />
+      <LiveNotifications notifications={notifications} />
       {/* Top Bar - Glassmorphism */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/60 h-16 flex items-center px-4 lg:px-6">
         <div className="flex items-center justify-between w-full">
@@ -268,8 +264,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main content */}
         <main
-          className="h-full min-w-0 overflow-y-auto overscroll-contain lg:ml-64"
-          style={{ scrollbarGutter: 'stable' }}
+          className="h-full min-w-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] lg:ml-64"
         >
           <div className="min-h-full p-4 lg:p-8">
             {children}

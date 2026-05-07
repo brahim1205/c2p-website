@@ -42,12 +42,6 @@ export default function LoginPage() {
       return;
     }
 
-    if (result.requires2FA) {
-      success('Code 2FA requis', 'Veuillez saisir le code de verification.');
-      navigate('/auth/two-factor', { state: { from: location.state?.from } });
-      return;
-    }
-
     success('Connexion reussie', 'Vous etes connecte. Redirection en cours...');
     const target = location.state?.from || getDashboardPathForRole(result.user?.role || 'client');
     setTimeout(() => navigate(target), 800);
@@ -73,7 +67,7 @@ export default function LoginPage() {
             {[
               ['7', 'roles'],
               ['Backend', 'C2P'],
-              ['2FA', 'pret'],
+              ['RBAC', 'actif'],
             ].map(([value, label]) => (
               <div key={label} className="bg-black/30 p-5 text-center">
                 <div className="text-2xl font-semibold text-[#d5b46f]">{value}</div>

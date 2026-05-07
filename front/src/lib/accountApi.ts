@@ -71,20 +71,6 @@ export async function fetchSecurity(userId: string) {
   return apiRequest<SecurityPayload>(`/auth/security/${userId}`);
 }
 
-export async function enable2FA(userId: string) {
-  return apiRequest<{ user: AuthUser; backupCodes: string[] }>('/auth/security/2fa/enable', {
-    method: 'POST',
-    body: JSON.stringify({ userId }),
-  });
-}
-
-export async function disable2FA(userId: string) {
-  return apiRequest<{ user: AuthUser }>('/auth/security/2fa/disable', {
-    method: 'POST',
-    body: JSON.stringify({ userId }),
-  });
-}
-
 export async function revokeAccountSession(userId: string, sessionId: string) {
   return apiRequest<{ success: boolean }>(`/auth/security/sessions/${sessionId}?userId=${encodeURIComponent(userId)}`, {
     method: 'DELETE',

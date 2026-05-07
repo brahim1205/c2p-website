@@ -114,6 +114,7 @@ async function bootstrap() {
       '/api/auth/login',
       '/api/auth/register',
       '/api/auth/forgot-password',
+      '/api/auth/reset-password',
       '/api/auth/verify-2fa',
       '/api/auth/refresh',
     ];
@@ -133,6 +134,10 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
       if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (!configService.isProduction && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
         callback(null, true);
         return;
       }
