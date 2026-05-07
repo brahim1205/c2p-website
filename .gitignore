@@ -1,0 +1,22 @@
+# environment
+**/.env
+**/.env.*
+!**/.env.example
+
+# dependencies
+**/node_modules/
+
+# build outputs
+backend/dist/
+front/out/
+front/.vite/
+
+# logs and runtime
+*.log
+*.pid
+coverage/
+.DS_Store
+
+# monitoring state
+ops/grafana/data/
+ops/prometheus/data/

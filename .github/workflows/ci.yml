@@ -1,0 +1,156 @@
+name: monorepo-ci
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+jobs:
+  build-test-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: test
+      PORT: 3003
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public
+      APP_ORIGINS: http://127.0.0.1:3000,http://localhost:3000
+      COOKIE_SECURE: "false"
+      TRUST_PROXY: "false"
+      REDIS_DISABLED: "true"
+      FRONT_URL: http://127.0.0.1:3000
+      API_URL: http://127.0.0.1:3003/api
+      VITE_API_URL: http://127.0.0.1:3003/api
+      VITE_DEV_BACKEND_URL: http://127.0.0.1:3003
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            front/package-lock.json
+
+      - name: Secret hygiene
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' >/dev/null; then
+            echo "Tracked .env file detected"
+            exit 1
+          fi
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: front
+        run: npm ci
+
+      - name: Backend dependency audit
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Frontend dependency audit
+        working-directory: front
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Type-check frontend
+        working-directory: front
+        run: npm run type-check
+
+      - name: Build frontend
+        working-directory: front
+        run: npm run build
+
+      - name: Build backend image
+        run: docker build -t c2p-backend:ci ./backend
+
+      - name: Build frontend image
+        run: docker build -t c2p-frontend:ci ./front
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Trivy backend image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: c2p-backend:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Trivy frontend image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: c2p-frontend:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          nohup npm run start > /tmp/c2p-backend.log 2>&1 &
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3003/api/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/c2p-backend.log
+          exit 1
+
+      - name: Start frontend preview
+        working-directory: front
+        run: |
+          nohup npm run preview -- --host 127.0.0.1 --port 3000 > /tmp/c2p-front.log 2>&1 &
+
+      - name: Wait for frontend
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3000 >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/c2p-front.log
+          exit 1
+
+      - name: Backend security checks
+        working-directory: backend
+        run: npm run security:test
+
+      - name: Frontend smoke test
+        working-directory: front
+        run: npm run smoke:test
+
+      - name: Print service logs on failure
+        if: failure()
+        run: |
+          echo "===== backend ====="
+          cat /tmp/c2p-backend.log || true
+          echo "===== frontend ====="
+          cat /tmp/c2p-front.log || true

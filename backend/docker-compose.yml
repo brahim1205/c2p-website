@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: .
+    ports:
+      - '3001:3000'
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: npm run start
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kodify
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+
+volumes:
+  db-data:
+  redis-data:

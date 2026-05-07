@@ -1,0 +1,101 @@
+groups:
+  - name: c2p-platform
+    rules:
+      - alert: C2PBackendDown
+        expr: up{job="c2p-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend C2P indisponible"
+          description: "Le backend ne repond plus depuis plus d'une minute."
+
+      - alert: C2PHighHttp5xxRate
+        expr: sum(rate(c2p_http_requests_total{status_code=~"5.."}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taux d'erreurs 5xx eleve"
+          description: "Le backend retourne trop d'erreurs 5xx."
+
+      - alert: C2PHighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(c2p_http_request_duration_ms_bucket[5m])) by (le, route)) > 750
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence backend P95 elevee"
+          description: "La latence P95 depasse 750ms sur une ou plusieurs routes."
+
+      - alert: C2PFrontendErrorsDetected
+        expr: increase(c2p_frontend_errors_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Erreurs frontend detectees"
+          description: "Plus de 5 erreurs frontend ont ete remontees en 10 minutes."
+
+      - alert: C2PExcessive401Rate
+        expr: sum(rate(c2p_http_requests_total{status_code="401"}[5m])) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hausse des 401"
+          description: "Le backend retourne un volume eleve de 401."
+
+      - alert: C2PExcessive403Rate
+        expr: sum(rate(c2p_http_requests_total{status_code="403"}[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hausse des 403"
+          description: "Le backend retourne un volume eleve de 403."
+
+      - alert: C2PExcessive429Rate
+        expr: sum(rate(c2p_http_requests_total{status_code="429"}[5m])) > 0.15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hausse des 429"
+          description: "Le backend applique fortement le rate limiting."
+
+      - alert: C2PBruteforceSuspected
+        expr: sum(rate(c2p_http_requests_total{route="/api/auth/login",status_code="401"}[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Suspicion de brute force sur /auth/login"
+          description: "Le volume de 401 sur la route de connexion depasse le seuil defini."
+
+      - alert: C2PHostMemoryHigh
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Memoire hote critique"
+          description: "Le serveur depasse 90% d utilisation memoire."
+
+      - alert: C2PHostDiskHigh
+        expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"})) > 0.85
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disque hote charge"
+          description: "Le serveur depasse 85% d utilisation disque."
+
+      - alert: C2PContainerRestartDetected
+        expr: changes(container_start_time_seconds{name=~".+"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redemarrage conteneur detecte"
+          description: "Au moins un conteneur a redemarre dans les 15 dernieres minutes."

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: C2P
+    orgId: 1
+    folder: C2P
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
