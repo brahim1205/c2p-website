@@ -45,7 +45,7 @@ services:
     build:
       context: ./backend
     env_file:
-      - ./ops/env/backend.production.env
+      - ${BACKEND_ENV_FILE:-./ops/env/backend.production.env}
     restart: unless-stopped
     expose:
       - "3000"

@@ -181,10 +181,16 @@ Tu vas utiliser ces valeurs au minimum pour :
 
 Si la chaine Neon a deja circule hors coffre, elle doit etre rotee avant prod.
 
-## 10. Creer le fichier d'environnement de production
+## 10. Creer les fichiers d'environnement de production
 
 ```bash
 cp ops/env/backend.production.env.example ops/env/backend.production.env
+cp ops/env/compose.production.env.example ops/env/compose.production.env
+```
+
+Edite d'abord le runtime backend :
+
+```bash
 nano ops/env/backend.production.env
 ```
 
@@ -223,9 +229,6 @@ DEXPAY_DEFAULT_CHAIN=BSC
 DEXPAY_ONRAMP_TYPE=BUY
 DEXPAY_OFFRAMP_TYPE=SELL
 
-GF_SECURITY_ADMIN_USER=admin
-GF_SECURITY_ADMIN_PASSWORD=...secret fort...
-GF_SERVER_ROOT_URL=http://127.0.0.1:3004
 ```
 
 Notes importantes :
@@ -233,6 +236,28 @@ Notes importantes :
 1. `SENDTEXT_SEND_PATH` n'est pas public sur leur site. Il faut le chemin officiel fourni par SendText.
 2. La doc DexPay publique decrit les endpoints relatifs, mais pas de base URL unique visible. Utilise la base URL fournie pendant l'onboarding DexPay.
 3. La doc DexPay est incoherente sur le champ `type` pour l'on-ramp. C'est pour ca que `DEXPAY_ONRAMP_TYPE` et `DEXPAY_OFFRAMP_TYPE` sont parametrables.
+
+Edite ensuite les variables Compose / monitoring :
+
+```bash
+nano ops/env/compose.production.env
+```
+
+Remplis au minimum :
+
+```dotenv
+BACKEND_ENV_FILE=./ops/env/backend.production.env
+REDIS_PASSWORD=...secret fort...
+GF_SECURITY_ADMIN_USER=admin
+GF_SECURITY_ADMIN_PASSWORD=...secret fort...
+GF_SERVER_ROOT_URL=http://127.0.0.1:3004
+```
+
+Important :
+
+- `backend.production.env` = variables runtime du backend
+- `compose.production.env` = variables d'interpolation Docker Compose
+- ne mélange pas les deux, sinon tu auras des comportements incohérents entre `docker compose config` et l'exécution réelle
 
 ## 11. Obtenir les certificats TLS
 

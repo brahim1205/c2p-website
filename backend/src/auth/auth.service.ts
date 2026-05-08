@@ -125,6 +125,7 @@ export class AuthService {
   };
 
   private seedPromise: Promise<void> | null = null;
+  private mutationQueue: Promise<void> = Promise.resolve();
 
   private clone<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -136,6 +137,23 @@ export class AuthService {
 
   private rowKey(table: AuthTableName, rowId: string) {
     return `${table}:${rowId}`;
+  }
+
+  private async runSerializedMutation<T>(operation: () => Promise<T>) {
+    const previous = this.mutationQueue;
+    let release!: () => void;
+
+    this.mutationQueue = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
   }
 
   private hashToken(token: string) {
@@ -736,60 +754,62 @@ export class AuthService {
   }
 
   async login(payload: { email?: string; password?: string }, request: AuthenticatedRequest, response: Response): Promise<LoginResult> {
-    const email = payload.email?.trim().toLowerCase();
-    const password = payload.password ?? '';
-    const meta = this.getRequestMeta(request);
-    const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-    const user = email ? this.findUserByEmail(email, users) : undefined;
+    return this.runSerializedMutation(async () => {
+      const email = payload.email?.trim().toLowerCase();
+      const password = payload.password ?? '';
+      const meta = this.getRequestMeta(request);
+      const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
+      const user = email ? this.findUserByEmail(email, users) : undefined;
 
-    if (!user) {
-      throw new UnauthorizedException('Adresse email ou mot de passe incorrect.');
-    }
-
-    if (user.lockedUntil && !this.isExpired(user.lockedUntil)) {
-      this.appendAuditLog(auditLogs, sessions, user.id, 'Tentative de connexion sur compte verrouille', 'failed', {
-        ip: meta.ip,
-        device: this.ensureDevice(meta),
-      });
-      await this.saveAuditLogs(auditLogs);
-      throw new UnauthorizedException('Compte temporairement verrouille. Reessayez plus tard.');
-    }
-
-    const passwordValid = await this.verifyPassword(user, password);
-    if (!passwordValid) {
-      user.failedLoginAttempts = (user.failedLoginAttempts ?? 0) + 1;
-      if ((user.failedLoginAttempts ?? 0) >= 5) {
-        user.lockedUntil = this.addMinutes(new Date().toISOString(), 15);
+      if (!user) {
+        throw new UnauthorizedException('Adresse email ou mot de passe incorrect.');
       }
-      this.appendAuditLog(auditLogs, sessions, user.id, 'Tentative de connexion echouee', 'failed', {
+
+      if (user.lockedUntil && !this.isExpired(user.lockedUntil)) {
+        this.appendAuditLog(auditLogs, sessions, user.id, 'Tentative de connexion sur compte verrouille', 'failed', {
+          ip: meta.ip,
+          device: this.ensureDevice(meta),
+        });
+        await this.saveAuditLogs(auditLogs);
+        throw new UnauthorizedException('Compte temporairement verrouille. Reessayez plus tard.');
+      }
+
+      const passwordValid = await this.verifyPassword(user, password);
+      if (!passwordValid) {
+        user.failedLoginAttempts = (user.failedLoginAttempts ?? 0) + 1;
+        if ((user.failedLoginAttempts ?? 0) >= 5) {
+          user.lockedUntil = this.addMinutes(new Date().toISOString(), 15);
+        }
+        this.appendAuditLog(auditLogs, sessions, user.id, 'Tentative de connexion echouee', 'failed', {
+          ip: meta.ip,
+          device: this.ensureDevice(meta),
+        });
+        await Promise.all([this.saveUsers(users), this.saveAuditLogs(auditLogs)]);
+        throw new UnauthorizedException('Adresse email ou mot de passe incorrect.');
+      }
+
+      this.assertStatusCanLogin(user.status);
+      await this.ensureUserHasPasswordHash(user);
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
+      user.lastLoginAt = new Date().toISOString();
+
+      const issued = this.issueSession(user, sessions, refreshTokens, meta);
+      this.appendAuditLog(auditLogs, sessions, user.id, 'Connexion reussie', 'success', {
         ip: meta.ip,
         device: this.ensureDevice(meta),
       });
-      await Promise.all([this.saveUsers(users), this.saveAuditLogs(auditLogs)]);
-      throw new UnauthorizedException('Adresse email ou mot de passe incorrect.');
-    }
 
-    this.assertStatusCanLogin(user.status);
-    await this.ensureUserHasPasswordHash(user);
-    user.failedLoginAttempts = 0;
-    user.lockedUntil = null;
-    user.lastLoginAt = new Date().toISOString();
+      await Promise.all([
+        this.saveUsers(users),
+        this.saveSessions(sessions),
+        this.saveRefreshTokens(refreshTokens),
+        this.saveAuditLogs(auditLogs),
+      ]);
 
-    const issued = this.issueSession(user, sessions, refreshTokens, meta);
-    this.appendAuditLog(auditLogs, sessions, user.id, 'Connexion reussie', 'success', {
-      ip: meta.ip,
-      device: this.ensureDevice(meta),
+      this.setAuthCookies(response, issued);
+      return { user: publicUser(user), csrfToken: issued.csrfToken };
     });
-
-    await Promise.all([
-      this.saveUsers(users),
-      this.saveSessions(sessions),
-      this.saveRefreshTokens(refreshTokens),
-      this.saveAuditLogs(auditLogs),
-    ]);
-
-    this.setAuthCookies(response, issued);
-    return { user: publicUser(user), csrfToken: issued.csrfToken };
   }
 
   async verifyTwoFactor(
@@ -813,262 +833,272 @@ export class AuthService {
   }
 
   async refresh(request: AuthenticatedRequest, response: Response): Promise<RefreshResult> {
-    const refreshToken = request.cookies?.[this.config.refreshCookieName];
-    if (!refreshToken) {
-      throw new UnauthorizedException('Session expiree.');
-    }
-
-    const meta = this.getRequestMeta(request);
-    const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-    const refreshRow = refreshTokens.find((candidate) => candidate.tokenHash === this.hashToken(refreshToken) && !candidate.revokedAt);
-    if (!refreshRow || this.isExpired(refreshRow.expiresAt)) {
-      throw new UnauthorizedException('Session expiree.');
-    }
-
-    const user = this.findUserById(refreshRow.userId, users);
-    if (!user) {
-      throw new UnauthorizedException('Session expiree.');
-    }
-
-    await this.revokeSessionChain(refreshRow.sessionId, sessions, refreshTokens);
-    const issued = this.issueSession(user, sessions, refreshTokens, meta);
-    refreshRow.revokedAt = new Date().toISOString();
-    refreshRow.replacedById = issued.sessionId;
-
-    this.appendAuditLog(auditLogs, sessions, user.id, 'Rotation de session', 'success', {
-      ip: meta.ip,
-      device: this.ensureDevice(meta),
-    });
-
-    await Promise.all([
-      this.saveSessions(sessions),
-      this.saveRefreshTokens(refreshTokens),
-      this.saveAuditLogs(auditLogs),
-    ]);
-
-    this.setAuthCookies(response, issued);
-    return {
-      user: publicUser(user),
-      csrfToken: issued.csrfToken,
-    };
-  }
-
-  async logout(request: AuthenticatedRequest, response: Response) {
-    const accessToken = request.cookies?.[this.config.sessionCookieName];
-    const refreshToken = request.cookies?.[this.config.refreshCookieName];
-    const { sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-    const now = new Date().toISOString();
-    let userId: string | null = null;
-
-    if (accessToken) {
-      const session = sessions.find((candidate) => candidate.tokenHash === this.hashToken(accessToken) && !candidate.revokedAt);
-      if (session) {
-        userId = session.userId;
-        session.revokedAt = now;
-        session.current = false;
+    return this.runSerializedMutation(async () => {
+      const refreshToken = request.cookies?.[this.config.refreshCookieName];
+      if (!refreshToken) {
+        throw new UnauthorizedException('Session expiree.');
       }
-    }
 
-    if (refreshToken) {
+      const meta = this.getRequestMeta(request);
+      const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
       const refreshRow = refreshTokens.find((candidate) => candidate.tokenHash === this.hashToken(refreshToken) && !candidate.revokedAt);
-      if (refreshRow) {
-        userId = userId ?? refreshRow.userId;
-        refreshRow.revokedAt = now;
+      if (!refreshRow || this.isExpired(refreshRow.expiresAt)) {
+        throw new UnauthorizedException('Session expiree.');
       }
-    }
 
-    if (userId) {
-      this.appendAuditLog(auditLogs, sessions, userId, 'Deconnexion', 'success');
-    }
+      const user = this.findUserById(refreshRow.userId, users);
+      if (!user) {
+        throw new UnauthorizedException('Session expiree.');
+      }
 
-    await Promise.all([
-      this.saveSessions(sessions),
-      this.saveRefreshTokens(refreshTokens),
-      this.saveAuditLogs(auditLogs),
-    ]);
+      await this.revokeSessionChain(refreshRow.sessionId, sessions, refreshTokens);
+      const issued = this.issueSession(user, sessions, refreshTokens, meta);
+      refreshRow.revokedAt = new Date().toISOString();
+      refreshRow.replacedById = issued.sessionId;
 
-    this.clearAuthCookies(response);
-    return { success: true };
-  }
-
-  async register(payload: RegisterPayload, request: AuthenticatedRequest, response: Response) {
-    const email = payload.email?.trim().toLowerCase();
-    if (!email || !payload.password || !payload.firstName || !payload.lastName || !payload.role) {
-      throw new BadRequestException('Informations de compte invalides.');
-    }
-
-    await this.validatePasswordPolicy(payload.password, []);
-    const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-    if (this.findUserByEmail(email, users)) {
-      throw new ConflictException('Un compte existe deja avec cette adresse email.');
-    }
-
-    const meta = this.getRequestMeta(request);
-    const passwordHash = await argon2.hash(payload.password, { type: argon2.argon2id });
-    const user: StoredUser = {
-      id: this.createId('usr'),
-      email,
-      passwordHash,
-      passwordHistory: [passwordHash],
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      phone: payload.phone,
-      role: payload.role,
-      status: 'active',
-      avatar: undefined,
-      bio: undefined,
-      location: undefined,
-      is2FAEnabled: false,
-      backupCodes: [],
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      lastPasswordChangeAt: new Date().toISOString(),
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
-
-    users.push(user);
-    const issued = this.issueSession(user, sessions, refreshTokens, meta);
-    this.appendAuditLog(auditLogs, sessions, user.id, 'Inscription du compte', 'success', {
-      ip: meta.ip,
-      device: this.ensureDevice(meta),
-    });
-
-    await Promise.all([
-      this.saveUsers(users),
-      this.saveSessions(sessions),
-      this.saveRefreshTokens(refreshTokens),
-      this.saveAuditLogs(auditLogs),
-    ]);
-
-    this.setAuthCookies(response, issued);
-    return { user: publicUser(user), csrfToken: issued.csrfToken };
-  }
-
-  async forgotPassword(payload: { email?: string }, request: AuthenticatedRequest) {
-    const email = payload.email?.trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new BadRequestException('Adresse email invalide.');
-    }
-
-    const meta = this.getRequestMeta(request);
-    const { users, sessions, pendingChallenges, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserByEmail(email, users);
-
-    if (user && user.status === 'active' && user.phone) {
-      const code = process.env.NODE_ENV === 'production' ? this.randomNumericCode() : '123456';
-      const createdAt = new Date().toISOString();
-
-      const remainingChallenges = pendingChallenges.filter((challenge) => !(
-        challenge.userId === user.id
-        && (challenge.purpose ?? 'login-2fa') === 'password-reset'
-      ));
-
-      remainingChallenges.unshift({
-        id: this.createId('pwd-reset'),
-        userId: user.id,
-        codeHash: this.hashToken(code),
-        purpose: 'password-reset',
-        createdAt,
-        expiresAt: this.addMinutes(createdAt, 10),
-        attempts: 0,
-      });
-
-      await this.deliverSecurityCode(user, code, 'password-reset');
-      this.appendAuditLog(auditLogs, sessions, user.id, 'Demande de reinitialisation du mot de passe', 'success', {
+      this.appendAuditLog(auditLogs, sessions, user.id, 'Rotation de session', 'success', {
         ip: meta.ip,
         device: this.ensureDevice(meta),
       });
 
       await Promise.all([
-        this.savePendingChallenges(remainingChallenges),
+        this.saveSessions(sessions),
+        this.saveRefreshTokens(refreshTokens),
         this.saveAuditLogs(auditLogs),
       ]);
-    }
 
-    return {
-      message: 'Si un compte existe, un code de reinitialisation sera envoye.',
-    };
+      this.setAuthCookies(response, issued);
+      return {
+        user: publicUser(user),
+        csrfToken: issued.csrfToken,
+      };
+    });
+  }
+
+  async logout(request: AuthenticatedRequest, response: Response) {
+    return this.runSerializedMutation(async () => {
+      const accessToken = request.cookies?.[this.config.sessionCookieName];
+      const refreshToken = request.cookies?.[this.config.refreshCookieName];
+      const { sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
+      const now = new Date().toISOString();
+      let userId: string | null = null;
+
+      if (accessToken) {
+        const session = sessions.find((candidate) => candidate.tokenHash === this.hashToken(accessToken) && !candidate.revokedAt);
+        if (session) {
+          userId = session.userId;
+          session.revokedAt = now;
+          session.current = false;
+        }
+      }
+
+      if (refreshToken) {
+        const refreshRow = refreshTokens.find((candidate) => candidate.tokenHash === this.hashToken(refreshToken) && !candidate.revokedAt);
+        if (refreshRow) {
+          userId = userId ?? refreshRow.userId;
+          refreshRow.revokedAt = now;
+        }
+      }
+
+      if (userId) {
+        this.appendAuditLog(auditLogs, sessions, userId, 'Deconnexion', 'success');
+      }
+
+      await Promise.all([
+        this.saveSessions(sessions),
+        this.saveRefreshTokens(refreshTokens),
+        this.saveAuditLogs(auditLogs),
+      ]);
+
+      this.clearAuthCookies(response);
+      return { success: true };
+    });
+  }
+
+  async register(payload: RegisterPayload, request: AuthenticatedRequest, response: Response) {
+    return this.runSerializedMutation(async () => {
+      const email = payload.email?.trim().toLowerCase();
+      if (!email || !payload.password || !payload.firstName || !payload.lastName || !payload.role) {
+        throw new BadRequestException('Informations de compte invalides.');
+      }
+
+      await this.validatePasswordPolicy(payload.password, []);
+      const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
+      if (this.findUserByEmail(email, users)) {
+        throw new ConflictException('Un compte existe deja avec cette adresse email.');
+      }
+
+      const meta = this.getRequestMeta(request);
+      const passwordHash = await argon2.hash(payload.password, { type: argon2.argon2id });
+      const user: StoredUser = {
+        id: this.createId('usr'),
+        email,
+        passwordHash,
+        passwordHistory: [passwordHash],
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        phone: payload.phone,
+        role: payload.role,
+        status: 'active',
+        avatar: undefined,
+        bio: undefined,
+        location: undefined,
+        is2FAEnabled: false,
+        backupCodes: [],
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastPasswordChangeAt: new Date().toISOString(),
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+
+      users.push(user);
+      const issued = this.issueSession(user, sessions, refreshTokens, meta);
+      this.appendAuditLog(auditLogs, sessions, user.id, 'Inscription du compte', 'success', {
+        ip: meta.ip,
+        device: this.ensureDevice(meta),
+      });
+
+      await Promise.all([
+        this.saveUsers(users),
+        this.saveSessions(sessions),
+        this.saveRefreshTokens(refreshTokens),
+        this.saveAuditLogs(auditLogs),
+      ]);
+
+      this.setAuthCookies(response, issued);
+      return { user: publicUser(user), csrfToken: issued.csrfToken };
+    });
+  }
+
+  async forgotPassword(payload: { email?: string }, request: AuthenticatedRequest) {
+    return this.runSerializedMutation(async () => {
+      const email = payload.email?.trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new BadRequestException('Adresse email invalide.');
+      }
+
+      const meta = this.getRequestMeta(request);
+      const { users, sessions, pendingChallenges, auditLogs } = await this.loadSnapshot();
+      const user = this.findUserByEmail(email, users);
+
+      if (user && user.status === 'active' && user.phone) {
+        const code = process.env.NODE_ENV === 'production' ? this.randomNumericCode() : '123456';
+        const createdAt = new Date().toISOString();
+
+        const remainingChallenges = pendingChallenges.filter((challenge) => !(
+          challenge.userId === user.id
+          && (challenge.purpose ?? 'login-2fa') === 'password-reset'
+        ));
+
+        remainingChallenges.unshift({
+          id: this.createId('pwd-reset'),
+          userId: user.id,
+          codeHash: this.hashToken(code),
+          purpose: 'password-reset',
+          createdAt,
+          expiresAt: this.addMinutes(createdAt, 10),
+          attempts: 0,
+        });
+
+        await this.deliverSecurityCode(user, code, 'password-reset');
+        this.appendAuditLog(auditLogs, sessions, user.id, 'Demande de reinitialisation du mot de passe', 'success', {
+          ip: meta.ip,
+          device: this.ensureDevice(meta),
+        });
+
+        await Promise.all([
+          this.savePendingChallenges(remainingChallenges),
+          this.saveAuditLogs(auditLogs),
+        ]);
+      }
+
+      return {
+        message: 'Si un compte existe, un code de reinitialisation sera envoye.',
+      };
+    });
   }
 
   async resetPassword(
     payload: { email?: string; code?: string; newPassword?: string },
     request: AuthenticatedRequest,
   ) {
-    const email = payload.email?.trim().toLowerCase();
-    const code = payload.code?.trim() ?? '';
-    const newPassword = payload.newPassword ?? '';
+    return this.runSerializedMutation(async () => {
+      const email = payload.email?.trim().toLowerCase();
+      const code = payload.code?.trim() ?? '';
+      const newPassword = payload.newPassword ?? '';
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new BadRequestException('Adresse email invalide.');
-    }
-    if (!/^\d{6}$/.test(code)) {
-      throw new BadRequestException('Code de verification invalide.');
-    }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new BadRequestException('Adresse email invalide.');
+      }
+      if (!/^\d{6}$/.test(code)) {
+        throw new BadRequestException('Code de verification invalide.');
+      }
 
-    const meta = this.getRequestMeta(request);
-    const { users, sessions, refreshTokens, pendingChallenges, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserByEmail(email, users);
-    if (!user) {
-      throw new UnauthorizedException('Code de verification invalide.');
-    }
+      const meta = this.getRequestMeta(request);
+      const { users, sessions, refreshTokens, pendingChallenges, auditLogs } = await this.loadSnapshot();
+      const user = this.findUserByEmail(email, users);
+      if (!user) {
+        throw new UnauthorizedException('Code de verification invalide.');
+      }
 
-    const challenge = pendingChallenges
-      .filter((candidate) => candidate.userId === user.id && (candidate.purpose ?? 'login-2fa') === 'password-reset')
-      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
+      const challenge = pendingChallenges
+        .filter((candidate) => candidate.userId === user.id && (candidate.purpose ?? 'login-2fa') === 'password-reset')
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
 
-    if (!challenge || this.isExpired(challenge.expiresAt)) {
-      throw new UnauthorizedException('Code de verification expire.');
-    }
+      if (!challenge || this.isExpired(challenge.expiresAt)) {
+        throw new UnauthorizedException('Code de verification expire.');
+      }
 
-    challenge.attempts += 1;
-    if (challenge.codeHash !== this.hashToken(code) || challenge.attempts > 5) {
-      this.appendAuditLog(auditLogs, sessions, user.id, 'Echec de reinitialisation du mot de passe', 'failed', {
+      challenge.attempts += 1;
+      if (challenge.codeHash !== this.hashToken(code) || challenge.attempts > 5) {
+        this.appendAuditLog(auditLogs, sessions, user.id, 'Echec de reinitialisation du mot de passe', 'failed', {
+          ip: meta.ip,
+          device: this.ensureDevice(meta),
+        });
+        await Promise.all([
+          this.savePendingChallenges(pendingChallenges),
+          this.saveAuditLogs(auditLogs),
+        ]);
+        throw new UnauthorizedException('Code de verification invalide.');
+      }
+
+      await this.validatePasswordPolicy(newPassword, [user.passwordHash ?? '', ...(user.passwordHistory ?? [])].filter(Boolean));
+      const passwordHash = await argon2.hash(newPassword, { type: argon2.argon2id });
+      user.passwordHash = passwordHash;
+      user.passwordHistory = [passwordHash, ...(user.passwordHistory ?? []).filter(Boolean)].slice(0, 5);
+      user.lastPasswordChangeAt = new Date().toISOString();
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
+      delete user.password;
+
+      const activeSessions = sessions.filter((session) => session.userId === user.id && !session.revokedAt);
+      for (const session of activeSessions) {
+        await this.revokeSessionChain(session.id, sessions, refreshTokens);
+      }
+
+      const remainingChallenges = pendingChallenges.filter((candidate) => !(
+        candidate.userId === user.id
+        && (candidate.purpose ?? 'login-2fa') === 'password-reset'
+      ));
+
+      this.appendAuditLog(auditLogs, sessions, user.id, 'Reinitialisation du mot de passe', 'success', {
         ip: meta.ip,
         device: this.ensureDevice(meta),
       });
+
       await Promise.all([
-        this.savePendingChallenges(pendingChallenges),
+        this.saveUsers(users),
+        this.saveSessions(sessions),
+        this.saveRefreshTokens(refreshTokens),
+        this.savePendingChallenges(remainingChallenges),
         this.saveAuditLogs(auditLogs),
       ]);
-      throw new UnauthorizedException('Code de verification invalide.');
-    }
 
-    await this.validatePasswordPolicy(newPassword, [user.passwordHash ?? '', ...(user.passwordHistory ?? [])].filter(Boolean));
-    const passwordHash = await argon2.hash(newPassword, { type: argon2.argon2id });
-    user.passwordHash = passwordHash;
-    user.passwordHistory = [passwordHash, ...(user.passwordHistory ?? []).filter(Boolean)].slice(0, 5);
-    user.lastPasswordChangeAt = new Date().toISOString();
-    user.failedLoginAttempts = 0;
-    user.lockedUntil = null;
-    delete user.password;
-
-    const activeSessions = sessions.filter((session) => session.userId === user.id && !session.revokedAt);
-    for (const session of activeSessions) {
-      await this.revokeSessionChain(session.id, sessions, refreshTokens);
-    }
-
-    const remainingChallenges = pendingChallenges.filter((candidate) => !(
-      candidate.userId === user.id
-      && (candidate.purpose ?? 'login-2fa') === 'password-reset'
-    ));
-
-    this.appendAuditLog(auditLogs, sessions, user.id, 'Reinitialisation du mot de passe', 'success', {
-      ip: meta.ip,
-      device: this.ensureDevice(meta),
+      return {
+        success: true,
+        message: 'Le mot de passe a ete reinitialise. Vous pouvez vous reconnecter.',
+      };
     });
-
-    await Promise.all([
-      this.saveUsers(users),
-      this.saveSessions(sessions),
-      this.saveRefreshTokens(refreshTokens),
-      this.savePendingChallenges(remainingChallenges),
-      this.saveAuditLogs(auditLogs),
-    ]);
-
-    return {
-      success: true,
-      message: 'Le mot de passe a ete reinitialise. Vous pouvez vous reconnecter.',
-    };
   }
 
   async getUsers(request: AuthenticatedRequest) {
@@ -1090,31 +1120,33 @@ export class AuthService {
     id: string,
     payload: Partial<Pick<AuthUser, 'firstName' | 'lastName' | 'email' | 'phone' | 'avatar' | 'bio' | 'location' | 'role' | 'status' | 'is2FAEnabled'>>,
   ) {
-    const actor = this.requireRole(request, ['admin']);
-    const { users, sessions, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserById(id, users);
-    if (!user) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
-
-    const patch = this.pickUserPatch(payload as Record<string, unknown>);
-    if (patch.email) {
-      patch.email = patch.email.trim().toLowerCase();
-      const existing = this.findUserByEmail(patch.email, users);
-      if (existing && existing.id !== id) {
-        throw new ConflictException('Un compte existe deja avec cette adresse email.');
+    return this.runSerializedMutation(async () => {
+      const actor = this.requireRole(request, ['admin']);
+      const { users, sessions, auditLogs } = await this.loadSnapshot();
+      const user = this.findUserById(id, users);
+      if (!user) {
+        throw new BadRequestException('Utilisateur introuvable.');
       }
-    }
 
-    Object.assign(user, patch);
-    this.appendAuditLog(auditLogs, sessions, actor.id, `Mise a jour utilisateur (${Object.keys(payload).join(', ') || 'profil'})`, 'success');
+      const patch = this.pickUserPatch(payload as Record<string, unknown>);
+      if (patch.email) {
+        patch.email = patch.email.trim().toLowerCase();
+        const existing = this.findUserByEmail(patch.email, users);
+        if (existing && existing.id !== id) {
+          throw new ConflictException('Un compte existe deja avec cette adresse email.');
+        }
+      }
 
-    await Promise.all([
-      this.saveUsers(users),
-      this.saveAuditLogs(auditLogs),
-    ]);
+      Object.assign(user, patch);
+      this.appendAuditLog(auditLogs, sessions, actor.id, `Mise a jour utilisateur (${Object.keys(payload).join(', ') || 'profil'})`, 'success');
 
-    return publicUser(user);
+      await Promise.all([
+        this.saveUsers(users),
+        this.saveAuditLogs(auditLogs),
+      ]);
+
+      return publicUser(user);
+    });
   }
 
   async getProfile(request: AuthenticatedRequest, id: string) {
@@ -1132,66 +1164,70 @@ export class AuthService {
     id: string,
     payload: Partial<Pick<AuthUser, 'firstName' | 'lastName' | 'email' | 'phone' | 'avatar' | 'bio' | 'location'>>,
   ) {
-    const actor = this.requireSelfOrAdmin(request, id);
-    const { users, sessions, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserById(id, users);
-    if (!user) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
-
-    const patch = this.pickUserPatch(payload as Record<string, unknown>);
-    if (patch.email) {
-      patch.email = patch.email.trim().toLowerCase();
-      const existing = this.findUserByEmail(patch.email, users);
-      if (existing && existing.id !== id) {
-        throw new ConflictException('Un compte existe deja avec cette adresse email.');
+    return this.runSerializedMutation(async () => {
+      const actor = this.requireSelfOrAdmin(request, id);
+      const { users, sessions, auditLogs } = await this.loadSnapshot();
+      const user = this.findUserById(id, users);
+      if (!user) {
+        throw new BadRequestException('Utilisateur introuvable.');
       }
-    }
 
-    Object.assign(user, patch);
-    this.appendAuditLog(auditLogs, sessions, actor.id, 'Modification du profil', 'success');
+      const patch = this.pickUserPatch(payload as Record<string, unknown>);
+      if (patch.email) {
+        patch.email = patch.email.trim().toLowerCase();
+        const existing = this.findUserByEmail(patch.email, users);
+        if (existing && existing.id !== id) {
+          throw new ConflictException('Un compte existe deja avec cette adresse email.');
+        }
+      }
 
-    await Promise.all([
-      this.saveUsers(users),
-      this.saveAuditLogs(auditLogs),
-    ]);
+      Object.assign(user, patch);
+      this.appendAuditLog(auditLogs, sessions, actor.id, 'Modification du profil', 'success');
 
-    return publicUser(user);
+      await Promise.all([
+        this.saveUsers(users),
+        this.saveAuditLogs(auditLogs),
+      ]);
+
+      return publicUser(user);
+    });
   }
 
   async updatePassword(request: AuthenticatedRequest, payload: PasswordChangePayload) {
-    const actor = this.requireSelfOrAdmin(request, payload.userId ?? '');
-    if (!payload.userId || !payload.currentPassword || !payload.newPassword) {
-      throw new BadRequestException('Informations de mot de passe invalides.');
-    }
+    return this.runSerializedMutation(async () => {
+      const actor = this.requireSelfOrAdmin(request, payload.userId ?? '');
+      if (!payload.userId || !payload.currentPassword || !payload.newPassword) {
+        throw new BadRequestException('Informations de mot de passe invalides.');
+      }
 
-    const { users, sessions, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserById(payload.userId, users);
-    if (!user) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
+      const { users, sessions, auditLogs } = await this.loadSnapshot();
+      const user = this.findUserById(payload.userId, users);
+      if (!user) {
+        throw new BadRequestException('Utilisateur introuvable.');
+      }
 
-    const currentPasswordValid = await this.verifyPassword(user, payload.currentPassword);
-    if (!currentPasswordValid) {
-      this.appendAuditLog(auditLogs, sessions, actor.id, 'Tentative de changement de mot de passe', 'failed');
-      await this.saveAuditLogs(auditLogs);
-      throw new UnauthorizedException('Mot de passe actuel incorrect.');
-    }
+      const currentPasswordValid = await this.verifyPassword(user, payload.currentPassword);
+      if (!currentPasswordValid) {
+        this.appendAuditLog(auditLogs, sessions, actor.id, 'Tentative de changement de mot de passe', 'failed');
+        await this.saveAuditLogs(auditLogs);
+        throw new UnauthorizedException('Mot de passe actuel incorrect.');
+      }
 
-    await this.validatePasswordPolicy(payload.newPassword, [user.passwordHash ?? '', ...(user.passwordHistory ?? [])].filter(Boolean));
-    const passwordHash = await argon2.hash(payload.newPassword, { type: argon2.argon2id });
-    user.passwordHash = passwordHash;
-    user.passwordHistory = [passwordHash, ...(user.passwordHistory ?? []).filter(Boolean)].slice(0, 5);
-    user.lastPasswordChangeAt = new Date().toISOString();
-    delete user.password;
-    this.appendAuditLog(auditLogs, sessions, actor.id, 'Changement de mot de passe', 'success');
+      await this.validatePasswordPolicy(payload.newPassword, [user.passwordHash ?? '', ...(user.passwordHistory ?? [])].filter(Boolean));
+      const passwordHash = await argon2.hash(payload.newPassword, { type: argon2.argon2id });
+      user.passwordHash = passwordHash;
+      user.passwordHistory = [passwordHash, ...(user.passwordHistory ?? []).filter(Boolean)].slice(0, 5);
+      user.lastPasswordChangeAt = new Date().toISOString();
+      delete user.password;
+      this.appendAuditLog(auditLogs, sessions, actor.id, 'Changement de mot de passe', 'success');
 
-    await Promise.all([
-      this.saveUsers(users),
-      this.saveAuditLogs(auditLogs),
-    ]);
+      await Promise.all([
+        this.saveUsers(users),
+        this.saveAuditLogs(auditLogs),
+      ]);
 
-    return { user: publicUser(user) };
+      return { user: publicUser(user) };
+    });
   }
 
   async getSecurity(request: AuthenticatedRequest, userId: string): Promise<SecurityPayload> {
@@ -1221,51 +1257,55 @@ export class AuthService {
   }
 
   async deleteSession(request: AuthenticatedRequest, sessionId: string, userId?: string) {
-    const actor = this.requireSelfOrAdmin(request, userId ?? '');
-    if (!userId) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
+    return this.runSerializedMutation(async () => {
+      const actor = this.requireSelfOrAdmin(request, userId ?? '');
+      if (!userId) {
+        throw new BadRequestException('Utilisateur introuvable.');
+      }
 
-    const { sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-    const session = sessions.find((candidate) => candidate.userId === userId && candidate.id === sessionId && !candidate.current && !candidate.revokedAt);
-    if (!session) {
-      throw new BadRequestException('Session introuvable.');
-    }
+      const { sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
+      const session = sessions.find((candidate) => candidate.userId === userId && candidate.id === sessionId && !candidate.current && !candidate.revokedAt);
+      if (!session) {
+        throw new BadRequestException('Session introuvable.');
+      }
 
-    await this.revokeSessionChain(sessionId, sessions, refreshTokens);
-    this.appendAuditLog(auditLogs, sessions, actor.id, 'Revocation de session', 'success');
+      await this.revokeSessionChain(sessionId, sessions, refreshTokens);
+      this.appendAuditLog(auditLogs, sessions, actor.id, 'Revocation de session', 'success');
 
-    await Promise.all([
-      this.saveSessions(sessions),
-      this.saveRefreshTokens(refreshTokens),
-      this.saveAuditLogs(auditLogs),
-    ]);
+      await Promise.all([
+        this.saveSessions(sessions),
+        this.saveRefreshTokens(refreshTokens),
+        this.saveAuditLogs(auditLogs),
+      ]);
 
-    return { success: true };
+      return { success: true };
+    });
   }
 
   async deleteOtherSessions(request: AuthenticatedRequest, userId?: string) {
-    const actor = this.requireSelfOrAdmin(request, userId ?? '');
-    if (!userId) {
-      throw new BadRequestException('Utilisateur introuvable.');
-    }
+    return this.runSerializedMutation(async () => {
+      const actor = this.requireSelfOrAdmin(request, userId ?? '');
+      if (!userId) {
+        throw new BadRequestException('Utilisateur introuvable.');
+      }
 
-    const { sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-    const removable = sessions.filter((session) => session.userId === userId && !session.current && !session.revokedAt);
-    for (const session of removable) {
-      await this.revokeSessionChain(session.id, sessions, refreshTokens);
-    }
+      const { sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
+      const removable = sessions.filter((session) => session.userId === userId && !session.current && !session.revokedAt);
+      for (const session of removable) {
+        await this.revokeSessionChain(session.id, sessions, refreshTokens);
+      }
 
-    if (removable.length > 0) {
-      this.appendAuditLog(auditLogs, sessions, actor.id, 'Revocation des autres sessions', 'success');
-    }
+      if (removable.length > 0) {
+        this.appendAuditLog(auditLogs, sessions, actor.id, 'Revocation des autres sessions', 'success');
+      }
 
-    await Promise.all([
-      this.saveSessions(sessions),
-      this.saveRefreshTokens(refreshTokens),
-      this.saveAuditLogs(auditLogs),
-    ]);
+      await Promise.all([
+        this.saveSessions(sessions),
+        this.saveRefreshTokens(refreshTokens),
+        this.saveAuditLogs(auditLogs),
+      ]);
 
-    return { success: true, removed: removable.length };
+      return { success: true, removed: removable.length };
+    });
   }
 }
