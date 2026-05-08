@@ -43,8 +43,10 @@ jobs:
 
       - name: Secret hygiene
         run: |
-          if git ls-files | grep -E '(^|/)\.env($|\.)' >/dev/null; then
-            echo "Tracked .env file detected"
+          tracked_env_files="$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -Ev '(\.example|\.sample|\.template)$' || true)"
+          if [ -n "$tracked_env_files" ]; then
+            echo "Tracked sensitive env file detected:"
+            printf '%s\n' "$tracked_env_files"
             exit 1
           fi
 

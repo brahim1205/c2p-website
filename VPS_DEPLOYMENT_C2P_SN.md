@@ -503,12 +503,12 @@ Dans GitHub :
    - `Require branches to be up to date before merging`
 6. ajoute comme checks obligatoires :
    - `build-test-security`
-   - `Analyze`
+   - le check GitHub natif de `Code scanning` / `CodeQL` visible dans l'interface de protection de branche
 
 Ces checks correspondent a :
 
 - `monorepo-ci` : build, type-check, audits npm, Trivy, tests de securite backend, smoke test front
-- `codeql` : analyse statique GitHub
+- `Code scanning` : analyse CodeQL geree par GitHub via la configuration par defaut activee dans le depot
 
 ### 22.2. Ouvrir l'interface GitHub Actions
 
@@ -516,13 +516,12 @@ Dans GitHub :
 
 1. va dans `Actions`
 2. ouvre `monorepo-ci`
-3. ouvre `codeql`
 
 Ce que tu dois verifier :
 
 - le workflow `monorepo-ci` est vert
 - les etapes `Trivy filesystem scan`, `Trivy backend image scan` et `Trivy frontend image scan` sont vertes
-- le workflow `codeql` est vert
+- l'onglet `Security > Code scanning` remonte bien les analyses CodeQL
 
 Si `monorepo-ci` echoue :
 
@@ -562,7 +561,6 @@ Les mises a jour automatiques sont definies dans `.github/dependabot.yml`.
 Le depot est dans un etat acceptable si :
 
 - `Actions > monorepo-ci` est vert sur `main`
-- `Actions > codeql` est vert sur `main`
 - `Security > Code scanning` ne contient pas d'alerte critique ouverte
 - `Security > Dependabot alerts` ne contient pas d'alerte critique ouverte
 
