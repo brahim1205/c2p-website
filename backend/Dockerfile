@@ -1,6 +1,8 @@
-FROM node:20-alpine AS builder
+ARG NODE_ALPINE_BASE=node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+
+FROM ${NODE_ALPINE_BASE} AS builder
 WORKDIR /usr/src/app
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl=3.5.6-r0
 
 COPY package.json package-lock.json tsconfig.json tsconfig.build.json ./
 COPY prisma ./prisma
@@ -9,9 +11,11 @@ RUN npm ci
 COPY src ./src
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM ${NODE_ALPINE_BASE} AS runner
 WORKDIR /usr/src/app
-RUN apk add --no-cache openssl wget
+RUN apk add --no-cache \
+    openssl=3.5.6-r0 \
+    wget=1.25.0-r2
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
