@@ -87,10 +87,10 @@ jobs:
         run: npm run build
 
       - name: Build backend image
-        run: docker build -t c2p-backend:ci ./backend
+        run: docker build --pull -t c2p-backend:ci ./backend
 
       - name: Build frontend image
-        run: docker build -t c2p-frontend:ci ./front
+        run: docker build --pull -t c2p-frontend:ci ./front
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0

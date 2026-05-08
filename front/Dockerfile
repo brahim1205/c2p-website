@@ -17,7 +17,13 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 WORKDIR /usr/share/nginx/html
 
+# Pull in the latest patched Alpine packages available for the pinned base tag.
+# This avoids Trivy failures caused only by stale OS packages in the base layer.
+USER root
+RUN apk upgrade --no-cache
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /usr/src/app/out ./
 
+USER 101
 EXPOSE 8080
