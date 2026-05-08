@@ -58,6 +58,10 @@ jobs:
         working-directory: front
         run: npm ci
 
+      - name: Install Playwright Chromium
+        working-directory: front
+        run: npx playwright install --with-deps chromium
+
       - name: Backend dependency audit
         working-directory: backend
         run: npm audit --omit=dev --audit-level=high
