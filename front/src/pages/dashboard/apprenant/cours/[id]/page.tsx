@@ -66,6 +66,7 @@ export default function ApprenantCoursDetailPage() {
   const [courseCompleted, setCourseCompleted] = useState(false);
 
   const course = id ? courseData[id] : null;
+  const courseId = course?.id ?? null;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -129,16 +130,16 @@ export default function ApprenantCoursDetailPage() {
 
   // Session timer effect
   useEffect(() => {
-    if (!course) return;
+    if (!courseId) return;
     // Load previous session time
-    const prevTime = loadSessionTime(course.id);
+    const prevTime = loadSessionTime(courseId);
     setSessionTimer(prevTime);
     setShowSessionTimer(true);
 
     sessionTimerRef.current = setInterval(() => {
       setSessionTimer((prev) => {
         const next = prev + 1;
-        addSessionTime(course.id, 1);
+        addSessionTime(courseId, 1);
         return next;
       });
     }, 1000);
@@ -149,7 +150,7 @@ export default function ApprenantCoursDetailPage() {
         sessionTimerRef.current = null;
       }
     };
-  }, [course?.id]);
+  }, [courseId]);
 
   // Detect 100% completion and auto-generate certificate
   useEffect(() => {
@@ -230,7 +231,7 @@ export default function ApprenantCoursDetailPage() {
         certificateDate: certEntry.issueDate,
       });
     }
-  }, [completedLessons.size, course, courseCompleted]);
+  }, [bookmarkedLessons, completedLessons, course, courseCompleted, notes, success]);
 
   // Format session timer
   const formatSessionTime = (seconds: number) => {

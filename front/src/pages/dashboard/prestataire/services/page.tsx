@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { backendClient } from '@/lib/backendClient';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -48,11 +48,7 @@ export default function PrestataireServicesPage() {
   });
   const [editService, setEditService] = useState<Partial<Service>>({});
 
-  useEffect(() => {
-    fetchServices();
-  }, [user?.id]);
-
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
       if (!user?.id) {
@@ -88,7 +84,11 @@ export default function PrestataireServicesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [error, user?.id]);
+
+  useEffect(() => {
+    void fetchServices();
+  }, [fetchServices]);
 
   const filteredServices = services.filter(s => {
     const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

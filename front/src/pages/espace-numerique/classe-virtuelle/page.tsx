@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { backendClient } from '@/lib/backendClient';
 
@@ -55,38 +55,44 @@ export default function ClasseVirtuellePage() {
   const [messages, setMessages] = useState<{ author: string; avatar: string; text: string; time: string; isInstructor?: boolean }[]>([]);
   const [expandedModule, setExpandedModule] = useState<string>('1');
 
-  const courseModules: Module[] = course ? [
-    {
-      id: '1',
-      title: `Module 1: Introduction ${course.title}`,
-      lessons: [
-        { id: '1-1', title: 'Introduction à la formation', duration: '45 min', type: 'video', completed: true, locked: false },
-        { id: '1-2', title: 'Concepts fondamentaux', duration: '1h 20min', type: 'video', completed: true, locked: false },
-        { id: '1-3', title: 'Pratique guidée', duration: '1h 30min', type: 'video', completed: true, locked: false },
-        { id: '1-4', title: 'Récapitulatif', duration: '1h 15min', type: 'video', completed: false, locked: false },
-        { id: '1-5', title: 'Quiz Module 1', duration: '20 min', type: 'quiz', completed: false, locked: true }
-      ]
-    },
-    {
-      id: '2',
-      title: `Module 2: Approfondissement`,
-      lessons: [
-        { id: '2-1', title: 'Techniques avancées', duration: '50 min', type: 'video', completed: false, locked: true },
-        { id: '2-2', title: 'Études de cas', duration: '1h 10min', type: 'video', completed: false, locked: true },
-        { id: '2-3', title: 'Exercices pratiques', duration: '1h 25min', type: 'exercise', completed: false, locked: true },
-        { id: '2-4', title: 'Quiz Module 2', duration: '30 min', type: 'quiz', completed: false, locked: true },
-      ]
-    },
-    {
-      id: '3',
-      title: `Module 3: Expertise`,
-      lessons: [
-        { id: '3-1', title: 'Maîtrise avancée', duration: '1h', type: 'video', completed: false, locked: true },
-        { id: '3-2', title: 'Projet final', duration: '2h', type: 'exercise', completed: false, locked: true },
-        { id: '3-3', title: 'Évaluation finale', duration: '1h', type: 'quiz', completed: false, locked: true },
-      ]
+  const courseModules = useMemo<Module[]>(() => {
+    if (!course) {
+      return [];
     }
-  ] : [];
+
+    return [
+      {
+        id: '1',
+        title: `Module 1: Introduction ${course.title}`,
+        lessons: [
+          { id: '1-1', title: 'Introduction à la formation', duration: '45 min', type: 'video', completed: true, locked: false },
+          { id: '1-2', title: 'Concepts fondamentaux', duration: '1h 20min', type: 'video', completed: true, locked: false },
+          { id: '1-3', title: 'Pratique guidée', duration: '1h 30min', type: 'video', completed: true, locked: false },
+          { id: '1-4', title: 'Récapitulatif', duration: '1h 15min', type: 'video', completed: false, locked: false },
+          { id: '1-5', title: 'Quiz Module 1', duration: '20 min', type: 'quiz', completed: false, locked: true }
+        ]
+      },
+      {
+        id: '2',
+        title: 'Module 2: Approfondissement',
+        lessons: [
+          { id: '2-1', title: 'Techniques avancées', duration: '50 min', type: 'video', completed: false, locked: true },
+          { id: '2-2', title: 'Études de cas', duration: '1h 10min', type: 'video', completed: false, locked: true },
+          { id: '2-3', title: 'Exercices pratiques', duration: '1h 25min', type: 'exercise', completed: false, locked: true },
+          { id: '2-4', title: 'Quiz Module 2', duration: '30 min', type: 'quiz', completed: false, locked: true },
+        ]
+      },
+      {
+        id: '3',
+        title: 'Module 3: Expertise',
+        lessons: [
+          { id: '3-1', title: 'Maîtrise avancée', duration: '1h', type: 'video', completed: false, locked: true },
+          { id: '3-2', title: 'Projet final', duration: '2h', type: 'exercise', completed: false, locked: true },
+          { id: '3-3', title: 'Évaluation finale', duration: '1h', type: 'quiz', completed: false, locked: true },
+        ]
+      }
+    ];
+  }, [course]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -115,10 +121,10 @@ export default function ClasseVirtuellePage() {
   }, [id]);
 
   useEffect(() => {
-    if (courseModules.length > 0 && !currentLesson) {
-      const firstUncompleted = courseModules[0]?.lessons.find(l => !l.completed && !l.locked);
-      setCurrentLesson(firstUncompleted || courseModules[0]?.lessons[0] || null);
-    }
+    if (courseModules.length === 0) return;
+    const firstUncompleted = courseModules[0]?.lessons.find(l => !l.completed && !l.locked);
+    const fallbackLesson = firstUncompleted || courseModules[0]?.lessons[0] || null;
+    setCurrentLesson((prev) => prev ?? fallbackLesson);
   }, [courseModules]);
 
   const handleSendChat = () => {

@@ -14,10 +14,7 @@ export default function DashboardPage() {
   const { totalUnread } = useBackendMessaging();
   const [showNotifications, setShowNotifications] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  if (user?.role) {
-    return <Navigate to={ROLE_DASHBOARD_PATHS[user.role]} replace />;
-  }
+  const redirectPath = user?.role ? ROLE_DASHBOARD_PATHS[user.role] : null;
 
   const userType = (user?.role ?? 'client') as 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'porteur' | 'partenaire';
 
@@ -25,6 +22,10 @@ export default function DashboardPage() {
     const timer = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
+
+  if (redirectPath) {
+    return <Navigate to={redirectPath} replace />;
+  }
 
   const dashboardContent: Record<string, {
     title: string;

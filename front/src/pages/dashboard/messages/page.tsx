@@ -96,7 +96,7 @@ export default function MessagesPage() {
     if (!activeConversationId && conversations.length > 0) {
       setActiveConversationId(conversations[0].id);
     }
-  }, [conversations, activeConversationId]);
+  }, [conversations, activeConversationId, setActiveConversationId]);
 
   // Close menus on outside click
   useEffect(() => {

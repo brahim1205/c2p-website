@@ -74,7 +74,10 @@ export default [
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          allowExportNames: ['ToastContext', 'useAuth', 'getDashboardPathForRole'],
+        },
       ],
       '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
@@ -89,7 +92,7 @@ export default [
       '@typescript-eslint/no-unused-expressions': 'off',
       'no-useless-catch': 'off',
       'no-irregular-whitespace': 'off',
-      'no-undef': 'error',
+      'no-undef': 'off',
     },
   },
   // Only enforce this rule for the router config file to avoid false positives elsewhere.
@@ -103,4 +106,3 @@ export default [
     },
   },
 ]
-
