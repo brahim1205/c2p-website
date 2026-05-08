@@ -6,7 +6,7 @@ Ce runbook suppose :
 - un VPS neuf
 - un acces SSH par cle
 - le domaine `c2p.sn`
-- un compte Neon deja cree
+- PostgreSQL heberge sur le VPS via Docker Compose
 - les acces DexPay et SendText disponibles cote metier
 
 Ce runbook n'expose pas Grafana, Prometheus, Alertmanager ou Loki publiquement. L'acces se fait par tunnel SSH. C'est le choix le plus propre pour un premier niveau enterprise sur VPS.
@@ -179,7 +179,7 @@ Tu vas utiliser ces valeurs au minimum pour :
 - `GF_SECURITY_ADMIN_PASSWORD`
 - toute cle fournisseur DexPay / SendText que tu dois regenerer
 
-Si la chaine Neon a deja circule hors coffre, elle doit etre rotee avant prod.
+Tous les anciens secrets de base de donnees, Redis, DexPay, SendText, Cloudinary et Grafana doivent etre rotes avant prod si leur valeur a circule hors coffre.
 
 ## 10. Creer les fichiers d'environnement de production
 
@@ -199,7 +199,7 @@ Remplis au minimum :
 ```dotenv
 NODE_ENV=production
 PORT=3000
-DATABASE_URL=postgresql://...
+DATABASE_URL=postgresql://c2p:...mot-de-passe-fort...@postgres:5432/c2p?schema=public&connection_limit=20&pool_timeout=10
 APP_ORIGINS=https://c2p.sn,https://www.c2p.sn
 COOKIE_DOMAIN=.c2p.sn
 COOKIE_SECURE=true
@@ -247,16 +247,22 @@ Remplis au minimum :
 
 ```dotenv
 BACKEND_ENV_FILE=./ops/env/backend.production.env
+POSTGRES_DB=c2p
+POSTGRES_USER=c2p
+POSTGRES_PASSWORD=...mot-de-passe-fort...
 REDIS_PASSWORD=...secret fort...
 GF_SECURITY_ADMIN_USER=admin
 GF_SECURITY_ADMIN_PASSWORD=...secret fort...
 GF_SERVER_ROOT_URL=http://127.0.0.1:3004
+BACKUP_RETENTION_DAYS=14
+BACKUP_CRON_SCHEDULE="30 2 * * *"
 ```
 
 Important :
 
 - `backend.production.env` = variables runtime du backend
 - `compose.production.env` = variables d'interpolation Docker Compose
+- `POSTGRES_*` dans `compose.production.env` doivent correspondre a la connexion utilisee dans `DATABASE_URL`
 - ne mélange pas les deux, sinon tu auras des comportements incohérents entre `docker compose config` et l'exécution réelle
 
 ## 11. Obtenir les certificats TLS
@@ -293,7 +299,7 @@ Important : la stack lit des variables pour Redis et Grafana. Il faut toujours u
 
 ```bash
 cd /srv/c2p
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml config >/tmp/c2p-compose.rendered.yml
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml config >/tmp/c2p-compose.rendered.yml
 sed -n '1,200p' /tmp/c2p-compose.rendered.yml
 ```
 
@@ -301,9 +307,9 @@ sed -n '1,200p' /tmp/c2p-compose.rendered.yml
 
 ```bash
 cd /srv/c2p
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml build
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml up -d
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml ps
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml build
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml up -d
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml ps
 ```
 
 Services attendus :
@@ -311,6 +317,7 @@ Services attendus :
 - `reverse-proxy`
 - `frontend`
 - `backend`
+- `postgres`
 - `redis`
 - `prometheus`
 - `alertmanager`
@@ -326,6 +333,7 @@ Depuis le VPS :
 
 ```bash
 curl -I http://127.0.0.1:3004
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml exec -T postgres pg_isready -U c2p -d c2p
 curl -fsS http://127.0.0.1:9090/-/healthy
 curl -fsS http://127.0.0.1:9093/-/healthy
 curl -fsS http://127.0.0.1:3100/ready
@@ -336,8 +344,8 @@ curl -fsSI https://c2p.sn | grep -Ei 'strict-transport-security|content-security
 Verifier aussi les logs :
 
 ```bash
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml logs --tail=100 reverse-proxy backend
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml logs --tail=100 grafana prometheus alertmanager loki promtail
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml logs --tail=100 reverse-proxy backend postgres
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml logs --tail=100 grafana prometheus alertmanager loki promtail
 ```
 
 ## 15. Acceder a Grafana, Prometheus, Alertmanager et Loki
@@ -401,7 +409,7 @@ receivers:
 Puis recharge :
 
 ```bash
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml up -d alertmanager
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml up -d alertmanager
 ```
 
 Verifier :
@@ -558,7 +566,61 @@ Le depot est dans un etat acceptable si :
 - `Security > Code scanning` ne contient pas d'alerte critique ouverte
 - `Security > Dependabot alerts` ne contient pas d'alerte critique ouverte
 
-## 23. Renouvellement des certificats
+## 23. Sauvegarde PostgreSQL nocturne
+
+Les scripts d'exploitation sont deja dans le repo :
+
+- `ops/scripts/postgres-backup.sh`
+- `ops/scripts/postgres-restore.sh`
+- `ops/scripts/install-postgres-backup-cron.sh`
+
+Creer d'abord le dossier de sauvegarde :
+
+```bash
+mkdir -p /srv/c2p/backups/postgres
+chmod 700 /srv/c2p/backups /srv/c2p/backups/postgres
+```
+
+Tester une sauvegarde manuelle :
+
+```bash
+cd /srv/c2p
+COMPOSE_ENV_FILE=/srv/c2p/ops/env/compose.production.env ./ops/scripts/postgres-backup.sh
+ls -lh /srv/c2p/backups/postgres
+```
+
+Installer ensuite le cron systeme :
+
+```bash
+cd /srv/c2p
+sudo COMPOSE_ENV_FILE=/srv/c2p/ops/env/compose.production.env BACKUP_RETENTION_DAYS=14 BACKUP_CRON_SCHEDULE='30 2 * * *' ./ops/scripts/install-postgres-backup-cron.sh
+sudo cat /etc/cron.d/c2p-postgres-backup
+sudo cp /srv/c2p/ops/logrotate/c2p-postgres-backup /etc/logrotate.d/c2p-postgres-backup
+sudo logrotate -d /etc/logrotate.d/c2p-postgres-backup
+```
+
+Ce cron lance une sauvegarde chaque nuit a `02:30`, conserve `14` jours, et ecrit les logs dans :
+
+```txt
+/var/log/c2p-postgres-backup.log
+```
+
+Verifier le cron :
+
+```bash
+sudo systemctl status cron --no-pager
+sudo grep c2p-postgres-backup /etc/cron.d/c2p-postgres-backup
+sudo tail -n 50 /var/log/c2p-postgres-backup.log || true
+```
+
+Restaurer une sauvegarde :
+
+```bash
+cd /srv/c2p
+COMPOSE_ENV_FILE=/srv/c2p/ops/env/compose.production.env ./ops/scripts/postgres-restore.sh /srv/c2p/backups/postgres/c2p-postgres-YYYYMMDDTHHMMSSZ.sql.gz
+```
+
+## 24. Renouvellement des certificats
 
 Teste d'abord :
 
@@ -578,7 +640,7 @@ chown deploy:deploy /srv/c2p/ops/nginx/certs/fullchain.pem /srv/c2p/ops/nginx/ce
 chmod 644 /srv/c2p/ops/nginx/certs/fullchain.pem
 chmod 600 /srv/c2p/ops/nginx/certs/privkey.pem
 cd /srv/c2p
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml up -d reverse-proxy
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml up -d reverse-proxy
 EOF
 sudo chmod +x /usr/local/bin/c2p-refresh-certs.sh
 ```
@@ -595,19 +657,19 @@ Puis :
 15 3 * * * certbot renew --quiet --deploy-hook /usr/local/bin/c2p-refresh-certs.sh
 ```
 
-## 24. Mise a jour applicative
+## 25. Mise a jour applicative
 
 ```bash
 cd /srv/c2p
 git fetch --all --tags
 git checkout main
 git pull --ff-only
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml build
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml up -d
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml ps
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml build
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml up -d
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml ps
 ```
 
-## 25. Rollback
+## 26. Rollback
 
 Si tu deploies par tag git :
 
@@ -615,11 +677,11 @@ Si tu deploies par tag git :
 cd /srv/c2p
 git fetch --all --tags
 git checkout v1.0.0
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml build
-docker compose --env-file ops/env/backend.production.env -f docker-compose.production.yml up -d
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml build
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml up -d
 ```
 
-## 26. Checklist de sortie
+## 27. Checklist de sortie
 
 Le deploiement est propre si :
 
@@ -627,6 +689,7 @@ Le deploiement est propre si :
 - `https://c2p.sn/api/healthz` repond
 - les headers de securite sont presents
 - `docker compose ps` ne montre aucun service en boucle
+- une sauvegarde `.sql.gz` recente existe dans `/srv/c2p/backups/postgres`
 - Grafana affiche `C2P Overview`
 - Prometheus montre les targets `UP`
 - Loki remonte les logs Docker
@@ -635,7 +698,7 @@ Le deploiement est propre si :
 - le dashboard Paiements ouvre DexPay
 - la page Admin Communications remonte l'etat SMS
 
-## 26. Ecarts connus a garder en tete
+## 28. Ecarts connus a garder en tete
 
 1. La CSP front reste forte sur `script-src`, mais `style-src 'unsafe-inline'` est encore necessaire tant que tout le front historique n'a pas ete purge de ses styles inline.
 2. `SENDTEXT_SEND_PATH` doit venir de la documentation ou du support SendText : ce point n'est pas public.

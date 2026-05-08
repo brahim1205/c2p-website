@@ -50,7 +50,8 @@ Base de départ:
 - [backend/.env.example](/home/cherif/Bureau/kodify/CP2/backend/.env.example)
 - [ops/env/backend.production.env.example](/home/cherif/Bureau/kodify/CP2/ops/env/backend.production.env.example)
 
-Important: la chaîne de connexion Neon qui a circulé hors coffre doit être considérée compromise et rotée avant la mise en production.
+Important: tous les anciens secrets base de données, Redis, DexPay, SendText, Cloudinary et Grafana qui ont circulé hors coffre doivent être considérés compromis et rotés avant la mise en production.
+En production VPS, la cible est désormais PostgreSQL local à la stack Docker, pas une base externe.
 
 ## Stack prod
 
@@ -59,6 +60,8 @@ Le monorepo est prévu pour tourner avec:
 - `reverse-proxy` Nginx public
 - `frontend` statique Nginx unprivileged
 - `backend` NestJS
+- `postgres` PostgreSQL 16
+- `redis`
 - `prometheus`
 - `alertmanager`
 - `grafana`
@@ -73,9 +76,10 @@ Fichier principal:
 
 ```bash
 cp ops/env/backend.production.env.example ops/env/backend.production.env
-docker compose -f docker-compose.production.yml build
-docker compose -f docker-compose.production.yml up -d
-docker compose -f docker-compose.production.yml ps
+cp ops/env/compose.production.env.example ops/env/compose.production.env
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml build
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml up -d
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml ps
 ```
 
 Contrôles immédiats:
@@ -122,9 +126,15 @@ docker compose -f docker-compose.production.yml up -d
 
 Minimum attendu:
 
-- sauvegarde Neon automatisée côté fournisseur
-- export régulier de la configuration VPS
+- sauvegarde PostgreSQL automatisée chaque nuit
+- rétention locale chiffrée ou au minimum restreinte par permissions
 - test de restauration planifié
+
+Scripts fournis:
+
+- [ops/scripts/postgres-backup.sh](/home/cherif/Bureau/kodify/CP2/ops/scripts/postgres-backup.sh)
+- [ops/scripts/postgres-restore.sh](/home/cherif/Bureau/kodify/CP2/ops/scripts/postgres-restore.sh)
+- [ops/scripts/install-postgres-backup-cron.sh](/home/cherif/Bureau/kodify/CP2/ops/scripts/install-postgres-backup-cron.sh)
 
 ## Limites restantes
 

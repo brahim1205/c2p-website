@@ -16,6 +16,7 @@ front/.vite/
 *.pid
 coverage/
 .DS_Store
+backups/
 
 # monitoring state
 ops/grafana/data/
