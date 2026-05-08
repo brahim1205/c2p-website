@@ -288,7 +288,7 @@ export class AuthService {
     return {
       httpOnly: true,
       secure: this.config.cookieSecure,
-      sameSite: 'lax',
+      sameSite: this.config.cookieSameSite,
       domain: this.config.cookieDomain,
       path: '/',
     };

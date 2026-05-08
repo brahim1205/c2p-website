@@ -1,17 +1,16 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { AppService } from '../app.service.js';
 import { PublicIntakeService } from './public-intake.service.js';
 
 @Controller()
 export class PublicController {
-  constructor(
-    private readonly appService: AppService,
-    private readonly publicIntakeService: PublicIntakeService,
-  ) {}
+  constructor(private readonly publicIntakeService: PublicIntakeService) {}
 
   @Get('healthz')
   healthz() {
-    return this.appService.getHealth();
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Post('public/contact')

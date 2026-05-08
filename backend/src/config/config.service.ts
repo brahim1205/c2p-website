@@ -22,6 +22,11 @@ export class ConfigService {
     return this.configService.get('DATABASE_URL')!;
   }
 
+  get redisUrl(): string | undefined {
+    const value = this.configService.get('REDIS_URL');
+    return value ? String(value) : undefined;
+  }
+
   get redisHost(): string {
     return this.configService.get('REDIS_HOST')!;
   }
@@ -97,6 +102,10 @@ export class ConfigService {
     return this.configService.get('COOKIE_SECURE') === 'true';
   }
 
+  get cookieSameSite(): 'strict' | 'lax' | 'none' {
+    return (this.configService.get('COOKIE_SAMESITE') ?? 'lax') as 'strict' | 'lax' | 'none';
+  }
+
   get trustProxy(): boolean {
     return this.configService.get('TRUST_PROXY') === 'true';
   }
@@ -135,6 +144,10 @@ export class ConfigService {
 
   get frontendMonitoringEnabled(): boolean {
     return this.configService.get('FRONTEND_MONITORING_ENABLED') === 'true';
+  }
+
+  get metricsEnabled(): boolean {
+    return this.configService.get('ENABLE_METRICS') !== 'false';
   }
 
   get smsProvider(): 'disabled' | 'mock' | 'sendtext' {

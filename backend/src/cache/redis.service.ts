@@ -9,22 +9,30 @@ export class RedisService implements OnModuleDestroy {
 
   constructor(configService: ConfigService) {
     if (configService.redisDisabled || !configService.redisHost || configService.redisHost === 'disabled') {
-      this.client = null;
-      this.logger.warn('Redis disabled by configuration.');
-      return;
+      if (!configService.redisUrl) {
+        this.client = null;
+        this.logger.warn('Redis disabled by configuration.');
+        return;
+      }
     }
 
-    this.client = new Redis({
-      host: configService.redisHost,
-      port: configService.redisPort,
-      username: configService.redisUsername,
-      password: configService.redisPassword,
-      db: configService.redisDb,
-      tls: configService.redisTls ? {} : undefined,
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-      enableOfflineQueue: false,
-    });
+    this.client = configService.redisUrl
+      ? new Redis(configService.redisUrl, {
+        lazyConnect: true,
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+      })
+      : new Redis({
+        host: configService.redisHost,
+        port: configService.redisPort,
+        username: configService.redisUsername,
+        password: configService.redisPassword,
+        db: configService.redisDb,
+        tls: configService.redisTls ? {} : undefined,
+        lazyConnect: true,
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+      });
 
     this.client.on('connect', () => this.logger.log('Connected to Redis'));
     this.client.on('error', (error: unknown) => this.logger.error('Redis error', error));
