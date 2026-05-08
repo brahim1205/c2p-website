@@ -16,6 +16,17 @@ RUN apk add --no-cache openssl wget
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
+# The runtime image does not need package managers. Removing them cuts the
+# attack surface and avoids Trivy findings coming only from bundled npm/yarn.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    /usr/local/lib/node_modules/corepack \
+    /opt/yarn-v* \
+ && rm -f /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/bin/corepack \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg
+
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
 
