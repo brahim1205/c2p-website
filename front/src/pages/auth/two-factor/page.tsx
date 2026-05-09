@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
@@ -160,12 +161,11 @@ export default function TwoFactorAuthPage() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-blue-50 to-purple-50 flex items-center justify-center p-6">
       <div className="max-w-md w-full">
         {/* Logo */}
-        <Link to="/" className="flex items-center justify-center space-x-3 mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">C2P</span>
-          </div>
-          <span className="text-2xl font-bold text-gray-900">Centre C2P</span>
-        </Link>
+        <BrandLogo
+          to="/"
+          className="mb-8 flex items-center justify-center"
+          imageClassName="h-14 w-auto object-contain"
+        />
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">

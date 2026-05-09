@@ -79,6 +79,17 @@ export default function AdminUsersPage() {
     }
   };
 
+  const toggleTrainerVerification = async (user: ManagedUser) => {
+    try {
+      const updated = await updateManagedUser(user.id, { expertVerified: !user.expertVerified });
+      setUsers((prev) => prev.map((entry) => (entry.id === user.id ? ({ ...entry, ...(updated as ManagedUser) }) : entry)));
+      success('Badge mis à jour', !user.expertVerified ? 'Le formateur est maintenant vérifié.' : 'La vérification du formateur a été retirée.');
+    } catch (err) {
+      console.error(err);
+      error('Erreur', 'Impossible de mettre à jour le badge expert.');
+    }
+  };
+
   const applyBulkStatus = async (status: ManagedUser['status']) => {
     try {
       await Promise.all(selectedUsers.map((id) => updateManagedUser(id, { status })));
@@ -239,15 +250,22 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">{ROLE_LABELS[user.role]}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                        user.status === 'active'
-                          ? 'bg-green-100 text-green-700'
-                          : user.status === 'pending'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-red-100 text-red-700'
-                      }`}>
-                        {statusLabels[user.status]}
-                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                          user.status === 'active'
+                            ? 'bg-green-100 text-green-700'
+                            : user.status === 'pending'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-red-100 text-red-700'
+                        }`}>
+                          {statusLabels[user.status]}
+                        </span>
+                        {user.role === 'formateur' && user.expertVerified ? (
+                          <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                            Expert vérifié
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{formatDate(user.createdAt)}</td>
                     <td className="px-6 py-4">
@@ -258,6 +276,18 @@ export default function AdminUsersPage() {
                             className="px-3 py-1.5 rounded-lg border border-green-200 text-green-700 text-xs font-medium hover:bg-green-50"
                           >
                             Valider
+                          </button>
+                        )}
+                        {user.role === 'formateur' && (
+                          <button
+                            onClick={() => toggleTrainerVerification(user)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                              user.expertVerified
+                                ? 'border border-amber-200 text-amber-700 hover:bg-amber-50'
+                                : 'border border-teal-200 text-teal-700 hover:bg-teal-50'
+                            }`}
+                          >
+                            {user.expertVerified ? 'Retirer le badge' : 'Vérifier'}
                           </button>
                         )}
                         {user.status !== 'suspended' ? (

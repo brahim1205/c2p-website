@@ -12,6 +12,7 @@ const CguPage = lazy(() => import('../pages/legal/cgu/page'));
 const CookiesPage = lazy(() => import('../pages/legal/cookies/page'));
 const AlloPrestaPage = lazy(() => import('../pages/allopresta/page'));
 const PrestatairePage = lazy(() => import('../pages/allopresta/prestataire/page'));
+const PublicInstructorProfilePage = lazy(() => import('../pages/formateurs/[id]/page'));
 const EspaceNumeriquePage = lazy(() => import('../pages/espace-numerique/page'));
 const FormationPage = lazy(() => import('../pages/espace-numerique/formation/page'));
 const MonApprentissagePage = lazy(() => import('../pages/espace-numerique/mon-apprentissage/page'));
@@ -46,16 +47,23 @@ const AdminReportsPage = lazy(() => import('../pages/admin/reports/page'));
 const AdminAnalyticsPage = lazy(() => import('../pages/admin/analytics/page'));
 const AdminSecurityPage = lazy(() => import('../pages/admin/security/page'));
 const AdminProfilePage = lazy(() => import('../pages/admin/profile/page'));
+const AdminMessagesPage = lazy(() => import('../pages/admin/messages/page'));
+const AdminNotificationsPage = lazy(() => import('../pages/admin/notifications/page'));
 const AdminCommunicationsPage = lazy(() => import('../pages/admin/communications/page'));
 const AdminSettingsPage = lazy(() => import('../pages/admin/settings/page'));
 const NotFoundPage = lazy(() => import('../pages/NotFound'));
 
 // Formateur pages
 const FormateurCoursPage = lazy(() => import('../pages/dashboard/formateur/mes-cours/page'));
+const FormateurCourseProgramPage = lazy(() => import('../pages/dashboard/formateur/mes-cours/[id]/programme/page'));
 const FormateurClassesPage = lazy(() => import('../pages/dashboard/formateur/classes-virtuelles/page'));
 const FormateurApprenantsPage = lazy(() => import('../pages/dashboard/formateur/apprenants/page'));
 const FormateurEvaluationsPage = lazy(() => import('../pages/dashboard/formateur/evaluations/page'));
 const FormateurCertificatsPage = lazy(() => import('../pages/dashboard/formateur/certificats/page'));
+const FormateurPublicProfilePage = lazy(() => import('../pages/dashboard/formateur/profil-public/page'));
+const FormateurRevenuePage = lazy(() => import('../pages/dashboard/formateur/revenus/page'));
+const FormateurAnalyticsPage = lazy(() => import('../pages/dashboard/formateur/analytics/page'));
+const FormateurCommunityPage = lazy(() => import('../pages/dashboard/formateur/communaute/page'));
 
 // Prestataire pages
 const PrestataireServicesPage = lazy(() => import('../pages/dashboard/prestataire/services/page'));
@@ -169,6 +177,14 @@ const routes: RouteObject[] = [
     element: (
       <RouteWrapper layout="public" hideFooter={false}>
         <PrestatairePage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/formateurs/:id',
+    element: (
+      <RouteWrapper layout="public" hideFooter={false}>
+        <PublicInstructorProfilePage />
       </RouteWrapper>
     )
   },
@@ -400,6 +416,14 @@ const routes: RouteObject[] = [
     )
   },
   {
+    path: '/dashboard/formateur/mes-cours/:id/programme',
+    element: (
+      <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={["formateur"]}>
+        <FormateurCourseProgramPage />
+      </RouteWrapper>
+    )
+  },
+  {
     path: '/dashboard/formateur/classes-virtuelles',
     element: (
       <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={["formateur"]}>
@@ -428,6 +452,38 @@ const routes: RouteObject[] = [
     element: (
       <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={["formateur"]}>
         <FormateurCertificatsPage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/dashboard/formateur/profil-public',
+    element: (
+      <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={["formateur"]}>
+        <FormateurPublicProfilePage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/dashboard/formateur/revenus',
+    element: (
+      <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={["formateur"]}>
+        <FormateurRevenuePage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/dashboard/formateur/analytics',
+    element: (
+      <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={["formateur"]}>
+        <FormateurAnalyticsPage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/dashboard/formateur/communaute',
+    element: (
+      <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={["formateur"]}>
+        <FormateurCommunityPage />
       </RouteWrapper>
     )
   },
@@ -682,6 +738,22 @@ const routes: RouteObject[] = [
     element: (
       <RouteWrapper layout="admin" requireAuth={true} allowedRoles={['admin']}>
         <AdminProfilePage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/admin/messages',
+    element: (
+      <RouteWrapper layout="admin" requireAuth={true} allowedRoles={['admin']}>
+        <AdminMessagesPage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/admin/notifications',
+    element: (
+      <RouteWrapper layout="admin" requireAuth={true} allowedRoles={['admin']}>
+        <AdminNotificationsPage />
       </RouteWrapper>
     )
   },

@@ -249,7 +249,7 @@ export default function ClientDashboardPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-3">Support</h2>
               <p className="text-sm text-gray-600 mb-4">Notre equipe reste disponible pour vos reservations et commandes.</p>
-              <Link to="/dashboard/messages" className="block w-full rounded-lg bg-gray-900 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-gray-800">
+              <Link to="/dashboard/messages?support=1" className="block w-full rounded-lg bg-gray-900 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-gray-800">
                 Contacter le support
               </Link>
             </div>

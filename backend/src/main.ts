@@ -2,8 +2,9 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { json, urlencoded, type NextFunction, type Request, type Response } from 'express';
+import { json, static as serveStatic, urlencoded, type NextFunction, type Request, type Response } from 'express';
 import { randomUUID } from 'crypto';
+import { resolve } from 'node:path';
 import { AppModule } from './app.module.js';
 import { ConfigService } from './config/config.service.js';
 import { AuthService } from './auth/auth.service.js';
@@ -35,6 +36,15 @@ async function bootstrap() {
   app.use(cookieParser());
   app.use(json({ limit: '256kb' }));
   app.use(urlencoded({ extended: true, limit: '256kb' }));
+  expressApp.use('/uploads', serveStatic(resolve(process.cwd(), configService.uploadStorageRoot), {
+    fallthrough: false,
+    index: false,
+    maxAge: '7d',
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    },
+  }));
 
   const globalRateLimit = new Map<string, { count: number; resetAt: number }>();
   const loginRateLimit = new Map<string, { count: number; resetAt: number }>();
@@ -117,6 +127,8 @@ async function bootstrap() {
       '/api/auth/reset-password',
       '/api/auth/verify-2fa',
       '/api/auth/refresh',
+      '/api/monitoring/frontend-errors',
+      '/api/monitoring/web-vitals',
     ];
     if (exempt.includes(path)) {
       return next();

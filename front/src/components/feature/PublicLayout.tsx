@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import BrandLogo from '@/components/base/BrandLogo';
 import { apiRequest } from '@/lib/api';
 
 interface PublicLayoutProps {
@@ -47,9 +48,11 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
         <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}>
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-20">
-              <Link to="/" className="flex items-center">
-                <span className={`text-lg font-bold tracking-tight ${textColor}`}>Centre C2P</span>
-              </Link>
+              <BrandLogo
+                to="/"
+                className="flex items-center"
+                imageClassName="h-10 w-auto object-contain"
+              />
 
               {/* Desktop Links */}
               <div className="hidden md:flex items-center space-x-8">
@@ -253,7 +256,11 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
                   <p className="mb-3 text-xs font-semibold uppercase tracking-[0.34em] text-[#d5b46f]">
                     Premium professional hub
                   </p>
-                  <span className="text-2xl font-semibold tracking-tight text-white">Centre C2P</span>
+                  <BrandLogo
+                    to="/"
+                    className="inline-flex items-center"
+                    imageClassName="h-12 w-auto object-contain"
+                  />
                 </div>
                 <p className="mb-7 max-w-sm text-[14px] leading-relaxed text-white/58">
                   Groupe C2P Consulting L&amp;M : services, formation et incubation reunis dans une experience professionnelle claire, selective et orientee resultat.

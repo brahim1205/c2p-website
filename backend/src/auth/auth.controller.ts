@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service.js';
-import type { AuthUser, Role } from './auth.store.js';
+import type { AuthUser, CertificationItem, PaymentSettings, PortfolioItem, Role, SocialLinks } from './auth.store.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 
 @Controller('auth')
@@ -114,11 +114,36 @@ export class AuthController {
     payload: Partial<
       Pick<
         AuthUser,
-        'firstName' | 'lastName' | 'email' | 'phone' | 'avatar' | 'bio' | 'location' | 'role' | 'status' | 'is2FAEnabled'
+        | 'firstName'
+        | 'lastName'
+        | 'email'
+        | 'phone'
+        | 'avatar'
+        | 'bio'
+        | 'location'
+        | 'publicTitle'
+        | 'website'
+        | 'preferredLanguage'
+        | 'languages'
+        | 'skills'
+        | 'socialLinks'
+        | 'certifications'
+        | 'portfolioItems'
+        | 'introVideo'
+        | 'publicProfileEnabled'
+        | 'expertVerified'
+        | 'role'
+        | 'status'
+        | 'is2FAEnabled'
       >
     >,
   ) {
     return this.authService.patchUser(request, id, payload);
+  }
+
+  @Get('public-profile/:id')
+  getPublicProfile(@Param('id') id: string) {
+    return this.authService.getPublicInstructorProfile(id);
   }
 
   @Get('profile/:id')
@@ -130,7 +155,30 @@ export class AuthController {
   updateProfile(
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body() payload: Partial<Pick<AuthUser, 'firstName' | 'lastName' | 'email' | 'phone' | 'avatar' | 'bio' | 'location'>>,
+    @Body()
+    payload: Partial<Pick<
+      AuthUser,
+      | 'firstName'
+      | 'lastName'
+      | 'email'
+      | 'phone'
+      | 'avatar'
+      | 'bio'
+      | 'location'
+      | 'publicTitle'
+      | 'website'
+      | 'preferredLanguage'
+      | 'languages'
+      | 'skills'
+      | 'introVideo'
+      | 'publicProfileEnabled'
+      | 'expertVerified'
+    >> & {
+      socialLinks?: SocialLinks;
+      certifications?: CertificationItem[];
+      portfolioItems?: PortfolioItem[];
+      paymentSettings?: PaymentSettings;
+    },
   ) {
     return this.authService.updateProfile(request, id, payload);
   }

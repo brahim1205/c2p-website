@@ -3,7 +3,7 @@ import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { createAdminCampaign, deleteAdminCampaign, fetchAdminCampaigns, updateAdminCampaign, type AdminCampaign } from '@/lib/adminApi';
-import { dispatchSmsCampaign, fetchSmsGatewayStatus } from '@/lib/communicationsApi';
+import { dispatchSmsCampaign, fetchEmailGatewayStatus, fetchSmsGatewayStatus } from '@/lib/communicationsApi';
 
 const channelConfig = {
   email: { icon: 'ri-mail-line', label: 'Email', color: 'bg-teal-500' },
@@ -23,6 +23,7 @@ export default function AdminCommunicationsPage() {
   const { success, error } = useToast();
   const [campaigns, setCampaigns] = useState<AdminCampaign[]>([]);
   const [smsGatewayStatus, setSmsGatewayStatus] = useState<{ provider: string; configured: boolean } | null>(null);
+  const [emailGatewayStatus, setEmailGatewayStatus] = useState<{ provider: string; configured: boolean } | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'draft' | 'scheduled' | 'sent'>('all');
   const [showCompose, setShowCompose] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -52,9 +53,15 @@ export default function AdminCommunicationsPage() {
   useEffect(() => {
     void (async () => {
       try {
-        setSmsGatewayStatus(await fetchSmsGatewayStatus());
+        const [smsStatus, emailStatus] = await Promise.all([
+          fetchSmsGatewayStatus(),
+          fetchEmailGatewayStatus(),
+        ]);
+        setSmsGatewayStatus(smsStatus);
+        setEmailGatewayStatus(emailStatus);
       } catch {
         setSmsGatewayStatus(null);
+        setEmailGatewayStatus(null);
       }
     })();
   }, []);
@@ -86,16 +93,24 @@ export default function AdminCommunicationsPage() {
       });
 
       let smsDispatchSummary = '';
-      if (!composeForm.schedule && (composeForm.type === 'sms' || composeForm.type === 'all')) {
+      if (!composeForm.schedule) {
         const result = await dispatchSmsCampaign({
           title: composeForm.title,
           type: composeForm.type,
           target: composeForm.target,
           content: composeForm.content,
         });
-        smsDispatchSummary = result.skipped
-          ? ' Envoi SMS ignore.'
-          : ` ${result.dispatched}/${result.recipients} SMS remis.`;
+        const parts = [];
+        if (composeForm.type === 'email' || composeForm.type === 'all') {
+          parts.push(`${result.channels.email.delivered}/${result.channels.email.attempted} email`);
+        }
+        if (composeForm.type === 'sms' || composeForm.type === 'all') {
+          parts.push(`${result.channels.sms.delivered}/${result.channels.sms.attempted} SMS`);
+        }
+        if (composeForm.type === 'push' || composeForm.type === 'all') {
+          parts.push(`${result.channels.push.delivered}/${result.channels.push.attempted} notification`);
+        }
+        smsDispatchSummary = parts.length > 0 ? ` ${parts.join(' · ')}.` : '';
       }
 
       setCampaigns((prev) => [created, ...prev]);
@@ -162,6 +177,13 @@ export default function AdminCommunicationsPage() {
                 <span className={`h-2 w-2 rounded-full ${smsGatewayStatus.configured ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 <span>SMS {smsGatewayStatus.provider}</span>
                 <span>{smsGatewayStatus.configured ? 'configure' : 'configuration requise'}</span>
+              </div>
+            )}
+            {emailGatewayStatus && (
+              <div className="mt-3 ml-2 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600">
+                <span className={`h-2 w-2 rounded-full ${emailGatewayStatus.configured ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                <span>Email {emailGatewayStatus.provider}</span>
+                <span>{emailGatewayStatus.configured ? 'configure' : 'configuration requise'}</span>
               </div>
             )}
           </div>

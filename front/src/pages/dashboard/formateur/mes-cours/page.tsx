@@ -3,44 +3,150 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
-import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
+import { SkeletonCard } from '@/components/base/Skeleton';
 import { backendClient } from '@/lib/backendClient';
 import ImageUploadField from '@/components/base/ImageUploadField';
+import CourseCreationWizard, { getWizardStorageKey } from './components/CourseCreationWizard';
+import {
+  courseStatusClasses,
+  courseStatusLabels,
+  getInstructorWorkflowAction,
+  type CourseWorkflowStatus,
+} from '@/lib/courseWorkflow';
+import { useAuth } from '@/hooks/useAuth';
 
 
 interface Course {
-  id: number;
+  id: string | number;
   title: string;
   category: string;
   description: string | null;
+  level: 'beginner' | 'intermediate' | 'advanced' | 'all_levels';
+  access_type: 'free' | 'paid';
+  is_free: boolean;
+  promotion_percentage: number;
+  trailer_url: string | null;
   students_count: number;
   completion_rate: number;
-  status: string;
+  status: CourseWorkflowStatus;
   revenue: number;
   modules: number;
   duration: string | null;
   updated_at: string;
   thumbnail: string | null;
   price: number;
+  current_price?: number;
+}
+
+type CourseFormErrors = Partial<Record<
+  'title' | 'category' | 'description' | 'level' | 'modules' | 'duration' | 'price' | 'promotion_percentage' | 'thumbnail' | 'trailer_url',
+  string
+>>;
+
+const COURSE_LEVEL_LABELS: Record<Course['level'], string> = {
+  beginner: 'Débutant',
+  intermediate: 'Intermédiaire',
+  advanced: 'Avancé',
+  all_levels: 'Tous niveaux',
+};
+
+function getFieldClass(hasError?: boolean) {
+  return `w-full px-3 py-2 border rounded-lg focus:outline-none text-sm ${
+    hasError ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-teal-500'
+  }`;
+}
+
+function isValidHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function validateCourseForm(form: Partial<Course>) {
+  const errors: CourseFormErrors = {};
+  const title = String(form.title ?? '').trim();
+  const category = String(form.category ?? '').trim();
+  const description = String(form.description ?? '');
+  const duration = String(form.duration ?? '').trim();
+  const modules = Number(form.modules ?? 0);
+  const price = Number(form.price ?? 0);
+  const promotionPercentage = Number(form.promotion_percentage ?? 0);
+  const thumbnail = String(form.thumbnail ?? '').trim();
+  const trailerUrl = String(form.trailer_url ?? '').trim();
+  const level = String(form.level ?? '').trim();
+  const isFree = Boolean(form.is_free);
+
+  if (!title) errors.title = 'Le titre est obligatoire.';
+  else if (title.length < 3) errors.title = 'Le titre doit contenir au moins 3 caractères.';
+
+  if (!category) errors.category = 'La catégorie est obligatoire.';
+  else if (category.length < 2) errors.category = 'La catégorie doit contenir au moins 2 caractères.';
+
+  if (description.length > 500) errors.description = 'La description ne peut pas dépasser 500 caractères.';
+  if (!['beginner', 'intermediate', 'advanced', 'all_levels'].includes(level)) {
+    errors.level = 'Sélectionnez un niveau valide.';
+  }
+  if (!duration) errors.duration = 'La durée est obligatoire.';
+  if (!Number.isFinite(modules) || modules < 1 || modules > 200) errors.modules = 'Le nombre de modules doit être compris entre 1 et 200.';
+  if (!Number.isFinite(price) || price < 0) errors.price = 'Le prix doit être supérieur ou égal à 0.';
+  if (!isFree && price <= 0) errors.price = 'Renseignez un prix supérieur à 0 pour une formation payante.';
+  if (!Number.isFinite(promotionPercentage) || promotionPercentage < 0 || promotionPercentage > 100) {
+    errors.promotion_percentage = 'La promotion doit être comprise entre 0 et 100%.';
+  }
+  if (thumbnail && !isValidHttpUrl(thumbnail)) errors.thumbnail = 'La miniature doit être une URL http(s) valide.';
+  if (trailerUrl && !isValidHttpUrl(trailerUrl)) errors.trailer_url = 'La bande-annonce doit être une URL http(s) valide.';
+
+  return errors;
 }
 
 export default function FormateurCoursPage() {
   const { success, error } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [workflowCourse, setWorkflowCourse] = useState<Course | null>(null);
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Course>>();
-  const [createForm, setCreateForm] = useState<Partial<Course>>({
-    status: 'draft',
-    modules: 1,
-    price: 0,
-    duration: '1h',
-  });
+  const [editErrors, setEditErrors] = useState<CourseFormErrors>({});
+  const [editFormMessage, setEditFormMessage] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const updateEditForm = <K extends keyof Course>(field: K, value: Course[K] | undefined) => {
+    setEditForm((current) => {
+      const next = { ...(current || {}), [field]: value };
+      if (field === 'is_free') {
+        const isFree = value === true;
+        next.is_free = isFree;
+        next.access_type = isFree ? 'free' : 'paid';
+        if (isFree) {
+          next.price = 0;
+        }
+      }
+      if (field === 'price' && Number(value ?? 0) > 0) {
+        next.is_free = false;
+        next.access_type = 'paid';
+      }
+      return next;
+    });
+    setEditErrors((current) => ({ ...current, [field]: undefined }));
+    setEditFormMessage(null);
+  };
+
+  const openCreateModal = () => {
+    if (typeof window !== 'undefined' && user?.id) {
+      window.localStorage.removeItem(getWizardStorageKey(user.id));
+      window.localStorage.removeItem(`c2p:trainer-course-draft:${user.id}`);
+    }
+    setShowCreateWizard(true);
+  };
 
   const fetchCourses = useCallback(async () => {
     setLoading(true);
@@ -55,6 +161,11 @@ export default function FormateurCoursPage() {
         category: 'General',
         completion_rate: 0,
         duration: 'N/A',
+        level: 'intermediate',
+        access_type: 'paid',
+        is_free: false,
+        promotion_percentage: 0,
+        trailer_url: null,
         modules: 0,
         price: 0,
         revenue: 0,
@@ -83,29 +194,31 @@ export default function FormateurCoursPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handlePublish = (course: Course) => {
-    setSelectedCourse(course);
-    setShowPublishModal(true);
+  const handleWorkflowAction = (course: Course) => {
+    setWorkflowCourse(course);
+    setShowWorkflowModal(true);
   };
 
-  const confirmPublish = async () => {
-    if (!selectedCourse) return;
+  const confirmWorkflowAction = async () => {
+    if (!workflowCourse) return;
+    const action = getInstructorWorkflowAction(workflowCourse.status);
+    if (!action) return;
     try {
       const { error: err } = await backendClient
         .from('courses')
-        .update({ status: 'published', updated_at: new Date().toISOString() })
-        .eq('id', selectedCourse.id);
+        .update({ status: action.nextStatus, updated_at: new Date().toISOString() })
+        .eq('id', workflowCourse.id);
 
       if (err) throw err;
-      success(
-        'Formation publiée',
-        `La formation "${selectedCourse.title}" est maintenant visible sur la plateforme.`
-      );
-      setShowPublishModal(false);
-      setSelectedCourse(null);
+      success('Workflow mis à jour', `La formation "${workflowCourse.title}" est passée en ${courseStatusLabels[action.nextStatus].toLowerCase()}.`);
+      setShowWorkflowModal(false);
+      setWorkflowCourse(null);
       fetchCourses();
     } catch (err: unknown) {
-      error('Erreur', 'Impossible de publier la formation.');
+      const message = err && typeof err === 'object' && 'message' in err
+        ? String(err.message)
+        : 'Impossible de mettre à jour le statut de la formation.';
+      error('Transition impossible', message);
       console.error(err);
     }
   };
@@ -113,22 +226,36 @@ export default function FormateurCoursPage() {
   const handleEdit = (course: Course) => {
     setSelectedCourse(course);
     setEditForm({ ...course });
+    setEditErrors({});
+    setEditFormMessage(null);
     setShowEditModal(true);
   };
 
   const confirmEdit = async () => {
-    if (!selectedCourse || !editForm.title) return;
+    if (!selectedCourse) return;
+    const nextErrors = validateCourseForm(editForm || {});
+    setEditErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setEditFormMessage('Corrigez les champs signalés avant d’enregistrer.');
+      return;
+    }
+    setIsUpdating(true);
     try {
       const { error: err } = await backendClient
         .from('courses')
         .update({
           title: editForm.title,
           category: editForm.category,
+          level: editForm.level,
           status: editForm.status,
           description: editForm.description,
           duration: editForm.duration,
           modules: editForm.modules,
           price: editForm.price,
+          access_type: editForm.is_free ? 'free' : 'paid',
+          is_free: Boolean(editForm.is_free),
+          promotion_percentage: editForm.promotion_percentage ?? 0,
+          trailer_url: editForm.trailer_url || null,
           thumbnail: editForm.thumbnail || selectedCourse.thumbnail,
           updated_at: new Date().toISOString(),
         })
@@ -139,10 +266,18 @@ export default function FormateurCoursPage() {
       setShowEditModal(false);
       setSelectedCourse(null);
       setEditForm({});
+      setEditErrors({});
+      setEditFormMessage(null);
       fetchCourses();
     } catch (err: unknown) {
-      error('Erreur', 'Impossible de modifier la formation.');
+      const message = err && typeof err === 'object' && 'message' in err
+        ? String(err.message)
+        : 'Impossible de modifier la formation.';
+      setEditFormMessage(message);
+      error('Erreur', message);
       console.error(err);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -155,53 +290,18 @@ export default function FormateurCoursPage() {
       success('Formation supprimée', `"${course.title}" a été supprimée.`);
       fetchCourses();
     } catch (err: unknown) {
-      error('Erreur', 'Impossible de supprimer la formation.');
-      console.error(err);
-    }
-  };
-
-  const handleCreate = async () => {
-    if (!createForm.title || !createForm.category) {
-      error('Champs requis', 'Le titre et la catégorie sont obligatoires.');
-      return;
-    }
-    try {
-      const { error: err } = await backendClient.from('courses').insert({
-        title: createForm.title,
-        category: createForm.category,
-        description: createForm.description || '',
-        status: createForm.status || 'draft',
-        modules: createForm.modules || 1,
-        duration: createForm.duration || '1h',
-        price: createForm.price || 0,
-        thumbnail: createForm.thumbnail || null,
-      });
-
-      if (err) throw err;
-      success('Formation créée', `"${createForm.title}" a été ajoutée avec succès.`);
-      setShowCreateModal(false);
-      setCreateForm({ status: 'draft', modules: 1, price: 0, duration: '1h' });
-      fetchCourses();
-    } catch (err: unknown) {
-      error('Erreur', 'Impossible de créer la formation.');
+      const message = err && typeof err === 'object' && 'message' in err
+        ? String(err.message)
+        : 'Impossible de supprimer la formation.';
+      error('Erreur', message);
       console.error(err);
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      published: 'bg-green-100 text-green-700',
-      draft: 'bg-amber-100 text-amber-700',
-      review: 'bg-blue-100 text-blue-700',
-    };
-    const labels: Record<string, string> = {
-      published: 'Publiée',
-      draft: 'Brouillon',
-      review: 'En révision',
-    };
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-        {labels[status] || status}
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${courseStatusClasses[status as CourseWorkflowStatus] || 'bg-gray-100 text-gray-700'}`}>
+        {courseStatusLabels[status as CourseWorkflowStatus] || status}
       </span>
     );
   };
@@ -228,7 +328,7 @@ export default function FormateurCoursPage() {
             <p className="text-gray-600 text-sm md:text-base">Créez, gérez et publiez vos formations</p>
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateModal}
             className="px-4 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap flex items-center gap-2"
           >
             <div className="w-5 h-5 flex items-center justify-center">
@@ -254,7 +354,7 @@ export default function FormateurCoursPage() {
               />
             </div>
             <div className="flex gap-2">
-              {(['all', 'published', 'draft', 'review'] as const).map((status) => (
+              {(['all', 'published', 'draft', 'review', 'rejected', 'archived'] as const).map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
@@ -270,7 +370,11 @@ export default function FormateurCoursPage() {
                       ? 'Publiés'
                       : status === 'draft'
                         ? 'Brouillons'
-                        : 'Révision'}
+                        : status === 'review'
+                          ? 'Révision'
+                          : status === 'rejected'
+                            ? 'Rejetés'
+                            : 'Archivés'}
                 </button>
               ))}
             </div>
@@ -313,6 +417,9 @@ export default function FormateurCoursPage() {
                       <i className="ri-book-line"></i>
                       {course.modules} modules
                     </span>
+                    <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md">
+                      {COURSE_LEVEL_LABELS[course.level] || 'Intermédiaire'}
+                    </span>
                   </div>
                 </div>
                 <div className="p-5">
@@ -343,15 +450,27 @@ export default function FormateurCoursPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-900">
-                      {formatRevenue(course.revenue)}
+                      {course.is_free ? 'Gratuit' : `${(course.current_price ?? course.price).toLocaleString('fr-FR')} FCFA`}
                     </span>
-                    <div className="flex gap-2">
-                      {course.status === 'draft' && (
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      <Link
+                        to={`/dashboard/formateur/mes-cours/${course.id}/programme`}
+                        className="px-3 py-1.5 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Programme
+                      </Link>
+                      {getInstructorWorkflowAction(course.status) && (
                         <button
-                          onClick={() => handlePublish(course)}
-                          className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors whitespace-nowrap"
+                          onClick={() => handleWorkflowAction(course)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                            course.status === 'published'
+                              ? 'border border-amber-200 text-amber-700 hover:bg-amber-50'
+                              : course.status === 'review'
+                                ? 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                : 'bg-teal-600 text-white hover:bg-teal-700'
+                          }`}
                         >
-                          Publier
+                          {getInstructorWorkflowAction(course.status)?.description}
                         </button>
                       )}
                       <button
@@ -384,145 +503,68 @@ export default function FormateurCoursPage() {
           </div>
         )}
 
-        {/* Create Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">Nouvelle formation</h3>
-              <div className="dashboard-form-grid">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
-                  <input
-                    type="text"
-                    value={createForm.title || ''}
-                    onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                    placeholder="Ex: Marketing Digital Avancé"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie *</label>
-                  <input
-                    type="text"
-                    value={createForm.category || ''}
-                    onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
-                    placeholder="Ex: Marketing"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
-                  />
-                </div>
-                <div className="dashboard-form-wide">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    rows={3}
-                    maxLength={500}
-                    value={createForm.description || ''}
-                    onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                    placeholder="Description de la formation..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm resize-none"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">500 caractères max</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Modules</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={createForm.modules || 1}
-                      onChange={(e) => setCreateForm({ ...createForm, modules: parseInt(e.target.value) || 1 })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Durée</label>
-                    <input
-                      type="text"
-                      value={createForm.duration || ''}
-                      onChange={(e) => setCreateForm({ ...createForm, duration: e.target.value })}
-                      placeholder="Ex: 12h"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Prix (FCFA)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={createForm.price || 0}
-                    onChange={(e) => setCreateForm({ ...createForm, price: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-                  <select
-                    value={createForm.status || 'draft'}
-                    onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm bg-white"
-                  >
-                    <option value="draft">Brouillon</option>
-                    <option value="review">En révision</option>
-                    <option value="published">Publiée</option>
-                  </select>
-                </div>
-                <ImageUploadField
-                  label="Miniature de la formation"
-                  value={createForm.thumbnail || ''}
-                  onChange={(url) => setCreateForm({ ...createForm, thumbnail: url })}
-                  folder="c2p/courses"
-                  helper="Importez la miniature de la formation ou collez une URL publique."
-                />
-              </div>
-              <div className="flex gap-3 justify-end mt-6">
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setCreateForm({ status: 'draft', modules: 1, price: 0, duration: '1h' });
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleCreate}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
-                >
-                  Créer la formation
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <CourseCreationWizard
+          open={showCreateWizard}
+          userId={user?.id}
+          onClose={() => setShowCreateWizard(false)}
+          onCreated={async () => {
+            await fetchCourses();
+          }}
+        />
 
-        {/* Publish Modal */}
-        {showPublishModal && selectedCourse && (
+        {/* Workflow Modal */}
+        {showWorkflowModal && workflowCourse && getInstructorWorkflowAction(workflowCourse.status) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                  <i className="ri-upload-cloud-line text-teal-600 text-xl"></i>
+                  <i className="ri-git-branch-line text-teal-600 text-xl"></i>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">Publier la formation</h3>
+                <h3 className="text-lg font-bold text-gray-900">{getInstructorWorkflowAction(workflowCourse.status)?.description}</h3>
               </div>
               <p className="text-gray-600 mb-6">
-                Êtes-vous sûr de vouloir publier <strong>"{selectedCourse.title}"</strong> ? Elle sera immédiatement visible par tous les apprenants.
+                {workflowCourse.status === 'draft' && (
+                  <>
+                    Soumettre <strong>"{workflowCourse.title}"</strong> à l équipe admin pour validation.
+                  </>
+                )}
+                {workflowCourse.status === 'review' && (
+                  <>
+                    Retirer <strong>"{workflowCourse.title}"</strong> de la file de révision et revenir en brouillon.
+                  </>
+                )}
+                {workflowCourse.status === 'published' && (
+                  <>
+                    Archiver <strong>"{workflowCourse.title}"</strong> pour la retirer du catalogue sans la supprimer.
+                  </>
+                )}
+                {(workflowCourse.status === 'rejected' || workflowCourse.status === 'archived') && (
+                  <>
+                    Repasser <strong>"{workflowCourse.title}"</strong> en brouillon pour la retravailler avant une nouvelle soumission.
+                  </>
+                )}
               </p>
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => {
-                    setShowPublishModal(false);
-                    setSelectedCourse(null);
+                    setShowWorkflowModal(false);
+                    setWorkflowCourse(null);
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Annuler
                 </button>
                 <button
-                  onClick={confirmPublish}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
+                  onClick={confirmWorkflowAction}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    workflowCourse.status === 'published'
+                      ? 'bg-amber-600 text-white hover:bg-amber-700'
+                      : workflowCourse.status === 'review'
+                        ? 'bg-gray-900 text-white hover:bg-gray-800'
+                        : 'bg-teal-600 text-white hover:bg-teal-700'
+                  }`}
                 >
-                  Publier
+                  Confirmer
                 </button>
               </div>
             </div>
@@ -539,15 +581,22 @@ export default function FormateurCoursPage() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">Modifier la formation</h3>
               </div>
+              {editFormMessage ? (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {editFormMessage}
+                </div>
+              ) : null}
               <div className="dashboard-form-grid">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
                   <input
                     type="text"
                     value={editForm.title || ''}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
+                    onChange={(e) => updateEditForm('title', e.target.value)}
+                    aria-invalid={Boolean(editErrors.title)}
+                    className={getFieldClass(Boolean(editErrors.title))}
                   />
+                  {editErrors.title ? <p className="mt-1 text-xs text-red-600">{editErrors.title}</p> : null}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -555,20 +604,38 @@ export default function FormateurCoursPage() {
                     <input
                       type="text"
                       value={editForm.category || ''}
-                      onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
+                      onChange={(e) => updateEditForm('category', e.target.value)}
+                      aria-invalid={Boolean(editErrors.category)}
+                      className={getFieldClass(Boolean(editErrors.category))}
                     />
+                    {editErrors.category ? <p className="mt-1 text-xs text-red-600">{editErrors.category}</p> : null}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Niveau</label>
+                    <select
+                      value={editForm.level || 'intermediate'}
+                      onChange={(e) => updateEditForm('level', e.target.value as Course['level'])}
+                      aria-invalid={Boolean(editErrors.level)}
+                      className={getFieldClass(Boolean(editErrors.level))}
+                    >
+                      {Object.entries(COURSE_LEVEL_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                    {editErrors.level ? <p className="mt-1 text-xs text-red-600">{editErrors.level}</p> : null}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
                     <select
                       value={editForm.status || ''}
-                      onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm bg-white"
+                      onChange={(e) => updateEditForm('status', e.target.value as CourseWorkflowStatus)}
+                      className={getFieldClass(false)}
                     >
-                      <option value="published">Publiée</option>
                       <option value="draft">Brouillon</option>
                       <option value="review">En révision</option>
+                      <option value="archived">Archivée</option>
+                      {editForm.status === 'published' && <option value="published">Publiée</option>}
+                      {editForm.status === 'rejected' && <option value="rejected">Rejetée</option>}
                     </select>
                   </div>
                 </div>
@@ -578,10 +645,12 @@ export default function FormateurCoursPage() {
                     rows={3}
                     maxLength={500}
                     value={editForm.description || ''}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm resize-none"
+                    onChange={(e) => updateEditForm('description', e.target.value)}
+                    aria-invalid={Boolean(editErrors.description)}
+                    className={`${getFieldClass(Boolean(editErrors.description))} resize-none`}
                   />
                   <p className="text-xs text-gray-500 mt-1">500 caractères max</p>
+                  {editErrors.description ? <p className="mt-1 text-xs text-red-600">{editErrors.description}</p> : null}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -589,9 +658,11 @@ export default function FormateurCoursPage() {
                     <input
                       type="text"
                       value={editForm.duration || ''}
-                      onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
+                      onChange={(e) => updateEditForm('duration', e.target.value)}
+                      aria-invalid={Boolean(editErrors.duration)}
+                      className={getFieldClass(Boolean(editErrors.duration))}
                     />
+                    {editErrors.duration ? <p className="mt-1 text-xs text-red-600">{editErrors.duration}</p> : null}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Modules</label>
@@ -599,9 +670,11 @@ export default function FormateurCoursPage() {
                       type="number"
                       min={1}
                       value={editForm.modules || 0}
-                      onChange={(e) => setEditForm({ ...editForm, modules: parseInt(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
+                      onChange={(e) => updateEditForm('modules', parseInt(e.target.value, 10) || 0)}
+                      aria-invalid={Boolean(editErrors.modules)}
+                      className={getFieldClass(Boolean(editErrors.modules))}
                     />
+                    {editErrors.modules ? <p className="mt-1 text-xs text-red-600">{editErrors.modules}</p> : null}
                   </div>
                 </div>
                 <div>
@@ -610,17 +683,55 @@ export default function FormateurCoursPage() {
                     type="number"
                     min={0}
                     value={editForm.price || 0}
-                    onChange={(e) => setEditForm({ ...editForm, price: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
+                    onChange={(e) => updateEditForm('price', parseInt(e.target.value, 10) || 0)}
+                    disabled={Boolean(editForm.is_free)}
+                    aria-invalid={Boolean(editErrors.price)}
+                    className={getFieldClass(Boolean(editErrors.price))}
                   />
+                  {editErrors.price ? <p className="mt-1 text-xs text-red-600">{editErrors.price}</p> : null}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Promotion (%)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={editForm.promotion_percentage || 0}
+                    onChange={(e) => updateEditForm('promotion_percentage', parseInt(e.target.value, 10) || 0)}
+                    aria-invalid={Boolean(editErrors.promotion_percentage)}
+                    className={getFieldClass(Boolean(editErrors.promotion_percentage))}
+                  />
+                  {editErrors.promotion_percentage ? <p className="mt-1 text-xs text-red-600">{editErrors.promotion_percentage}</p> : null}
+                </div>
+                <label className="dashboard-form-wide flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editForm.is_free)}
+                    onChange={(e) => updateEditForm('is_free', e.target.checked)}
+                    className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  Formation gratuite
+                </label>
+                <div className="dashboard-form-wide">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bande-annonce vidéo</label>
+                  <input
+                    type="url"
+                    value={editForm.trailer_url || ''}
+                    onChange={(e) => updateEditForm('trailer_url', e.target.value)}
+                    aria-invalid={Boolean(editErrors.trailer_url)}
+                    placeholder="https://.../trailer.mp4"
+                    className={getFieldClass(Boolean(editErrors.trailer_url))}
+                  />
+                  {editErrors.trailer_url ? <p className="mt-1 text-xs text-red-600">{editErrors.trailer_url}</p> : null}
                 </div>
                 <ImageUploadField
                   label="Miniature de la formation"
                   value={editForm.thumbnail || selectedCourse.thumbnail || ''}
-                  onChange={(url) => setEditForm({ ...editForm, thumbnail: url })}
+                  onChange={(url) => updateEditForm('thumbnail', url)}
                   folder="c2p/courses"
                   helper="Ce visuel sera utilise dans le catalogue et sur la fiche formation."
                 />
+                {editErrors.thumbnail ? <p className="dashboard-form-wide -mt-2 text-xs text-red-600">{editErrors.thumbnail}</p> : null}
               </div>
               <div className="flex gap-3 justify-end mt-6">
                 <button
@@ -628,16 +739,20 @@ export default function FormateurCoursPage() {
                     setShowEditModal(false);
                     setSelectedCourse(null);
                     setEditForm({});
+                    setEditErrors({});
+                    setEditFormMessage(null);
                   }}
+                  disabled={isUpdating}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={confirmEdit}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
+                  disabled={isUpdating}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Enregistrer
+                  {isUpdating ? 'Enregistrement...' : 'Enregistrer'}
                 </button>
               </div>
             </div>

@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { backendClient } from '@/lib/backendClient';
 import { formatDate, formatDateTime } from '@/lib/formatters';
-import { downloadHtmlFile } from '@/lib/downloads';
+import { downloadSimplePdf } from '@/lib/downloads';
 import CertificateViewer, { type CertificateData } from '../../profile/components/CertificateViewer';
 
 interface Certificate {
@@ -21,6 +21,10 @@ interface Certificate {
   certificate_number: string | null;
   issued_at: string | null;
   completion_date: string | null;
+}
+
+function formatCertificateGrade(value: number | null) {
+  return value != null ? `${value}` : '-';
 }
 
 export default function ApprenantCertificatsPage() {
@@ -70,7 +74,7 @@ export default function ApprenantCertificatsPage() {
     ready: certificates.filter((certificate) => certificate.status === 'ready').length,
     pending: certificates.filter((certificate) => certificate.status === 'pending').length,
     avgGrade: certificates.length
-      ? (certificates.reduce((sum, certificate) => sum + Number(certificate.grade ?? 0), 0) / certificates.length).toFixed(1)
+      ? (certificates.reduce((sum, certificate) => sum + Number(certificate.final_grade ?? certificate.grade ?? 0), 0) / certificates.length).toFixed(1)
       : '0.0',
   }), [certificates]);
 
@@ -95,37 +99,20 @@ export default function ApprenantCertificatsPage() {
       error('Indisponible', 'Le telechargement sera disponible apres emission.');
       return;
     }
-    const html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <title>${certificate.certificate_number || certificate.id}</title>
-  <style>
-    body { font-family: Georgia, serif; background: #f8f3e8; margin: 0; padding: 40px; }
-    main { max-width: 980px; margin: 0 auto; min-height: 680px; background: #fffaf0; border: 10px double #d5b46f; padding: 64px; box-sizing: border-box; text-align: center; }
-    .eyebrow { color: #9a7a2f; text-transform: uppercase; letter-spacing: 0.35em; font-size: 12px; font-weight: 700; }
-    h1 { margin: 32px 0 16px; font-size: 52px; }
-    .student { margin: 30px 0 10px; font-size: 40px; font-weight: 700; }
-    .course { font-size: 24px; color: #444; }
-    .meta { margin-top: 48px; display: flex; justify-content: space-between; gap: 16px; font-size: 15px; color: #555; }
-  </style>
-</head>
-<body>
-  <main>
-    <p class="eyebrow">Centre C2P</p>
-    <h1>Certificat de reussite</h1>
-    <p>Ce certificat est attribue a</p>
-    <div class="student">${`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Apprenant C2P'}</div>
-    <p class="course">${certificate.course_name || certificate.title}</p>
-    <div class="meta">
-      <span>Identifiant : ${certificate.certificate_number || certificate.certificate_id || certificate.id}</span>
-      <span>Note : ${certificate.final_grade ?? certificate.grade ?? '-'} / 20</span>
-      <span>Date : ${certificate.issued_at ? formatDate(certificate.issued_at) : certificate.completion_date ? formatDate(certificate.completion_date) : '-'}</span>
-    </div>
-  </main>
-</body>
-</html>`;
-    downloadHtmlFile(`${certificate.certificate_number || `certificat-${certificate.id}`}.html`, html);
+    downloadSimplePdf(`${certificate.certificate_number || `certificat-${certificate.id}`}.pdf`, {
+      title: 'CERTIFICAT DE REUSSITE',
+      lines: [
+        'Centre C2P',
+        '',
+        'Ce certificat est attribue a',
+        `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Apprenant C2P',
+        '',
+        `Formation: ${certificate.course_name || certificate.title}`,
+        `Identifiant: ${certificate.certificate_number || certificate.certificate_id || certificate.id}`,
+        `Note finale: ${formatCertificateGrade(certificate.final_grade ?? certificate.grade ?? null)}`,
+        `Date: ${certificate.issued_at ? formatDate(certificate.issued_at) : certificate.completion_date ? formatDate(certificate.completion_date) : '-'}`,
+      ],
+    });
     success('Telechargement', `Le certificat ${certificate.certificate_number || certificate.id} a ete telecharge.`);
   };
 
@@ -144,7 +131,7 @@ export default function ApprenantCertificatsPage() {
             { label: 'Emis', value: stats.issued, icon: 'ri-award-line', color: 'bg-green-500' },
             { label: 'Prets', value: stats.ready, icon: 'ri-time-line', color: 'bg-amber-500' },
             { label: 'En attente', value: stats.pending, icon: 'ri-loader-4-line', color: 'bg-blue-500' },
-            { label: 'Moyenne', value: stats.avgGrade, icon: 'ri-bar-chart-line', color: 'bg-[#14B8A6]' },
+            { label: 'Note moyenne', value: stats.avgGrade, icon: 'ri-bar-chart-line', color: 'bg-[#14B8A6]' },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center gap-3">
@@ -212,7 +199,7 @@ export default function ApprenantCertificatsPage() {
                         {certificate.status === 'issued' ? 'Emis' : certificate.status === 'ready' ? 'Pret' : 'En attente'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{certificate.final_grade ?? certificate.grade ?? '-'}/20</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{formatCertificateGrade(certificate.final_grade ?? certificate.grade ?? null)}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {certificate.issued_at ? formatDate(certificate.issued_at) : certificate.completion_date ? formatDate(certificate.completion_date) : '-'}
                     </td>

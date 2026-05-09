@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/useToast';
-import { uploadImageToCloudinary } from '@/lib/uploadApi';
+import { uploadImageToServer } from '@/lib/uploadApi';
 
 // Singleton backend client
 
@@ -30,6 +30,7 @@ export default function AvatarUpload({
   const [preview, setPreview] = useState<string | null>(src || null);
   const [isHovering, setIsHovering] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = useCallback(
@@ -48,22 +49,25 @@ export default function AvatarUpload({
       }
 
       setIsUploading(true);
+      setUploadProgress(0);
 
       try {
-        const publicId = `avatar-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        const publicUrl = await uploadImageToCloudinary(file, {
+        const filename = `avatar-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const uploaded = await uploadImageToServer(file, {
           folder: 'c2p/avatars',
-          publicId,
+          filename,
+          onProgress: setUploadProgress,
         });
 
-        setPreview(publicUrl);
-        onChange?.(publicUrl);
+        setPreview(uploaded.url);
+        onChange?.(uploaded.url);
         success('Avatar mis à jour', 'Votre photo de profil a été enregistrée.');
       } catch (err: unknown) {
         console.error('Upload error:', err);
         error('Erreur d\'upload', 'Impossible d\'envoyer l\'image. Réessayez plus tard.');
       } finally {
         setIsUploading(false);
+        setUploadProgress(0);
       }
     },
     [onChange, success, error]
@@ -107,8 +111,9 @@ export default function AvatarUpload({
 
       {isUploading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
-          <div className="w-6 h-6 flex items-center justify-center">
-            <i className="ri-loader-4-line animate-spin text-white text-lg"></i>
+          <div className="flex flex-col items-center justify-center text-white">
+            <i className="ri-loader-4-line animate-spin text-lg"></i>
+            <span className="mt-1 text-[10px] font-semibold">{uploadProgress}%</span>
           </div>
         </div>
       )}

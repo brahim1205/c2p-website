@@ -4,16 +4,19 @@ import {
   Get,
   Post,
   Req,
-  UnauthorizedException,
 } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { AuthService } from '../auth/auth.service.js';
+import { CommunicationsService } from './communications.service.js';
+import { EmailService } from './email.service.js';
 import { SmsService } from './sms.service.js';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
 import {
   dispatchCampaignSchema,
+  emailTestSchema,
   smsTestSchema,
   type DispatchCampaignDto,
+  type EmailTestDto,
   type SmsTestDto,
 } from './dto/communications.dto.js';
 
@@ -21,13 +24,21 @@ import {
 export class CommunicationsController {
   constructor(
     private readonly authService: AuthService,
+    private readonly communicationsService: CommunicationsService,
     private readonly smsService: SmsService,
+    private readonly emailService: EmailService,
   ) {}
 
   @Get('sms/status')
   async getSmsStatus(@Req() request: AuthenticatedRequest) {
     this.authService.requireRole(request, ['admin']);
     return this.smsService.getStatus();
+  }
+
+  @Get('email/status')
+  async getEmailStatus(@Req() request: AuthenticatedRequest) {
+    this.authService.requireRole(request, ['admin']);
+    return this.emailService.getStatus();
   }
 
   @Post('sms/test')
@@ -50,57 +61,33 @@ export class CommunicationsController {
     };
   }
 
+  @Post('email/test')
+  async sendTestEmail(
+    @Req() request: AuthenticatedRequest,
+    @Body(new ZodValidationPipe(emailTestSchema)) payload: EmailTestDto,
+  ) {
+    const actor = this.authService.requireRole(request, ['admin']);
+    const result = await this.emailService.send({
+      to: payload.email,
+      subject: payload.subject,
+      text: payload.message,
+      purpose: 'admin-test',
+      userId: actor.id,
+    });
+
+    return {
+      ok: result.accepted,
+      provider: result.provider,
+      providerMessageId: result.providerMessageId ?? null,
+    };
+  }
+
   @Post('campaigns/dispatch')
   async dispatchCampaign(
     @Req() request: AuthenticatedRequest,
     @Body(new ZodValidationPipe(dispatchCampaignSchema)) payload: DispatchCampaignDto,
   ) {
-    this.authService.requireRole(request, ['admin']);
-    if (!['sms', 'all'].includes(payload.type)) {
-      return { dispatched: 0, skipped: true };
-    }
-
-    const users = await this.authService.getUsers(request);
-    const recipients = this.resolveRecipients(payload.target, users)
-      .filter((user) => Boolean(user.phone))
-      .map((user) => ({ userId: user.id, phone: user.phone }));
-
-    const results = await this.smsService.sendBulk(
-      recipients,
-      payload.content,
-      `campaign:${payload.title}`,
-    );
-
-    return {
-      dispatched: results.filter((entry) => entry.ok).length,
-      failed: results.filter((entry) => !entry.ok).length,
-      recipients: recipients.length,
-    };
-  }
-
-  private resolveRecipients(
-    target: string,
-    users: Awaited<ReturnType<AuthService['getUsers']>>,
-  ) {
-    const normalized = target.trim().toLowerCase();
-    if (normalized.includes('apprenant')) {
-      return users.filter((user) => user.role === 'apprenant');
-    }
-    if (normalized.includes('client')) {
-      return users.filter((user) => user.role === 'client');
-    }
-    if (normalized.includes('porteur')) {
-      return users.filter((user) => user.role === 'porteur');
-    }
-    if (normalized.includes('prestataire')) {
-      return users.filter((user) => user.role === 'prestataire');
-    }
-    if (normalized.includes('partenaire')) {
-      return users.filter((user) => user.role === 'partenaire');
-    }
-    if (normalized.includes('formateur')) {
-      return users.filter((user) => user.role === 'formateur');
-    }
-    return users;
+    const actor = this.authService.requireRole(request, ['admin']);
+    return this.communicationsService.dispatchCampaign(actor, payload);
   }
 }

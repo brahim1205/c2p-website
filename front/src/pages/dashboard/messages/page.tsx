@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { fetchDirectoryUsers } from '@/lib/accountApi';
 import { downloadTextFile } from '@/lib/downloads';
+import { useSearchParams } from 'react-router-dom';
 
 interface ContactOption {
   id: string;
@@ -17,6 +18,7 @@ interface ContactOption {
 }
 
 export default function MessagesPage() {
+  const [searchParams] = useSearchParams();
   const {
     conversations,
     activeConversationId,
@@ -54,6 +56,8 @@ export default function MessagesPage() {
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const attachmentMenuRef = useRef<HTMLDivElement>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const supportBootstrapDoneRef = useRef(false);
+  const conversationBootstrapDoneRef = useRef(false);
   const [callDuration, setCallDuration] = useState(0);
 
   const currentConversation = conversations.find(c => c.id === activeConversationId);
@@ -97,6 +101,58 @@ export default function MessagesPage() {
       setActiveConversationId(conversations[0].id);
     }
   }, [conversations, activeConversationId, setActiveConversationId]);
+
+  useEffect(() => {
+    if (supportBootstrapDoneRef.current || searchParams.get('support') !== '1' || !user) {
+      return;
+    }
+
+    supportBootstrapDoneRef.current = true;
+
+    const supportConversation = conversations.find((conversation) =>
+      conversation.type === 'individual'
+      && conversation.participants.includes(user.id)
+      && conversation.participants.includes('usr-admin'),
+    );
+
+    if (supportConversation) {
+      setActiveConversationId(supportConversation.id);
+      success('Support ouvert', 'La conversation avec l administration est prete.');
+      return;
+    }
+
+    void (async () => {
+      const created = await createConversation({
+        name: 'Support C2P',
+        role: 'Support',
+        participants: [user.id, 'usr-admin'],
+        type: 'individual',
+        members: 2,
+      });
+
+      if (created) {
+        setActiveConversationId(created.id);
+        success('Support ouvert', 'La conversation avec l administration a ete creee.');
+      } else {
+        error('Support indisponible', 'Impossible d ouvrir la conversation support.');
+      }
+    })();
+  }, [conversations, createConversation, error, searchParams, setActiveConversationId, success, user]);
+
+  useEffect(() => {
+    const targetConversationId = searchParams.get('conversation');
+    if (!targetConversationId || conversationBootstrapDoneRef.current) {
+      return;
+    }
+
+    const matchingConversation = conversations.find((conversation) => conversation.id === targetConversationId);
+    if (!matchingConversation) {
+      return;
+    }
+
+    conversationBootstrapDoneRef.current = true;
+    setActiveConversationId(matchingConversation.id);
+  }, [conversations, searchParams, setActiveConversationId]);
 
   // Close menus on outside click
   useEffect(() => {

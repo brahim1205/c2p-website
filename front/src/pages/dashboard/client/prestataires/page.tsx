@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { backendClient } from '@/lib/backendClient';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -8,6 +8,7 @@ import { SkeletonCard } from '@/components/base/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { createNotification } from '@/hooks/useCreateNotification';
 import { formatCurrency } from '@/lib/formatters';
+import { useBackendMessaging } from '@/hooks/useBackendMessaging';
 
 interface Prestataire {
   id: number;
@@ -26,8 +27,10 @@ interface Prestataire {
 }
 
 export default function ClientPrestatairesPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { success } = useToast();
+  const { success, error } = useToast();
+  const { conversations, createConversation, sendMessage } = useBackendMessaging();
   const [loading, setLoading] = useState(true);
   const [prestataires, setPrestataires] = useState<Prestataire[]>([]);
   const [search, setSearch] = useState('');
@@ -117,26 +120,28 @@ export default function ClientPrestatairesPage() {
     if (!contactMessage.trim() || !selectedPrestataire || !user) return;
 
     const recipientUserId = selectedPrestataire.user_id ?? 'usr-prestataire';
-    const conversationId = Date.now();
 
     try {
-      await backendClient.from('conversations').insert({
-        id: conversationId,
+      const existingConversation = conversations.find((conversation) =>
+        conversation.type === 'individual'
+        && conversation.participants.includes(user.id)
+        && conversation.participants.includes(recipientUserId),
+      );
+
+      const targetConversation = existingConversation ?? await createConversation({
         name: selectedPrestataire.name,
         avatar: selectedPrestataire.avatar,
         role: 'Prestataire',
-        type: 'individual',
         participants: [user.id, recipientUserId],
+        type: 'individual',
+        members: 2,
       });
 
-      await backendClient.from('messages').insert({
-        conversation_id: conversationId,
-        content: contactMessage.trim(),
-        sender_id: user.id,
-        sender_name: `${user.firstName} ${user.lastName}`,
-        sender_avatar: user.avatar ?? null,
-        read: false,
-      });
+      if (!targetConversation) {
+        throw new Error('Conversation introuvable');
+      }
+
+      await sendMessage(targetConversation.id, contactMessage.trim());
 
       await createNotification(
         recipientUserId,
@@ -151,8 +156,10 @@ export default function ClientPrestatairesPage() {
       setShowContactModal(false);
       setContactMessage('');
       setSelectedPrestataire(null);
-    } catch (error) {
-      console.error(error);
+      navigate(`/dashboard/messages?conversation=${encodeURIComponent(targetConversation.id)}`);
+    } catch (err) {
+      console.error(err);
+      error('Erreur', 'Impossible d ouvrir la conversation avec ce prestataire.');
     }
   };
 

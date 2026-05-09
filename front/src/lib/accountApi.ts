@@ -47,17 +47,21 @@ export async function updateManagedUser(
 }
 
 export async function fetchProfile(id: string) {
-  return apiRequest<AuthUser & { status?: string; bio?: string; location?: string }>(`/auth/profile/${id}`);
+  return apiRequest<AuthUser & { status?: string }>(`/auth/profile/${id}`);
 }
 
 export async function updateProfile(
   id: string,
-  payload: Partial<AuthUser> & { bio?: string; location?: string },
+  payload: Partial<AuthUser>,
 ) {
   return apiRequest<AuthUser>(`/auth/profile/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchPublicInstructorProfile(id: string) {
+  return apiRequest<AuthUser>(`/auth/public-profile/${id}`, {}, { retryOnAuth: false });
 }
 
 export async function changeAccountPassword(userId: string, currentPassword: string, newPassword: string) {

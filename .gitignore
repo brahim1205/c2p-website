@@ -17,6 +17,7 @@ front/.vite/
 coverage/
 .DS_Store
 backups/
+backend/storage/uploads/
 
 # monitoring state
 ops/grafana/data/

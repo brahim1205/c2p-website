@@ -4,6 +4,7 @@ import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonList } from '@/components/base/Skeleton';
 import { backendClient } from '@/lib/backendClient';
+import { downloadSimplePdf } from '@/lib/downloads';
 
 
 interface Certificate {
@@ -18,6 +19,10 @@ interface Certificate {
   certificate_id: string | null;
   issued_at: string | null;
   created_at: string;
+}
+
+function formatCertificateGrade(value: number | null) {
+  return value != null ? `${value}` : '-';
 }
 
 export default function FormateurCertificatsPage() {
@@ -80,48 +85,22 @@ export default function FormateurCertificatsPage() {
       return;
     }
 
-    const certificateHtml = `<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <title>Certificat ${cert.certificate_id ?? cert.id}</title>
-  <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #111; color: #111; }
-    .certificate { width: 1000px; min-height: 700px; margin: 40px auto; padding: 64px; background: #fffaf0; border: 12px double #d5b46f; box-sizing: border-box; text-align: center; }
-    .eyebrow { color: #9a7a2f; letter-spacing: 6px; text-transform: uppercase; font-size: 13px; font-weight: 700; }
-    h1 { margin: 36px 0 10px; font-size: 54px; }
-    .student { margin: 32px 0 12px; font-size: 42px; font-weight: 700; color: #111; }
-    .course { font-size: 24px; color: #444; }
-    .meta { margin-top: 52px; display: flex; justify-content: space-between; color: #555; font-size: 15px; }
-  </style>
-</head>
-<body>
-  <main class="certificate">
-    <p class="eyebrow">Centre C2P</p>
-    <h1>Certificat de reussite</h1>
-    <p>Ce certificat est decerne a</p>
-    <div class="student">${cert.student_name}</div>
-    <p class="course">${cert.course_name ?? 'Formation C2P'}</p>
-    <div class="meta">
-      <span>Identifiant: ${cert.certificate_id ?? cert.id}</span>
-      <span>Note finale: ${cert.final_grade ?? '-'} / 20</span>
-      <span>Date: ${cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}</span>
-    </div>
-  </main>
-</body>
-</html>`;
+    downloadSimplePdf(`${cert.certificate_id ?? `certificat-${cert.id}`}.pdf`, {
+      title: 'CERTIFICAT DE REUSSITE',
+      lines: [
+        'Centre C2P',
+        '',
+        'Ce certificat est decerne a',
+        cert.student_name,
+        '',
+        `Formation: ${cert.course_name ?? 'Formation C2P'}`,
+        `Identifiant: ${cert.certificate_id ?? cert.id}`,
+        `Note finale: ${formatCertificateGrade(cert.final_grade)}`,
+        `Date: ${cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}`,
+      ],
+    });
 
-    const blob = new Blob([certificateHtml], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${cert.certificate_id ?? `certificat-${cert.id}`}.html`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-
-    success('Téléchargement', `Le certificat ${cert.certificate_id} a été généré.`);
+    success('Téléchargement', `Le certificat ${cert.certificate_id ?? cert.id} a été généré.`);
   };
 
   const handleDelete = async (cert: Certificate) => {
@@ -248,7 +227,7 @@ export default function FormateurCertificatsPage() {
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {cert.completion_date ? new Date(cert.completion_date).toLocaleDateString('fr-FR') : '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{cert.final_grade != null ? `${cert.final_grade}/20` : '-'}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCertificateGrade(cert.final_grade)}</td>
                       <td className="px-4 py-3 text-sm font-mono text-gray-600">{cert.certificate_id || '-'}</td>
                       <td className="px-4 py-3">{getStatusBadge(cert.status)}</td>
                       <td className="px-4 py-3">
@@ -322,7 +301,7 @@ export default function FormateurCertificatsPage() {
 
                   <div className="flex items-center justify-center gap-8 mb-6">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-gray-900">{selectedCert.final_grade != null ? `${selectedCert.final_grade}/20` : '-'}</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatCertificateGrade(selectedCert.final_grade)}</p>
                       <p className="text-xs text-gray-500">Note finale</p>
                     </div>
                     <div className="w-px h-10 bg-gray-300"></div>

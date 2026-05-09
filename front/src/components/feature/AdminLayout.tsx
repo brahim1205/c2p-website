@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import LiveNotifications from './LiveNotifications';
-import DarkModeToggle from '@/components/base/DarkModeToggle';
+import BrandLogo from '@/components/base/BrandLogo';
 import { useAuth } from '@/hooks/useAuth';
+import { useBackendMessaging } from '@/hooks/useBackendMessaging';
 import { useNotifications } from '@/hooks/useNotifications';
+import { fetchPublicContactSubmissions } from '@/lib/communicationsApi';
 
 const adminNavItems = [
   { label: 'Tableau de bord', icon: 'ri-dashboard-line', path: '/admin/dashboard' },
@@ -25,14 +27,49 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const { notifications } = useNotifications();
+  const { user, logout } = useAuth();
+  const { notifications, unreadCount: notificationUnreadCount } = useNotifications();
+  const { totalUnread: messageUnreadCount } = useBackendMessaging();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
+
+  useEffect(() => {
+    const loadSupportUnread = async () => {
+      try {
+        const submissions = await fetchPublicContactSubmissions();
+        setSupportUnreadCount(submissions.filter((entry) => entry.status === 'new').length);
+      } catch {
+        setSupportUnreadCount(0);
+      }
+    };
+
+    if (user?.role !== 'admin') {
+      setSupportUnreadCount(0);
+      return;
+    }
+
+    const handleSupportUpdated = () => {
+      void loadSupportUnread();
+    };
+
+    void loadSupportUnread();
+    const intervalId = window.setInterval(() => {
+      void loadSupportUnread();
+    }, 20000);
+    window.addEventListener('c2p:admin-support-updated', handleSupportUpdated);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('c2p:admin-support-updated', handleSupportUpdated);
+    };
+  }, [user?.role]);
+
+  const topbarMessageCount = messageUnreadCount + supportUnreadCount;
 
   return (
     <div className="admin-layout h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -50,42 +87,60 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <i className="ri-menu-line text-xl text-gray-600 dark:text-gray-300"></i>
               </div>
             </button>
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-9 h-9 rounded-xl bg-[#0F766E] flex items-center justify-center">
-                <span className="text-white font-bold text-sm">C2P</span>
-              </div>
-              <span className="text-lg font-bold text-gray-900 dark:text-white hidden sm:block">C2P Admin</span>
-            </Link>
+            <BrandLogo
+              to="/admin/dashboard"
+              className="flex items-center gap-3"
+              imageClassName="h-9 w-auto object-contain sm:h-10"
+              subtitle="Administration"
+              title="Centre C2P"
+              textWrapperClassName="hidden min-w-0 sm:block"
+              subtitleClassName="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700"
+              titleClassName="text-base font-bold text-gray-900 dark:text-white"
+            />
           </div>
 
-          {/* Right: dark mode + settings + home + logout */}
-          <div className="flex items-center space-x-1">
-            <DarkModeToggle />
+          <div className="ml-auto flex items-center gap-1.5">
             <Link
-              to="/admin/security"
-              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              to="/admin/messages"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Messages support"
             >
-              <div className="w-5 h-5 flex items-center justify-center">
-                <i className="ri-settings-3-line text-xl text-gray-600 dark:text-gray-300"></i>
-              </div>
+              <i className="ri-message-3-line text-lg text-gray-600 dark:text-gray-300"></i>
+              {topbarMessageCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {topbarMessageCount > 9 ? '9+' : topbarMessageCount}
+                </span>
+              )}
             </Link>
+
             <Link
-              to="/"
-              className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              to="/admin/notifications"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Notifications"
             >
-              <div className="w-5 h-5 flex items-center justify-center">
-                <i className="ri-home-line text-xl text-gray-600 dark:text-gray-300"></i>
-              </div>
+              <i className="ri-notification-3-line text-lg text-gray-600 dark:text-gray-300"></i>
+              {notificationUnreadCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
+                </span>
+              )}
             </Link>
-            <button
-              onClick={handleLogout}
-              className="hidden sm:flex items-center justify-center w-9 h-9 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors ml-1"
-              title="Se déconnecter"
+
+            <Link
+              to="/admin/settings"
+              className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Parametres"
             >
-              <div className="w-5 h-5 flex items-center justify-center">
-                <i className="ri-logout-box-r-line text-xl text-red-500"></i>
-              </div>
-            </button>
+              <i className="ri-settings-3-line text-lg text-gray-600 dark:text-gray-300"></i>
+            </Link>
+
+            <Link
+              to="/admin/profile"
+              className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Profil"
+            >
+              <i className="ri-user-line text-lg text-gray-600 dark:text-gray-300"></i>
+            </Link>
           </div>
         </div>
       </nav>

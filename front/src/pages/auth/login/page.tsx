@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
@@ -79,27 +80,13 @@ export default function LoginPage() {
 
         <section className="rounded-[30px] border border-white/10 bg-white/[0.06] p-6 shadow-[0_35px_100px_rgba(0,0,0,0.45)] backdrop-blur sm:p-8">
           <div className="mb-8">
-            <Link to="/" className="text-sm font-semibold uppercase tracking-[0.28em] text-[#d5b46f]">
-              Centre C2P
-            </Link>
+            <BrandLogo
+              to="/"
+              className="inline-flex items-center"
+              imageClassName="h-12 w-auto object-contain"
+            />
             <h2 className="mt-5 text-3xl font-semibold text-white">Connexion</h2>
             <p className="mt-2 text-sm leading-6 text-white/58">Accedez a votre espace personnel.</p>
-          </div>
-
-          <div className="mb-6 rounded-2xl border border-[#d5b46f]/20 bg-[#d5b46f]/10 p-4">
-            <p className="mb-3 text-xs text-[#f1d58c]">
-              <i className="ri-information-line mr-1"></i>
-              Comptes de demo - mot de passe : <strong>password123</strong>
-            </p>
-            <div className="grid grid-cols-2 gap-1 text-[11px] text-white/62">
-              <span>admin@c2p.sn</span>
-              <span>prestataire@c2p.sn</span>
-              <span>formateur@c2p.sn</span>
-              <span>apprenant@c2p.sn</span>
-              <span>porteur@c2p.sn</span>
-              <span>partenaire@c2p.sn</span>
-              <span className="col-span-2 text-center">client@c2p.sn</span>
-            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

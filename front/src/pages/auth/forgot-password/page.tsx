@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { apiRequest, toApiError } from '@/lib/api';
 
@@ -81,9 +82,11 @@ export default function ForgotPasswordPage() {
 
         <section className="rounded-[30px] border border-white/10 bg-white/[0.06] p-6 shadow-[0_35px_100px_rgba(0,0,0,0.45)] backdrop-blur sm:p-8">
           <div className="mb-8">
-            <Link to="/" className="text-sm font-semibold uppercase tracking-[0.28em] text-[#d5b46f]">
-              Centre C2P
-            </Link>
+            <BrandLogo
+              to="/"
+              className="inline-flex items-center"
+              imageClassName="h-12 w-auto object-contain"
+            />
             <div className="mt-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#d5b46f]/25 bg-[#d5b46f]/10 text-[#d5b46f]">
               <i className="ri-lock-password-line text-2xl"></i>
             </div>

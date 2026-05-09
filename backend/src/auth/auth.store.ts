@@ -2,6 +2,40 @@ export type Role = 'admin' | 'apprenant' | 'formateur' | 'prestataire' | 'porteu
 export type UserStatus = 'active' | 'pending' | 'suspended';
 export type AuditStatus = 'success' | 'failed';
 
+export interface SocialLinks {
+  linkedin?: string;
+  twitter?: string;
+  facebook?: string;
+  instagram?: string;
+  youtube?: string;
+}
+
+export interface CertificationItem {
+  id: string;
+  title: string;
+  issuer: string;
+  year: string;
+  credentialUrl?: string;
+}
+
+export interface PortfolioItem {
+  id: string;
+  title: string;
+  summary: string;
+  image?: string;
+  url?: string;
+}
+
+export interface PaymentSettings {
+  beneficiaryName?: string;
+  iban?: string;
+  paypal?: string;
+  orangeMoney?: string;
+  wave?: string;
+  freeMoney?: string;
+  mtnMoney?: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -13,6 +47,18 @@ export interface AuthUser {
   avatar?: string;
   bio?: string;
   location?: string;
+  publicTitle?: string;
+  website?: string;
+  preferredLanguage?: string;
+  languages?: string[];
+  skills?: string[];
+  socialLinks?: SocialLinks;
+  certifications?: CertificationItem[];
+  portfolioItems?: PortfolioItem[];
+  introVideo?: string;
+  publicProfileEnabled?: boolean;
+  expertVerified?: boolean;
+  paymentSettings?: PaymentSettings;
   is2FAEnabled?: boolean;
   createdAt: string;
 }
@@ -127,6 +173,59 @@ const users: StoredUser[] = [
     avatar: avatar('trainer-aminata'),
     bio: 'Formatrice en transformation digitale.',
     location: 'Dakar, Senegal',
+    publicTitle: 'Experte en marketing digital et produits educatifs',
+    website: 'https://c2p.sn/formateurs/aminata-diop',
+    preferredLanguage: 'Francais',
+    languages: ['Francais', 'Anglais', 'Wolof'],
+    skills: ['Marketing digital', 'Growth', 'React', 'Pedagogie produit'],
+    socialLinks: {
+      linkedin: 'https://linkedin.com/in/aminata-diop-c2p',
+      twitter: 'https://x.com/aminatadiop',
+      youtube: 'https://youtube.com/@aminatadiopc2p',
+    },
+    certifications: [
+      {
+        id: 'cert-google-analytics',
+        title: 'Google Analytics Certification',
+        issuer: 'Google',
+        year: '2025',
+        credentialUrl: 'https://example.com/certifications/google-analytics',
+      },
+      {
+        id: 'cert-product-marketing',
+        title: 'Product Marketing Leader',
+        issuer: 'Product School',
+        year: '2024',
+        credentialUrl: 'https://example.com/certifications/product-marketing',
+      },
+    ],
+    portfolioItems: [
+      {
+        id: 'portfolio-c2p-growth',
+        title: 'Refonte du parcours acquisition C2P',
+        summary: 'Nouveau tunnel de conversion et automatisation des relances apprenants.',
+        image: '/images/home/academy.jpg',
+        url: 'https://c2p.sn',
+      },
+      {
+        id: 'portfolio-react-bootcamp',
+        title: 'Bootcamp React intensif',
+        summary: 'Programme de 6 semaines avec projets, lives et certification finale.',
+        image: '/images/home/precision.jpg',
+      },
+    ],
+    introVideo: '',
+    publicProfileEnabled: true,
+    expertVerified: true,
+    paymentSettings: {
+      beneficiaryName: 'Aminata Diop',
+      iban: 'SN1200123400567800912345678',
+      paypal: 'payments@aminatadiop.sn',
+      orangeMoney: '+221773104050',
+      wave: '+221773104050',
+      freeMoney: '+221763104050',
+      mtnMoney: '+237671234567',
+    },
     is2FAEnabled: false,
     backupCodes: [],
     passwordHistory: [],
@@ -313,8 +412,36 @@ function randomCode(prefix: string) {
 }
 
 export function publicUser(user: StoredUser): AuthUser {
+  const { password: _password, backupCodes: _backupCodes, paymentSettings: _paymentSettings, ...safeUser } = user;
+  return safeUser;
+}
+
+export function editableProfileUser(user: StoredUser): AuthUser {
   const { password: _password, backupCodes: _backupCodes, ...safeUser } = user;
   return safeUser;
+}
+
+export function publicInstructorProfile(user: StoredUser) {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    avatar: user.avatar,
+    bio: user.bio,
+    location: user.location,
+    publicTitle: user.publicTitle,
+    website: user.website,
+    preferredLanguage: user.preferredLanguage,
+    languages: user.languages ?? [],
+    skills: user.skills ?? [],
+    socialLinks: user.socialLinks ?? {},
+    certifications: user.certifications ?? [],
+    portfolioItems: user.portfolioItems ?? [],
+    introVideo: user.introVideo ?? null,
+    publicProfileEnabled: Boolean(user.publicProfileEnabled),
+    expertVerified: Boolean(user.expertVerified),
+  };
 }
 
 export function listUsers() {

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import BrandLogo from '@/components/base/BrandLogo';
 
 export default function NotFound() {
   return (
@@ -12,9 +13,11 @@ export default function NotFound() {
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-12rem)] max-w-5xl items-center justify-center text-center">
         <section>
-          <Link to="/" className="text-sm font-semibold uppercase tracking-[0.32em] text-[#d5b46f]">
-            Centre C2P
-          </Link>
+          <BrandLogo
+            to="/"
+            className="inline-flex items-center justify-center"
+            imageClassName="h-12 w-auto object-contain"
+          />
           <div className="mt-10 flex items-center justify-center gap-4">
             <div className="h-px w-16 bg-[#d5b46f]"></div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/48">Page introuvable</p>

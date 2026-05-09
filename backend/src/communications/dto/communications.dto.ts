@@ -5,6 +5,12 @@ export const smsTestSchema = z.object({
   message: z.string().trim().min(3).max(480),
 });
 
+export const emailTestSchema = z.object({
+  email: z.string().trim().email(),
+  subject: z.string().trim().min(3).max(160),
+  message: z.string().trim().min(3).max(5000),
+});
+
 export const dispatchCampaignSchema = z.object({
   title: z.string().trim().min(3).max(120),
   type: z.enum(['email', 'sms', 'push', 'all']),
@@ -12,5 +18,6 @@ export const dispatchCampaignSchema = z.object({
   content: z.string().trim().min(3).max(480),
 });
 
+export type EmailTestDto = z.infer<typeof emailTestSchema>;
 export type SmsTestDto = z.infer<typeof smsTestSchema>;
 export type DispatchCampaignDto = z.infer<typeof dispatchCampaignSchema>;

@@ -52,86 +52,102 @@ export function useBackendMessaging() {
   const [loading, setLoading] = useState(true);
   const realtimeRef = useRef<any>(null);
 
-  // Fetch conversations from backend
-  useEffect(() => {
-    if (!user) return;
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: convs, error: convError } = await backendClient
-        .from('conversations')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (convError) {
-        console.error('Error fetching conversations:', convError);
-        setLoading(false);
-        return;
-      }
-
-      const visibleConversations = (convs ?? []).filter((conversation: any) =>
-        Array.isArray(conversation.participants)
-          ? conversation.participants.map(String).includes(user.id)
-          : true
-      );
-
-      // Fetch messages for all conversations
-      const convIds = visibleConversations.map((c: any) => c.id);
-      const messagesMap: Record<string, Message[]> = {};
-
-      if (convIds.length > 0) {
-        const { data: msgs } = await backendClient
-          .from('messages')
-          .select('*')
-          .in('conversation_id', convIds)
-          .order('created_at', { ascending: true });
-
-        msgs?.forEach((m: any) => {
-          const convId = String(m.conversation_id);
-          if (!messagesMap[convId]) messagesMap[convId] = [];
-          messagesMap[convId].push({
-            id: String(m.id),
-            conversationId: convId,
-            content: m.content,
-            senderId: m.sender_id,
-            senderName: m.sender_name,
-            senderAvatar: m.sender_avatar,
-            timestamp: m.created_at,
-            read: m.read,
-            attachments: m.attachments || []
-          });
-        });
-      }
-
-      // Count unread per conversation
-      const enrichedConvs: Conversation[] = visibleConversations.map((c: any) => {
-        const convMessages = messagesMap[String(c.id)] ?? [];
-        const lastMsg = convMessages[convMessages.length - 1];
-        const unreadCount = convMessages.filter(
-          (m: Message) => !m.read && m.senderId !== user.id
-        ).length;
-
-        return {
-          id: String(c.id),
-          name: c.name,
-          avatar: c.avatar,
-          role: c.role || 'Conversation',
-          lastMessage: lastMsg?.content || 'Nouvelle conversation',
-          lastMessageAt: lastMsg?.timestamp || c.updated_at || c.created_at,
-          unreadCount,
-          online: Math.random() > 0.5,
-          type: c.type || 'individual',
-          members: c.members,
-          participants: c.participants || []
-        };
-      });
-
-      setConversations(enrichedConvs);
-      setMessages(messagesMap);
+  const loadData = useCallback(async (showLoader = true) => {
+    if (!user) {
+      setConversations([]);
+      setMessages({});
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchData();
+    if (showLoader) {
+      setLoading(true);
+    }
+
+    const { data: convs, error: convError } = await backendClient
+      .from('conversations')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (convError) {
+      console.error('Error fetching conversations:', convError);
+      setLoading(false);
+      return;
+    }
+
+    const visibleConversations = (convs ?? []).filter((conversation: any) =>
+      Array.isArray(conversation.participants)
+        ? conversation.participants.map(String).includes(user.id)
+        : true
+    );
+
+    const convIds = visibleConversations.map((c: any) => c.id);
+    const messagesMap: Record<string, Message[]> = {};
+
+    if (convIds.length > 0) {
+      const { data: msgs } = await backendClient
+        .from('messages')
+        .select('*')
+        .in('conversation_id', convIds)
+        .order('created_at', { ascending: true });
+
+      msgs?.forEach((m: any) => {
+        const convId = String(m.conversation_id);
+        if (!messagesMap[convId]) messagesMap[convId] = [];
+        messagesMap[convId].push({
+          id: String(m.id),
+          conversationId: convId,
+          content: m.content,
+          senderId: m.sender_id,
+          senderName: m.sender_name,
+          senderAvatar: m.sender_avatar,
+          timestamp: m.created_at,
+          read: m.read,
+          attachments: m.attachments || []
+        });
+      });
+    }
+
+    const enrichedConvs: Conversation[] = visibleConversations.map((c: any) => {
+      const convMessages = messagesMap[String(c.id)] ?? [];
+      const lastMsg = convMessages[convMessages.length - 1];
+      const unreadCount = convMessages.filter(
+        (m: Message) => !m.read && m.senderId !== user.id
+      ).length;
+
+      return {
+        id: String(c.id),
+        name: c.name,
+        avatar: c.avatar,
+        role: c.role || 'Conversation',
+        lastMessage: lastMsg?.content || 'Nouvelle conversation',
+        lastMessageAt: lastMsg?.timestamp || c.updated_at || c.created_at,
+        unreadCount,
+        online: Math.random() > 0.5,
+        type: c.type || 'individual',
+        members: c.members,
+        participants: c.participants || []
+      };
+    });
+
+    setConversations(enrichedConvs);
+    setMessages(messagesMap);
+    setLoading(false);
   }, [user]);
+
+  useEffect(() => {
+    void loadData(true);
+
+    if (!user) return;
+
+    const intervalId = window.setInterval(() => {
+      void loadData(false);
+    }, 20000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [loadData, user]);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -202,7 +218,7 @@ export function useBackendMessaging() {
       sender_id: user.id,
       sender_name: senderName,
       sender_avatar: user.avatar,
-      read: true,
+      read: false,
       attachments: attachments || []
     });
 

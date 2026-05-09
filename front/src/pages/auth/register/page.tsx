@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
@@ -96,7 +97,11 @@ export default function RegisterPage() {
 
       <div className="relative z-10 mx-auto max-w-6xl">
         <div className="mb-10 text-center">
-          <Link to="/" className="text-sm font-semibold uppercase tracking-[0.3em] text-[#d5b46f]">Centre C2P</Link>
+          <BrandLogo
+            to="/"
+            className="inline-flex items-center justify-center"
+            imageClassName="mx-auto h-12 w-auto object-contain"
+          />
           <h1 className="mt-5 text-4xl font-semibold text-white sm:text-5xl">Creer votre compte</h1>
           <p className="mt-3 text-sm leading-7 text-white/58">Choisissez votre role et accedez a l ecosysteme C2P.</p>
         </div>

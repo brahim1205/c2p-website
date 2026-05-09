@@ -16,6 +16,9 @@ interface VirtualClass {
   status: string;
   room_link: string | null;
   recording_url: string | null;
+  recording_status?: 'none' | 'pending' | 'processing' | 'ready';
+  instructor_notes?: string | null;
+  provider?: 'jitsi' | 'custom';
 }
 
 interface Course {
@@ -31,7 +34,7 @@ interface Lesson {
   id: string;
   title: string;
   duration: string;
-  type: 'video' | 'quiz' | 'exercise' | 'pdf';
+  type: 'video' | 'quiz' | 'exercise' | 'pdf' | 'article' | 'live' | 'coding' | 'practice' | 'assignment';
   completed: boolean;
   locked: boolean;
 }
@@ -46,6 +49,8 @@ export default function ClasseVirtuellePage() {
   const { id } = useParams();
   const [vclass, setVclass] = useState<VirtualClass | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
+  const [sections, setSections] = useState<Array<{ id: string | number; title: string }>>([]);
+  const [lessons, setLessons] = useState<Array<{ id: string | number; section_id: string | number; title: string; duration: string | null; type: Lesson['type']; is_preview?: boolean }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
@@ -58,6 +63,23 @@ export default function ClasseVirtuellePage() {
   const courseModules = useMemo<Module[]>(() => {
     if (!course) {
       return [];
+    }
+
+    if (sections.length > 0) {
+      return sections.map((section, sectionIndex) => ({
+        id: String(section.id),
+        title: section.title || `Module ${sectionIndex + 1}`,
+        lessons: lessons
+          .filter((lesson) => String(lesson.section_id) === String(section.id))
+          .map((lesson, lessonIndex) => ({
+            id: String(lesson.id),
+            title: lesson.title,
+            duration: lesson.duration || 'A definir',
+            type: lesson.type === 'assignment' ? 'exercise' : lesson.type,
+            completed: lessonIndex === 0,
+            locked: lessonIndex > 1,
+          })),
+      }));
     }
 
     return [
@@ -92,7 +114,7 @@ export default function ClasseVirtuellePage() {
         ]
       }
     ];
-  }, [course]);
+  }, [course, lessons, sections]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,12 +129,26 @@ export default function ClasseVirtuellePage() {
         setVclass(vData as VirtualClass);
 
         if (vData.course_id) {
-          const { data: cData } = await backendClient
-            .from('courses')
-            .select('id,title,category,modules,duration,description')
-            .eq('id', vData.course_id)
-            .maybeSingle();
-          setCourse(cData as Course | null);
+          const [courseRes, sectionsRes, lessonsRes] = await Promise.all([
+            backendClient
+              .from('courses')
+              .select('id,title,category,modules,duration,description')
+              .eq('id', vData.course_id)
+              .maybeSingle(),
+            backendClient
+              .from('course_sections')
+              .select('id,title,position')
+              .eq('course_id', vData.course_id)
+              .order('position', { ascending: true }),
+            backendClient
+              .from('course_lessons')
+              .select('id,section_id,title,duration,type,is_preview,position')
+              .eq('course_id', vData.course_id)
+              .order('position', { ascending: true }),
+          ]);
+          setCourse(courseRes.data as Course | null);
+          setSections((sectionsRes.data || []) as Array<{ id: string | number; title: string }>);
+          setLessons((lessonsRes.data || []) as Array<{ id: string | number; section_id: string | number; title: string; duration: string | null; type: Lesson['type']; is_preview?: boolean }>);
         }
       } catch (err) { setError('Erreur de chargement'); console.error(err); }
       finally { setLoading(false); }
@@ -138,6 +174,10 @@ export default function ClasseVirtuellePage() {
       case 'video': return 'ri-play-circle-line';
       case 'quiz': return 'ri-question-line';
       case 'exercise': return 'ri-code-s-slash-line';
+      case 'coding': return 'ri-code-s-slash-line';
+      case 'practice': return 'ri-tools-line';
+      case 'article': return 'ri-file-text-line';
+      case 'live': return 'ri-live-line';
       case 'pdf': return 'ri-file-pdf-line';
       default: return 'ri-file-line';
     }
@@ -152,6 +192,7 @@ export default function ClasseVirtuellePage() {
   const isLive = vclass?.status === 'live';
   const isEnded = vclass?.status === 'ended';
   const isScheduled = vclass?.status === 'scheduled';
+  const isReplayProcessing = isEnded && !vclass?.recording_url && vclass?.recording_status === 'processing';
 
   if (loading) {
     return (
@@ -241,6 +282,11 @@ export default function ClasseVirtuellePage() {
             )}
           </div>
         </div>
+        {vclass.instructor_notes ? (
+          <div className="mt-3 rounded-lg border border-gray-700 bg-gray-900/70 px-4 py-3 text-sm text-gray-300">
+            <span className="font-medium text-white">Notes du formateur:</span> {vclass.instructor_notes}
+          </div>
+        ) : null}
       </div>
 
       <div className="flex h-[calc(100vh-56px-60px)]">
@@ -321,6 +367,14 @@ export default function ClasseVirtuellePage() {
                   La classe commence le {new Date(vclass.class_date).toLocaleDateString('fr-FR')} à {vclass.class_time}
                 </p>
                 <p className="text-sm text-gray-500">Revenez à l&apos;heure prévue pour accéder au direct</p>
+              </div>
+            ) : isReplayProcessing ? (
+              <div className="text-center px-6">
+                <div className="w-20 h-20 flex items-center justify-center bg-amber-500 rounded-full mx-auto mb-4">
+                  <i className="ri-loader-4-line animate-spin text-4xl text-white"></i>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Replay en préparation</h3>
+                <p className="text-sm text-gray-400">Le formateur a terminé la session. L’enregistrement sera disponible ici dès qu’il sera prêt.</p>
               </div>
             ) : (
               <div className="text-center px-6">

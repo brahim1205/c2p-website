@@ -17,13 +17,19 @@ import {
   getInitialRefreshTokens,
   getInitialSessions,
   getInitialUsers,
+  editableProfileUser,
   publicUser,
+  publicInstructorProfile,
   type AuditLog,
   type AuditStatus,
   type AuthUser,
+  type CertificationItem,
+  type PaymentSettings,
   type PendingTwoFactorChallenge,
+  type PortfolioItem,
   type RefreshTokenSession,
   type Role,
+  type SocialLinks,
   type StoredUser,
   type UserSession,
   type UserStatus,
@@ -107,6 +113,18 @@ export class AuthService {
     'avatar',
     'bio',
     'location',
+    'publicTitle',
+    'website',
+    'preferredLanguage',
+    'languages',
+    'skills',
+    'socialLinks',
+    'certifications',
+    'portfolioItems',
+    'introVideo',
+    'publicProfileEnabled',
+    'expertVerified',
+    'paymentSettings',
     'role',
     'status',
     'is2FAEnabled',
@@ -1101,10 +1119,14 @@ export class AuthService {
     });
   }
 
-  async getUsers(request: AuthenticatedRequest) {
-    this.requireRole(request, ['admin']);
+  async listAllUsers() {
     const users = await this.loadRows<StoredUser>('auth_users');
     return users.map((user) => publicUser(this.normalizeUser(user)));
+  }
+
+  async getUsers(request: AuthenticatedRequest) {
+    this.requireRole(request, ['admin']);
+    return this.listAllUsers();
   }
 
   async getUserDirectory(request: AuthenticatedRequest) {
@@ -1118,7 +1140,31 @@ export class AuthService {
   async patchUser(
     request: AuthenticatedRequest,
     id: string,
-    payload: Partial<Pick<AuthUser, 'firstName' | 'lastName' | 'email' | 'phone' | 'avatar' | 'bio' | 'location' | 'role' | 'status' | 'is2FAEnabled'>>,
+    payload: Partial<Pick<
+      AuthUser,
+      | 'firstName'
+      | 'lastName'
+      | 'email'
+      | 'phone'
+      | 'avatar'
+      | 'bio'
+      | 'location'
+      | 'publicTitle'
+      | 'website'
+      | 'preferredLanguage'
+      | 'languages'
+      | 'skills'
+      | 'socialLinks'
+      | 'certifications'
+      | 'portfolioItems'
+      | 'introVideo'
+      | 'publicProfileEnabled'
+      | 'expertVerified'
+      | 'paymentSettings'
+      | 'role'
+      | 'status'
+      | 'is2FAEnabled'
+    >>,
   ) {
     return this.runSerializedMutation(async () => {
       const actor = this.requireRole(request, ['admin']);
@@ -1156,13 +1202,44 @@ export class AuthService {
     if (!user) {
       throw new BadRequestException('Utilisateur introuvable.');
     }
-    return publicUser(this.normalizeUser(user));
+    return editableProfileUser(this.normalizeUser(user));
+  }
+
+  async getPublicInstructorProfile(id: string) {
+    const users = await this.loadRows<StoredUser>('auth_users');
+    const user = this.findUserById(id, users);
+    if (!user || user.role !== 'formateur' || !user.publicProfileEnabled) {
+      throw new BadRequestException('Profil formateur introuvable.');
+    }
+    return publicInstructorProfile(this.normalizeUser(user));
   }
 
   async updateProfile(
     request: AuthenticatedRequest,
     id: string,
-    payload: Partial<Pick<AuthUser, 'firstName' | 'lastName' | 'email' | 'phone' | 'avatar' | 'bio' | 'location'>>,
+    payload: Partial<Pick<
+      AuthUser,
+      | 'firstName'
+      | 'lastName'
+      | 'email'
+      | 'phone'
+      | 'avatar'
+      | 'bio'
+      | 'location'
+      | 'publicTitle'
+      | 'website'
+      | 'preferredLanguage'
+      | 'languages'
+      | 'skills'
+      | 'introVideo'
+      | 'publicProfileEnabled'
+      | 'expertVerified'
+    >> & {
+      socialLinks?: SocialLinks;
+      certifications?: CertificationItem[];
+      portfolioItems?: PortfolioItem[];
+      paymentSettings?: PaymentSettings;
+    },
   ) {
     return this.runSerializedMutation(async () => {
       const actor = this.requireSelfOrAdmin(request, id);
@@ -1189,7 +1266,7 @@ export class AuthService {
         this.saveAuditLogs(auditLogs),
       ]);
 
-      return publicUser(user);
+      return editableProfileUser(user);
     });
   }
 

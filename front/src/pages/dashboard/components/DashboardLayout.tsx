@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ROLE_LABELS } from '@/lib/roles';
 import { useBackendMessaging } from '@/hooks/useBackendMessaging';
 import { useNotifications } from '@/hooks/useNotifications';
+import BrandLogo from '@/components/base/BrandLogo';
 import LiveNotifications from '@/components/feature/LiveNotifications';
 import AvatarUpload from '@/components/base/AvatarUpload';
 
@@ -46,11 +47,15 @@ const roleNavOverrides: Record<string, { label: string; icon: string; path: stri
   ],
   formateur: [
     { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/formateur' },
+    { label: 'Profil public', icon: 'ri-user-star-line', path: '/dashboard/formateur/profil-public' },
     { label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/formateur/mes-cours' },
     { label: 'Classes virtuelles', icon: 'ri-video-line', path: '/dashboard/formateur/classes-virtuelles' },
     { label: 'Mes apprenants', icon: 'ri-group-line', path: '/dashboard/formateur/apprenants' },
     { label: 'Évaluations', icon: 'ri-file-list-3-line', path: '/dashboard/formateur/evaluations' },
     { label: 'Certificats', icon: 'ri-award-line', path: '/dashboard/formateur/certificats' },
+    { label: 'Revenus', icon: 'ri-wallet-3-line', path: '/dashboard/formateur/revenus' },
+    { label: 'Analytics', icon: 'ri-line-chart-line', path: '/dashboard/formateur/analytics' },
+    { label: 'Communauté', icon: 'ri-chat-3-line', path: '/dashboard/formateur/communaute' },
     { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
     { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
     { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
@@ -146,12 +151,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <i className="ri-menu-line text-xl text-gray-600"></i>
               </div>
             </button>
-            <Link to="/" className="flex items-center space-x-2 group">
-              <div className="w-9 h-9 rounded-xl bg-[#0F766E] flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300">
-                <span className="text-white font-bold text-sm">C2P</span>
-              </div>
-              <span className="text-lg font-bold text-gray-900 hidden sm:block">C2P</span>
-            </Link>
+            <BrandLogo
+              to="/"
+              className="flex items-center group"
+              imageClassName="h-10 w-auto object-contain transition-all duration-300 group-hover:scale-[1.02]"
+            />
           </div>
 
           {/* Right: messages + notifications + user */}

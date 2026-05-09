@@ -53,6 +53,19 @@ export const configValidationSchema = z.object({
   SENDTEXT_API_KEY: z.string().optional(),
   SENDTEXT_API_SECRET: z.string().optional(),
   SENDTEXT_TIMEOUT_MS: z.string().default('10000'),
+  EMAIL_PROVIDER: z.enum(['disabled', 'mock', 'resend']).default('mock'),
+  EMAIL_FROM: z.string().email().optional(),
+  EMAIL_REPLY_TO: z.string().email().optional(),
+  EMAIL_TIMEOUT_MS: z.string().default('10000'),
+  RESEND_API_KEY: z.string().optional(),
+  LIVE_PROVIDER: z.enum(['jitsi', 'custom']).default('jitsi'),
+  LIVE_JITSI_BASE_URL: z.string().url().default('https://meet.jit.si'),
+  UPLOAD_STORAGE_ROOT: z.string().default('storage/uploads'),
+  UPLOAD_TMP_ROOT: z.string().default('storage/uploads/_tmp'),
+  UPLOAD_IMAGE_MAX_MB: z.string().default('8'),
+  UPLOAD_RAW_MAX_MB: z.string().default('512'),
+  UPLOAD_VIDEO_MAX_MB: z.string().default('5120'),
+  UPLOAD_REQUEST_MAX_MB: z.string().default('5120'),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
@@ -126,6 +139,18 @@ export const configValidationSchema = z.object({
     }
   }
 
+  if (config.EMAIL_PROVIDER === 'resend') {
+    for (const key of ['EMAIL_FROM', 'RESEND_API_KEY'] as const) {
+      if (!config[key]?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when EMAIL_PROVIDER=resend.`,
+        });
+      }
+    }
+  }
+
   if (config.DEXPAY_ENABLED === 'true') {
     for (const key of ['DEXPAY_BASE_URL', 'DEXPAY_API_KEY', 'DEXPAY_API_SECRET'] as const) {
       if (!config[key]?.trim()) {
@@ -133,24 +158,6 @@ export const configValidationSchema = z.object({
           code: z.ZodIssueCode.custom,
           path: [key],
           message: `${key} is required when DEXPAY_ENABLED=true.`,
-        });
-      }
-    }
-  }
-
-  const hasAnyCloudinaryValue = [
-    config.CLOUDINARY_CLOUD_NAME,
-    config.CLOUDINARY_API_KEY,
-    config.CLOUDINARY_API_SECRET,
-  ].some((value) => Boolean(value?.trim()));
-
-  if (config.NODE_ENV === 'production' || hasAnyCloudinaryValue) {
-    for (const key of ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'] as const) {
-      if (!config[key]?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [key],
-          message: `${key} is required for production image uploads.`,
         });
       }
     }

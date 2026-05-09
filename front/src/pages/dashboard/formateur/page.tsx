@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -7,60 +7,175 @@ import { useAuth } from '@/hooks/useAuth';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
 import GlobalSearch from '../components/GlobalSearch';
 import { backendClient } from '@/lib/backendClient';
-
+import {
+  courseStatusClasses,
+  courseStatusLabels,
+  getCourseReadinessIssues,
+  getInstructorWorkflowAction,
+  type CourseWorkflowStatus,
+} from '@/lib/courseWorkflow';
 
 interface Course {
-  id: number;
+  id: number | string;
   title: string;
-  status: string;
+  category: string | null;
+  description: string | null;
+  status: CourseWorkflowStatus;
   students_count: number;
   completion_rate: number;
   revenue: number;
+  modules: number;
+  lessons_count?: number;
+  assets_count?: number;
+  preview_lessons_count?: number;
+  published_lessons_count?: number;
+  duration: string | null;
+  updated_at: string;
+  thumbnail: string | null;
+  price: number | null;
 }
 
 interface Enrollment {
   id: number;
+  student_id: string;
   student_name: string;
+  student_email: string | null;
   progress: number;
   last_active: string;
-  courses?: { title: string } | null;
+  course_id: number;
+  course_name?: string | null;
+  attention_level?: 'on_track' | 'watch' | 'at_risk' | 'completed' | string;
+  pending_grading_count?: number;
+  certificate_status?: string;
+  days_since_active?: number;
+}
+
+interface Exam {
+  id: number;
+  title: string;
+  type: string;
+  course_id: number;
+  course_name?: string | null;
+  status: string;
+  max_grade: number;
+  submitted?: number;
+  avg_grade?: number | null;
+  questions_count?: number;
+  open_questions_count?: number;
+  auto_gradable?: boolean;
+}
+
+interface Submission {
+  id: number;
+  exam_id: number;
+  student_id: string;
+  student_name?: string | null;
+  status: string;
+  submitted_at: string | null;
+  grade: number | null;
+}
+
+interface CourseInsight extends Course {
+  readinessIssues: string[];
+  workflowActionLabel: string | null;
+}
+
+function formatCurrency(amount: number) {
+  if (!amount) return '0 FCFA';
+  return `${amount.toLocaleString('fr-FR')} FCFA`;
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString('fr-FR');
+}
+
+function getDaysSince(value: string | null | undefined) {
+  if (!value) return null;
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return null;
+  return Math.max(0, Math.floor((Date.now() - timestamp) / 86_400_000));
+}
+
+function formatRelativeActivity(value: string | null | undefined) {
+  const days = getDaysSince(value);
+  if (days === null) return '-';
+  if (days === 0) return "Aujourd'hui";
+  if (days === 1) return 'Hier';
+  if (days < 7) return `Il y a ${days} jours`;
+  return `Il y a ${days} j`;
+}
+
+function getAttentionBadge(level: string | undefined) {
+  const styles: Record<string, string> = {
+    on_track: 'bg-emerald-100 text-emerald-700',
+    watch: 'bg-amber-100 text-amber-700',
+    at_risk: 'bg-red-100 text-red-700',
+    completed: 'bg-teal-100 text-teal-700',
+  };
+  const labels: Record<string, string> = {
+    on_track: 'Sur la bonne voie',
+    watch: 'À surveiller',
+    at_risk: 'À relancer',
+    completed: 'Terminé',
+  };
+
+  return (
+    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${styles[level || 'watch'] || 'bg-gray-100 text-gray-700'}`}>
+      {labels[level || 'watch'] || level}
+    </span>
+  );
+}
+
+function getExamTypeLabel(type: string) {
+  const labels: Record<string, string> = {
+    quiz: 'Quiz',
+    assignment: 'Devoir',
+    project: 'Projet',
+    oral: 'Oral',
+  };
+  return labels[type] || type;
 }
 
 export default function FormateurDashboardPage() {
   const { user } = useAuth();
-  const { success, error } = useToast();
+  const { error } = useToast();
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Enrollment[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
 
   const loadData = useCallback(async () => {
     if (!user?.id) {
       setCourses([]);
       setStudents([]);
+      setExams([]);
+      setSubmissions([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const [coursesRes, studentsRes] = await Promise.all([
-        backendClient.from('courses').select('*').eq('instructor_id', user.id).order('updated_at', { ascending: false }).limit(4),
-        backendClient.from('course_enrollments').select('*, courses(title)').order('last_active', { ascending: false }).limit(4),
+      const [coursesRes, studentsRes, examsRes, submissionsRes] = await Promise.all([
+        backendClient.from('courses').select('*').eq('instructor_id', user.id).order('updated_at', { ascending: false }),
+        backendClient.from('course_enrollments').select('*').order('last_active', { ascending: false }),
+        backendClient.from('exams').select('*').order('exam_date', { ascending: false }),
+        backendClient.from('submissions').select('*').order('submitted_at', { ascending: false }),
       ]);
 
       if (coursesRes.error) throw coursesRes.error;
       if (studentsRes.error) throw studentsRes.error;
+      if (examsRes.error) throw examsRes.error;
+      if (submissionsRes.error) throw submissionsRes.error;
 
-      setCourses((coursesRes.data || []).map((course) => ({
-        completion_rate: 0,
-        revenue: 0,
-        students_count: 0,
-        status: 'draft',
-        ...course,
-      })));
-      setStudents(studentsRes.data || []);
+      setCourses((coursesRes.data || []) as Course[]);
+      setStudents((studentsRes.data || []) as Enrollment[]);
+      setExams((examsRes.data || []) as Exam[]);
+      setSubmissions((submissionsRes.data || []) as Submission[]);
     } catch (err: unknown) {
-      error('Erreur', 'Impossible de charger les données du tableau de bord.');
+      error('Erreur', 'Impossible de charger les données du tableau de bord formateur.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -71,57 +186,113 @@ export default function FormateurDashboardPage() {
     loadData();
   }, [loadData]);
 
-  const totalStudents = courses.reduce((a, c) => a + (c.students_count || 0), 0);
-  const avgCompletion = courses.length
-    ? Math.round(courses.reduce((a, c) => a + (c.completion_rate || 0), 0) / courses.length)
-    : 0;
-  const totalRevenue = courses.reduce((a, c) => a + (c.revenue || 0), 0);
+  const courseInsights = useMemo<CourseInsight[]>(() => courses.map((course) => {
+    const readinessIssues = getCourseReadinessIssues({
+      description: course.description,
+      duration: course.duration,
+      thumbnail: course.thumbnail,
+      sectionCount: Number(course.modules || 0),
+      lessonCount: Number(course.lessons_count || 0),
+    });
+    const workflowAction = getInstructorWorkflowAction(course.status);
+    return {
+      ...course,
+      readinessIssues,
+      workflowActionLabel: workflowAction?.description ?? null,
+    };
+  }), [courses]);
+
+  const pendingCorrectionsCount = useMemo(
+    () => submissions.filter((submission) => submission.status === 'pending').length,
+    [submissions],
+  );
+  const atRiskEnrollments = useMemo(
+    () => students.filter((student) => student.attention_level === 'at_risk').sort((left, right) => (right.days_since_active ?? getDaysSince(right.last_active) ?? 0) - (left.days_since_active ?? getDaysSince(left.last_active) ?? 0)),
+    [students],
+  );
+  const watchEnrollments = useMemo(
+    () => students.filter((student) => student.attention_level === 'watch'),
+    [students],
+  );
+  const quizExams = useMemo(
+    () => exams.filter((exam) => exam.type === 'quiz'),
+    [exams],
+  );
+  const quizsToConfigureCount = useMemo(
+    () => quizExams.filter((exam) => (exam.questions_count || 0) === 0).length,
+    [quizExams],
+  );
+  const readyDraftCount = useMemo(
+    () => courseInsights.filter((course) => course.status === 'draft' && course.readinessIssues.length === 0).length,
+    [courseInsights],
+  );
+  const reviewCount = useMemo(
+    () => courseInsights.filter((course) => course.status === 'review').length,
+    [courseInsights],
+  );
+  const publishedCount = useMemo(
+    () => courseInsights.filter((course) => course.status === 'published').length,
+    [courseInsights],
+  );
+
+  const pipelineCourses = useMemo(
+    () => [...courseInsights].sort((left, right) => {
+      if (left.status !== right.status) {
+        const priority: Record<CourseWorkflowStatus, number> = {
+          draft: 0,
+          rejected: 1,
+          review: 2,
+          published: 3,
+          archived: 4,
+        };
+        return priority[left.status] - priority[right.status];
+      }
+      if (left.readinessIssues.length !== right.readinessIssues.length) {
+        return left.readinessIssues.length - right.readinessIssues.length;
+      }
+      return Date.parse(right.updated_at) - Date.parse(left.updated_at);
+    }).slice(0, 5),
+    [courseInsights],
+  );
+
+  const examsWithInsights = useMemo(() => exams.map((exam) => ({
+    ...exam,
+    pendingCorrections: submissions.filter((submission) => submission.exam_id === exam.id && submission.status === 'pending').length,
+  })), [exams, submissions]);
+
+  const totalSections = useMemo(
+    () => courses.reduce((sum, course) => sum + Number(course.modules || 0), 0),
+    [courses],
+  );
+  const totalLessons = useMemo(
+    () => courses.reduce((sum, course) => sum + Number(course.lessons_count || 0), 0),
+    [courses],
+  );
+  const totalAssets = useMemo(
+    () => courses.reduce((sum, course) => sum + Number(course.assets_count || 0), 0),
+    [courses],
+  );
+  const totalPreviewLessons = useMemo(
+    () => courses.reduce((sum, course) => sum + Number(course.preview_lessons_count || 0), 0),
+    [courses],
+  );
+  const coursesMissingContentCount = useMemo(
+    () => courseInsights.filter((course) => (course.assets_count || 0) === 0 || (course.lessons_count || 0) === 0).length,
+    [courseInsights],
+  );
+  const latestUpdatedCourse = useMemo(
+    () => [...courseInsights].sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at))[0] ?? null,
+    [courseInsights],
+  );
 
   const stats = [
-    { label: 'Formations actives', value: String(courses.filter((c) => c.status === 'published').length), change: '+2', icon: 'ri-presentation-line', color: 'bg-teal-500' },
-    { label: 'Apprenants inscrits', value: String(totalStudents), change: '+18', icon: 'ri-group-line', color: 'bg-teal-500' },
-    { label: 'Taux de complétion', value: `${avgCompletion}%`, change: '+3%', icon: 'ri-bar-chart-line', color: 'bg-green-500' },
-    { label: 'Revenus totaux', value: `${(totalRevenue / 1000).toFixed(0)}K FCFA`, change: '+12%', icon: 'ri-money-cny-circle-line', color: 'bg-amber-500' },
+    { label: 'Cours publiés', value: String(publishedCount), icon: 'ri-presentation-line', color: 'bg-green-500' },
+    { label: 'Brouillons prêts', value: String(readyDraftCount), icon: 'ri-send-plane-line', color: 'bg-teal-500' },
+    { label: 'En révision', value: String(reviewCount), icon: 'ri-shield-check-line', color: 'bg-blue-500' },
+    { label: 'Quiz à configurer', value: String(quizsToConfigureCount), icon: 'ri-questionnaire-line', color: 'bg-amber-500' },
+    { label: 'Apprenants à relancer', value: String(new Set(atRiskEnrollments.map((student) => student.student_id)).size), icon: 'ri-alarm-warning-line', color: 'bg-red-500' },
+    { label: 'Corrections en attente', value: String(pendingCorrectionsCount), icon: 'ri-file-list-3-line', color: 'bg-violet-500' },
   ];
-
-  const handlePublish = async (id: number, title: string) => {
-    try {
-      const { error: err } = await backendClient
-        .from('courses')
-        .update({ status: 'published', updated_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (err) throw err;
-      success('Formation publiée', `"${title}" est maintenant visible sur la plateforme.`);
-      loadData();
-    } catch (err: unknown) {
-      error('Erreur', 'Impossible de publier la formation.');
-      console.error(err);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      published: 'bg-green-100 text-green-700',
-      draft: 'bg-gray-100 text-gray-700',
-      review: 'bg-blue-100 text-blue-700',
-    };
-    const labels: Record<string, string> = {
-      published: 'Publiée',
-      draft: 'Brouillon',
-      review: 'En révision',
-    };
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-        {labels[status] || status}
-      </span>
-    );
-  };
-
-  const formatRevenue = (rev: number) => {
-    if (!rev) return '0 FCFA';
-    return rev.toLocaleString('fr-FR') + ' FCFA';
-  };
 
   return (
     <DashboardLayout>
@@ -130,121 +301,425 @@ export default function FormateurDashboardPage() {
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord Formateur</h1>
-          <p className="text-gray-600">Créez et dispensez vos formations</p>
+          <p className="text-gray-600">Pilotez vos cours, la qualité pédagogique et les apprenants qui demandent une action.</p>
         </div>
 
         <GlobalSearch context="formateur" />
 
-        {/* Stats */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <SkeletonCard count={4} />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-8">
+            <SkeletonCard count={6} />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <i className={`${stat.icon} text-xl text-white`}></i>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-8">
+            {stats.map((stat) => (
+              <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      <i className={`${stat.icon} text-white text-sm`}></i>
                     </div>
                   </div>
-                  <span className="text-sm font-medium text-green-600">{stat.change}</span>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-xs text-gray-600">{stat.label}</p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
-                <p className="text-sm text-gray-600">{stat.label}</p>
               </div>
             ))}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          {/* Formations */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900">Mes formations</h2>
-              <Link to="/dashboard/formateur/mes-cours" className="text-sm font-medium text-teal-600 hover:text-teal-700">
-                Voir tout
-              </Link>
-            </div>
-
-            {loading ? (
-              <SkeletonList count={3} />
-            ) : (
-              <div className="space-y-4">
-                {courses.map((formation) => (
-                  <div key={formation.id} className="p-4 border border-gray-200 rounded-lg hover:border-teal-300 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{formation.title}</h3>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-sm text-gray-600">
-                            <i className="ri-group-line mr-1"></i>
-                            {formation.students_count} apprenants
-                          </span>
-                          <span className="text-sm text-gray-600">
-                            <i className="ri-bar-chart-line mr-1"></i>
-                            {formation.completion_rate}% complété
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(formation.status)}
-                        <span className="text-sm font-medium text-gray-900">{formatRevenue(formation.revenue)}</span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                      <div className="bg-teal-500 h-2 rounded-full transition-all" style={{ width: `${formation.completion_rate}%` }}></div>
-                    </div>
-                    {formation.status === 'draft' && (
-                      <button
-                        onClick={() => handlePublish(formation.id, formation.title)}
-                        className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap"
-                      >
-                        Publier
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+        <section className="mb-8 rounded-xl border border-gray-200 bg-white p-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Pilotage formateur</h2>
+            <p className="text-sm text-gray-500">Accès direct aux blocs que nous avons ajoutés: profil public, revenus, analytics et communauté.</p>
           </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              { to: '/dashboard/formateur/profil-public', icon: 'ri-user-star-line', title: 'Profil public', description: 'Photo, bio, compétences, portfolio, vidéo et paiement.' },
+              { to: '/dashboard/formateur/revenus', icon: 'ri-wallet-3-line', title: 'Revenus', description: 'Comptes de retrait, disponible et historique des versements.' },
+              { to: '/dashboard/formateur/analytics', icon: 'ri-line-chart-line', title: 'Analytics', description: 'Ventes, vues, conversion, complétion et abandon.' },
+              { to: '/dashboard/formateur/communaute', icon: 'ri-chat-3-line', title: 'Communauté', description: 'Commentaires de leçons, réponses et FAQ de cours.' },
+            ].map((item) => (
+              <Link key={item.to} to={item.to} className="rounded-xl border border-gray-200 p-4 transition-colors hover:border-teal-300 hover:bg-teal-50/40">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+                  <i className={`${item.icon} text-lg`}></i>
+                </div>
+                <div className="font-semibold text-gray-900">{item.title}</div>
+                <p className="mt-2 text-sm text-gray-600">{item.description}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
 
-          {/* Recent Students */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_0.9fr] gap-6 lg:gap-8 mb-8">
+          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900">Apprenants récents</h2>
-              <span className="text-sm text-gray-500">Activité des 7 derniers jours</span>
+              <div>
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900">Pipeline de publication</h2>
+                <p className="text-sm text-gray-500">Les cours les plus proches d&apos;une action concrète.</p>
+              </div>
+              <Link to="/dashboard/formateur/mes-cours" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+                Gérer mes formations
+              </Link>
             </div>
 
             {loading ? (
               <SkeletonList count={4} />
             ) : (
               <div className="space-y-4">
-                {students.map((student) => (
-                  <div key={student.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div>
-                      <h3 className="font-medium text-gray-900">{student.student_name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {student.courses && typeof student.courses === 'object' ? (student.courses as { title?: string }).title : 'Formation'}
-                      </p>
+                {pipelineCourses.map((course) => (
+                  <div key={course.id} className="border border-gray-200 rounded-xl p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${courseStatusClasses[course.status]}`}>
+                            {courseStatusLabels[course.status]}
+                          </span>
+                          {course.status === 'draft' && course.readinessIssues.length === 0 && (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                              Prête à soumettre
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">{course.category || 'Général'}</p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          to={`/dashboard/formateur/mes-cours/${course.id}/programme`}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          Voir programme
+                        </Link>
+                        <Link
+                          to="/dashboard/formateur/mes-cours"
+                          className="px-3 py-2 border border-teal-200 rounded-lg text-sm font-medium text-teal-700 hover:bg-teal-50 transition-colors"
+                        >
+                          {course.workflowActionLabel || 'Ouvrir'}
+                        </Link>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">{student.progress}%</p>
-                      <p className="text-xs text-gray-500">{new Date(student.last_active).toLocaleDateString('fr-FR')}</p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Sections</p>
+                        <p className="text-sm font-semibold text-gray-900">{course.modules || 0}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Leçons</p>
+                        <p className="text-sm font-semibold text-gray-900">{course.lessons_count || 0}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Contenus</p>
+                        <p className="text-sm font-semibold text-gray-900">{course.assets_count || 0}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Traction</p>
+                        <p className="text-sm font-semibold text-gray-900">{course.students_count} apprenants</p>
+                      </div>
+                    </div>
+
+                    {course.readinessIssues.length > 0 ? (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                        <p className="text-xs font-medium text-amber-800 mb-1">À compléter avant soumission</p>
+                        <p className="text-sm text-amber-900">{course.readinessIssues.join(', ')}.</p>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                        <p className="text-xs font-medium text-emerald-800 mb-1">Readiness</p>
+                        <p className="text-sm text-emerald-900">
+                          Le cours est structuré et peut passer à l&apos;étape suivante.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-3">
+                      <span>{course.completion_rate}% de progression moyenne</span>
+                      <span>{formatCurrency(course.revenue || 0)}</span>
+                      <span>Mis à jour le {formatDate(course.updated_at)}</span>
                     </div>
                   </div>
                 ))}
+
+                {pipelineCourses.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                    Aucune formation disponible pour le moment.
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </section>
+
+          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900">Apprenants à relancer</h2>
+                <p className="text-sm text-gray-500">Visibilité directe sur les signaux d’attention.</p>
+              </div>
+              <Link to="/dashboard/formateur/apprenants" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+                Voir les apprenants
+              </Link>
+            </div>
+
+            {loading ? (
+              <SkeletonList count={4} />
+            ) : (
+              <div className="space-y-4">
+                {(atRiskEnrollments.length > 0 ? atRiskEnrollments : watchEnrollments).slice(0, 5).map((student) => (
+                  <div key={student.id} className="border border-gray-200 rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <p className="font-medium text-gray-900">{student.student_name}</p>
+                        <p className="text-sm text-gray-600">{student.course_name || 'Formation'}</p>
+                      </div>
+                      {getAttentionBadge(student.attention_level)}
+                    </div>
+
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                      <div
+                        className={`${student.progress >= 70 ? 'bg-green-500' : student.progress >= 30 ? 'bg-amber-500' : 'bg-red-500'} h-2 rounded-full transition-all`}
+                        style={{ width: `${student.progress}%` }}
+                      ></div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-3">
+                      <span>{student.progress}% complété</span>
+                      <span>{formatRelativeActivity(student.last_active)}</span>
+                      {student.pending_grading_count ? <span>{student.pending_grading_count} correction(s) à rendre</span> : null}
+                      {student.certificate_status === 'issued' ? <span>Certifié</span> : null}
+                    </div>
+
+                    <Link
+                      to={`/dashboard/messages?student=${encodeURIComponent(student.student_id)}&name=${encodeURIComponent(student.student_name)}`}
+                      className="inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-700"
+                    >
+                      Envoyer un message
+                      <i className="ri-arrow-right-line"></i>
+                    </Link>
+                  </div>
+                ))}
+
+                {students.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                    Aucun apprenant rattaché à vos cours pour le moment.
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
         </div>
 
-        {/* Quick Actions */}
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6 lg:gap-8 mb-8">
+          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900">Quiz & évaluations</h2>
+                <p className="text-sm text-gray-500">Configuration des quiz et charge de correction.</p>
+              </div>
+              <Link to="/dashboard/formateur/evaluations" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+                Voir toutes les évaluations
+              </Link>
+            </div>
+
+            {!loading && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-1">Quiz configurés</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {quizExams.filter((exam) => (exam.questions_count || 0) > 0).length}/{quizExams.length}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-1">Corrections en attente</p>
+                  <p className="text-sm font-semibold text-gray-900">{pendingCorrectionsCount}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-1">Examens actifs</p>
+                  <p className="text-sm font-semibold text-gray-900">{exams.filter((exam) => exam.status === 'ongoing').length}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-1">Auto-corrigeables</p>
+                  <p className="text-sm font-semibold text-gray-900">{quizExams.filter((exam) => exam.auto_gradable).length}</p>
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <SkeletonList count={4} />
+            ) : (
+              <div className="space-y-4">
+                {examsWithInsights.slice(0, 5).map((exam) => (
+                  <div key={exam.id} className="border border-gray-200 rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-gray-900">{exam.title}</p>
+                          <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                            {getExamTypeLabel(exam.type)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{exam.course_name || 'Formation'}</p>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900">{exam.submitted || 0} soumission(s)</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Questions</p>
+                        <p className="font-semibold text-gray-900">{exam.questions_count || 0}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Ouvertes</p>
+                        <p className="font-semibold text-gray-900">{exam.open_questions_count || 0}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">En attente</p>
+                        <p className="font-semibold text-gray-900">{exam.pendingCorrections}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Note moyenne</p>
+                        <p className="font-semibold text-gray-900">{exam.avg_grade ?? '-'}</p>
+                      </div>
+                    </div>
+
+                    {(exam.type === 'quiz' && (exam.questions_count || 0) === 0) ? (
+                      <p className="text-sm text-amber-700 mt-3">Quiz non configuré: ajoutez les questions avant de le diffuser.</p>
+                    ) : null}
+                  </div>
+                ))}
+
+                {examsWithInsights.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                    Aucune évaluation créée pour le moment.
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900">Programme & contenus</h2>
+                <p className="text-sm text-gray-500">Les améliorations pédagogiques visibles directement depuis l’accueil.</p>
+              </div>
+            </div>
+
+            {loading ? (
+              <SkeletonList count={4} />
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Sections créées</p>
+                    <p className="text-2xl font-bold text-gray-900">{totalSections}</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Leçons créées</p>
+                    <p className="text-2xl font-bold text-gray-900">{totalLessons}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Contenus attachés</p>
+                    <p className="text-2xl font-bold text-gray-900">{totalAssets}</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Leçons preview</p>
+                    <p className="text-2xl font-bold text-gray-900">{totalPreviewLessons}</p>
+                  </div>
+                </div>
+
+                {latestUpdatedCourse ? (
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Cours repris récemment</p>
+                        <p className="font-semibold text-gray-900">{latestUpdatedCourse.title}</p>
+                        <p className="text-sm text-gray-600">{latestUpdatedCourse.category || 'Général'}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${courseStatusClasses[latestUpdatedCourse.status]}`}>
+                        {courseStatusLabels[latestUpdatedCourse.status]}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Sections</p>
+                        <p className="font-semibold text-gray-900">{latestUpdatedCourse.modules || 0}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Leçons</p>
+                        <p className="font-semibold text-gray-900">{latestUpdatedCourse.lessons_count || 0}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 p-3">
+                        <p className="text-xs text-gray-500 mb-1">Contenus</p>
+                        <p className="font-semibold text-gray-900">{latestUpdatedCourse.assets_count || 0}</p>
+                      </div>
+                    </div>
+
+                    {latestUpdatedCourse.readinessIssues.length > 0 ? (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-3">
+                        <p className="text-xs font-medium text-amber-800 mb-1">Encore à finaliser</p>
+                        <p className="text-sm text-amber-900">{latestUpdatedCourse.readinessIssues.join(', ')}.</p>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 mb-3">
+                        <p className="text-xs font-medium text-emerald-800 mb-1">Programme exploitable</p>
+                        <p className="text-sm text-emerald-900">Le cours est structuré et prêt à être poussé dans le workflow prévu.</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
+                      <span>{latestUpdatedCourse.published_lessons_count || 0} leçon(s) publiées</span>
+                      <span>{latestUpdatedCourse.preview_lessons_count || 0} preview</span>
+                      <span>Mis à jour le {formatDate(latestUpdatedCourse.updated_at)}</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        to={`/dashboard/formateur/mes-cours/${latestUpdatedCourse.id}/programme`}
+                        className="px-3 py-2 border border-teal-200 rounded-lg text-sm font-medium text-teal-700 hover:bg-teal-50 transition-colors"
+                      >
+                        Continuer le programme
+                      </Link>
+                      <Link
+                        to="/dashboard/formateur/evaluations"
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Voir les évaluations
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                    Aucune formation à reprendre pour le moment.
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Cours avec contenu incomplet</p>
+                    <p className="text-2xl font-bold text-gray-900">{coursesMissingContentCount}</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Cours à reprise après rejet / archivage</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {courseInsights.filter((course) => course.status === 'rejected' || course.status === 'archived').length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
           <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             <Link to="/dashboard/formateur/mes-cours" className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 transition-all text-center">
               <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                 <div className="w-6 h-6 flex items-center justify-center">
@@ -252,6 +727,17 @@ export default function FormateurDashboardPage() {
                 </div>
               </div>
               <p className="font-medium text-gray-900 text-sm">Mes formations</p>
+            </Link>
+            <Link
+              to={latestUpdatedCourse ? `/dashboard/formateur/mes-cours/${latestUpdatedCourse.id}/programme` : '/dashboard/formateur/mes-cours'}
+              className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 transition-all text-center"
+            >
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <i className="ri-node-tree text-xl text-teal-600"></i>
+                </div>
+              </div>
+              <p className="font-medium text-gray-900 text-sm">Programme</p>
             </Link>
             <Link to="/dashboard/formateur/classes-virtuelles" className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 transition-all text-center">
               <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-3">

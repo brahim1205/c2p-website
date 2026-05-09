@@ -190,6 +190,61 @@ export class ConfigService {
     return Number(this.configService.get('SENDTEXT_TIMEOUT_MS') ?? '10000');
   }
 
+  get emailProvider(): 'disabled' | 'mock' | 'resend' {
+    return (this.configService.get('EMAIL_PROVIDER') ?? 'mock') as 'disabled' | 'mock' | 'resend';
+  }
+
+  get emailFrom(): string | undefined {
+    const value = this.configService.get('EMAIL_FROM');
+    return value ? String(value) : undefined;
+  }
+
+  get emailReplyTo(): string | undefined {
+    const value = this.configService.get('EMAIL_REPLY_TO');
+    return value ? String(value) : undefined;
+  }
+
+  get emailTimeoutMs(): number {
+    return Number(this.configService.get('EMAIL_TIMEOUT_MS') ?? '10000');
+  }
+
+  get resendApiKey(): string | undefined {
+    const value = this.configService.get('RESEND_API_KEY');
+    return value ? String(value) : undefined;
+  }
+
+  get defaultLiveProvider(): 'jitsi' | 'custom' {
+    return (this.configService.get('LIVE_PROVIDER') ?? 'jitsi') as 'jitsi' | 'custom';
+  }
+
+  get liveJitsiBaseUrl(): string {
+    return String(this.configService.get('LIVE_JITSI_BASE_URL') ?? 'https://meet.jit.si').replace(/\/$/, '');
+  }
+
+  get uploadStorageRoot(): string {
+    return String(this.configService.get('UPLOAD_STORAGE_ROOT') ?? 'storage/uploads');
+  }
+
+  get uploadTmpRoot(): string {
+    return String(this.configService.get('UPLOAD_TMP_ROOT') ?? 'storage/uploads/_tmp');
+  }
+
+  get uploadImageMaxBytes(): number {
+    return Number(this.configService.get('UPLOAD_IMAGE_MAX_MB') ?? '8') * 1024 * 1024;
+  }
+
+  get uploadRawMaxBytes(): number {
+    return Number(this.configService.get('UPLOAD_RAW_MAX_MB') ?? '512') * 1024 * 1024;
+  }
+
+  get uploadVideoMaxBytes(): number {
+    return Number(this.configService.get('UPLOAD_VIDEO_MAX_MB') ?? '5120') * 1024 * 1024;
+  }
+
+  get uploadRequestMaxBytes(): number {
+    return Number(this.configService.get('UPLOAD_REQUEST_MAX_MB') ?? '5120') * 1024 * 1024;
+  }
+
   get cloudinaryCloudName(): string | undefined {
     const value = this.configService.get('CLOUDINARY_CLOUD_NAME');
     return value ? String(value) : undefined;

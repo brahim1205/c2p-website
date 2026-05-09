@@ -12,6 +12,8 @@ interface ContactSubmission {
   subject: string;
   message: string;
   createdAt: string;
+  status: 'new' | 'handled';
+  handledAt: string | null;
 }
 
 interface NewsletterSubscription {
@@ -70,6 +72,22 @@ export class PublicIntakeService {
     });
   }
 
+  private async loadRows<T extends ContactSubmission | NewsletterSubscription>(table: PublicTableName): Promise<T[]> {
+    if (!this.prisma.isConnected) {
+      const source = table === 'public_contact_submissions'
+        ? this.fallback.contact
+        : this.fallback.newsletter;
+      return this.clone(source) as T[];
+    }
+
+    const rows = await this.prisma.appRow.findMany({
+      where: { table },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return rows.map((row) => this.clone(row.data as unknown) as T);
+  }
+
   async submitContact(payload: {
     firstName?: string;
     lastName?: string;
@@ -101,9 +119,59 @@ export class PublicIntakeService {
       subject,
       message,
       createdAt: new Date().toISOString(),
+      status: 'new',
+      handledAt: null,
     };
     await this.saveRow('public_contact_submissions', row);
     return { success: true };
+  }
+
+  async listContactSubmissions() {
+    const rows = await this.loadRows<ContactSubmission>('public_contact_submissions');
+    return rows
+      .map((row) => ({
+        ...row,
+        status: row.status ?? 'new',
+        handledAt: row.handledAt ?? null,
+      }))
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  }
+
+  async markContactSubmissionHandled(id: string) {
+    const handledAt = new Date().toISOString();
+
+    if (!this.prisma.isConnected) {
+      const row = this.fallback.contact.find((entry) => entry.id === id);
+      if (!row) {
+        throw new BadRequestException('Demande introuvable.');
+      }
+      row.status = 'handled';
+      row.handledAt = handledAt;
+      return this.clone(row);
+    }
+
+    const existing = await this.prisma.appRow.findUnique({
+      where: { key: this.rowKey('public_contact_submissions', id) },
+    });
+
+    if (!existing) {
+      throw new BadRequestException('Demande introuvable.');
+    }
+
+    const updated = {
+      ...(this.clone(existing.data as unknown) as ContactSubmission),
+      status: 'handled' as const,
+      handledAt,
+    };
+
+    await this.prisma.appRow.update({
+      where: { key: existing.key },
+      data: {
+        data: this.toJson(updated),
+      },
+    });
+
+    return updated;
   }
 
   async subscribeNewsletter(payload: { email?: string; source?: string }) {

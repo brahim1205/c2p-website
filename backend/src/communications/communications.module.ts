@@ -1,10 +1,15 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
+import { DatabaseModule } from '../database/database.module.js';
 import { CommunicationsController } from './communications.controller.js';
+import { CommunicationsService } from './communications.service.js';
+import { EmailService } from './email.service.js';
 import { SmsModule } from './sms.module.js';
 
 @Module({
-  imports: [AuthModule, SmsModule],
+  imports: [AuthModule, DatabaseModule, SmsModule],
   controllers: [CommunicationsController],
+  providers: [CommunicationsService, EmailService],
+  exports: [CommunicationsService, EmailService],
 })
 export class CommunicationsModule {}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
+import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { backendClient } from '@/lib/backendClient';
@@ -336,9 +337,7 @@ export default function FacturesPage() {
             <div className="p-6">
               <div className="flex items-start justify-between mb-6 pb-6 border-b border-gray-200">
                 <div className="flex items-center space-x-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0f766e]">
-                    <span className="text-white font-bold text-lg">C2P</span>
-                  </div>
+                  <BrandLogo className="flex items-center" imageClassName="h-12 w-auto object-contain" />
                   <div>
                     <p className="font-bold text-gray-900">Centre C2P</p>
                     <p className="text-sm text-gray-600">Yaoundé, Cameroun</p>

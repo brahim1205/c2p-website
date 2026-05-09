@@ -7,8 +7,8 @@ import { downloadCsvFile } from '@/lib/downloads';
 
 export default function AdminContentPage() {
   const { success, error } = useToast();
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'published' | 'rejected'>('all');
-  const [selectedContent, setSelectedContent] = useState<number[]>([]);
+  const [activeTab, setActiveTab] = useState<'all' | 'draft' | 'pending' | 'published' | 'rejected' | 'archived'>('all');
+  const [selectedContent, setSelectedContent] = useState<Array<number | string>>([]);
   const [contents, setContents] = useState<AdminContentItem[]>([]);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -35,25 +35,36 @@ export default function AdminContentPage() {
   const stats = useMemo(() => [
     { label: 'Contenus totaux', value: String(contents.length), icon: 'ri-file-list-line', color: 'bg-teal-500' },
     { label: 'Publies', value: String(contents.filter((content) => content.status === 'published').length), icon: 'ri-check-line', color: 'bg-green-500' },
+    { label: 'Brouillons', value: String(contents.filter((content) => content.status === 'draft').length), icon: 'ri-draft-line', color: 'bg-slate-500' },
     { label: 'En attente', value: String(contents.filter((content) => content.status === 'pending').length), icon: 'ri-time-line', color: 'bg-orange-500' },
     { label: 'Rejetes', value: String(contents.filter((content) => content.status === 'rejected').length), icon: 'ri-alert-line', color: 'bg-red-500' },
+    { label: 'Archives', value: String(contents.filter((content) => content.status === 'archived').length), icon: 'ri-archive-line', color: 'bg-gray-500' },
   ], [contents]);
 
   const getStatusBadge = (status: AdminContentItem['status']) => {
     const styles = {
+      draft: 'bg-slate-100 text-slate-700',
       published: 'bg-green-100 text-green-700',
       pending: 'bg-orange-100 text-orange-700',
       rejected: 'bg-red-100 text-red-700',
+      archived: 'bg-gray-200 text-gray-700',
     };
-    const labels = { published: 'Publie', pending: 'En attente', rejected: 'Rejete' };
+    const labels = { draft: 'Brouillon', published: 'Publie', pending: 'En attente', rejected: 'Rejete', archived: 'Archive' };
     return <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>{labels[status]}</span>;
   };
 
-  const mutateStatus = async (id: number, status: AdminContentItem['status']) => {
+  const mutateStatus = async (id: number | string, status: AdminContentItem['status']) => {
     try {
       const updated = await updateAdminContentItem(id, { status });
       setContents((prev) => prev.map((content) => (content.id === id ? updated : content)));
-      success(status === 'published' ? 'Contenu publie' : 'Contenu rejete', updated.title);
+      const labels: Record<AdminContentItem['status'], string> = {
+        draft: 'Contenu repasse en brouillon',
+        pending: 'Contenu renvoye en revision',
+        published: 'Contenu publie',
+        rejected: 'Contenu rejete',
+        archived: 'Contenu archive',
+      };
+      success(labels[status], updated.title);
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de mettre a jour le contenu.');
@@ -129,12 +140,14 @@ export default function AdminContentPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="border-b border-gray-200">
             <div className="flex space-x-8 px-6 overflow-x-auto">
-              {(['all', 'pending', 'published', 'rejected'] as const).map((tab) => (
+              {(['all', 'draft', 'pending', 'published', 'rejected', 'archived'] as const).map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab ? 'border-[#14B8A6] text-[#14B8A6]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                   {tab === 'all' && `Tous (${contents.length})`}
+                  {tab === 'draft' && `Brouillons (${contents.filter((content) => content.status === 'draft').length})`}
                   {tab === 'pending' && `En attente (${contents.filter((content) => content.status === 'pending').length})`}
                   {tab === 'published' && `Publies (${contents.filter((content) => content.status === 'published').length})`}
                   {tab === 'rejected' && `Rejetes (${contents.filter((content) => content.status === 'rejected').length})`}
+                  {tab === 'archived' && `Archives (${contents.filter((content) => content.status === 'archived').length})`}
                 </button>
               ))}
             </div>
@@ -146,6 +159,7 @@ export default function AdminContentPage() {
               <div className="flex items-center space-x-3">
                 <button onClick={() => handleBulkStatus('published')} className="px-4 py-2 bg-white text-[#14B8A6] border border-[#14B8A6] rounded-lg hover:bg-[#14B8A6]/5 transition-colors text-sm font-medium whitespace-nowrap">Publier</button>
                 <button onClick={() => handleBulkStatus('rejected')} className="px-4 py-2 bg-white text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium whitespace-nowrap">Rejeter</button>
+                <button onClick={() => handleBulkStatus('archived')} className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium whitespace-nowrap">Archiver</button>
               </div>
             </div>
           )}
@@ -184,8 +198,10 @@ export default function AdminContentPage() {
                       <div className="flex items-center justify-end space-x-2">
                         <button onClick={() => { setSelectedItem(content); setShowViewModal(true); }} className="p-2 text-[#14B8A6] hover:bg-[#14B8A6]/10 rounded-lg transition-colors" title="Voir"><i className="ri-eye-line text-base"></i></button>
                         {content.status !== 'published' && <button onClick={() => mutateStatus(content.id, 'published')} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Publier"><i className="ri-check-line text-base"></i></button>}
+                        {content.status !== 'pending' && <button onClick={() => mutateStatus(content.id, 'pending')} className="p-2 text-[#14B8A6] hover:bg-[#14B8A6]/10 rounded-lg transition-colors" title="Mettre en révision"><i className="ri-refresh-line text-base"></i></button>}
                         {content.status !== 'rejected' && <button onClick={() => mutateStatus(content.id, 'rejected')} className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Rejeter"><i className="ri-close-line text-base"></i></button>}
-                        <button onClick={() => { setSelectedItem(content); setShowDeleteModal(true); }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer"><i className="ri-delete-bin-line text-base"></i></button>
+                        {content.status !== 'archived' && <button onClick={() => mutateStatus(content.id, 'archived')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Archiver"><i className="ri-archive-line text-base"></i></button>}
+                        {content.source_table !== 'courses' && <button onClick={() => { setSelectedItem(content); setShowDeleteModal(true); }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer"><i className="ri-delete-bin-line text-base"></i></button>}
                       </div>
                     </td>
                   </tr>
@@ -214,11 +230,14 @@ export default function AdminContentPage() {
               </div>
               <div className="flex gap-3 mt-6">
                 <button onClick={() => setShowViewModal(false)} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Fermer</button>
-                {selectedItem.status === 'pending' && (
+                {selectedItem.status !== 'published' && (
                   <>
                     <button onClick={() => { void mutateStatus(selectedItem.id, 'published'); setShowViewModal(false); }} className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Publier</button>
                     <button onClick={() => { void mutateStatus(selectedItem.id, 'rejected'); setShowViewModal(false); }} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">Rejeter</button>
                   </>
+                )}
+                {selectedItem.status === 'published' && (
+                  <button onClick={() => { void mutateStatus(selectedItem.id, 'archived'); setShowViewModal(false); }} className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors">Archiver</button>
                 )}
               </div>
             </div>

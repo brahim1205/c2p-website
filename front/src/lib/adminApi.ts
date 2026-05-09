@@ -25,13 +25,13 @@ export interface AdminAccreditation {
 }
 
 export interface AdminContentItem {
-  id: number;
+  id: number | string;
   source_table: string;
   source_id: number | string;
   title: string;
   type: string;
   author: string;
-  status: 'published' | 'pending' | 'rejected';
+  status: 'draft' | 'pending' | 'published' | 'rejected' | 'archived';
   date: string;
   views: number;
   category: string;
@@ -145,12 +145,12 @@ export async function fetchAdminContentItems() {
   return expectData<AdminContentItem[]>(backendClient.from('admin_content_items').select('*').order('date', { ascending: false }));
 }
 
-export async function updateAdminContentItem(id: number, patch: Partial<AdminContentItem>) {
+export async function updateAdminContentItem(id: number | string, patch: Partial<AdminContentItem>) {
   const row = await expectData<AdminContentItem[]>(backendClient.from('admin_content_items').update(patch).eq('id', id).select('*'));
   return row[0];
 }
 
-export async function deleteAdminContentItem(id: number) {
+export async function deleteAdminContentItem(id: number | string) {
   return expectData<AdminContentItem[]>(backendClient.from('admin_content_items').delete().eq('id', id).select('*'));
 }
 
