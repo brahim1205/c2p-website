@@ -187,7 +187,7 @@ export default function MessagesPage() {
         error('Support indisponible', 'Impossible d ouvrir la conversation support.');
       }
     })();
-  }, [activeConversationId, conversations, createConversation, error, messagesLoading, searchParams, setActiveConversationId, success, user]);
+  }, [activeConversationId, contacts, conversations, createConversation, error, messagesLoading, searchParams, setActiveConversationId, success, user]);
 
   useEffect(() => {
     const targetConversationId = searchParams.get('conversation');
@@ -268,7 +268,7 @@ export default function MessagesPage() {
         error('Conversation indisponible', 'Impossible d ouvrir cette conversation.');
       }
     })();
-  }, [activeConversationId, conversations, createConversation, error, messagesLoading, searchParams, setActiveConversationId, success, user]);
+  }, [activeConversationId, contacts, conversations, createConversation, error, messagesLoading, searchParams, setActiveConversationId, success, user]);
 
   // Close menus on outside click
   useEffect(() => {
