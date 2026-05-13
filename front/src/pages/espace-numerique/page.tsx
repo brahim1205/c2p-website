@@ -306,23 +306,25 @@ export default function EspaceNumeriquePage() {
               </div>
 
               {/* Quick Stats */}
-              <div className="mt-12 grid max-w-3xl grid-cols-1 gap-px overflow-hidden rounded-2xl border border-[#80bfdf] bg-[#80bfdf] sm:grid-cols-3">
+              <div className="mx-auto mt-12 grid max-w-3xl grid-cols-1 gap-px overflow-hidden rounded-2xl border border-[#d6dbe1] bg-[#d6dbe1] sm:grid-cols-3">
                 <div className="text-center">
-                  <div className="bg-white/78 p-5">
-                    <div className="mb-1 text-3xl font-semibold text-[#06053a]">{branchFilter === 'all' ? courses.length : filteredFormations.length}+</div>
-                    <div className="text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">Parcours {branchFilter === 'all' ? 'disponibles' : activeBranchLabel}</div>
+                  <div className="flex h-full min-h-[136px] flex-col items-center justify-center bg-[#f7f6f4] px-5 py-6">
+                    <div className="mb-1 text-3xl font-semibold text-[#0f1c35]">{branchFilter === 'all' ? courses.length : filteredFormations.length}+</div>
+                    <div className="max-w-[12rem] text-[11px] uppercase leading-6 tracking-[0.22em] text-[#1a9a96]">
+                      Parcours {branchFilter === 'all' ? 'disponibles' : activeBranchLabel}
+                    </div>
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="bg-white/78 p-5">
-                    <div className="mb-1 text-3xl font-semibold text-[#06053a]">{branchCounts.form_actions}</div>
-                    <div className="text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">Form Actions</div>
+                  <div className="flex h-full min-h-[136px] flex-col items-center justify-center bg-[#f7f6f4] px-5 py-6">
+                    <div className="mb-1 text-3xl font-semibold text-[#0f1c35]">{branchCounts.form_actions}</div>
+                    <div className="max-w-[12rem] text-[11px] uppercase leading-6 tracking-[0.22em] text-[#1a9a96]">Form Actions</div>
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="bg-white/78 p-5">
-                    <div className="mb-1 text-3xl font-semibold text-[#06053a]">{branchCounts.end}</div>
-                    <div className="text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">END</div>
+                  <div className="flex h-full min-h-[136px] flex-col items-center justify-center bg-[#f7f6f4] px-5 py-6">
+                    <div className="mb-1 text-3xl font-semibold text-[#0f1c35]">{branchCounts.end}</div>
+                    <div className="max-w-[12rem] text-[11px] uppercase leading-6 tracking-[0.22em] text-[#1a9a96]">END</div>
                   </div>
                 </div>
               </div>

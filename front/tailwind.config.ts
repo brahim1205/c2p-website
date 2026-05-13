@@ -31,16 +31,16 @@ export default {
           'danger-soft': 'var(--c2p-danger-soft)',
         },
         primary: {
-          DEFAULT: '#27346b',
-          dark: '#0c0e3a',
+          DEFAULT: '#1a9a96',
+          dark: '#147f7b',
         },
         accent: {
-          DEFAULT: '#dbad29',
-          light: '#e1a913',
+          DEFAULT: '#0f1c35',
+          light: '#64748b',
         },
         beige: {
-          DEFAULT: '#80bfdf',
-          light: '#d0b55e',
+          DEFAULT: '#eceff3',
+          light: '#f7f6f4',
         },
       },
       fontFamily: {

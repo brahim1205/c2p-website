@@ -145,7 +145,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="mt-12 grid max-w-4xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/20 bg-white/30 backdrop-blur md:grid-cols-4">
+          <div className="mt-12 grid max-w-4xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/20 bg-white/22 backdrop-blur-[2px] md:grid-cols-4">
             {[
               ['3', 'Piliers C2P'],
               ['7', 'Espaces roles'],
@@ -232,7 +232,7 @@ export default function HomePage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#ffffff] via-[#ffffff]/68 to-transparent"></div>
                   <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 lg:p-7">
-                    <p className="inline-flex items-center rounded-full border border-white/14 bg-[#06053a]/84 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#c24141] shadow-[0_12px_30px_rgba(6,5,58,0.24)] backdrop-blur-md sm:px-4 sm:py-2 sm:text-[11px] sm:tracking-[0.28em]">
+                    <p className="inline-flex items-center rounded-full border border-white/14 bg-[#06053a]/84 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#c24141] shadow-[0_12px_30px_rgba(6,5,58,0.24)] backdrop-blur-[2px] sm:px-4 sm:py-2 sm:text-[11px] sm:tracking-[0.28em]">
                       {item.eyebrow}
                     </p>
                     <h3 className="mt-3 text-2xl font-semibold text-[#06053a] sm:text-3xl lg:text-4xl">{item.title}</h3>
@@ -281,7 +281,7 @@ export default function HomePage() {
             <h2 className="animate-fade-in-up text-3xl font-semibold leading-tight text-[#06053a] sm:text-4xl lg:text-5xl">
               Un tableau de bord adapté à chaque acteur de l&apos;écosystème.
             </h2>
-            <p className="rounded-2xl bg-white/88 px-5 py-4 text-base leading-8 text-[#06053a] shadow-[0_14px_34px_rgba(12,14,58,0.08)] backdrop-blur-sm">
+            <p className="rounded-2xl bg-white/88 px-5 py-4 text-base leading-8 text-[#06053a] shadow-[0_14px_34px_rgba(12,14,58,0.08)] backdrop-blur-[2px]">
               Les droits, les menus et les actions changent selon le profil: client / prestateur, prestataire,
               apprenant, formateur, porteur, partenaire ou administrateur.
             </p>

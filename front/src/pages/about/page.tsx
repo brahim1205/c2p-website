@@ -75,7 +75,7 @@ export default function AboutPage() {
             className="h-full w-full object-cover object-center opacity-24"
           />
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.94)_0%,rgba(247,248,252,0.76)_46%,rgba(247,248,252,0.30)_100%)]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.90)_0%,rgba(247,248,252,0.68)_46%,rgba(247,248,252,0.24)_100%)]"></div>
         <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
         <div className="relative z-10 flex min-h-[680px] items-center px-4 pt-24 sm:px-6 lg:px-20">
@@ -84,23 +84,23 @@ export default function AboutPage() {
               <p className="c2p-eyebrow mb-5">
                 À propos de C2P
               </p>
-              <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#06053a] sm:text-5xl lg:text-7xl">
+              <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#0f1c35] sm:text-5xl lg:text-7xl">
                 Un écosystème professionnel conçu pour faire avancer les talents
               </h1>
-              <p className="max-w-2xl text-base leading-8 text-[#27346b] sm:text-lg">
+              <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
                 C2P rassemble SenPresta, Form’Actions, l’END et Projects Center dans une plateforme unique pour transformer les ambitions en actions mesurables.
               </p>
             </div>
 
-            <div className="mt-12 grid max-w-4xl grid-cols-1 gap-px overflow-hidden rounded-2xl border border-[#80bfdf] bg-[#80bfdf] sm:grid-cols-3">
+            <div className="mt-12 grid max-w-4xl grid-cols-1 gap-px overflow-hidden rounded-2xl border border-[#d6dbe1] bg-[#d6dbe1] sm:grid-cols-3">
               {[
                 ['2,500+', 'Professionnels'],
                 ['150+', 'Projets accompagnes'],
                 ['98%', 'Satisfaction'],
               ].map(([value, label]) => (
-                <div key={label} className="bg-white/84 p-5 text-center">
-                  <div className="mb-1 text-3xl font-semibold text-[#06053a]">{value}</div>
-                  <div className="text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">{label}</div>
+                <div key={label} className="bg-[#f7f6f4] p-5 text-center">
+                  <div className="mb-1 text-3xl font-semibold text-[#0f1c35]">{value}</div>
+                  <div className="text-xs uppercase tracking-[0.22em] text-[#1a9a96]">{label}</div>
                 </div>
               ))}
             </div>
@@ -110,21 +110,21 @@ export default function AboutPage() {
 
       <section className="px-4 py-20 sm:px-6 lg:px-20 lg:py-28">
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="relative overflow-hidden rounded-[30px] border border-[#80bfdf]">
+          <div className="relative overflow-hidden rounded-[30px] border border-[#d6dbe1]">
             <img src="/images/brand/_.jpeg" alt="Mission C2P" className="h-[520px] w-full object-cover object-center" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#06053a]/48 to-transparent"></div>
-            <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-[#80bfdf] bg-white/88 p-5 backdrop-blur">
-              <div className="text-3xl font-semibold text-[#27346b]">98%</div>
-              <p className="mt-1 text-sm leading-6 text-[#27346b]">des apprenants recommandent l’accompagnement C2P.</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0f1c35]/42 to-transparent"></div>
+            <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-[#d6dbe1] bg-white/86 p-5 backdrop-blur-sm">
+              <div className="text-3xl font-semibold text-[#0f1c35]">98%</div>
+              <p className="mt-1 text-sm leading-6 text-[#64748b]">des apprenants recommandent l’accompagnement C2P.</p>
             </div>
           </div>
 
           <div>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#27346b]">Notre mission</p>
-            <h2 className="max-w-3xl text-3xl font-semibold leading-tight text-[#06053a] sm:text-4xl lg:text-5xl">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#1a9a96]">Notre mission</p>
+            <h2 className="max-w-3xl text-3xl font-semibold leading-tight text-[#0f1c35] sm:text-4xl lg:text-5xl">
               Donner à chaque acteur les moyens d’apprendre, produire et entreprendre.
             </h2>
-            <p className="mt-6 text-base leading-8 text-[#27346b]">
+            <p className="mt-6 text-base leading-8 text-[#64748b]">
               C2P part d’une conviction simple : les talents ont besoin d’un cadre fiable, de bons outils, de réseaux solides et d’un accompagnement concret. La plateforme organise ces besoins autour de parcours clairs pour les apprenants, prestataires, formateurs, porteurs de projet et partenaires.
             </p>
             <div className="mt-8 grid gap-4">
@@ -134,9 +134,9 @@ export default function AboutPage() {
                     <span className="c2p-icon-badge h-10 w-10">
                       <i className={`${pillar.icon} text-lg`}></i>
                     </span>
-                    <h3 className="font-semibold text-[#06053a]">{pillar.title}</h3>
+                    <h3 className="font-semibold text-[#0f1c35]">{pillar.title}</h3>
                   </div>
-                  <p className="text-sm leading-7 text-[#27346b]">{pillar.text}</p>
+                  <p className="text-sm leading-7 text-[#64748b]">{pillar.text}</p>
                 </div>
               ))}
             </div>
@@ -144,17 +144,17 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="border-y border-[#80bfdf] bg-[#ffffff] px-4 py-20 sm:px-6 lg:px-20">
+      <section className="border-y border-[#d6dbe1] bg-[#ffffff] px-4 py-20 sm:px-6 lg:px-20">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 max-w-2xl">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#27346b]">Nos valeurs</p>
-            <h2 className="text-3xl font-semibold text-[#06053a] sm:text-4xl">Une culture orientée qualité, impact et confiance.</h2>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#1a9a96]">Nos valeurs</p>
+            <h2 className="text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Une culture orientée qualité, impact et confiance.</h2>
           </div>
-          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[26px] border border-[#80bfdf] bg-[#80bfdf] sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[26px] border border-[#d6dbe1] bg-[#d6dbe1] sm:grid-cols-2 lg:grid-cols-3">
             {values.map((value) => (
               <div key={value} className="bg-white p-6">
-                <div className="mb-5 h-px w-12 bg-[#27346b]"></div>
-                <h3 className="text-lg font-semibold text-[#06053a]">{value}</h3>
+                <div className="mb-5 h-px w-12 bg-[#1a9a96]"></div>
+                <h3 className="text-lg font-semibold text-[#0f1c35]">{value}</h3>
               </div>
             ))}
           </div>
@@ -162,15 +162,15 @@ export default function AboutPage() {
       </section>
 
       <section className="relative overflow-hidden px-4 py-20 sm:px-6 lg:px-20 lg:py-28">
-        <div className="absolute left-1/2 top-56 hidden h-[calc(100%-18rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#27346b]/45 to-transparent lg:block"></div>
+        <div className="absolute left-1/2 top-56 hidden h-[calc(100%-18rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#d6dbe1] to-transparent lg:block"></div>
 
         <div className="mx-auto max-w-6xl">
           <div className="mx-auto mb-16 max-w-2xl text-center">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#27346b]">Notre Parcours</p>
-            <h2 className="text-3xl font-semibold text-[#06053a] sm:text-4xl lg:text-5xl">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#1a9a96]">Notre Parcours</p>
+            <h2 className="text-3xl font-semibold text-[#0f1c35] sm:text-4xl lg:text-5xl">
               Une Histoire de Croissance
             </h2>
-            <p className="mt-4 text-sm leading-7 text-[#27346b] sm:text-base">
+            <p className="mt-4 text-sm leading-7 text-[#64748b] sm:text-base">
               De la fondation à la vision 2030, découvrez les étapes clés qui ont façonné C2P.
             </p>
           </div>
@@ -185,21 +185,21 @@ export default function AboutPage() {
                   className="relative grid items-center gap-6 lg:grid-cols-[1fr_90px_1fr] lg:gap-0"
                 >
                   <div className={`${isLeft ? 'lg:pr-10' : 'lg:col-start-3 lg:pl-10'} ${isLeft ? '' : 'lg:row-start-1'}`}>
-                    <div className={`c2p-card group rounded-[24px] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#27346b]/45 hover:shadow-[0_24px_60px_rgba(12,14,58,0.08)] ${isLeft ? 'lg:text-right' : ''}`}>
-                      <span className="inline-flex rounded-full border border-[#27346b]/35 bg-[#27346b]/10 px-3 py-1 text-sm font-semibold text-[#27346b]">
+                    <div className={`c2p-card group rounded-[24px] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#1a9a96]/35 hover:shadow-[0_24px_60px_rgba(15,28,53,0.08)] ${isLeft ? 'lg:text-right' : ''}`}>
+                      <span className="inline-flex rounded-full border border-[#d6dbe1] bg-[#1a9a96]/10 px-3 py-1 text-sm font-semibold text-[#1a9a96]">
                         {milestone.year}
                       </span>
-                      <h3 className="mt-4 text-xl font-semibold text-[#06053a] transition-colors group-hover:text-[#27346b]">
+                      <h3 className="mt-4 text-xl font-semibold text-[#0f1c35] transition-colors group-hover:text-[#1a9a96]">
                         {milestone.title}
                       </h3>
-                      <p className="mt-3 text-sm leading-7 text-[#27346b]">
+                      <p className="mt-3 text-sm leading-7 text-[#64748b]">
                         {milestone.desc}
                       </p>
                     </div>
                   </div>
 
                   <div className="hidden justify-center lg:col-start-2 lg:row-start-1 lg:flex">
-                    <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full border border-[#27346b]/45 bg-white shadow-[0_0_0_10px_rgba(39,52,107,0.10)]">
+                    <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full border border-[#d6dbe1] bg-white shadow-[0_0_0_10px_rgba(26,154,150,0.10)]">
                       <div className="c2p-icon-badge h-10 w-10">
                         <i className={`${milestone.icon} text-lg`}></i>
                       </div>
@@ -212,15 +212,15 @@ export default function AboutPage() {
             })}
           </div>
 
-          <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-[26px] border border-[#80bfdf] bg-[#80bfdf] sm:grid-cols-3">
+          <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-[26px] border border-[#d6dbe1] bg-[#d6dbe1] sm:grid-cols-3">
             {[
               ['AlloPresta', 'Services vérifiés'],
               ['Espace Numérique', 'Compétences certifiées'],
               ['ProjectCenter', 'Projets accompagnés'],
             ].map(([name, label]) => (
               <div key={name} className="bg-white p-6 text-center">
-                <div className="text-lg font-semibold text-[#06053a]">{name}</div>
-                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">{label}</div>
+                <div className="text-lg font-semibold text-[#0f1c35]">{name}</div>
+                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-[#1a9a96]">{label}</div>
               </div>
             ))}
           </div>

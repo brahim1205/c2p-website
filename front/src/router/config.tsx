@@ -193,7 +193,7 @@ const routes: RouteObject[] = [
   {
     path: '/allopresta/prestataire/:id',
     element: (
-      <RouteWrapper layout="public" hideFooter={false} hideHeader={true}>
+      <RouteWrapper layout="public" hideFooter={false}>
         <PrestatairePage />
       </RouteWrapper>
     )

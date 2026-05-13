@@ -129,17 +129,17 @@ export default function PricingPage() {
           </p>
           <div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
-              <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-[#06053a] sm:text-5xl lg:text-6xl">
+              <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl lg:text-6xl">
                 Sachez avant inscription ce qui est payant, a quel prix, et ce que chaque plan debloque.
               </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-[#27346b] sm:text-lg">
+              <p className="mt-6 max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
                 C2P ne demande pas un abonnement a tout le monde. Les plans concernent surtout les acteurs qui
                 publient une offre ou exploitent un parcours premium : prestataires, formateurs et porteurs de projet.
               </p>
             </div>
             <div className="c2p-panel p-6">
               <p className="c2p-eyebrow text-sm tracking-[0.2em]">Quand on vous le demande</p>
-              <div className="mt-5 space-y-4 text-sm leading-7 text-[#27346b]">
+              <div className="mt-5 space-y-4 text-sm leading-7 text-[#64748b]">
                 <p>Pas a l inscription, pas a la connexion.</p>
                 <p>L abonnement devient requis quand vous voulez publier un service, lancer une formation ou soumettre un projet premium.</p>
                 <p>Le backend bloque ensuite les ecritures premium si aucun plan actif n existe.</p>
@@ -161,12 +161,12 @@ export default function PricingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#27346b]">Rôles monétisés</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#06053a] sm:text-4xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">Rôles monétisés</p>
+              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">
                 Trois familles de plans publics aujourd’hui
               </h2>
             </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#27346b]">
+            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
               Chaque famille correspond à un usage métier distinct. Les prix et les fonctionnalités affichés ici sont les vrais plans actifs exposés par la plateforme.
             </p>
           </div>
@@ -178,18 +178,18 @@ export default function PricingPage() {
               return (
                 <article
                   key={role}
-                  className="rounded-[22px] border border-[#80bfdf] bg-white px-5 py-6 shadow-[0_18px_45px_rgba(12,14,58,0.08)] sm:rounded-[24px] sm:px-6 sm:py-7 sm:shadow-[0_22px_60px_rgba(12,14,58,0.08)]"
+                  className="rounded-[22px] border border-[#d6dbe1] bg-white px-5 py-6 shadow-[0_18px_45px_rgba(15,28,53,0.08)] sm:rounded-[24px] sm:px-6 sm:py-7 sm:shadow-[0_22px_60px_rgba(15,28,53,0.08)]"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#27346b]">{content.shortLabel}</p>
-                  <h3 className="mt-3 text-xl font-semibold text-[#06053a] sm:mt-4 sm:text-2xl">{content.label}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#27346b] sm:mt-4 sm:leading-7">{content.summary}</p>
-                  <p className="mt-3 text-sm font-medium text-[#06053a] sm:mt-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#1a9a96]">{content.shortLabel}</p>
+                  <h3 className="mt-3 text-xl font-semibold text-[#0f1c35] sm:mt-4 sm:text-2xl">{content.label}</h3>
+                  <p className="mt-3 text-sm leading-6 text-[#64748b] sm:mt-4 sm:leading-7">{content.summary}</p>
+                  <p className="mt-3 text-sm font-medium text-[#0f1c35] sm:mt-4">
                     {priceRange ?? (isLoading ? 'Chargement des prix...' : 'Plans indisponibles')}
                   </p>
-                  <ul className="mt-4 space-y-2.5 text-sm leading-6 text-[#27346b] sm:mt-5 sm:space-y-3">
+                  <ul className="mt-4 space-y-2.5 text-sm leading-6 text-[#64748b] sm:mt-5 sm:space-y-3">
                     {content.unlocks.map((item) => (
                       <li key={item} className="flex items-start gap-3">
-                        <i className="ri-check-line mt-0.5 text-[#27346b]"></i>
+                        <i className="ri-check-line mt-0.5 text-[#1a9a96]"></i>
                         <span>{item}</span>
                       </li>
                     ))}
@@ -205,10 +205,10 @@ export default function PricingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#27346b]">SenPresta</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#06053a] sm:text-4xl">Visibilité, alertes et vérification</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">SenPresta</p>
+              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Visibilité, alertes et vérification</h2>
             </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#27346b]">
+            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
               Le client a demandé trois niveaux clairs dans SenPresta : consultation visiteur, accès abonné et profil vérifié. Les plans prestataire servent aujourd’hui à porter cette logique.
             </p>
           </div>
@@ -217,29 +217,29 @@ export default function PricingPage() {
             {[
               {
                 title: 'Visiteur',
-                tone: 'border-[#d7e6fb] bg-[#f8fbff]',
+                tone: 'border-[#d6dbe1] bg-[#f7f6f4]',
                 pass: 'Billet standard',
                 text: 'Consulte les annonces, voit le profil résumé et passe par C2P pour la mise en relation.',
               },
               {
                 title: 'Abonné',
-                tone: 'border-[#80bfdf] bg-white',
+                tone: 'border-[#d6dbe1] bg-white',
                 pass: 'Billet prioritaire',
                 text: 'Active les alertes, ouvre plus de détails et gagne en visibilité standard sur SenPresta.',
               },
               {
                 title: 'Vérifié',
-                tone: 'border-[#dbad29]/30 bg-[#fff8e6]',
+                tone: 'border-[#d6dbe1] bg-[#f7f6f4]',
                 pass: 'Billet premium',
                 text: 'Débloque le badge C2P, la priorité de matching et la visibilité premium dans les flux.',
               },
             ].map((item) => (
-              <article key={item.title} className={`rounded-[22px] border px-5 py-6 shadow-[0_18px_45px_rgba(12,14,58,0.06)] ${item.tone}`}>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#27346b]">{item.title}</p>
-                <p className="mt-3 inline-flex rounded-full border border-[#80bfdf]/45 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#06053a]">
+              <article key={item.title} className={`rounded-[22px] border px-5 py-6 shadow-[0_18px_45px_rgba(15,28,53,0.06)] ${item.tone}`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#1a9a96]">{item.title}</p>
+                <p className="mt-3 inline-flex rounded-full border border-[#d6dbe1] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0f1c35]">
                   {item.pass}
                 </p>
-                <p className="mt-4 text-sm leading-7 text-[#27346b]">{item.text}</p>
+                <p className="mt-4 text-sm leading-7 text-[#64748b]">{item.text}</p>
               </article>
             ))}
           </div>
@@ -250,21 +250,21 @@ export default function PricingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#27346b]">À quoi sert l’abonnement</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#06053a] sm:text-4xl">L’accès premium se déclenche au premier usage</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">À quoi sert l’abonnement</p>
+              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">L’accès premium se déclenche au premier usage</h2>
             </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#27346b]">
+            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
               Vous pouvez créer un compte librement. La plateforme vous demandera ensuite un plan actif quand vous voudrez utiliser une capacité premium liée à votre rôle.
             </p>
           </div>
 
           <div className="grid gap-5 lg:grid-cols-3">
             {monetizedRoles.map((role, index) => (
-              <article key={role} className="border-t border-[#d8cdb9] pt-5 sm:pt-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#27346b]">Etape 0{index + 1}</p>
-                <h3 className="mt-3 text-xl font-semibold text-[#06053a] sm:text-2xl">{monetizedRoleContent[role].label}</h3>
-                <p className="mt-3 text-sm leading-6 text-[#27346b] sm:mt-4 sm:leading-7">{monetizedRoleContent[role].purpose}</p>
-                <p className="mt-4 rounded-2xl bg-[#ffffff] px-4 py-4 text-sm font-medium leading-6 text-[#06053a]">
+              <article key={role} className="border-t border-[#d6dbe1] pt-5 sm:pt-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#1a9a96]">Etape 0{index + 1}</p>
+                <h3 className="mt-3 text-xl font-semibold text-[#0f1c35] sm:text-2xl">{monetizedRoleContent[role].label}</h3>
+                <p className="mt-3 text-sm leading-6 text-[#64748b] sm:mt-4 sm:leading-7">{monetizedRoleContent[role].purpose}</p>
+                <p className="mt-4 rounded-2xl bg-[#ffffff] px-4 py-4 text-sm font-medium leading-6 text-[#0f1c35]">
                   {monetizedRoleContent[role].gateLabel}
                 </p>
               </article>
@@ -277,10 +277,10 @@ export default function PricingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#27346b]">Plans actifs</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#06053a] sm:text-4xl">Prix mensuels et fonctionnalités</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">Plans actifs</p>
+              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Prix mensuels et fonctionnalités</h2>
             </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#27346b]">
+            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
               Les plans ci-dessous viennent du backend public. Si l’équipe C2P modifie un tarif ou une fonctionnalité, cette page suit directement la source métier.
             </p>
           </div>
@@ -299,19 +299,19 @@ export default function PricingPage() {
                   <section
                     id={`${role}-plans`}
                     key={role}
-                    className="overflow-hidden rounded-[32px] border border-[#80bfdf] bg-[radial-gradient(circle_at_top,rgba(39,52,107,0.10),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(219,173,41,0.08),transparent_26%),linear-gradient(180deg,#ffffff,#ffffff)] px-5 py-8 text-[#06053a] shadow-[0_24px_70px_rgba(39,52,107,0.10)] sm:px-8 lg:px-10"
+                    className="overflow-hidden rounded-[32px] border border-[#d6dbe1] bg-[radial-gradient(circle_at_top,rgba(26,154,150,0.08),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(15,28,53,0.05),transparent_26%),linear-gradient(180deg,#ffffff,#ffffff)] px-5 py-8 text-[#0f1c35] shadow-[0_24px_70px_rgba(15,28,53,0.10)] sm:px-8 lg:px-10"
                   >
                     <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#27346b]">{content.shortLabel}</p>
-                        <h3 className="mt-3 text-3xl font-semibold text-[#06053a]">{content.label}</h3>
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#1a9a96]">{content.shortLabel}</p>
+                        <h3 className="mt-3 text-3xl font-semibold text-[#0f1c35]">{content.label}</h3>
                       </div>
-                      <p className="max-w-2xl text-sm leading-7 text-[#27346b]">{content.purpose}</p>
+                      <p className="max-w-2xl text-sm leading-7 text-[#64748b]">{content.purpose}</p>
                     </div>
 
                     <div className="mb-6 flex justify-center sm:mb-8">
-                      <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-[#80bfdf] bg-[#ffffff] px-4 py-2.5 text-center text-xs text-[#27346b] sm:gap-3 sm:px-5 sm:py-3 sm:text-sm">
-                        <span className="rounded-full bg-[#27346b] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white">
+                      <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-[#d6dbe1] bg-[#ffffff] px-4 py-2.5 text-center text-xs text-[#64748b] sm:gap-3 sm:px-5 sm:py-3 sm:text-sm">
+                        <span className="rounded-full bg-[#0f1c35] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white">
                           Mensuel
                         </span>
                         <span>Facturation active actuellement</span>
@@ -323,12 +323,12 @@ export default function PricingPage() {
                         {[1, 2, 3].map((placeholder) => (
                           <div
                             key={placeholder}
-                            className="min-h-[540px] animate-pulse rounded-[28px] border border-[#80bfdf] bg-white"
+                            className="min-h-[540px] animate-pulse rounded-[28px] border border-[#d6dbe1] bg-white"
                           />
                         ))}
                       </div>
                     ) : rolePlans.length === 0 ? (
-                      <div className="rounded-[24px] border border-[#80bfdf] bg-[#ffffff] px-6 py-6 text-sm text-[#27346b]">
+                      <div className="rounded-[24px] border border-[#d6dbe1] bg-[#ffffff] px-6 py-6 text-sm text-[#64748b]">
                         Aucun plan public actif pour ce rôle.
                       </div>
                     ) : (
@@ -339,42 +339,42 @@ export default function PricingPage() {
                           return (
                           <article
                             key={plan.id}
-                            className={`relative flex h-full min-h-0 flex-col justify-between overflow-hidden rounded-[24px] border p-5 shadow-[0_18px_50px_rgba(39,52,107,0.10)] transition-transform duration-300 sm:min-h-[560px] sm:rounded-[28px] sm:p-6 ${
+                            className={`relative flex h-full min-h-0 flex-col justify-between overflow-hidden rounded-[24px] border p-5 shadow-[0_18px_50px_rgba(15,28,53,0.10)] transition-transform duration-300 sm:min-h-[560px] sm:rounded-[28px] sm:p-6 ${
                               isFeatured
-                                ? 'border-[#27346b] bg-[radial-gradient(circle_at_top_left,rgba(39,52,107,0.12),transparent_42%),linear-gradient(180deg,#ffffff,#ffffff)] shadow-[0_0_0_1px_rgba(39,52,107,0.28),0_28px_80px_rgba(39,52,107,0.18)]'
-                                : 'border-[#80bfdf] bg-[radial-gradient(circle_at_top_left,rgba(39,52,107,0.06),transparent_42%),linear-gradient(180deg,#ffffff,#ffffff)]'
+                                ? 'border-[#0f1c35] bg-[radial-gradient(circle_at_top_left,rgba(15,28,53,0.10),transparent_42%),linear-gradient(180deg,#ffffff,#ffffff)] shadow-[0_0_0_1px_rgba(15,28,53,0.20),0_28px_80px_rgba(15,28,53,0.14)]'
+                                : 'border-[#d6dbe1] bg-[radial-gradient(circle_at_top_left,rgba(26,154,150,0.05),transparent_42%),linear-gradient(180deg,#ffffff,#ffffff)]'
                             }`}
                           >
-                            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(39,52,107,0.03))]" />
+                            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(15,28,53,0.03))]" />
                             <div>
                               <div className="relative z-10 flex items-start justify-between gap-4">
                                 <div>
                                   <div className="flex flex-wrap items-center gap-3">
-                                    <h4 className="text-xl font-semibold text-[#06053a] sm:text-2xl">{plan.name}</h4>
+                                    <h4 className="text-xl font-semibold text-[#0f1c35] sm:text-2xl">{plan.name}</h4>
                                     {isFeatured ? (
-                                      <span className="rounded-full bg-[#fff4ec] px-3 py-1 text-xs font-semibold text-[#d0b55e]">
+                                      <span className="rounded-full bg-[#f7f6f4] px-3 py-1 text-xs font-semibold text-[#1a9a96]">
                                         Le plus choisi
                                       </span>
                                     ) : null}
                                   </div>
                                   <div className="mt-4 flex flex-wrap items-end gap-2 sm:mt-5">
-                                    <span className="text-4xl font-semibold tracking-tight text-[#06053a] sm:text-5xl">
+                                    <span className="text-4xl font-semibold tracking-tight text-[#0f1c35] sm:text-5xl">
                                       {formatAmountOnly(plan.price_monthly)}
                                     </span>
-                                    <span className="pb-1 text-xl font-semibold text-[#06053a] sm:text-2xl">
+                                    <span className="pb-1 text-xl font-semibold text-[#0f1c35] sm:text-2xl">
                                       {formatCurrencyLabel(plan.currency)}
                                     </span>
-                                    <span className="pb-1.5 text-base text-[#5fa6f3] sm:pb-2 sm:text-lg">/ mois</span>
+                                    <span className="pb-1.5 text-base text-[#1a9a96] sm:pb-2 sm:text-lg">/ mois</span>
                                   </div>
-                                  <p className="mt-3 max-w-sm text-sm leading-6 text-[#27346b] sm:mt-4 sm:leading-7">
+                                  <p className="mt-3 max-w-sm text-sm leading-6 text-[#64748b] sm:mt-4 sm:leading-7">
                                     {content.summary}
                                   </p>
                                 </div>
                                 <span
                                   className={`flex h-7 w-7 items-center justify-center rounded-full border text-sm ${
                                     isFeatured
-                                      ? 'border-[#27346b] bg-[#27346b] text-white'
-                                      : 'border-[#5fa6f3] text-[#5fa6f3]'
+                                      ? 'border-[#0f1c35] bg-[#0f1c35] text-white'
+                                      : 'border-[#1a9a96] text-[#1a9a96]'
                                   }`}
                                 >
                                   <i className={isFeatured ? 'ri-check-line' : 'ri-circle-line'}></i>
@@ -382,23 +382,23 @@ export default function PricingPage() {
                               </div>
 
                               <div className="relative z-10 mt-5 grid grid-cols-2 gap-3 sm:mt-6">
-                                <div className="rounded-2xl border border-[#80bfdf] bg-white px-3 py-3.5 sm:px-4 sm:py-4">
-                                  <p className="text-lg font-semibold text-[#06053a]">{plan.commission_rate}%</p>
-                                  <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#5fa6f3]">Commission</p>
+                                <div className="rounded-2xl border border-[#d6dbe1] bg-white px-3 py-3.5 sm:px-4 sm:py-4">
+                                  <p className="text-lg font-semibold text-[#0f1c35]">{plan.commission_rate}%</p>
+                                  <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#1a9a96]">Commission</p>
                                 </div>
-                                <div className="rounded-2xl border border-[#80bfdf] bg-white px-3 py-3.5 sm:px-4 sm:py-4">
-                                  <p className="text-lg font-semibold text-[#06053a]">{getSupportLabel(plan.support_level)}</p>
-                                  <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#5fa6f3]">Support</p>
+                                <div className="rounded-2xl border border-[#d6dbe1] bg-white px-3 py-3.5 sm:px-4 sm:py-4">
+                                  <p className="text-lg font-semibold text-[#0f1c35]">{getSupportLabel(plan.support_level)}</p>
+                                  <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#1a9a96]">Support</p>
                                 </div>
                               </div>
 
-                              <ul className="relative z-10 mt-5 space-y-3 text-sm leading-6 text-[#06053a] sm:mt-6 sm:space-y-4">
+                              <ul className="relative z-10 mt-5 space-y-3 text-sm leading-6 text-[#0f1c35] sm:mt-6 sm:space-y-4">
                                 {plan.features.map((feature) => (
                                   <li key={feature} className="flex items-start gap-3">
-                                    <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#ffffff] text-[#27346b] sm:h-10 sm:w-10">
+                                    <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#ffffff] text-[#1a9a96] sm:h-10 sm:w-10">
                                       <i className={`${getFeatureIcon(feature)} text-base sm:text-lg`}></i>
                                     </span>
-                                    <span className="pt-0.5 text-sm leading-6 text-[#06053a] sm:pt-1 sm:text-base sm:leading-7">{feature}</span>
+                                    <span className="pt-0.5 text-sm leading-6 text-[#0f1c35] sm:pt-1 sm:text-base sm:leading-7">{feature}</span>
                                   </li>
                                 ))}
                               </ul>
@@ -408,10 +408,10 @@ export default function PricingPage() {
                               to={cta.to}
                               className={`relative z-10 mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-colors sm:mt-8 ${
                                 cta.variant === 'featured_orange' && isFeatured
-                                  ? 'bg-[#dbad29] text-white hover:bg-[#e1a913]'
+                                  ? 'bg-[#1a9a96] text-white hover:bg-[#147f7b]'
                                   : cta.variant === 'featured_orange'
-                                    ? 'bg-[#27346b] text-white hover:bg-[#5b32cb]'
-                                    : 'border border-[#5fa6f3] bg-white text-[#27346b] hover:border-[#27346b] hover:bg-[#ffffff]'
+                                    ? 'bg-[#0f1c35] text-white hover:bg-[#1b2d4a]'
+                                    : 'border border-[#d6dbe1] bg-white text-[#0f1c35] hover:border-[#1a9a96] hover:bg-[#ffffff]'
                               }`}
                             >
                               {cta.label}
@@ -432,19 +432,19 @@ export default function PricingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#27346b]">Sans abonnement</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#06053a] sm:text-4xl">Qui peut entrer sans plan mensuel</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">Sans abonnement</p>
+              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Qui peut entrer sans plan mensuel</h2>
             </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#27346b]">
+            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
               Tous les rôles ne sont pas monétisés par abonnement. C2P garde une entrée libre pour les usages d’exploration, d’achat ou d’onboarding encadré.
             </p>
           </div>
 
           <div className="grid gap-5 lg:grid-cols-3">
             {publicAccessRoles.map((item) => (
-              <article key={item.role} className="rounded-[24px] border border-[#80bfdf] bg-[#ffffff] px-6 py-7">
-                <h3 className="text-2xl font-semibold text-[#06053a]">{item.label}</h3>
-                <p className="mt-4 text-sm leading-7 text-[#27346b]">{item.description}</p>
+              <article key={item.role} className="rounded-[24px] border border-[#d6dbe1] bg-[#ffffff] px-6 py-7">
+                <h3 className="text-2xl font-semibold text-[#0f1c35]">{item.label}</h3>
+                <p className="mt-4 text-sm leading-7 text-[#64748b]">{item.description}</p>
               </article>
             ))}
           </div>

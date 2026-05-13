@@ -126,10 +126,10 @@ export default function ContactPage() {
               <p className="c2p-eyebrow mb-5">
                 Contact C2P
               </p>
-              <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#06053a] sm:text-5xl lg:text-7xl">
+              <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#0f1c35] sm:text-5xl lg:text-7xl">
                 Parlons de votre prochain mouvement professionnel
               </h1>
-              <p className="max-w-2xl text-base leading-8 text-[#27346b] sm:text-lg">
+              <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
                 Que vous soyez apprenant, prestataire, formateur, porteur de projet ou partenaire, notre équipe vous oriente vers le bon parcours.
               </p>
             </div>
@@ -141,28 +141,28 @@ export default function ContactPage() {
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="c2p-panel p-6 sm:p-8 lg:p-10">
             <p className="c2p-eyebrow mb-3">Message</p>
-            <h2 className="mb-2 text-2xl font-semibold text-[#06053a] sm:text-3xl">Envoyez-nous un message</h2>
-            <p className="mb-8 text-sm leading-7 text-[#27346b]">Nous vous répondons sous 24h ouvrées avec une orientation claire.</p>
+            <h2 className="mb-2 text-2xl font-semibold text-[#0f1c35] sm:text-3xl">Envoyez-nous un message</h2>
+            <p className="mb-8 text-sm leading-7 text-[#64748b]">Nous vous répondons sous 24h ouvrées avec une orientation claire.</p>
 
             <form id="contact-form" data-readdy-form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="prenom" className="mb-1.5 block text-sm font-medium text-[#27346b]">Prénom *</label>
+                  <label htmlFor="prenom" className="mb-1.5 block text-sm font-medium text-[#64748b]">Prénom *</label>
                   <input type="text" id="prenom" name="prenom" required placeholder="Jean" className={inputClass} value={formValues.prenom} onChange={(e) => setFormValues((prev) => ({ ...prev, prenom: e.target.value }))} />
                 </div>
                 <div>
-                  <label htmlFor="nom" className="mb-1.5 block text-sm font-medium text-[#27346b]">Nom *</label>
+                  <label htmlFor="nom" className="mb-1.5 block text-sm font-medium text-[#64748b]">Nom *</label>
                   <input type="text" id="nom" name="nom" required placeholder="Dupont" className={inputClass} value={formValues.nom} onChange={(e) => setFormValues((prev) => ({ ...prev, nom: e.target.value }))} />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#27346b]">Email *</label>
+                <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-[#64748b]">Email *</label>
                 <input type="email" id="email" name="email" required placeholder="jean.dupont@email.com" className={inputClass} value={formValues.email} onChange={(e) => setFormValues((prev) => ({ ...prev, email: e.target.value }))} />
               </div>
 
               <div>
-                <label htmlFor="sujet" className="mb-1.5 block text-sm font-medium text-[#27346b]">Sujet *</label>
+                <label htmlFor="sujet" className="mb-1.5 block text-sm font-medium text-[#64748b]">Sujet *</label>
                 <select id="sujet" name="sujet" required value={formValues.sujet} onChange={(e) => setFormValues((prev) => ({ ...prev, sujet: e.target.value }))} className={`${inputClass} cursor-pointer appearance-none`}>
                   <option value="" disabled>Choisissez un sujet</option>
                   {sujets.map((s) => (
@@ -172,7 +172,7 @@ export default function ContactPage() {
               </div>
 
               <div>
-                <label htmlFor="message" className="mb-1.5 block text-sm font-medium text-[#27346b]">Message *</label>
+                <label htmlFor="message" className="mb-1.5 block text-sm font-medium text-[#64748b]">Message *</label>
                 <textarea
                   id="message"
                   name="message"
@@ -218,17 +218,17 @@ export default function ContactPage() {
                   <div className="c2p-icon-badge mb-4 h-11 w-11">
                     <i className={`${info.icon} text-xl`}></i>
                   </div>
-                  <h3 className="mb-2 font-semibold text-[#06053a]">{info.title}</h3>
+                  <h3 className="mb-2 font-semibold text-[#0f1c35]">{info.title}</h3>
                   {info.lines.map((line) => (
-                    <p key={line} className="text-sm leading-6 text-[#27346b]">{line}</p>
+                    <p key={line} className="text-sm leading-6 text-[#64748b]">{line}</p>
                   ))}
                 </div>
               ))}
             </div>
 
             <div className="c2p-soft-highlight p-6">
-              <h3 className="mb-2 text-xl font-semibold text-[#06053a]">Vous avez un projet ?</h3>
-              <p className="mb-5 text-sm leading-7 text-[#27346b]">
+              <h3 className="mb-2 text-xl font-semibold text-[#0f1c35]">Vous avez un projet ?</h3>
+              <p className="mb-5 text-sm leading-7 text-[#64748b]">
                 ProjectCenter peut vous aider à structurer votre idée et préparer votre accompagnement.
               </p>
               <Link to="/project-center" className="c2p-link inline-flex items-center gap-2 text-sm font-semibold">
@@ -240,16 +240,16 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section className="border-y border-[#80bfdf] bg-[#ffffff] px-4 py-16 sm:px-6 lg:px-20">
+      <section className="border-y border-[#d6dbe1] bg-[#ffffff] px-4 py-16 sm:px-6 lg:px-20">
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 max-w-2xl">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.34em] text-[#27346b]">Localisation</p>
-            <h2 className="text-3xl font-semibold text-[#06053a]">Où nous trouver</h2>
-            <p className="mt-3 text-sm leading-7 text-[#27346b]">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.34em] text-[#1a9a96]">Localisation</p>
+            <h2 className="text-3xl font-semibold text-[#0f1c35]">Où nous trouver</h2>
+            <p className="mt-3 text-sm leading-7 text-[#64748b]">
               Groupe C2P Consulting L&M, Almadies 2 - Villa n° 39, Route des Émetteurs, Keur Massar, Dakar, Sénégal.
             </p>
           </div>
-          <div className="h-[320px] overflow-hidden rounded-[28px] border border-[#80bfdf] bg-white shadow-[0_22px_60px_rgba(12,14,58,0.06)] sm:h-[430px]">
+          <div className="h-[320px] overflow-hidden rounded-[28px] border border-[#d6dbe1] bg-white shadow-[0_22px_60px_rgba(15,28,53,0.06)] sm:h-[430px]">
             <iframe
               title="Carte C2P Dakar"
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15438.861977226!2d-17.4534189!3d14.7645042!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xec172f4e3e2f8c5%3A0x3e7f4e3e2f8c5!2sKeur%20Massar%2C%20Dakar%2C%20S%C3%A9n%C3%A9gal!5e0!3m2!1sfr!2s!4v1700000000000!5m2!1sfr!2s"

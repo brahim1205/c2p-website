@@ -188,7 +188,7 @@ export default function PrestataireDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f1e8] pt-24 px-4">
+      <div className="min-h-screen bg-[#f7f6f4] pt-24 px-4">
           <div className="max-w-7xl mx-auto animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
             <div className="grid grid-cols-3 gap-8">
@@ -209,14 +209,14 @@ export default function PrestataireDetailPage() {
 
   if (!prestataire) {
     return (
-      <div className="min-h-screen bg-[#f5f1e8] pt-24 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f7f6f4] pt-24 flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <i className="ri-error-warning-line text-3xl text-gray-400"></i>
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Prestataire introuvable</h2>
             <p className="text-gray-600 mb-4">Ce prestataire n\'existe pas ou a été supprimé.</p>
-            <Link to="/allopresta" className="text-[#5fa6f3] font-medium hover:underline">
+            <Link to="/allopresta" className="text-[#1a9a96] font-medium hover:underline">
               Retour à AlloPresta
             </Link>
           </div>
@@ -225,11 +225,11 @@ export default function PrestataireDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f1e8] pt-24">
+    <div className="min-h-screen bg-[#f7f6f4] pt-24">
         {/* Success Toast */}
         {formSuccess && (
           <div className="fixed top-6 right-6 z-50 max-w-md">
-            <div role="status" aria-live="polite" className="bg-[#5fa6f3] text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <div role="status" aria-live="polite" className="bg-[#1a9a96] text-white px-5 py-3 rounded-xl shadow-[0_16px_34px_rgba(26,154,150,0.22)] flex items-center gap-3">
               <div className="w-5 h-5 flex items-center justify-center">
                 <i className="ri-check-line"></i>
               </div>
@@ -242,17 +242,17 @@ export default function PrestataireDetailPage() {
         )}
 
         {/* Breadcrumb */}
-        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-20 py-4">
-          <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-gray-600">
-            <Link to="/" className="hover:text-[#06053a]">Accueil</Link>
+        <div className="bg-white border-b border-[#d6dbe1] px-4 sm:px-6 lg:px-20 py-4">
+          <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-[#64748b]">
+            <Link to="/" className="hover:text-[#0f1c35]">Accueil</Link>
             <div className="w-4 h-4 flex items-center justify-center">
               <i className="ri-arrow-right-s-line"></i>
             </div>
-            <Link to="/allopresta" className="hover:text-[#06053a]">AlloPresta</Link>
+            <Link to="/allopresta" className="hover:text-[#0f1c35]">AlloPresta</Link>
             <div className="w-4 h-4 flex items-center justify-center">
               <i className="ri-arrow-right-s-line"></i>
             </div>
-            <span className="text-[#06053a]">{displayName}</span>
+            <span className="text-[#0f1c35]">{displayName}</span>
           </div>
         </div>
 
@@ -277,7 +277,7 @@ export default function PrestataireDetailPage() {
                       <div className="mb-3 flex items-start justify-between">
                         <div>
                           <div className="mb-2 flex flex-wrap items-center gap-2.5 sm:gap-3">
-                            <h1 className="text-[#06053a] font-bold text-xl sm:text-2xl md:text-3xl">{displayName}</h1>
+                            <h1 className="text-[#0f1c35] font-bold text-xl sm:text-2xl md:text-3xl">{displayName}</h1>
                             {prestataire.verified && (
                               <div className="flex items-center gap-1 rounded-full bg-[#1D9BF0] px-2.5 py-1 text-[11px] font-medium text-white shadow-[0_10px_24px_rgba(29,155,240,0.28)] sm:px-3 sm:text-xs">
                                 <i className="ri-verified-badge-fill"></i>
@@ -307,23 +307,21 @@ export default function PrestataireDetailPage() {
                           <span className="text-base font-bold text-gray-900 sm:text-lg">{prestataire.rating}</span>
                           <span className="text-gray-500 text-sm">({reviews.length} avis)</span>
                         </div>
-                        <div className="text-gray-600 text-sm">
-                          <strong>{prestataire.completed_jobs}</strong> prestations réalisées
-                        </div>
+                        <div className="text-gray-600 text-sm">{prestataire.completed_jobs} prestations réalisées</div>
                       </div>
 
-                      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                         <button
                           type="button"
                           onClick={openReservationFlow}
                           aria-label={`Contacter ${displayName} via C2P`}
-                          className="rounded-xl bg-[#E46F47] px-5 py-3 text-sm font-medium leading-tight text-white shadow-[0_14px_34px_rgba(228,111,71,0.28)] transition-all hover:bg-[#D85C35] hover:shadow-[0_18px_42px_rgba(216,92,53,0.32)] cursor-pointer"
+                          className="rounded-xl bg-[#1a9a96] px-5 py-3 text-sm font-medium leading-tight text-white shadow-[0_14px_34px_rgba(26,154,150,0.24)] transition-all hover:bg-[#147f7b] hover:shadow-[0_18px_42px_rgba(20,127,123,0.28)] cursor-pointer"
                         >
                           {profileUnlocked ? 'Contacter le prestataire' : 'Ouvrir le dossier avec C2P'}
                         </button>
                         <Link
                           to={user ? '/dashboard/messages?support=1' : '/contact'}
-                          className="rounded-xl border-2 border-[#E46F47] bg-[#FFF4EF] px-5 py-3 text-sm font-medium leading-tight text-[#E46F47] transition-all hover:bg-[#E46F47] hover:text-white cursor-pointer"
+                          className="text-sm font-medium text-[#1a9a96] transition-colors hover:text-[#0f1c35]"
                         >
                           Parler à l’équipe C2P
                         </Link>
@@ -354,7 +352,7 @@ export default function PrestataireDetailPage() {
                   ) : null}
 
                   <div className="border-t border-gray-200 pt-6">
-                    <h3 className="text-[#06053a] font-bold text-lg mb-3">À propos</h3>
+                    <h3 className="text-[#0f1c35] font-bold text-lg mb-3">À propos</h3>
                     <p className="text-gray-700 text-[15px] leading-relaxed">
                       {profileUnlocked
                         ? (prestataire.bio || 'Professionnel qualifié et vérifié sur la plateforme C2P.')
@@ -365,24 +363,24 @@ export default function PrestataireDetailPage() {
 
                 {/* Services */}
                 <div className="bg-white rounded-xl p-4 sm:p-6 md:p-8">
-                  <h3 className="mb-5 text-[#06053a] text-xl font-bold sm:mb-6 sm:text-2xl">Services Proposés</h3>
+                  <h3 className="mb-5 text-[#0f1c35] text-xl font-bold sm:mb-6 sm:text-2xl">Services Proposés</h3>
                   <div className="space-y-4">
                     {visibleServiceOptions.map((service, index) => (
                       <div
                         key={index}
-                        className="rounded-xl border border-gray-200 p-4 transition-all hover:border-[#E46F47]/45 hover:shadow-[0_18px_44px_rgba(228,111,71,0.10)] sm:p-6"
+                        className="rounded-xl border border-[#d6dbe1] p-4 transition-all hover:border-[#1a9a96]/45 hover:shadow-[0_18px_44px_rgba(26,154,150,0.08)] sm:p-6"
                       >
                         <div className="mb-3 flex flex-col items-start justify-between gap-3 sm:flex-row">
                           <div className="flex-1">
-                            <h4 className="mb-2 text-base font-bold text-[#06053a] sm:text-lg">{service}</h4>
+                            <h4 className="mb-2 text-base font-bold text-[#0f1c35] sm:text-lg">{service}</h4>
                             <p className="text-gray-600 text-sm leading-relaxed">
                               {profileUnlocked
-                                ? `Intervenant qualifié proposant des services de ${service.toLowerCase()} avec accompagnement C2P.`
-                                : 'Service présenté sous forme résumée. C2P qualifie ensuite le besoin et l’intervenant avant attribution.'}
+                                ? `Intervention ${service.toLowerCase()} avec cadrage et suivi C2P.`
+                                : 'Service présenté sous forme résumée. Le cadrage complet reste géré par C2P.'}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <div className="mb-1 text-xl font-bold text-[#06053a] sm:text-2xl">
+                            <div className="mb-1 text-xl font-bold text-[#0f1c35] sm:text-2xl">
                               {prestataire.price_per_hour.toLocaleString('fr-FR')} FCFA
                             </div>
                             <div className="text-gray-500 text-xs">par heure</div>
@@ -396,7 +394,7 @@ export default function PrestataireDetailPage() {
                               openReservationFlow();
                             }}
                             aria-label={`Demander à C2P de cadrer le besoin ${service}`}
-                            className="inline-flex w-full justify-center rounded-xl bg-[#E46F47] px-4 py-3 text-sm font-medium leading-tight text-white shadow-[0_12px_28px_rgba(228,111,71,0.24)] transition-all hover:bg-[#D85C35] hover:shadow-[0_16px_36px_rgba(216,92,53,0.30)] cursor-pointer sm:w-auto sm:px-5"
+                            className="inline-flex w-full justify-center rounded-xl bg-[#1a9a96] px-4 py-3 text-sm font-medium leading-tight text-white shadow-[0_12px_28px_rgba(26,154,150,0.22)] transition-all hover:bg-[#147f7b] hover:shadow-[0_16px_36px_rgba(20,127,123,0.28)] cursor-pointer sm:w-auto sm:px-5"
                           >
                             Demander à C2P de cadrer ce besoin
                           </button>
@@ -409,33 +407,30 @@ export default function PrestataireDetailPage() {
                 {/* Reviews */}
                 <div className="bg-white rounded-xl p-4 sm:p-6 md:p-8">
                   <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-                    <h3 className="text-[#06053a] font-bold text-2xl">
+                    <h3 className="text-[#0f1c35] font-bold text-2xl">
                       Avis Clients ({reviews.length})
                     </h3>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!profileUnlocked) {
-                          setFormSuccess('Le détail d’avis de ce profil reste piloté par C2P tant que le niveau d’accès requis n’est pas atteint.');
-                          setTimeout(() => setFormSuccess(null), 5000);
-                          return;
-                        }
-                        if (!user?.id) {
-                          setFormSuccess('Connectez-vous pour publier un avis.');
-                          setTimeout(() => setFormSuccess(null), 5000);
-                          return;
-                        }
-                        setShowReviewForm(true);
-                      }}
-                    className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      <i className="ri-star-line mr-1"></i>Donner mon avis
-                    </button>
+                    {profileUnlocked ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!user?.id) {
+                            setFormSuccess('Connectez-vous pour publier un avis.');
+                            setTimeout(() => setFormSuccess(null), 5000);
+                            return;
+                          }
+                          setShowReviewForm(true);
+                        }}
+                        className="px-4 py-2 bg-[#1a9a96] text-white rounded-lg text-sm font-medium hover:bg-[#147f7b] transition-colors whitespace-nowrap cursor-pointer"
+                      >
+                        <i className="ri-star-line mr-1"></i>Donner mon avis
+                      </button>
+                    ) : null}
                   </div>
 
                   {!profileUnlocked ? (
-                    <div className="mb-6 rounded-xl border border-dashed border-[#d7e6fb] bg-[#f8fbff] p-5 text-sm leading-7 text-[#31445f]">
-                      Les avis détaillés sont visibles une fois le niveau d’accès du profil atteint. C2P peut tout de même recevoir votre besoin et piloter la mise en relation.
+                    <div className="rounded-xl border border-dashed border-[#d6dbe1] bg-[#f7fbfb] p-5 text-sm leading-7 text-[#64748b]">
+                      Les avis détaillés deviennent visibles une fois le niveau d’accès requis atteint. En attendant, C2P peut recevoir votre besoin et piloter la mise en relation.
                     </div>
                   ) : null}
 
@@ -463,7 +458,7 @@ export default function PrestataireDetailPage() {
                         onChange={(e) => setReviewComment(e.target.value)}
                         placeholder="Décrivez votre expérience..."
                         maxLength={500}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm resize-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#1a9a96] text-sm resize-none"
                         rows={3}
                       />
                       <p className="text-xs text-gray-400 mt-1 text-right">{reviewComment.length}/500</p>
@@ -471,7 +466,7 @@ export default function PrestataireDetailPage() {
                         <button
                           type="button"
                           onClick={handleSubmitReview}
-                          className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors whitespace-nowrap cursor-pointer"
+                          className="px-4 py-2 bg-[#1a9a96] text-white rounded-lg text-sm font-medium hover:bg-[#147f7b] transition-colors whitespace-nowrap cursor-pointer"
                         >
                           Publier l&apos;avis
                         </button>
@@ -486,8 +481,9 @@ export default function PrestataireDetailPage() {
                     </div>
                   )}
 
-                  <div className="space-y-6">
-                    {profileUnlocked ? reviews.map((review) => (
+                  {profileUnlocked ? (
+                    <div className="space-y-6">
+                      {reviews.map((review) => (
                       <div key={review.id} className="border-b border-gray-200 pb-5 last:border-0 sm:pb-6">
                         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div className="flex items-center gap-3">
@@ -499,7 +495,7 @@ export default function PrestataireDetailPage() {
                               </div>
                             )}
                             <div>
-                              <div className="font-semibold text-[#06053a]">{review.client_name}</div>
+                              <div className="font-semibold text-[#0f1c35]">{review.client_name}</div>
                               <div className="flex items-center gap-1">
                                 {[...Array(5)].map((_, i) => (
                                   <i
@@ -520,12 +516,13 @@ export default function PrestataireDetailPage() {
                           </button>
                         </div>
                       </div>
-                    )) : null}
-                  </div>
+                    ))}
+                    </div>
+                  ) : null}
 
                   {profileUnlocked && reviews.length === 0 && (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">Aucun avis pour le moment. Soyez le premier à donner votre avis !</p>
+                      <p className="text-gray-500">Aucun avis pour le moment.</p>
                     </div>
                   )}
                 </div>
@@ -533,92 +530,38 @@ export default function PrestataireDetailPage() {
 
               {/* Right Column - Sidebar */}
               <div className="space-y-6">
-                <div className="bg-white rounded-xl border border-[#d6a84a]/20 p-4 sm:p-6">
-                  <h3 className="text-[#06053a] font-bold text-lg mb-3">Intermédiation C2P</h3>
+                <div className="bg-white rounded-xl border border-[#d6dbe1] p-4 sm:p-6">
+                  <h3 className="text-[#0f1c35] font-bold text-lg mb-3">Intermédiation C2P</h3>
                   <p className="text-sm leading-6 text-gray-600">
                     Cette fiche présente un profil {profileUnlocked ? 'détaillé' : 'résumé'}. La prise en charge commerciale, la qualification du besoin et l&apos;attribution de mission passent par C2P.
                   </p>
-                  <div className="mt-4 space-y-2 text-sm text-[#556274]">
+                  <div className="mt-4 space-y-2 text-sm text-[#64748b]">
                     <div className="flex items-start gap-2">
-                      <i className="ri-check-line mt-0.5 text-[#5fa6f3]"></i>
+                      <i className="ri-check-line mt-0.5 text-[#1a9a96]"></i>
                       <span>Analyse du besoin par l&apos;équipe C2P</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <i className="ri-check-line mt-0.5 text-[#5fa6f3]"></i>
+                      <i className="ri-check-line mt-0.5 text-[#1a9a96]"></i>
                       <span>Sélection et affectation du bon intervenant</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <i className="ri-check-line mt-0.5 text-[#5fa6f3]"></i>
+                      <i className="ri-check-line mt-0.5 text-[#1a9a96]"></i>
                       <span>Suivi de mission et cadrage contractuel via C2P</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-[#80bfdf] p-4 sm:p-6">
-                  <h3 className="text-[#06053a] font-bold text-lg mb-3">Cadre SenPresta</h3>
-                  <div className="space-y-2 text-sm leading-6 text-[#556274]">
-                    <p><strong className="text-[#06053a]">Niveau requis :</strong> {getProviderTierLabel(prestataire.public_profile_level)}</p>
-                    <p><strong className="text-[#06053a]">Visibilité :</strong> {prestataire.visibility_tier === 'premium' ? 'Premium' : prestataire.visibility_tier === 'priority' ? 'Prioritaire' : 'Standard'}</p>
-                    <p><strong className="text-[#06053a]">Billet :</strong> {getProviderVisibilityPassLabel(prestataire.visibility_tier)}</p>
-                    <p><strong className="text-[#06053a]">Alertes :</strong> {prestataire.alerts_enabled ? 'Activées' : 'Pilotées par C2P'}</p>
-                    <p><strong className="text-[#06053a]">Traitement :</strong> {prestataire.operations_managed ? 'Centre d’opération C2P' : 'Direct'}</p>
-                    <p className="pt-2 text-xs text-[#4b5b73]">{getProviderVisibilityPassHint(prestataire.visibility_tier)}</p>
+                <div className="bg-white rounded-xl border border-[#d6dbe1] p-4 sm:p-6">
+                  <h3 className="text-[#0f1c35] font-bold text-lg mb-3">Cadre SenPresta</h3>
+                  <div className="space-y-2 text-sm leading-6 text-[#64748b]">
+                    <p><strong className="text-[#0f1c35]">Niveau requis :</strong> {getProviderTierLabel(prestataire.public_profile_level)}</p>
+                    <p><strong className="text-[#0f1c35]">Visibilité :</strong> {prestataire.visibility_tier === 'premium' ? 'Premium' : prestataire.visibility_tier === 'priority' ? 'Prioritaire' : 'Standard'}</p>
+                    <p><strong className="text-[#0f1c35]">Billet :</strong> {getProviderVisibilityPassLabel(prestataire.visibility_tier)}</p>
+                    <p><strong className="text-[#0f1c35]">Alertes :</strong> {prestataire.alerts_enabled ? 'Activées' : 'Pilotées par C2P'}</p>
+                    <p><strong className="text-[#0f1c35]">Traitement :</strong> {prestataire.operations_managed ? 'Centre d’opération C2P' : 'Direct'}</p>
+                    <p className="pt-2 text-xs text-[#64748b]">{getProviderVisibilityPassHint(prestataire.visibility_tier)}</p>
                   </div>
                 </div>
-
-                {/* Quick Stats */}
-                <div className="bg-white rounded-xl p-4 sm:p-6">
-                  <h3 className="text-[#06053a] font-bold text-lg mb-4">Statistiques</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 text-sm">Temps de réponse</span>
-                      <span className="text-[#06053a] font-semibold">{prestataire.response_time || '2h'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 text-sm">Membre depuis</span>
-                      <span className="text-[#06053a] font-semibold">{prestataire.member_since}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 text-sm">Taux de satisfaction</span>
-                      <span className="text-[#5fa6f3] font-semibold">
-                        {reviews.length > 0
-                          ? Math.round((reviews.filter(r => r.rating >= 4).length / reviews.length) * 100)
-                          : 98}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Languages */}
-                <div className="bg-white rounded-xl p-4 sm:p-6">
-                  <h3 className="text-[#06053a] font-bold text-lg mb-4">Langues</h3>
-                  <div className="space-y-2">
-                    {prestataire.languages.map((language, index) => (
-                      <div key={index} className="flex items-center gap-2 text-gray-700 text-sm">
-                        <div className="w-4 h-4 flex items-center justify-center">
-                          <i className="ri-translate-2 text-[#5fa6f3]"></i>
-                        </div>
-                        <span>{language}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Services Tags */}
-                <div className="bg-white rounded-xl p-4 sm:p-6">
-                  <h3 className="text-[#06053a] font-bold text-lg mb-4">Services</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {visibleServiceOptions.map((service, index) => (
-                      <span
-                        key={index}
-                        className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm"
-                      >
-                        {service}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
               </div>
             </div>
           </div>
@@ -630,7 +573,7 @@ export default function PrestataireDetailPage() {
             <div role="dialog" aria-modal="true" aria-labelledby="allopresta-reservation-title" className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-5 sm:p-8">
                 <div className="mb-5 flex items-center justify-between sm:mb-6">
-                  <h2 id="allopresta-reservation-title" className="text-[#06053a] text-xl font-bold sm:text-2xl">Transmettre une demande à C2P</h2>
+                  <h2 id="allopresta-reservation-title" className="text-[#0f1c35] text-xl font-bold sm:text-2xl">Transmettre une demande à C2P</h2>
                   <button
                     type="button"
                     aria-label="Fermer la demande de prestation"
@@ -644,7 +587,7 @@ export default function PrestataireDetailPage() {
                 </div>
 
                 <form onSubmit={handleReservationSubmit} className="space-y-6">
-                  <div className="rounded-xl border border-[#5fa6f3]/20 bg-[#5fa6f3]/5 px-4 py-3 text-sm text-gray-700">
+                  <div className="rounded-xl border border-[#d6dbe1] bg-[#f7fbfb] px-4 py-3 text-sm text-[#64748b]">
                     Vous n&apos;envoyez pas un message direct. C2P reçoit votre besoin, vérifie le contexte, puis attribue la mission à l&apos;intervenant le plus adapté.
                   </div>
                   <div>
@@ -655,7 +598,7 @@ export default function PrestataireDetailPage() {
                       id="reservation-service"
                       value={resForm.service}
                       onChange={(e) => setResForm(s => ({ ...s, service: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#5fa6f3] cursor-pointer text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#1a9a96] cursor-pointer text-sm"
                     >
                       {visibleServiceOptions.map((s, i) => (
                         <option key={i} value={s}>{s}</option>
@@ -673,7 +616,7 @@ export default function PrestataireDetailPage() {
                       required
                       value={resForm.date}
                       onChange={(e) => setResForm(s => ({ ...s, date: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#5fa6f3] text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#1a9a96] text-sm"
                     />
                   </div>
 
@@ -688,7 +631,7 @@ export default function PrestataireDetailPage() {
                       value={resForm.address}
                       onChange={(e) => setResForm(s => ({ ...s, address: e.target.value }))}
                       placeholder="Ex: Dakar, Almadies, Rue 12"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#5fa6f3] text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#1a9a96] text-sm"
                     />
                   </div>
 
@@ -702,7 +645,7 @@ export default function PrestataireDetailPage() {
                       value={resForm.description}
                       onChange={(e) => setResForm(s => ({ ...s, description: e.target.value }))}
                       placeholder="Décrivez votre projet en détail..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#5fa6f3] resize-none text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#1a9a96] resize-none text-sm"
                       maxLength={500}
                     ></textarea>
                     <div className="text-gray-500 text-xs mt-1">Maximum 500 caractères</div>
@@ -719,7 +662,7 @@ export default function PrestataireDetailPage() {
                       value={resForm.budget}
                       onChange={(e) => setResForm(s => ({ ...s, budget: e.target.value }))}
                       placeholder="Ex: 50000"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#5fa6f3] text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-[#1a9a96] text-sm"
                     />
                   </div>
 
@@ -733,7 +676,7 @@ export default function PrestataireDetailPage() {
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 rounded-xl bg-[#E46F47] py-3 font-medium text-white shadow-[0_14px_34px_rgba(228,111,71,0.24)] transition-all hover:bg-[#D85C35] hover:shadow-[0_18px_42px_rgba(216,92,53,0.30)] whitespace-nowrap cursor-pointer"
+                      className="flex-1 rounded-xl bg-[#1a9a96] py-3 font-medium text-white shadow-[0_14px_34px_rgba(26,154,150,0.24)] transition-all hover:bg-[#147f7b] hover:shadow-[0_18px_42px_rgba(20,127,123,0.30)] whitespace-nowrap cursor-pointer"
                     >
                       Envoyer la demande à C2P
                     </button>

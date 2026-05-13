@@ -144,7 +144,7 @@ export default function AlloPrestPage() {
   return (
     <div className="min-h-screen bg-c2p-bg text-c2p-text">
         {/* Hero Section */}
-        <section className="relative min-h-[680px] w-full overflow-hidden bg-[#ffffff]">
+        <section className="relative min-h-[560px] w-full overflow-hidden bg-[#ffffff]">
           {/* Background image */}
           <div className="absolute inset-0">
             <img
@@ -156,17 +156,17 @@ export default function AlloPrestPage() {
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.94)_0%,rgba(247,248,252,0.78)_46%,rgba(247,248,252,0.36)_100%)]"></div>
           <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
-          <div className="relative z-10 flex min-h-[680px] items-center px-4 pt-24 sm:px-6 lg:px-20">
+          <div className="relative z-10 flex min-h-[560px] items-center px-4 pt-24 sm:px-6 lg:px-20">
             <div className="mx-auto w-full max-w-7xl">
               <div className="max-w-3xl">
                 <p className="mb-5 text-xs font-semibold uppercase tracking-[0.36em] text-[#27346b]">
                   SenPresta | AlloPresta by C2P
                 </p>
-                <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#06053a] sm:text-5xl lg:text-7xl">
-                  Offres et demandes de prestations avec cadrage C2P
+                <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl lg:text-6xl">
+                  Trouver un prestataire sans se perdre dans le bruit.
                 </h1>
-                <p className="max-w-2xl text-base leading-8 text-[#27346b] sm:text-lg">
-                  SenPresta permet aux visiteurs de consulter les annonces, aux abonnés de recevoir des alertes et à C2P de piloter la mise en relation sensible.
+                <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
+                  Consultez des profils résumés, filtrez par besoin et laissez C2P piloter la prise en charge lorsque la mission demande un cadrage plus fin.
                 </p>
               </div>
 
@@ -197,26 +197,16 @@ export default function AlloPrestPage() {
                 </div>
               </div>
 
-              {/* Quick Stats */}
-              <div className="mt-12 grid max-w-3xl grid-cols-1 gap-px overflow-hidden rounded-2xl border border-[#80bfdf] bg-[#80bfdf] sm:grid-cols-3">
-                <div className="text-center">
-                  <div className="bg-white/78 p-5">
-                    <div className="mb-1 text-3xl font-semibold text-[#06053a]">{providers.length}+</div>
-                    <div className="text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">Prestataires actifs</div>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="bg-white/78 p-5">
-                    <div className="mb-1 text-3xl font-semibold text-[#06053a]">5,000+</div>
-                    <div className="text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">Prestations realisees</div>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="bg-white/78 p-5">
-                    <div className="mb-1 text-3xl font-semibold text-[#06053a]">4.8/5</div>
-                    <div className="text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">Satisfaction client</div>
-                  </div>
-                </div>
+              <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-[#64748b]">
+                <span className="rounded-full border border-[#d6dbe1] bg-white px-4 py-2">
+                  {providers.length}+ prestataires visibles
+                </span>
+                <span className="rounded-full border border-[#d6dbe1] bg-white px-4 py-2">
+                  4.8/5 satisfaction moyenne
+                </span>
+                <span className="rounded-full border border-[#d6dbe1] bg-white px-4 py-2">
+                  Mise en relation cadrée par C2P
+                </span>
               </div>
             </div>
           </div>
@@ -248,29 +238,19 @@ export default function AlloPrestPage() {
           </div>
         </section>
 
-        <section className="bg-[#f8fbff] px-4 py-5 sm:px-6 lg:px-20">
-          <div className="mx-auto grid max-w-7xl gap-3 md:grid-cols-3">
-            {[
-              { id: 'visitor', title: 'Visiteur', text: 'Consulte les annonces, le profil résumé et les services cadrés par C2P.' },
-              { id: 'subscriber', title: 'Abonné', text: 'Compte C2P connecté : détail plus riche, alertes et orientation opérationnelle.' },
-              { id: 'verified', title: 'Vérifié', text: 'Compte vérifié par C2P : accès complet aux profils sensibles et priorités premium.' },
-            ].map((item) => (
-              <div key={item.id} className={`rounded-2xl border px-4 py-4 text-sm shadow-sm ${viewerTier === item.id ? 'border-[#27346b]/25 bg-white text-[#172033]' : 'border-[#d7e6fb] bg-white/75 text-[#4b5b73]'}`}>
-                <p className="font-semibold text-[#06053a]">{item.title}</p>
-                <p className="mt-2 leading-6">{item.text}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mx-auto mt-4 flex max-w-7xl flex-col gap-3 rounded-2xl border border-[#d7e6fb] bg-white px-4 py-4 text-sm text-[#31445f] shadow-sm md:flex-row md:items-center md:justify-between">
+        <section className="bg-[#f7f6f4] px-4 py-5 sm:px-6 lg:px-20">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 rounded-2xl border border-[#d6dbe1] bg-white px-4 py-4 text-sm text-[#64748b] shadow-sm md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="font-semibold text-[#06053a]">
+              <p className="font-semibold text-[#0f1c35]">
                 Niveau actuel : {viewerTier === 'visitor' ? 'Visiteur' : viewerTier === 'subscriber' ? 'Abonne' : 'Verifie'}
               </p>
-              <p className="mt-1 leading-6">{accessAction.helper}</p>
+              <p className="mt-1 leading-6">
+                Les profils sensibles et les mises en relation complètes restent pilotés par C2P.
+              </p>
             </div>
             <Link
               to={accessAction.to}
-              className="inline-flex items-center justify-center rounded-xl bg-[#27346b] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#06053a]"
+              className="inline-flex items-center justify-center rounded-xl bg-[#0f1c35] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16284a]"
             >
               {accessAction.label}
             </Link>
@@ -410,8 +390,8 @@ export default function AlloPrestPage() {
               <div id="allopresta-results" className="flex-1 min-w-0">
                 {/* Sort Bar */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
-                  <div className="text-sm text-[#27346b]">
-                    <strong className="text-[#06053a]">{filteredPrestataires.length}</strong> prestataire{filteredPrestataires.length !== 1 ? 's' : ''} trouve{filteredPrestataires.length !== 1 ? 's' : ''}
+                  <div className="text-sm text-[#64748b]">
+                    <strong className="text-[#0f1c35]">{filteredPrestataires.length}</strong> prestataire{filteredPrestataires.length !== 1 ? 's' : ''} trouve{filteredPrestataires.length !== 1 ? 's' : ''}
                   </div>
                   <select
                     aria-label="Trier les prestataires"
@@ -429,7 +409,7 @@ export default function AlloPrestPage() {
                 {loading ? (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                     {[...Array(4)].map((_, i) => (
-                      <div key={i} className="overflow-hidden rounded-[24px] border border-[#80bfdf] bg-white animate-pulse shadow-[0_18px_45px_rgba(12,14,58,0.05)]">
+                      <div key={i} className="overflow-hidden rounded-[24px] border border-[#d6dbe1] bg-white animate-pulse shadow-[0_18px_45px_rgba(12,14,58,0.05)]">
                         <div className="h-44 bg-[#e9eef5] sm:h-64"></div>
                         <div className="space-y-3 p-4 sm:p-5">
                           <div className="h-5 bg-[#e9eef5] rounded w-3/4"></div>
@@ -440,14 +420,14 @@ export default function AlloPrestPage() {
                     ))}
                   </div>
                 ) : filteredPrestataires.length === 0 ? (
-                  <div className="rounded-[24px] border border-[#80bfdf] bg-white p-12 text-center shadow-[0_18px_45px_rgba(12,14,58,0.05)]">
+                  <div className="rounded-[24px] border border-[#d6dbe1] bg-white p-12 text-center shadow-[0_18px_45px_rgba(12,14,58,0.05)]">
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#ffffff]">
                       <div className="w-8 h-8 flex items-center justify-center">
-                        <i className="ri-search-line text-[#27346b] text-2xl"></i>
+                      <i className="ri-search-line text-[#0f1c35] text-2xl"></i>
                       </div>
                     </div>
-                    <h3 className="mb-2 text-lg font-semibold text-[#06053a]">Aucun prestataire trouve</h3>
-                    <p className="mb-4 text-sm text-[#27346b]">Essayez d&apos;ajuster vos filtres pour voir plus de resultats</p>
+                    <h3 className="mb-2 text-lg font-semibold text-[#0f1c35]">Aucun prestataire trouve</h3>
+                    <p className="mb-4 text-sm text-[#64748b]">Essayez d&apos;ajuster vos filtres pour voir plus de resultats</p>
                     <button
                       type="button"
                       onClick={resetFilters}
@@ -462,7 +442,7 @@ export default function AlloPrestPage() {
                       <Link
                         key={prestataire.id}
                         to={`/allopresta/prestataire/${prestataire.id}`}
-                        className="group cursor-pointer overflow-hidden rounded-[24px] border border-[#80bfdf] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#27346b]/45 hover:shadow-[0_24px_60px_rgba(12,14,58,0.10)]"
+                        className="group cursor-pointer overflow-hidden rounded-[24px] border border-[#d6dbe1] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#1a9a96]/40 hover:shadow-[0_24px_60px_rgba(12,14,58,0.10)]"
                       >
                         <div className="relative h-40 w-full overflow-hidden sm:h-64">
                           <img
@@ -488,14 +468,14 @@ export default function AlloPrestPage() {
                                 <span className="rounded-full border border-[#d7e6fb] bg-[#f8fbff] px-2.5 py-1 text-[11px] font-medium text-[#27346b]">
                                   {getProviderTierLabel(prestataire.public_profile_level)}
                                 </span>
-                                <span className="rounded-full border border-[#dbad29]/25 bg-[#fff8e6] px-2.5 py-1 text-[11px] font-medium text-[#8a6511]">
+                                <span className="rounded-full border border-[#d6dbe1] bg-[#f7f6f4] px-2.5 py-1 text-[11px] font-medium text-[#64748b]">
                                   {getProviderVisibilityLabel(prestataire.visibility_tier)}
                                 </span>
                               </div>
-                              <h3 className="mb-1 text-base font-semibold text-[#06053a] sm:text-lg">
+                              <h3 className="mb-1 text-base font-semibold text-[#0f1c35] sm:text-lg">
                                 {getProviderDisplayName(prestataire, viewerTier)}
                               </h3>
-                              <p className="text-sm text-[#27346b]">{prestataire.title}</p>
+                              <p className="text-sm text-[#64748b]">{prestataire.title}</p>
                             </div>
                           </div>
 
@@ -504,54 +484,46 @@ export default function AlloPrestPage() {
                               <div className="w-4 h-4 flex items-center justify-center">
                                 <i className="ri-star-fill text-yellow-400 text-sm"></i>
                               </div>
-                              <span className="text-sm font-semibold text-[#06053a]">
+                              <span className="text-sm font-semibold text-[#0f1c35]">
                                 {prestataire.rating}
                               </span>
                             </div>
-                            <span className="text-sm text-[#5fa6f3]">
+                            <span className="text-sm text-[#64748b]">
                               ({prestataire.reviews} avis)
                             </span>
                             <span className="text-[#c6bfb2]">•</span>
-                            <span className="text-sm text-[#5fa6f3]">{prestataire.completed_jobs} missions</span>
+                            <span className="text-sm text-[#64748b]">{prestataire.completed_jobs} missions</span>
                           </div>
 
-                          <div className="mb-3 flex items-center gap-2 text-sm text-[#27346b] sm:mb-4">
+                          <div className="mb-4 flex items-center gap-2 text-sm text-[#64748b]">
                             <div className="w-4 h-4 flex items-center justify-center">
                               <i className="ri-map-pin-line"></i>
                             </div>
                             <span>{prestataire.location}</span>
                           </div>
 
-                          <div className="mb-3 rounded-xl border border-[#d7e6fb] bg-[#f8fbff] px-3 py-3 text-xs leading-6 text-[#31445f] sm:mb-4">
-                            <p className="font-semibold text-[#06053a]">{getProviderVisibilityPassLabel(prestataire.visibility_tier)}</p>
-                            <p className="mt-1">{getProviderVisibilityPassHint(prestataire.visibility_tier)}</p>
-                          </div>
-
-                          <div className="mb-3 flex flex-wrap gap-2 sm:mb-4">
+                          <div className="mb-4 flex flex-wrap gap-2">
                             {prestataire.operations_managed ? (
-                              <span className="rounded-full border border-[#dbad29]/25 bg-[#fff8e6] px-2.5 py-1 text-[11px] font-medium text-[#8a6511] sm:text-xs">
+                              <span className="rounded-full border border-[#d6dbe1] bg-[#f7fbfb] px-2.5 py-1 text-[11px] font-medium text-[#1a9a96] sm:text-xs">
                                 C2P gere la mise en relation
                               </span>
                             ) : null}
                             {prestataire.plan_name ? (
-                              <span className="rounded-full border border-[#d7e6fb] bg-white px-2.5 py-1 text-[11px] font-medium text-[#27346b] sm:text-xs">
+                              <span className="rounded-full border border-[#d6dbe1] bg-white px-2.5 py-1 text-[11px] font-medium text-[#64748b] sm:text-xs">
                                 {prestataire.plan_name}
                               </span>
                             ) : null}
                           </div>
 
-                          <div className="flex items-end justify-between gap-3 border-t border-[#eee4d3] pt-3 sm:pt-4">
+                          <div className="flex items-end justify-between gap-3 border-t border-[#eceff3] pt-3 sm:pt-4">
                             <div>
-                              <div className="text-lg font-semibold text-[#27346b] sm:text-xl">
+                              <div className="text-lg font-semibold text-[#0f1c35] sm:text-xl">
                                 {prestataire.price_per_hour.toLocaleString('fr-FR')} FCFA
                               </div>
                               <div className="text-xs text-[#94a3b8]">par heure</div>
                             </div>
-                            <div className="flex max-w-[42%] items-center gap-1.5 text-right text-[11px] text-[#27346b] sm:max-w-none sm:gap-2 sm:text-xs">
-                              <div className="w-4 h-4 flex items-center justify-center">
-                                <i className="ri-time-line"></i>
-                              </div>
-                              <span>Repond en {prestataire.response_time}</span>
+                            <div className="text-right text-sm font-medium text-[#1a9a96]">
+                              Voir le profil
                             </div>
                           </div>
                         </div>
