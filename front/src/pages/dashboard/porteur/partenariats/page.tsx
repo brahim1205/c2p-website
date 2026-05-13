@@ -3,8 +3,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { createNotification } from '@/hooks/useCreateNotification';
-import { fetchPartnershipsForOwner, type ProjectPartnership } from '@/lib/projectApi';
+import { contactOwnerPartnership, fetchPartnershipsForOwner, type ProjectPartnership } from '@/lib/projectApi';
 
 export default function PorteurPartenariatsPage() {
   const { user } = useAuth();
@@ -46,21 +45,20 @@ export default function PorteurPartenariatsPage() {
   }, [partners, search, typeFilter]);
 
   const handleContact = async () => {
-    if (!selectedPartner?.counterpart_user_id) {
-      success('Message prepare', 'Le contact n est pas un compte plateforme, ouvrez la messagerie externe.');
-      setShowContactModal(false);
-      return;
-    }
+    if (!selectedPartner) return;
 
     try {
-      await createNotification(
-        selectedPartner.counterpart_user_id,
-        'Nouveau message porteur',
-        message || `Le porteur souhaite faire le point sur ${selectedPartner.project_title || 'le projet'}.`,
-        'message',
-        '/dashboard/messages',
-      );
-      success('Message envoye', `Votre demande a ete envoyee a ${selectedPartner.name}.`);
+      const result = await contactOwnerPartnership({
+        counterpartUserId: selectedPartner.counterpart_user_id,
+        counterpartName: selectedPartner.name,
+        projectTitle: selectedPartner.project_title,
+        message,
+      });
+      if (!result.delivered) {
+        error('Indisponible', 'La demande n a pas pu etre transmise a C2P.');
+        return;
+      }
+      success('Message envoye', 'Votre demande a ete transmise a l equipe C2P.');
       setMessage('');
       setShowContactModal(false);
     } catch (err) {
@@ -83,7 +81,7 @@ export default function PorteurPartenariatsPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-gray-900">{partners.length}</p><p className="text-sm text-gray-600">Relations actives</p></div>
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-blue-600">{partners.filter((partner) => partner.type === 'mentor').length}</p><p className="text-sm text-gray-600">Mentors</p></div>
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-green-600">{partners.filter((partner) => partner.type === 'financier').length}</p><p className="text-sm text-gray-600">Financiers</p></div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-[#14B8A6]">{partners.filter((partner) => partner.type === 'technique').length}</p><p className="text-sm text-gray-600">Techniques</p></div>
+          <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-[#5fa6f3]">{partners.filter((partner) => partner.type === 'technique').length}</p><p className="text-sm text-gray-600">Techniques</p></div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
@@ -115,7 +113,7 @@ export default function PorteurPartenariatsPage() {
                   <h3 className="font-semibold text-gray-900 truncate">{partner.name}</h3>
                   <p className="text-sm text-gray-500">{partner.role}</p>
                   <div className="flex gap-2 mt-2 flex-wrap">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${partner.type === 'mentor' ? 'bg-blue-100 text-blue-700' : partner.type === 'financier' ? 'bg-green-100 text-green-700' : 'bg-[#14B8A6]/10 text-[#14B8A6]'}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${partner.type === 'mentor' ? 'bg-blue-100 text-blue-700' : partner.type === 'financier' ? 'bg-green-100 text-green-700' : 'bg-[#5fa6f3]/10 text-[#5fa6f3]'}`}>
                       {partner.type}
                     </span>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${partner.status === 'actif' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -143,7 +141,7 @@ export default function PorteurPartenariatsPage() {
                 onClick={() => { setSelectedPartner(partner); setShowContactModal(true); }}
                 className="w-full px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
               >
-                Contacter
+                Saisir C2P
               </button>
             </div>
           ))}
@@ -154,12 +152,17 @@ export default function PorteurPartenariatsPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-lg w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Contacter {selectedPartner.name}</h3>
+              <h3 className="text-lg font-bold text-gray-900">Contacter C2P a propos de {selectedPartner.name}</h3>
               <button onClick={() => setShowContactModal(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100">
                 <i className="ri-close-line text-xl text-gray-500"></i>
               </button>
             </div>
+            <p className="mb-3 text-sm text-gray-500">C2P recoit votre demande puis coordonne la suite avec le partenaire concerne.</p>
+            <label htmlFor="porteur-partnership-message" className="mb-2 block text-sm font-medium text-gray-700">
+              Message
+            </label>
             <textarea
+              id="porteur-partnership-message"
               rows={5}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -168,7 +171,7 @@ export default function PorteurPartenariatsPage() {
             />
             <div className="mt-5 flex justify-end gap-3">
               <button onClick={() => setShowContactModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
-              <button onClick={handleContact} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Envoyer</button>
+              <button onClick={handleContact} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Envoyer a C2P</button>
             </div>
           </div>
         </div>

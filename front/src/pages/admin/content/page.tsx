@@ -32,15 +32,6 @@ export default function AdminContentPage() {
     [activeTab, contents],
   );
 
-  const stats = useMemo(() => [
-    { label: 'Contenus totaux', value: String(contents.length), icon: 'ri-file-list-line', color: 'bg-teal-500' },
-    { label: 'Publies', value: String(contents.filter((content) => content.status === 'published').length), icon: 'ri-check-line', color: 'bg-green-500' },
-    { label: 'Brouillons', value: String(contents.filter((content) => content.status === 'draft').length), icon: 'ri-draft-line', color: 'bg-slate-500' },
-    { label: 'En attente', value: String(contents.filter((content) => content.status === 'pending').length), icon: 'ri-time-line', color: 'bg-orange-500' },
-    { label: 'Rejetes', value: String(contents.filter((content) => content.status === 'rejected').length), icon: 'ri-alert-line', color: 'bg-red-500' },
-    { label: 'Archives', value: String(contents.filter((content) => content.status === 'archived').length), icon: 'ri-archive-line', color: 'bg-gray-500' },
-  ], [contents]);
-
   const getStatusBadge = (status: AdminContentItem['status']) => {
     const styles = {
       draft: 'bg-slate-100 text-slate-700',
@@ -116,32 +107,26 @@ export default function AdminContentPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl">
         <Breadcrumb items={[{ label: 'Admin', path: '/admin/dashboard' }, { label: 'Contenus' }]} />
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Gestion des contenus</h1>
-          <button onClick={handleExport} className="px-6 py-3 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0D9488] transition-colors font-medium whitespace-nowrap">
-            Exporter les donnees
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center mb-4`}>
-                <i className={`${stat.icon} text-xl text-white`}></i>
-              </div>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
-              <p className="text-sm text-gray-600">{stat.label}</p>
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-teal-600">Administration</p>
+              <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">Gestion des contenus</h1>
+              <p className="mt-2 text-sm text-gray-600 md:text-base">Validation, publication, archivage et revue des contenus de la plateforme.</p>
             </div>
-          ))}
-        </div>
+            <button onClick={handleExport} className="rounded-2xl bg-teal-600 px-5 py-3 text-sm font-medium text-white hover:bg-teal-700 whitespace-nowrap">
+              Exporter les données
+            </button>
+          </div>
+        </section>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200">
-            <div className="flex space-x-8 px-6 overflow-x-auto">
+            <div className="flex space-x-6 overflow-x-auto px-6">
               {(['all', 'draft', 'pending', 'published', 'rejected', 'archived'] as const).map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab ? 'border-[#14B8A6] text-[#14B8A6]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab ? 'border-[#5fa6f3] text-[#5fa6f3]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                   {tab === 'all' && `Tous (${contents.length})`}
                   {tab === 'draft' && `Brouillons (${contents.filter((content) => content.status === 'draft').length})`}
                   {tab === 'pending' && `En attente (${contents.filter((content) => content.status === 'pending').length})`}
@@ -154,10 +139,10 @@ export default function AdminContentPage() {
           </div>
 
           {selectedContent.length > 0 && (
-            <div className="bg-[#14B8A6]/10 border-b border-[#14B8A6]/20 px-6 py-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-[#0D9488]">{selectedContent.length} contenu(x) selectionne(s)</span>
+            <div className="bg-[#5fa6f3]/10 border-b border-[#5fa6f3]/20 px-6 py-3 flex items-center justify-between">
+              <span className="text-sm font-medium text-[#27346b]">{selectedContent.length} contenu(x) selectionne(s)</span>
               <div className="flex items-center space-x-3">
-                <button onClick={() => handleBulkStatus('published')} className="px-4 py-2 bg-white text-[#14B8A6] border border-[#14B8A6] rounded-lg hover:bg-[#14B8A6]/5 transition-colors text-sm font-medium whitespace-nowrap">Publier</button>
+                <button onClick={() => handleBulkStatus('published')} className="px-4 py-2 bg-white text-[#5fa6f3] border border-[#5fa6f3] rounded-lg hover:bg-[#5fa6f3]/5 transition-colors text-sm font-medium whitespace-nowrap">Publier</button>
                 <button onClick={() => handleBulkStatus('rejected')} className="px-4 py-2 bg-white text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium whitespace-nowrap">Rejeter</button>
                 <button onClick={() => handleBulkStatus('archived')} className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium whitespace-nowrap">Archiver</button>
               </div>
@@ -169,7 +154,7 @@ export default function AdminContentPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left">
-                    <input type="checkbox" checked={filteredContents.length > 0 && selectedContent.length === filteredContents.length} onChange={() => setSelectedContent(selectedContent.length === filteredContents.length ? [] : filteredContents.map((content) => content.id))} className="w-4 h-4 text-[#14B8A6] border-gray-300 rounded focus:ring-[#14B8A6] cursor-pointer" />
+                    <input type="checkbox" checked={filteredContents.length > 0 && selectedContent.length === filteredContents.length} onChange={() => setSelectedContent(selectedContent.length === filteredContents.length ? [] : filteredContents.map((content) => content.id))} className="w-4 h-4 text-[#5fa6f3] border-gray-300 rounded focus:ring-[#5fa6f3] cursor-pointer" />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titre</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
@@ -185,7 +170,7 @@ export default function AdminContentPage() {
                 {filteredContents.map((content) => (
                   <tr key={content.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
-                      <input type="checkbox" checked={selectedContent.includes(content.id)} onChange={() => setSelectedContent((prev) => prev.includes(content.id) ? prev.filter((id) => id !== content.id) : [...prev, content.id])} className="w-4 h-4 text-[#14B8A6] border-gray-300 rounded focus:ring-[#14B8A6] cursor-pointer" />
+                      <input type="checkbox" checked={selectedContent.includes(content.id)} onChange={() => setSelectedContent((prev) => prev.includes(content.id) ? prev.filter((id) => id !== content.id) : [...prev, content.id])} className="w-4 h-4 text-[#5fa6f3] border-gray-300 rounded focus:ring-[#5fa6f3] cursor-pointer" />
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{content.title}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{content.type}</td>
@@ -196,9 +181,9 @@ export default function AdminContentPage() {
                     <td className="px-6 py-4 text-sm text-gray-500">{content.date}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button onClick={() => { setSelectedItem(content); setShowViewModal(true); }} className="p-2 text-[#14B8A6] hover:bg-[#14B8A6]/10 rounded-lg transition-colors" title="Voir"><i className="ri-eye-line text-base"></i></button>
+                        <button onClick={() => { setSelectedItem(content); setShowViewModal(true); }} className="p-2 text-[#5fa6f3] hover:bg-[#5fa6f3]/10 rounded-lg transition-colors" title="Voir"><i className="ri-eye-line text-base"></i></button>
                         {content.status !== 'published' && <button onClick={() => mutateStatus(content.id, 'published')} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Publier"><i className="ri-check-line text-base"></i></button>}
-                        {content.status !== 'pending' && <button onClick={() => mutateStatus(content.id, 'pending')} className="p-2 text-[#14B8A6] hover:bg-[#14B8A6]/10 rounded-lg transition-colors" title="Mettre en révision"><i className="ri-refresh-line text-base"></i></button>}
+                        {content.status !== 'pending' && <button onClick={() => mutateStatus(content.id, 'pending')} className="p-2 text-[#5fa6f3] hover:bg-[#5fa6f3]/10 rounded-lg transition-colors" title="Mettre en révision"><i className="ri-refresh-line text-base"></i></button>}
                         {content.status !== 'rejected' && <button onClick={() => mutateStatus(content.id, 'rejected')} className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Rejeter"><i className="ri-close-line text-base"></i></button>}
                         {content.status !== 'archived' && <button onClick={() => mutateStatus(content.id, 'archived')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Archiver"><i className="ri-archive-line text-base"></i></button>}
                         {content.source_table !== 'courses' && <button onClick={() => { setSelectedItem(content); setShowDeleteModal(true); }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer"><i className="ri-delete-bin-line text-base"></i></button>}

@@ -70,7 +70,7 @@ export default function AdminReportsPage() {
           <div className="border-b border-gray-200">
             <div className="flex space-x-8 px-6 overflow-x-auto">
               {(['pending', 'resolved', 'dismissed'] as const).map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab ? 'border-[#14B8A6] text-[#14B8A6]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab ? 'border-[#5fa6f3] text-[#5fa6f3]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                   {tab === 'pending' && `En attente (${reports.filter((report) => report.status === 'pending').length})`}
                   {tab === 'resolved' && `Resolus (${reports.filter((report) => report.status === 'resolved').length})`}
                   {tab === 'dismissed' && `Rejetes (${reports.filter((report) => report.status === 'dismissed').length})`}
@@ -141,7 +141,7 @@ export default function AdminReportsPage() {
                 </button>
               </div>
               <p className="text-sm text-gray-600 mb-4">Vous allez suspendre <strong>{pendingSuspend.reported}</strong>.</p>
-              <textarea rows={3} value={suspendReason} onChange={(e) => setSuspendReason(e.target.value)} placeholder="Motif de suspension..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"></textarea>
+              <textarea rows={3} value={suspendReason} onChange={(e) => setSuspendReason(e.target.value)} placeholder="Motif de suspension..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]"></textarea>
               <div className="flex gap-3 mt-6">
                 <button onClick={() => { setShowSuspendModal(false); setPendingSuspend(null); setSuspendReason(''); }} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Annuler</button>
                 <button onClick={() => void confirmSuspend()} disabled={!suspendReason.trim()} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${suspendReason.trim() ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>Confirmer</button>

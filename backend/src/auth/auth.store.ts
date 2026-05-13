@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'apprenant' | 'formateur' | 'prestataire' | 'porteur' | 'partenaire' | 'client';
+export type Role = 'admin' | 'apprenant' | 'formateur' | 'prestataire' | 'parent' | 'porteur' | 'partenaire' | 'client';
 export type UserStatus = 'active' | 'pending' | 'suspended';
 export type AuditStatus = 'success' | 'failed';
 
@@ -63,6 +63,46 @@ export interface AuthUser {
   createdAt: string;
 }
 
+export interface DirectoryUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: Role;
+  status: UserStatus;
+  avatar?: string;
+  publicTitle?: string;
+  expertVerified?: boolean;
+}
+
+function buildSafeUserPayload(user: StoredUser, includePaymentSettings: boolean): AuthUser {
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    status: user.status,
+    phone: user.phone,
+    avatar: user.avatar,
+    bio: user.bio,
+    location: user.location,
+    publicTitle: user.publicTitle,
+    website: user.website,
+    preferredLanguage: user.preferredLanguage,
+    languages: user.languages ?? [],
+    skills: user.skills ?? [],
+    socialLinks: user.socialLinks ?? {},
+    certifications: user.certifications ?? [],
+    portfolioItems: user.portfolioItems ?? [],
+    introVideo: user.introVideo,
+    publicProfileEnabled: Boolean(user.publicProfileEnabled),
+    expertVerified: Boolean(user.expertVerified),
+    is2FAEnabled: Boolean(user.is2FAEnabled),
+    createdAt: user.createdAt,
+    ...(includePaymentSettings ? { paymentSettings: user.paymentSettings ?? {} } : {}),
+  };
+}
+
 export interface StoredUser extends AuthUser {
   password?: string;
   passwordHash?: string;
@@ -117,8 +157,26 @@ export interface AuditLog {
   status: AuditStatus;
 }
 
-const avatar = (seed: string) =>
-  `https://readdy.ai/api/search-image?query=professional%20african%20business%20portrait%20${seed}%20clean%20background%20studio%20lighting&width=200&height=200&seq=${seed}&orientation=squarish`;
+const LOCAL_AVATAR_POOL = [
+  '/images/brand/image1.jpeg',
+  '/images/brand/image2.jpeg',
+  '/images/brand/image3.jpeg',
+  '/images/brand/image5.jpeg',
+  '/images/brand/image6.jpeg',
+  '/images/brand/image7.jpeg',
+  '/images/brand/image8.jpeg',
+  '/images/brand/images9.jpeg',
+];
+
+function pickSeededImage(seed: string, pool: string[]) {
+  const hash = Array.from(seed).reduce((sum, char, index) => sum + char.charCodeAt(0) * (index + 1), 0);
+  return pool[hash % pool.length];
+}
+
+const avatar = (seed: string) => pickSeededImage(seed, LOCAL_AVATAR_POOL);
+
+const DEFAULT_TEST_PASSWORD_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$Ib10W7lbOfDuhU5wr72pzw$/dnOjZh0+kI0S2UG5hFu3ygmxjKLo6DDmBQqq0ri84o';
 
 const users: StoredUser[] = [
   {
@@ -128,14 +186,14 @@ const users: StoredUser[] = [
     lastName: 'Mbarga',
     role: 'admin',
     status: 'active',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 77 100 20 30',
     avatar: avatar('admin-jean'),
     bio: 'Administrateur principal de la plateforme C2P.',
     location: 'Dakar, Senegal',
     is2FAEnabled: false,
-    backupCodes: ['ADMN-9X3P', 'ADMN-7M2Q', 'ADMN-4K8R', 'ADMN-6T1V'],
-    passwordHistory: [],
+    backupCodes: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
@@ -148,14 +206,14 @@ const users: StoredUser[] = [
     lastName: 'Toure',
     role: 'apprenant',
     status: 'active',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 77 210 30 40',
     avatar: avatar('learn-ibrahim'),
     bio: 'Apprenant en marketing et front-end.',
     location: 'Dakar, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
@@ -168,7 +226,7 @@ const users: StoredUser[] = [
     lastName: 'Diop',
     role: 'formateur',
     status: 'active',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 77 310 40 50',
     avatar: avatar('trainer-aminata'),
     bio: 'Formatrice en transformation digitale.',
@@ -189,14 +247,14 @@ const users: StoredUser[] = [
         title: 'Google Analytics Certification',
         issuer: 'Google',
         year: '2025',
-        credentialUrl: 'https://example.com/certifications/google-analytics',
+        credentialUrl: 'https://skillshop.withgoogle.com/',
       },
       {
         id: 'cert-product-marketing',
         title: 'Product Marketing Leader',
         issuer: 'Product School',
         year: '2024',
-        credentialUrl: 'https://example.com/certifications/product-marketing',
+        credentialUrl: 'https://productschool.com/',
       },
     ],
     portfolioItems: [
@@ -228,7 +286,7 @@ const users: StoredUser[] = [
     },
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
@@ -241,14 +299,35 @@ const users: StoredUser[] = [
     lastName: 'Fall',
     role: 'prestataire',
     status: 'active',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 77 410 50 60',
     avatar: avatar('provider-moussa'),
     bio: 'Prestataire batiment et maintenance.',
     location: 'Dakar, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
+    failedLoginAttempts: 0,
+    lockedUntil: null,
+    lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
+    createdAt: '2026-01-01',
+  },
+  {
+    id: 'usr-parent',
+    email: 'parent@c2p.sn',
+    firstName: 'Khadija',
+    lastName: 'Sy',
+    role: 'parent',
+    status: 'active',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
+    phone: '+221 77 490 51 61',
+    avatar: avatar('parent-khadija'),
+    bio: 'Parent accompagne le suivi d apprentissage de son enfant sur l espace numerique C2P.',
+    location: 'Dakar, Senegal',
+    publicTitle: 'Parent referent',
+    is2FAEnabled: false,
+    backupCodes: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
@@ -261,14 +340,14 @@ const users: StoredUser[] = [
     lastName: 'Ndiaye',
     role: 'client',
     status: 'active',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 77 510 60 70',
     avatar: avatar('client-awa'),
     bio: 'Cliente active sur AlloPresta.',
     location: 'Dakar, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
@@ -281,14 +360,14 @@ const users: StoredUser[] = [
     lastName: 'Ba',
     role: 'porteur',
     status: 'active',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 77 610 70 80',
     avatar: avatar('founder-cheikh'),
     bio: 'Porteur du projet AgroLink.',
     location: 'Dakar, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
@@ -301,14 +380,14 @@ const users: StoredUser[] = [
     lastName: 'Sarr',
     role: 'partenaire',
     status: 'active',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 77 710 80 90',
     avatar: avatar('partner-marieme'),
     bio: 'Partenaire investissement et croissance.',
     location: 'Dakar, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
@@ -321,13 +400,13 @@ const users: StoredUser[] = [
     lastName: 'Kamga',
     role: 'prestataire',
     status: 'pending',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 70 111 22 33',
     avatar: avatar('extra-marie'),
     location: 'Dakar, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     createdAt: '2026-04-15',
@@ -339,13 +418,13 @@ const users: StoredUser[] = [
     lastName: 'Sow',
     role: 'prestataire',
     status: 'suspended',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 70 222 33 44',
     avatar: avatar('extra-aminata'),
     location: 'Thies, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     createdAt: '2026-03-28',
@@ -357,13 +436,13 @@ const users: StoredUser[] = [
     lastName: 'Diallo',
     role: 'apprenant',
     status: 'active',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 70 333 44 55',
     avatar: avatar('extra-fatima'),
     location: 'Saint-Louis, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     createdAt: '2026-03-12',
@@ -375,13 +454,13 @@ const users: StoredUser[] = [
     lastName: 'Essomba',
     role: 'porteur',
     status: 'pending',
-    password: 'password123',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
     phone: '+221 70 444 55 66',
     avatar: avatar('extra-paul'),
     location: 'Kaolack, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     createdAt: '2026-02-25',
@@ -393,6 +472,7 @@ const sessions: UserSession[] = [
   { id: 'sess-admin-2', userId: 'usr-admin', device: 'Safari sur iPhone 14', location: 'Dakar, Senegal', ip: '196.1.95.124', lastActive: '2026-05-06T09:20:00.000Z', current: false },
   { id: 'sess-client-1', userId: 'usr-client', device: 'Chrome sur MacOS', location: 'Dakar, Senegal', ip: '154.72.14.56', lastActive: '2026-05-05T18:10:00.000Z', current: true },
   { id: 'sess-prest-1', userId: 'usr-prestataire', device: 'Chrome sur Android', location: 'Dakar, Senegal', ip: '41.82.123.45', lastActive: '2026-05-05T16:45:00.000Z', current: true },
+  { id: 'sess-parent-1', userId: 'usr-parent', device: 'Safari sur iPhone', location: 'Dakar, Senegal', ip: '154.72.88.41', lastActive: '2026-05-05T12:30:00.000Z', current: true },
   { id: 'sess-porteur-1', userId: 'usr-porteur', device: 'Firefox sur MacOS', location: 'Dakar, Senegal', ip: '102.16.45.78', lastActive: '2026-05-04T12:00:00.000Z', current: true },
   { id: 'sess-porteur-2', userId: 'usr-porteur', device: 'Safari sur iPad', location: 'Thies, Senegal', ip: '102.16.45.81', lastActive: '2026-05-03T09:15:00.000Z', current: false },
   { id: 'sess-partner-1', userId: 'usr-partenaire', device: 'Chrome sur Windows', location: 'Dakar, Senegal', ip: '105.12.88.10', lastActive: '2026-05-05T14:30:00.000Z', current: true },
@@ -405,6 +485,7 @@ const auditLogs: AuditLog[] = [
   { id: 'audit-4', userId: 'usr-porteur', action: 'Connexion reussie', timestamp: '2026-05-05T14:15:00.000Z', ip: '102.16.45.78', device: 'Firefox sur MacOS', status: 'success' },
   { id: 'audit-5', userId: 'usr-porteur', action: 'Changement de mot de passe', timestamp: '2026-05-01T08:20:00.000Z', ip: '102.16.45.78', device: 'Firefox sur MacOS', status: 'success' },
   { id: 'audit-6', userId: 'usr-prestataire', action: 'Connexion reussie', timestamp: '2026-05-05T16:45:00.000Z', ip: '41.82.123.45', device: 'Chrome sur Android', status: 'success' },
+  { id: 'audit-7', userId: 'usr-parent', action: 'Connexion reussie', timestamp: '2026-05-05T12:30:00.000Z', ip: '154.72.88.41', device: 'Safari sur iPhone', status: 'success' },
 ];
 
 function randomCode(prefix: string) {
@@ -412,13 +493,24 @@ function randomCode(prefix: string) {
 }
 
 export function publicUser(user: StoredUser): AuthUser {
-  const { password: _password, backupCodes: _backupCodes, paymentSettings: _paymentSettings, ...safeUser } = user;
-  return safeUser;
+  return buildSafeUserPayload(user, false);
 }
 
 export function editableProfileUser(user: StoredUser): AuthUser {
-  const { password: _password, backupCodes: _backupCodes, ...safeUser } = user;
-  return safeUser;
+  return buildSafeUserPayload(user, true);
+}
+
+export function directoryUser(user: StoredUser): DirectoryUser {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    status: user.status,
+    avatar: user.avatar,
+    publicTitle: user.publicTitle,
+    expertVerified: Boolean(user.expertVerified),
+  };
 }
 
 export function publicInstructorProfile(user: StoredUser) {

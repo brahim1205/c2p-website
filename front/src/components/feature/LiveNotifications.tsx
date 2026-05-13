@@ -43,7 +43,7 @@ function playNotificationSound() {
 
 export default function LiveNotifications({ notifications }: LiveNotificationsProps) {
   const { info } = useToast();
-  const lastNotifiedIds = useRef<Set<number>>(new Set());
+  const lastNotifiedIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     // On first mount, mark all existing as notified so we don't flood the user

@@ -24,10 +24,12 @@ const LoginPage = lazy(() => import('../pages/auth/login/page'));
 const RegisterPage = lazy(() => import('../pages/auth/register/page'));
 const ForgotPasswordPage = lazy(() => import('../pages/auth/forgot-password/page'));
 const TwoFactorPage = lazy(() => import('../pages/auth/two-factor/page'));
+const PricingPage = lazy(() => import('../pages/tarifs/page'));
 const DashboardPage = lazy(() => import('../pages/dashboard/page'));
 const PrestataireDashboardPage = lazy(() => import('../pages/dashboard/prestataire/page'));
 const FormateurDashboardPage = lazy(() => import('../pages/dashboard/formateur/page'));
 const ApprenantDashboardPage = lazy(() => import('../pages/dashboard/apprenant/page'));
+const ParentDashboardPage = lazy(() => import('../pages/dashboard/parent/page'));
 const PorteurDashboardPage = lazy(() => import('../pages/dashboard/porteur/page'));
 const PartenaireDashboardPage = lazy(() => import('../pages/dashboard/partenaire/page'));
 const ProfilePage = lazy(() => import('../pages/dashboard/profile/page'));
@@ -133,6 +135,22 @@ const routes: RouteObject[] = [
     )
   },
   {
+    path: '/tarifs',
+    element: (
+      <RouteWrapper layout="public" hideFooter={false}>
+        <PricingPage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/abonnements',
+    element: (
+      <RouteWrapper layout="public" hideFooter={false}>
+        <PricingPage />
+      </RouteWrapper>
+    )
+  },
+  {
     path: '/mentions-legales',
     element: (
       <RouteWrapper layout="none">
@@ -175,7 +193,7 @@ const routes: RouteObject[] = [
   {
     path: '/allopresta/prestataire/:id',
     element: (
-      <RouteWrapper layout="public" hideFooter={false}>
+      <RouteWrapper layout="public" hideFooter={false} hideHeader={true}>
         <PrestatairePage />
       </RouteWrapper>
     )
@@ -199,7 +217,7 @@ const routes: RouteObject[] = [
   {
     path: '/espace-numerique/formation/:id',
     element: (
-      <RouteWrapper layout="public" hideFooter={false}>
+      <RouteWrapper layout="public" hideFooter={true}>
         <FormationPage />
       </RouteWrapper>
     )
@@ -315,6 +333,14 @@ const routes: RouteObject[] = [
     element: (
       <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={['apprenant']}>
         <ApprenantDashboardPage />
+      </RouteWrapper>
+    )
+  },
+  {
+    path: '/dashboard/parent',
+    element: (
+      <RouteWrapper layout="dashboard" requireAuth={true} allowedRoles={['parent']}>
+        <ParentDashboardPage />
       </RouteWrapper>
     )
   },

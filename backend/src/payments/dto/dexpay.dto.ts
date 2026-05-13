@@ -56,5 +56,24 @@ export const dexpaySyncSchema = z.object({
   transactionId: z.string().trim().min(3).max(120).optional(),
 });
 
+export const dexpayWebhookSchema = z.record(z.string(), z.unknown()).superRefine((payload, ctx) => {
+  const providerReference = payload.orderId ?? payload.reference ?? payload.id ?? payload.order_id;
+  if (!providerReference || String(providerReference).trim().length < 3) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'orderId, reference ou id est requis pour traiter le webhook DexPay.',
+      path: ['orderId'],
+    });
+  }
+});
+
+export const dexpayReconcileSchema = z.object({
+  limit: z.number().int().min(1).max(200).default(25),
+  onlyPending: z.boolean().default(true),
+  providerReference: z.string().trim().min(3).max(160).optional(),
+});
+
 export type DexPayCheckoutDto = z.infer<typeof dexpayCheckoutSchema>;
 export type DexPaySyncDto = z.infer<typeof dexpaySyncSchema>;
+export type DexPayWebhookDto = z.infer<typeof dexpayWebhookSchema>;
+export type DexPayReconcileDto = z.infer<typeof dexpayReconcileSchema>;

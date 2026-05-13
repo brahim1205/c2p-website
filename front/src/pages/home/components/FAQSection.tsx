@@ -13,7 +13,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: 'Quels rôles sont disponibles sur la plateforme ?',
-    answer: 'C2P propose 7 rôles adaptés à vos besoins : Apprenant pour suivre des formations, Formateur pour dispenser des cours, Prestataire pour proposer des services, Client pour trouver des prestataires, Porteur de projet pour lancer votre entreprise, Partenaire pour collaborer sur des projets, et Admin pour la gestion de la plateforme.'
+    answer: 'C2P propose 8 rôles adaptés à vos besoins : Apprenant pour suivre des formations, Parent pour suivre les parcours rattachés, Formateur pour dispenser des cours, Prestataire pour proposer des services, Client / Prestateur pour publier un besoin et trouver un prestataire, Porteur de projet pour lancer votre entreprise, Partenaire pour collaborer sur des projets, et Admin pour la gestion de la plateforme.'
   },
   {
     question: 'Les formations sont-elles certifiantes ?',
@@ -21,7 +21,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: 'Comment fonctionne AlloPresta ?',
-    answer: 'AlloPresta est notre marketplace de services. En tant que client, vous publiez votre besoin et recevez des propositions de prestataires vérifiés. En tant que prestataire, vous créez vos services, définissez vos tarifs et recevez des demandes de clients. Le paiement est sécurisé et libéré après validation du service.'
+    answer: 'AlloPresta porte le cadre SenPresta. En tant que client / prestateur, vous publiez votre besoin ou choisissez un prestataire et C2P pilote la mise en relation. En tant que prestataire, vous activez votre visibilité, vos alertes et votre niveau de vérification selon votre plan. Le paiement reste sécurisé et libéré selon le workflow C2P.'
   },
   {
     question: 'Quel est le coût pour utiliser ProjectCenter ?',
@@ -62,7 +62,7 @@ function AccordionItem({ item, index, isOpen, onToggle, isVisible }: {
     >
       <div
         className={`border border-gray-200 rounded-2xl overflow-hidden transition-all duration-300 ${
-          isOpen ? 'border-[#14B8A6]/30 shadow-lg shadow-[#14B8A6]/5' : 'hover:border-gray-300'
+          isOpen ? 'border-[#5fa6f3]/30 shadow-lg shadow-[#5fa6f3]/5' : 'hover:border-gray-300'
         }`}
       >
         <button
@@ -73,8 +73,8 @@ function AccordionItem({ item, index, isOpen, onToggle, isVisible }: {
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
                 isOpen
-                  ? 'bg-[#14B8A6] text-white rotate-0'
-                  : 'bg-[#14B8A6]/10 text-[#14B8A6] group-hover:bg-[#14B8A6]/20'
+                  ? 'bg-[#5fa6f3] text-white rotate-0'
+                  : 'bg-[#5fa6f3]/10 text-[#5fa6f3] group-hover:bg-[#5fa6f3]/20'
               }`}
             >
               <div className="w-5 h-5 flex items-center justify-center">
@@ -83,7 +83,7 @@ function AccordionItem({ item, index, isOpen, onToggle, isVisible }: {
             </div>
             <span
               className={`font-semibold text-base lg:text-lg transition-colors duration-300 ${
-                isOpen ? 'text-[#1a2b4a]' : 'text-gray-700 group-hover:text-[#1a2b4a]'
+                isOpen ? 'text-[#06053a]' : 'text-gray-700 group-hover:text-[#06053a]'
               }`}
             >
               {item.question}
@@ -92,8 +92,8 @@ function AccordionItem({ item, index, isOpen, onToggle, isVisible }: {
           <div
             className={`w-8 h-8 flex items-center justify-center rounded-full transition-all duration-500 flex-shrink-0 ${
               isOpen
-                ? 'bg-[#14B8A6] text-white rotate-180'
-                : 'bg-gray-100 text-gray-400 group-hover:bg-[#14B8A6]/10 group-hover:text-[#14B8A6]'
+                ? 'bg-[#5fa6f3] text-white rotate-180'
+                : 'bg-gray-100 text-gray-400 group-hover:bg-[#5fa6f3]/10 group-hover:text-[#5fa6f3]'
             }`}
           >
             <i className="ri-arrow-down-s-line text-lg"></i>
@@ -122,19 +122,19 @@ export default function FAQSection() {
   };
 
   return (
-    <section ref={sectionRef} className="py-24 lg:py-32 px-4 sm:px-6 lg:px-20 bg-[#faf8f3] relative overflow-hidden">
+    <section ref={sectionRef} className="py-24 lg:py-32 px-4 sm:px-6 lg:px-20 bg-[#ffffff] relative overflow-hidden">
       {/* Decorative background */}
-      <div className="absolute top-20 left-0 w-[400px] h-[400px] bg-[#14B8A6]/5 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-20 right-0 w-[300px] h-[300px] bg-[#1a2b4a]/5 rounded-full blur-[80px] pointer-events-none"></div>
+      <div className="absolute top-20 left-0 w-[400px] h-[400px] bg-[#5fa6f3]/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-20 right-0 w-[300px] h-[300px] bg-[#06053a]/5 rounded-full blur-[80px] pointer-events-none"></div>
 
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Section Header */}
         <div className={`text-center mb-16 transition-all duration-1000 ${sectionVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="inline-flex items-center gap-2 mb-5">
-            <div className="w-3 h-3 bg-[#14B8A6] rotate-45"></div>
-            <span className="text-[#1a2b4a] text-sm font-medium uppercase tracking-wider">FAQ</span>
+            <div className="w-3 h-3 bg-[#5fa6f3] rotate-45"></div>
+            <span className="text-[#06053a] text-sm font-medium uppercase tracking-wider">FAQ</span>
           </div>
-          <h2 className="text-[#1a2b4a] font-bold text-2xl sm:text-3xl lg:text-[48px] leading-tight mb-3 sm:mb-4">
+          <h2 className="text-[#06053a] font-bold text-2xl sm:text-3xl lg:text-[48px] leading-tight mb-3 sm:mb-4">
             Questions Fréquentes
           </h2>
           <p className="text-gray-600 text-sm sm:text-base lg:text-lg max-w-2xl mx-auto px-2 sm:px-0">
@@ -163,7 +163,7 @@ export default function FAQSection() {
           </p>
           <a
             href="mailto:contact@c2p.africa"
-            className="group inline-flex items-center gap-2 bg-[#1a2b4a] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#14B8A6] hover:scale-105 active:scale-95 transition-all duration-300 whitespace-nowrap"
+            className="group inline-flex items-center gap-2 bg-[#06053a] text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-[#5fa6f3] hover:scale-105 active:scale-95 transition-all duration-300 whitespace-nowrap"
           >
             <div className="w-5 h-5 flex items-center justify-center">
               <i className="ri-mail-line"></i>

@@ -9,8 +9,10 @@ import type { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service.js';
+import { AuditLogService } from '../database/audit-log.service.js';
 import { ConfigService } from '../config/config.service.js';
 import { SmsService } from '../communications/sms.service.js';
+import { RbacService } from './rbac.service.js';
 import {
   getInitialAuditLogs,
   getInitialPendingTwoFactorChallenges,
@@ -18,12 +20,14 @@ import {
   getInitialSessions,
   getInitialUsers,
   editableProfileUser,
+  directoryUser,
   publicUser,
   publicInstructorProfile,
   type AuditLog,
   type AuditStatus,
   type AuthUser,
   type CertificationItem,
+  type DirectoryUser,
   type PaymentSettings,
   type PendingTwoFactorChallenge,
   type PortfolioItem,
@@ -94,15 +98,28 @@ interface SecurityPayload {
   backupCodes: string[];
 }
 
+interface PermissionAuditContext {
+  targetType?: string | null;
+  targetId?: string | null;
+  httpMethod?: string | null;
+  route?: string | null;
+  requestId?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+  reason?: string | null;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly smsService: SmsService,
+    private readonly rbacService: RbacService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
-  private readonly userPatchKeys: (keyof Omit<
+  private readonly managedUserPatchKeys: (keyof Omit<
     StoredUser,
     'id' | 'password' | 'passwordHash' | 'passwordHistory' | 'backupCodes' | 'createdAt'
   >)[] = [
@@ -128,10 +145,30 @@ export class AuthService {
     'role',
     'status',
     'is2FAEnabled',
-    'failedLoginAttempts',
-    'lockedUntil',
-    'lastLoginAt',
-    'lastPasswordChangeAt',
+  ];
+
+  private readonly selfProfilePatchKeys: (keyof Omit<
+    StoredUser,
+    'id' | 'password' | 'passwordHash' | 'passwordHistory' | 'backupCodes' | 'createdAt'
+  >)[] = [
+    'firstName',
+    'lastName',
+    'email',
+    'phone',
+    'avatar',
+    'bio',
+    'location',
+    'publicTitle',
+    'website',
+    'preferredLanguage',
+    'languages',
+    'skills',
+    'socialLinks',
+    'certifications',
+    'portfolioItems',
+    'introVideo',
+    'publicProfileEnabled',
+    'paymentSettings',
   ];
 
   private readonly fallback = {
@@ -144,6 +181,9 @@ export class AuthService {
 
   private seedPromise: Promise<void> | null = null;
   private mutationQueue: Promise<void> = Promise.resolve();
+  private readonly passwordResetChallengeTtlMinutes = 10;
+  private readonly passwordResetCooldownSeconds = 60;
+  private readonly passwordResetMaxAttempts = 5;
 
   private clone<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T;
@@ -484,9 +524,15 @@ export class AuthService {
     await this.saveRows('auth_audit_logs', auditLogs);
   }
 
-  private pickUserPatch(payload: Record<string, unknown>) {
+  private pickUserPatch(
+    payload: Record<string, unknown>,
+    keys: readonly (keyof Omit<
+      StoredUser,
+      'id' | 'password' | 'passwordHash' | 'passwordHistory' | 'backupCodes' | 'createdAt'
+    >)[],
+  ) {
     const patch: Partial<Omit<StoredUser, 'id' | 'password' | 'passwordHash' | 'passwordHistory' | 'backupCodes' | 'createdAt'>> = {};
-    for (const key of this.userPatchKeys) {
+    for (const key of keys) {
       if (key in payload) {
         patch[key] = payload[key] as never;
       }
@@ -500,6 +546,19 @@ export class AuthService {
 
   private findUserById(id: string, users: StoredUser[]) {
     return users.find((candidate) => candidate.id === id);
+  }
+
+  private listPasswordResetChallenges(userId: string, pendingChallenges: PendingTwoFactorChallenge[]) {
+    return pendingChallenges
+      .filter((candidate) => candidate.userId === userId && (candidate.purpose ?? 'login-2fa') === 'password-reset')
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  }
+
+  private removePasswordResetChallenges(userId: string, pendingChallenges: PendingTwoFactorChallenge[]) {
+    return pendingChallenges.filter((candidate) => !(
+      candidate.userId === userId
+      && (candidate.purpose ?? 'login-2fa') === 'password-reset'
+    ));
   }
 
   private listSessionsForUser(userId: string, sessions: AccessSession[]) {
@@ -706,9 +765,98 @@ export class AuthService {
     return actor;
   }
 
+  private shouldAuditPermissionDecision(
+    permissions: string[],
+    context?: PermissionAuditContext,
+  ) {
+    const normalizedMethod = String(context?.httpMethod ?? '').trim().toUpperCase();
+    if (normalizedMethod && normalizedMethod !== 'GET') {
+      return true;
+    }
+
+    return permissions.some((permission) => (
+      permission.startsWith('users.')
+      || permission.startsWith('communications.')
+      || permission.startsWith('payments.')
+      || permission.startsWith('support.')
+      || permission.startsWith('data.admin.')
+      || permission.startsWith('data.finance.')
+      || permission.startsWith('data.subscriptions.')
+      || permission.endsWith('.write')
+      || permission.endsWith('.manage')
+    ));
+  }
+
+  async assertPermissionForActor(
+    actor: AuthUser,
+    permissions: string | string[],
+    context?: PermissionAuditContext,
+  ) {
+    const requestedPermissions = Array.isArray(permissions) ? permissions : [permissions];
+    const resolvedPermissions = [...await this.rbacService.getEffectivePermissions(actor)].sort();
+    const resolvedRoles = [...await this.rbacService.getEffectiveRoleIds(actor)].sort();
+    const granted = requestedPermissions.every((permission) => resolvedPermissions.includes(permission));
+
+    if (!granted || this.shouldAuditPermissionDecision(requestedPermissions, context)) {
+      await this.auditLogService.record({
+        scope: 'rbac',
+        action: 'permission_check',
+        status: granted ? 'success' : 'failed',
+        userId: actor.id,
+        actorLabel: `${actor.firstName} ${actor.lastName}`.trim() || actor.email || actor.id,
+        targetType: context?.targetType ?? 'permission',
+        targetId: context?.targetId ?? requestedPermissions.join(','),
+        ip: context?.ip ?? undefined,
+        device: context?.userAgent ?? undefined,
+        reason: context?.reason ?? (granted ? 'permission_granted' : 'permission_denied'),
+        metadata: {
+          decision: granted ? 'granted' : 'denied',
+          permissions: requestedPermissions,
+          resolvedPermissions,
+          resolvedRoles,
+          httpMethod: context?.httpMethod ?? null,
+          route: context?.route ?? null,
+          requestId: context?.requestId ?? null,
+        },
+      });
+    }
+
+    if (!granted) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+
+    return actor;
+  }
+
+  async requirePermission(
+    request: AuthenticatedRequest,
+    permissions: string | string[],
+    context: Partial<PermissionAuditContext> = {},
+  ) {
+    const actor = this.getActor(request);
+    const meta = this.getRequestMeta(request);
+    await this.assertPermissionForActor(actor, permissions, {
+      ...context,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      requestId: context.requestId ?? meta.requestId,
+      httpMethod: request.method ?? context.httpMethod ?? null,
+      route: request.originalUrl ?? request.route?.path ?? context.route ?? null,
+    });
+    return actor;
+  }
+
   requireSelfOrAdmin(request: AuthenticatedRequest, userId: string) {
     const actor = this.getActor(request);
     if (actor.role !== 'admin' && actor.id !== userId) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    return actor;
+  }
+
+  requireSelf(request: AuthenticatedRequest, userId: string) {
+    const actor = this.getActor(request);
+    if (actor.id !== userId) {
       throw new UnauthorizedException('Acces refuse.');
     }
     return actor;
@@ -1000,13 +1148,24 @@ export class AuthService {
       const user = this.findUserByEmail(email, users);
 
       if (user && user.status === 'active' && user.phone) {
+        const latestChallenge = this.listPasswordResetChallenges(user.id, pendingChallenges)[0];
+        if (
+          latestChallenge
+          && (Date.now() - Date.parse(latestChallenge.createdAt)) < this.passwordResetCooldownSeconds * 1000
+        ) {
+          this.appendAuditLog(auditLogs, sessions, user.id, 'Demande de reinitialisation du mot de passe ignoree (cooldown)', 'failed', {
+            ip: meta.ip,
+            device: this.ensureDevice(meta),
+          });
+          await this.saveAuditLogs(auditLogs);
+          return {
+            message: 'Si un compte existe, un code de reinitialisation sera envoye.',
+          };
+        }
+
         const code = process.env.NODE_ENV === 'production' ? this.randomNumericCode() : '123456';
         const createdAt = new Date().toISOString();
-
-        const remainingChallenges = pendingChallenges.filter((challenge) => !(
-          challenge.userId === user.id
-          && (challenge.purpose ?? 'login-2fa') === 'password-reset'
-        ));
+        const remainingChallenges = this.removePasswordResetChallenges(user.id, pendingChallenges);
 
         remainingChallenges.unshift({
           id: this.createId('pwd-reset'),
@@ -1014,7 +1173,7 @@ export class AuthService {
           codeHash: this.hashToken(code),
           purpose: 'password-reset',
           createdAt,
-          expiresAt: this.addMinutes(createdAt, 10),
+          expiresAt: this.addMinutes(createdAt, this.passwordResetChallengeTtlMinutes),
           attempts: 0,
         });
 
@@ -1059,24 +1218,31 @@ export class AuthService {
         throw new UnauthorizedException('Code de verification invalide.');
       }
 
-      const challenge = pendingChallenges
-        .filter((candidate) => candidate.userId === user.id && (candidate.purpose ?? 'login-2fa') === 'password-reset')
-        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
+      const challenge = this.listPasswordResetChallenges(user.id, pendingChallenges)[0];
 
       if (!challenge || this.isExpired(challenge.expiresAt)) {
         throw new UnauthorizedException('Code de verification expire.');
       }
 
       challenge.attempts += 1;
-      if (challenge.codeHash !== this.hashToken(code) || challenge.attempts > 5) {
+      const codeMatches = challenge.codeHash === this.hashToken(code);
+      if (!codeMatches || challenge.attempts > this.passwordResetMaxAttempts) {
+        const shouldInvalidateChallenge = !codeMatches && challenge.attempts >= this.passwordResetMaxAttempts;
         this.appendAuditLog(auditLogs, sessions, user.id, 'Echec de reinitialisation du mot de passe', 'failed', {
           ip: meta.ip,
           device: this.ensureDevice(meta),
         });
-        await Promise.all([
-          this.savePendingChallenges(pendingChallenges),
-          this.saveAuditLogs(auditLogs),
-        ]);
+        if (shouldInvalidateChallenge) {
+          await Promise.all([
+            this.savePendingChallenges(this.removePasswordResetChallenges(user.id, pendingChallenges)),
+            this.saveAuditLogs(auditLogs),
+          ]);
+        } else {
+          await Promise.all([
+            this.savePendingChallenges(pendingChallenges),
+            this.saveAuditLogs(auditLogs),
+          ]);
+        }
         throw new UnauthorizedException('Code de verification invalide.');
       }
 
@@ -1094,10 +1260,7 @@ export class AuthService {
         await this.revokeSessionChain(session.id, sessions, refreshTokens);
       }
 
-      const remainingChallenges = pendingChallenges.filter((candidate) => !(
-        candidate.userId === user.id
-        && (candidate.purpose ?? 'login-2fa') === 'password-reset'
-      ));
+      const remainingChallenges = this.removePasswordResetChallenges(user.id, pendingChallenges);
 
       this.appendAuditLog(auditLogs, sessions, user.id, 'Reinitialisation du mot de passe', 'success', {
         ip: meta.ip,
@@ -1125,15 +1288,15 @@ export class AuthService {
   }
 
   async getUsers(request: AuthenticatedRequest) {
-    this.requireRole(request, ['admin']);
+    await this.requirePermission(request, 'users.read');
     return this.listAllUsers();
   }
 
-  async getUserDirectory(request: AuthenticatedRequest) {
+  async getUserDirectory(request: AuthenticatedRequest): Promise<DirectoryUser[]> {
     this.getActor(request);
     const users = await this.loadRows<StoredUser>('auth_users');
     return users
-      .map((user) => publicUser(this.normalizeUser(user)))
+      .map((user) => directoryUser(this.normalizeUser(user)))
       .filter((user) => user.status !== 'suspended');
   }
 
@@ -1167,14 +1330,14 @@ export class AuthService {
     >>,
   ) {
     return this.runSerializedMutation(async () => {
-      const actor = this.requireRole(request, ['admin']);
+      const actor = await this.requirePermission(request, 'users.manage');
       const { users, sessions, auditLogs } = await this.loadSnapshot();
       const user = this.findUserById(id, users);
       if (!user) {
         throw new BadRequestException('Utilisateur introuvable.');
       }
 
-      const patch = this.pickUserPatch(payload as Record<string, unknown>);
+      const patch = this.pickUserPatch(payload as Record<string, unknown>, this.managedUserPatchKeys);
       if (patch.email) {
         patch.email = patch.email.trim().toLowerCase();
         const existing = this.findUserByEmail(patch.email, users);
@@ -1205,10 +1368,12 @@ export class AuthService {
     return editableProfileUser(this.normalizeUser(user));
   }
 
-  async getPublicInstructorProfile(id: string) {
+  async getPublicInstructorProfile(request: Pick<AuthenticatedRequest, 'auth'> | null, id: string) {
     const users = await this.loadRows<StoredUser>('auth_users');
     const user = this.findUserById(id, users);
-    if (!user || user.role !== 'formateur' || !user.publicProfileEnabled) {
+    const actor = request?.auth?.user;
+    const canPreviewUnpublished = Boolean(actor && (actor.id === id || actor.role === 'admin'));
+    if (!user || user.role !== 'formateur' || (!user.publicProfileEnabled && !canPreviewUnpublished)) {
       throw new BadRequestException('Profil formateur introuvable.');
     }
     return publicInstructorProfile(this.normalizeUser(user));
@@ -1249,7 +1414,7 @@ export class AuthService {
         throw new BadRequestException('Utilisateur introuvable.');
       }
 
-      const patch = this.pickUserPatch(payload as Record<string, unknown>);
+      const patch = this.pickUserPatch(payload as Record<string, unknown>, this.selfProfilePatchKeys);
       if (patch.email) {
         patch.email = patch.email.trim().toLowerCase();
         const existing = this.findUserByEmail(patch.email, users);
@@ -1272,12 +1437,12 @@ export class AuthService {
 
   async updatePassword(request: AuthenticatedRequest, payload: PasswordChangePayload) {
     return this.runSerializedMutation(async () => {
-      const actor = this.requireSelfOrAdmin(request, payload.userId ?? '');
+      const actor = this.requireSelf(request, payload.userId ?? '');
       if (!payload.userId || !payload.currentPassword || !payload.newPassword) {
         throw new BadRequestException('Informations de mot de passe invalides.');
       }
 
-      const { users, sessions, auditLogs } = await this.loadSnapshot();
+      const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
       const user = this.findUserById(payload.userId, users);
       if (!user) {
         throw new BadRequestException('Utilisateur introuvable.');
@@ -1296,10 +1461,21 @@ export class AuthService {
       user.passwordHistory = [passwordHash, ...(user.passwordHistory ?? []).filter(Boolean)].slice(0, 5);
       user.lastPasswordChangeAt = new Date().toISOString();
       delete user.password;
+      const currentSessionId = request.auth?.sessionId ?? null;
+      const secondarySessions = sessions.filter((session) => (
+        session.userId === user.id
+        && !session.revokedAt
+        && session.id !== currentSessionId
+      ));
+      for (const session of secondarySessions) {
+        await this.revokeSessionChain(session.id, sessions, refreshTokens);
+      }
       this.appendAuditLog(auditLogs, sessions, actor.id, 'Changement de mot de passe', 'success');
 
       await Promise.all([
         this.saveUsers(users),
+        this.saveSessions(sessions),
+        this.saveRefreshTokens(refreshTokens),
         this.saveAuditLogs(auditLogs),
       ]);
 
@@ -1319,7 +1495,7 @@ export class AuthService {
       user: publicUser(user),
       sessions: this.buildPublicSessions(this.listSessionsForUser(userId, sessions)),
       auditLogs: this.listAuditLogsForUser(userId, auditLogs),
-      backupCodes: [...user.backupCodes],
+      backupCodes: [],
     };
   }
 

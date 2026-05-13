@@ -85,18 +85,18 @@ export default function AdminSecurityPage() {
     <AdminLayout>
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={[{ label: 'Admin', path: '/admin/dashboard' }, { label: 'Securite' }]} />
-        <div className="flex items-center justify-between mb-8">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Securite et protection</h1>
             <p className="text-gray-600">Gestion de la securite de la plateforme</p>
           </div>
-          <div className="w-14 h-14 lg:w-16 lg:h-16 bg-[#14B8A6] rounded-2xl flex items-center justify-center">
+          <div className="w-14 h-14 lg:w-16 lg:h-16 bg-[#5fa6f3] rounded-2xl flex items-center justify-center self-start sm:self-auto">
             <i className="ri-shield-check-line text-white text-2xl lg:text-3xl"></i>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-          <div className="flex border-b border-gray-200 overflow-x-auto">
+          <div className="flex border-b border-gray-200 overflow-x-auto" role="tablist" aria-label="Navigation securite admin">
             {[
               ['overview', 'Vue d ensemble'],
               ['users', 'Utilisateurs'],
@@ -104,7 +104,16 @@ export default function AdminSecurityPage() {
               ['backups', 'Sauvegardes'],
               ['settings', 'Parametres'],
             ].map(([id, label]) => (
-              <button key={id} onClick={() => setActiveTab(id as typeof activeTab)} className={`px-4 lg:px-6 py-4 font-medium whitespace-nowrap transition-colors text-sm ${activeTab === id ? 'text-[#14B8A6] border-b-2 border-[#14B8A6]' : 'text-gray-600 hover:text-gray-900'}`}>
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`admin-security-tab-${id}`}
+                aria-selected={activeTab === id}
+                aria-controls={`admin-security-panel-${id}`}
+                onClick={() => setActiveTab(id as typeof activeTab)}
+                className={`px-4 lg:px-6 py-4 font-medium whitespace-nowrap transition-colors text-sm ${activeTab === id ? 'text-[#5fa6f3] border-b-2 border-[#5fa6f3]' : 'text-gray-600 hover:text-gray-900'}`}
+              >
                 {label}
               </button>
             ))}
@@ -112,7 +121,7 @@ export default function AdminSecurityPage() {
         </div>
 
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div className="space-y-6" role="tabpanel" id="admin-security-panel-overview" aria-labelledby="admin-security-tab-overview">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               {[
                 { label: 'Utilisateurs actifs', value: securityStats.activeUsers, color: 'bg-teal-100', icon: 'ri-user-line text-teal-600' },
@@ -133,7 +142,7 @@ export default function AdminSecurityPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg lg:text-xl font-bold text-gray-900">Alertes de securite</h2>
-                <button onClick={loadSecurity} className="px-4 py-2 bg-[#14B8A6] text-white rounded-lg font-medium hover:bg-[#0D9488] transition-all whitespace-nowrap text-sm">Actualiser</button>
+                <button type="button" aria-label="Actualiser les alertes et indicateurs de securite" onClick={loadSecurity} className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg font-medium hover:bg-[#27346b] transition-all whitespace-nowrap text-sm">Actualiser</button>
               </div>
               <div className="space-y-4">
                 {securityAlerts.map((alert) => (
@@ -153,7 +162,7 @@ export default function AdminSecurityPage() {
                         </div>
                       </div>
                       {alert.status === 'active' && (
-                        <button onClick={() => void markAlertReviewed(alert.id).then(() => { success('Alerte traitee', alert.title); loadSecurity(); })} className="px-3 py-2 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488] transition-all whitespace-nowrap">
+                        <button type="button" aria-label={`Traiter l alerte ${alert.title}`} onClick={() => void markAlertReviewed(alert.id).then(() => { success('Alerte traitee', alert.title); loadSecurity(); })} className="px-3 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-all whitespace-nowrap">
                           Traiter
                         </button>
                       )}
@@ -166,7 +175,7 @@ export default function AdminSecurityPage() {
         )}
 
         {activeTab === 'users' && (
-          <div className="space-y-4">
+          <div className="space-y-4" role="tabpanel" id="admin-security-panel-users" aria-labelledby="admin-security-tab-users">
             {users.map((user) => (
               <div key={user.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -176,7 +185,7 @@ export default function AdminSecurityPage() {
                 <div className="flex items-center gap-3">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.status === 'active' ? 'bg-green-100 text-green-700' : user.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{user.status}</span>
                   {user.status !== 'suspended' && (
-                    <button onClick={() => void forceSuspendUser(user.id).then(() => { success('Compte suspendu', user.email); loadSecurity(); })} className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors whitespace-nowrap">
+                    <button type="button" aria-label={`Suspendre le compte de ${user.firstName} ${user.lastName}`} onClick={() => void forceSuspendUser(user.id).then(() => { success('Compte suspendu', user.email); loadSecurity(); })} className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors whitespace-nowrap">
                       Suspendre
                     </button>
                   )}
@@ -187,13 +196,13 @@ export default function AdminSecurityPage() {
         )}
 
         {activeTab === 'logs' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6" role="tabpanel" id="admin-security-panel-logs" aria-labelledby="admin-security-tab-logs">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-2">Journaux d audit administrateur</h2>
                 <p className="text-gray-600">Historique des actions administratives</p>
               </div>
-              <button onClick={handleExportLogs} className="px-6 py-3 bg-[#14B8A6] text-white rounded-lg font-semibold hover:bg-[#0D9488] transition-all whitespace-nowrap text-sm">Exporter</button>
+              <button type="button" aria-label="Exporter les journaux d audit administrateur" onClick={handleExportLogs} className="px-6 py-3 bg-[#5fa6f3] text-white rounded-lg font-semibold hover:bg-[#27346b] transition-all whitespace-nowrap text-sm">Exporter</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -225,7 +234,7 @@ export default function AdminSecurityPage() {
         )}
 
         {activeTab === 'backups' && (
-          <div className="space-y-6">
+          <div className="space-y-6" role="tabpanel" id="admin-security-panel-backups" aria-labelledby="admin-security-tab-backups">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-6">Historique des sauvegardes</h2>
               <div className="space-y-3">
@@ -243,13 +252,13 @@ export default function AdminSecurityPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-4">Sauvegarde manuelle</h2>
               <p className="text-gray-600 mb-6">Creer une sauvegarde immediate de toutes les donnees.</p>
-              <button onClick={() => void createManualBackup()} className="px-6 py-3 bg-[#14B8A6] text-white rounded-lg font-semibold hover:bg-[#0D9488] transition-all whitespace-nowrap">Creer une sauvegarde maintenant</button>
+              <button type="button" aria-label="Creer une sauvegarde manuelle immediate" onClick={() => void createManualBackup()} className="px-6 py-3 bg-[#5fa6f3] text-white rounded-lg font-semibold hover:bg-[#27346b] transition-all whitespace-nowrap">Creer une sauvegarde maintenant</button>
             </div>
           </div>
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-6">
+          <div className="space-y-6" role="tabpanel" id="admin-security-panel-settings" aria-labelledby="admin-security-tab-settings">
             {[
               { id: 'force_https', label: 'Forcer HTTPS' },
               { id: 'tls_13_enabled', label: 'TLS 1.3' },
@@ -258,12 +267,15 @@ export default function AdminSecurityPage() {
             ].map((item) => {
               const rule = rules.find((entry) => entry.id === item.id);
               return (
-                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
+                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{item.label}</p>
                     <p className="text-sm text-gray-600">{rule?.description}</p>
                   </div>
-                  <input type="checkbox" checked={Boolean(rule?.value)} onChange={(e) => void saveRule(item.id, e.target.checked)} />
+                  <label htmlFor={`admin-security-rule-${item.id}`} className="inline-flex items-center gap-3 text-sm font-medium text-gray-700">
+                    <span>Actif</span>
+                    <input id={`admin-security-rule-${item.id}`} type="checkbox" checked={Boolean(rule?.value)} onChange={(e) => void saveRule(item.id, e.target.checked)} />
+                  </label>
                 </div>
               );
             })}
@@ -274,12 +286,17 @@ export default function AdminSecurityPage() {
             ].map((item) => {
               const rule = rules.find((entry) => entry.id === item.id);
               return (
-                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between gap-4">
+                <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{item.label}</p>
                     <p className="text-sm text-gray-600">{rule?.description}</p>
                   </div>
-                  <input type="number" value={Number(rule?.value || 0)} onChange={(e) => void saveRule(item.id, Number(e.target.value))} className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  <div className="w-full sm:w-auto">
+                    <label htmlFor={`admin-security-number-${item.id}`} className="mb-2 block text-sm font-medium text-gray-700">
+                      Valeur
+                    </label>
+                    <input id={`admin-security-number-${item.id}`} type="number" value={Number(rule?.value || 0)} onChange={(e) => void saveRule(item.id, Number(e.target.value))} className="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
                 </div>
               );
             })}

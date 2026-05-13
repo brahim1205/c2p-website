@@ -1,41 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { backendClient } from '@/lib/backendClient';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
-import GlobalSearch from '../components/GlobalSearch';
 import ResumeCourseBanner from '@/components/feature/ResumeCourseBanner';
-
-
-interface Enrollment {
-  id: number;
-  course_id: number;
-  progress: number;
-  grade: number | null;
-  status: string;
-  last_active: string;
-  courses: {
-    id: number;
-    title: string;
-    category: string;
-    modules: number | null;
-    duration: string | null;
-    thumbnail: string | null;
-  } | null;
-}
-
-interface Certificate {
-  id: number;
-  title: string;
-  course_name: string | null;
-  grade: number | null;
-  status: string;
-  issued_at: string | null;
-  certificate_number: string | null;
-}
+import {
+  fetchApprenantDashboardSnapshot,
+  type ApprenantCertificate as Certificate,
+  type ApprenantEnrollment as Enrollment,
+} from '@/lib/apprenantDashboardApi';
 
 export default function ApprenantDashboardPage() {
   const { user } = useAuth();
@@ -55,26 +30,9 @@ export default function ApprenantDashboardPage() {
 
       setLoading(true);
       try {
-        // Fetch enrollments
-        const { data: enrData, error: enrErr } = await backendClient
-          .from('course_enrollments')
-          .select('*, courses(id, title, category, modules, duration, thumbnail)')
-          .eq('student_id', user.id)
-          .order('last_active', { ascending: false })
-          .limit(5);
-        if (enrErr) throw enrErr;
-        setEnrollments(enrData || []);
-
-        // Fetch certificates
-        const { data: certData, error: certErr } = await backendClient
-          .from('certificates')
-          .select('*')
-          .eq('student_id', user.id)
-          .eq('status', 'issued')
-          .order('issued_at', { ascending: false })
-          .limit(5);
-        if (certErr) throw certErr;
-        setCertificates(certData || []);
+        const snapshot = await fetchApprenantDashboardSnapshot(user.id);
+        setEnrollments(snapshot.enrollments);
+        setCertificates(snapshot.certificates);
       } catch (err) {
         console.error(err);
       } finally {
@@ -87,10 +45,21 @@ export default function ApprenantDashboardPage() {
   const totalEnrolled = enrollments.length;
   const inProgressCount = enrollments.filter((e) => e.progress > 0 && e.progress < 100).length;
   const completedCount = enrollments.filter((e) => e.progress >= 100).length;
+  const averageProgress = enrollments.length
+    ? Math.round(enrollments.reduce((sum, enrollment) => sum + Number(enrollment.progress || 0), 0) / enrollments.length)
+    : 0;
   const totalHours = enrollments.reduce((sum, e) => {
     const hours = parseInt(e.courses?.duration?.replace(/\D/g, '') || '0');
     return sum + hours;
   }, 0);
+
+  const quickLinks = [
+    { label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/apprenant/mes-cours', tone: 'bg-teal-50 text-teal-700' },
+    { label: 'Ma progression', icon: 'ri-bar-chart-grouped-line', path: '/dashboard/apprenant/progression', tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Mes certificats', icon: 'ri-award-line', path: '/dashboard/apprenant/certificats', tone: 'bg-amber-50 text-amber-700' },
+    { label: 'Messagerie', icon: 'ri-message-3-line', path: '/dashboard/messages', tone: 'bg-sky-50 text-sky-700' },
+    { label: 'Catalogue', icon: 'ri-compass-line', path: '/espace-numerique', tone: 'bg-violet-50 text-violet-700' },
+  ];
 
   const handleContinue = (id: number) => {
     success('Cours repris', 'Bonne continuation dans votre apprentissage !');
@@ -98,53 +67,81 @@ export default function ApprenantDashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Apprenant' }]} />
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord Apprenant</h1>
-          <p className="text-gray-600">Suivez vos formations et développez vos compétences</p>
-        </div>
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-teal-600">Espace apprenant</p>
+            <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
+              Bonjour, {user?.firstName || 'Apprenant'} <span className="align-middle">👋</span>
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-gray-600 md:text-base">
+              Reprenez vos formations, suivez votre progression et gardez l’essentiel sous les yeux.
+            </p>
+          </div>
+        </section>
 
-        <GlobalSearch context="apprenant" />
-
-        {/* Resume banner */}
         <ResumeCourseBanner />
 
-        {/* Stats */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <SkeletonCard count={4} />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: 'Formations en cours', value: String(inProgressCount), change: '+1', icon: 'ri-book-open-line', color: 'bg-teal-500' },
-              { label: 'Formations terminées', value: String(completedCount), change: '+2', icon: 'ri-checkbox-circle-line', color: 'bg-green-500' },
-              { label: 'Certificats obtenus', value: String(certificates.length), change: '+1', icon: 'ri-award-line', color: 'bg-yellow-500' },
-              { label: "Heures d'apprentissage", value: String(totalHours), change: '+12h', icon: 'ri-time-line', color: 'bg-teal-600' },
+              { label: 'Formations en cours', value: String(inProgressCount), detail: `${totalEnrolled} inscription(s)`, icon: 'ri-book-open-line', surface: 'bg-teal-50 text-teal-700' },
+              { label: 'Formations terminées', value: String(completedCount), detail: `${averageProgress}% de progression moyenne`, icon: 'ri-checkbox-circle-line', surface: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Certificats obtenus', value: String(certificates.length), detail: 'disponibles au téléchargement', icon: 'ri-award-line', surface: 'bg-amber-50 text-amber-700' },
+              { label: "Heures d'apprentissage", value: String(totalHours), detail: 'estimées sur vos cours', icon: 'ri-time-line', surface: 'bg-sky-50 text-sky-700' },
             ].map((stat, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <i className={`${stat.icon} text-xl text-white`}></i>
-                    </div>
+              <div key={index} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">{stat.label}</p>
+                    <p className="mt-2 text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="mt-2 text-sm text-gray-500">{stat.detail}</p>
                   </div>
-                  <span className="text-sm font-medium text-green-600">{stat.change}</span>
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${stat.surface}`}>
+                    <i className={`${stat.icon} text-xl`}></i>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
-                <p className="text-sm text-gray-600">{stat.label}</p>
               </div>
             ))}
-          </div>
+          </section>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          {/* In Progress */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">Accès rapide</h2>
+            <Link to="/espace-numerique" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+              Explorer le catalogue
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+            {quickLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`rounded-2xl border border-transparent px-4 py-4 transition-all hover:border-gray-200 hover:bg-white ${link.tone}`}
+              >
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white">
+                  <i className={`${link.icon} text-lg`}></i>
+                </div>
+                <p className="text-sm font-medium">{link.label}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr,1fr]">
+          <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900">Formations en cours</h2>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">À reprendre</h2>
+                <p className="text-sm text-gray-500">Vos cours encore actifs, avec progression et accès direct.</p>
+              </div>
               <Link to="/dashboard/apprenant/mes-cours" className="text-sm font-medium text-teal-600 hover:text-teal-700">
                 Voir tout
               </Link>
@@ -186,12 +183,12 @@ export default function ApprenantDashboardPage() {
                 )}
               </div>
             )}
-          </div>
+          </section>
 
-          {/* Certificates */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="space-y-6">
+            <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900">Mes certificats</h2>
+              <h2 className="text-lg font-bold text-gray-900">Mes certificats</h2>
               <span className="text-sm text-gray-500">{certificates.length} certificats</span>
             </div>
 
@@ -225,53 +222,26 @@ export default function ApprenantDashboardPage() {
                 )}
               </div>
             )}
-          </div>
-        </div>
+            </section>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Link to="/dashboard/apprenant/mes-cours" className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 transition-all text-center">
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <i className="ri-book-open-line text-xl text-teal-600"></i>
+            <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">Repères</h2>
+                <Link to="/dashboard/apprenant/progression" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+                  Voir ma progression
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Inscrites</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{totalEnrolled}</p>
+                </div>
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Complétées</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{completedCount}</p>
                 </div>
               </div>
-              <p className="font-medium text-gray-900 text-sm">Mes formations</p>
-            </Link>
-            <Link to="/dashboard/apprenant/progression" className="p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 transition-all text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <i className="ri-bar-chart-grouped-line text-xl text-green-600"></i>
-                </div>
-              </div>
-              <p className="font-medium text-gray-900 text-sm">Ma progression</p>
-            </Link>
-            <Link to="/dashboard/apprenant/certificats" className="p-4 border-2 border-gray-200 rounded-lg hover:border-yellow-500 transition-all text-center">
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <i className="ri-award-line text-xl text-yellow-600"></i>
-                </div>
-              </div>
-              <p className="font-medium text-gray-900 text-sm">Mes certificats</p>
-            </Link>
-            <Link to="/dashboard/messages" className="p-4 border-2 border-gray-200 rounded-lg hover:border-[#14B8A6] transition-all text-center">
-              <div className="w-12 h-12 bg-[#14B8A6]/10 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <i className="ri-message-3-line text-xl text-[#14B8A6]"></i>
-                </div>
-              </div>
-              <p className="font-medium text-gray-900 text-sm">Messagerie</p>
-            </Link>
-            <Link to="/espace-numerique" className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 transition-all text-center">
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <i className="ri-compass-line text-xl text-teal-600"></i>
-                </div>
-              </div>
-              <p className="font-medium text-gray-900 text-sm">Explorer le catalogue</p>
-            </Link>
+            </section>
           </div>
         </div>
       </div>

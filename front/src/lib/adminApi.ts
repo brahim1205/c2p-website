@@ -1,5 +1,11 @@
 import { backendClient } from './backendClient';
+import { apiRequest } from './api';
 import { fetchUsers, revokeOtherAccountSessions, updateManagedUser, type AuditLogEntry } from './accountApi';
+import { fetchFinanceCapabilities, type CommissionEntry, type EscrowCase, type FinanceCapabilitySnapshot, type PayoutRequest, type UserSubscription } from './saasApi';
+import {
+  notifyClientBookingAssignedByC2P,
+  notifyProviderMissionAssignedByC2P,
+} from '@/hooks/useCreateNotification';
 
 type QueryResult<T> = { data: T | null; error: { message: string } | null };
 
@@ -126,10 +132,242 @@ export interface AdminPaymentTransaction {
   reference?: string;
 }
 
+export interface AdminFinanceOverview {
+  transactions: AdminPaymentTransaction[];
+  escrowCases: EscrowCase[];
+  payoutRequests: PayoutRequest[];
+  subscriptions: UserSubscription[];
+  commissionEntries: CommissionEntry[];
+  invoices?: Array<Record<string, unknown>>;
+}
+
+export interface OutboxMetrics {
+  counts: {
+    pending: number;
+    processing: number;
+    failed: number;
+    dead: number;
+    processed: number;
+  };
+  dueNow: number;
+  oldestDueLagMs: number;
+  oldestDueLagSeconds: number;
+  maxAttemptCount: number;
+  averageAttemptCount: number;
+  supportedHandlers: string[];
+  generatedAt: string;
+}
+
+export interface OutboxDeadLetterEvent {
+  id: string;
+  eventType: string;
+  eventVersion: number;
+  aggregateType?: string | null;
+  aggregateId?: string | null;
+  actorId?: string | null;
+  correlationId?: string | null;
+  financialOperationId?: string | null;
+  idempotencyKey?: string | null;
+  occurredAt: string;
+  attemptCount: number;
+  maxRetries: number;
+  lastError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationDeliveryRow {
+  id: string;
+  deliveryKey: string;
+  outboxEventId?: string | null;
+  eventType: string;
+  channel: string;
+  recipientUserId?: string | null;
+  recipientAddress?: string | null;
+  provider?: string | null;
+  providerMessageId?: string | null;
+  status: string;
+  attemptedAt?: string | null;
+  deliveredAt?: string | null;
+  failedAt?: string | null;
+  error?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebhookDispatchHistoryRow {
+  id: string;
+  dispatchKey: string;
+  outboxEventId?: string | null;
+  eventType: string;
+  targetUrl: string;
+  method: string;
+  status: string;
+  responseStatus?: number | null;
+  responseBody?: string | null;
+  error?: string | null;
+  attemptCount: number;
+  dispatchedAt?: string | null;
+  deliveredAt?: string | null;
+  correlationId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DexPayWebhookReceipt {
+  id: string;
+  provider: string;
+  providerEventId?: string | null;
+  eventType?: string | null;
+  status: string;
+  idempotencyKey?: string | null;
+  correlationId?: string | null;
+  receivedAt: string;
+  processedAt?: string | null;
+  error?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface DexPayReconciliationJob {
+  id: string;
+  provider: string;
+  scope?: string | null;
+  status: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  windowStart?: string | null;
+  windowEnd?: string | null;
+  summary?: Record<string, unknown> | null;
+  error?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DexPayProviderTransaction {
+  id: string;
+  paymentIntentId?: string | null;
+  provider: string;
+  providerReference: string;
+  providerStatus: string;
+  lifecycleStatus?: string;
+  direction?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  confirmedAt?: string | null;
+  failedAt?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DexPayPaymentIntent {
+  id: string;
+  actorId?: string | null;
+  userId?: string | null;
+  provider: string;
+  providerIntentRef?: string | null;
+  contextType?: string | null;
+  contextId?: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+  expiresAt?: string | null;
+  confirmedAt?: string | null;
+  cancelledAt?: string | null;
+  financialOperationId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminAnalyticsSnapshot {
   stats: { label: string; value: string; change: string; icon: string; color: string }[];
   moduleStats: { name: string; users: number; revenue: string; growth: string; color: string }[];
   topPrestataires: { name: string; profession: string; rating: number; services: number; revenue: string; avatar: string }[];
+}
+
+export interface AdminDashboardManagedUser {
+  status: 'active' | 'pending' | 'suspended';
+  role: string;
+}
+
+export interface AdminDashboardCourse {
+  price: number;
+  revenue?: number;
+  status: string;
+}
+
+export interface AdminDashboardProviderOption {
+  id: number;
+  user_id?: string | null;
+  name: string;
+  category?: string | null;
+  verified?: boolean | null;
+}
+
+export interface AdminDashboardMatchingCandidate {
+  id: number;
+  user_id?: string | null;
+  name: string;
+  score: number;
+  reasons?: string[];
+}
+
+export interface AdminDashboardBooking {
+  status: string;
+  price: number | null;
+  created_at?: string;
+  updated_at?: string;
+  id: number;
+  client_id?: string | null;
+  client_name?: string | null;
+  provider_id?: number | null;
+  requested_provider_id?: number | null;
+  requested_provider_name?: string | null;
+  service?: string | null;
+  booking_date?: string | null;
+  request_type?: string | null;
+  assignment_status?: string | null;
+  provider?: AdminDashboardProviderOption | null;
+  requested_provider?: AdminDashboardProviderOption | null;
+  platform_fee_amount?: number | null;
+  provider_payout_amount?: number | null;
+  matching_candidates?: AdminDashboardMatchingCandidate[];
+}
+
+export interface AdminDashboardProject {
+  funding: number;
+  status: string;
+}
+
+export interface AdminDashboardHistoryItem {
+  id: number;
+  project_title?: string | null;
+  action: string;
+  user: string;
+  date: string;
+}
+
+export interface AdminDashboardSnapshot {
+  users: AdminDashboardManagedUser[];
+  courses: AdminDashboardCourse[];
+  bookings: AdminDashboardBooking[];
+  providers: AdminDashboardProviderOption[];
+  projects: AdminDashboardProject[];
+  history: AdminDashboardHistoryItem[];
+  escrows: EscrowCase[];
+  subscriptions: UserSubscription[];
+  commissionTotal: number;
+  providerHealth: {
+    pending: number;
+    failed: number;
+    receiptsKo: number;
+    jobsRunning: number;
+    outboxDead: number;
+    outboxFailed: number;
+  };
 }
 
 export async function fetchAdminAccreditations() {
@@ -241,16 +479,249 @@ export async function createAdminAuditLog(payload: Omit<AuditLogEntry, 'id'> & {
 }
 
 export async function fetchAdminTransactions() {
-  return expectData<AdminPaymentTransaction[]>(backendClient.from('payment_transactions').select('*').order('date', { ascending: false }));
+  return apiRequest<AdminPaymentTransaction[]>('/payments/admin/transactions');
 }
 
-export async function updateAdminTransaction(id: string, patch: Partial<AdminPaymentTransaction>) {
-  const row = await expectData<AdminPaymentTransaction[]>(backendClient.from('payment_transactions').update(patch).eq('id', id).select('*'));
-  return row[0];
+export async function fetchAdminFinanceOverview() {
+  return apiRequest<AdminFinanceOverview>('/payments/admin/overview');
 }
 
-export async function createAdminTransaction(payload: AdminPaymentTransaction) {
-  return expectData<AdminPaymentTransaction>(backendClient.from('payment_transactions').insert(payload).select('*').single());
+export async function fetchAdminDashboardSnapshot() {
+  const [
+    users,
+    coursesRes,
+    bookingsRes,
+    providersRes,
+    projectsRes,
+    historyRes,
+    financeOverview,
+    providerTransactions,
+    webhookReceipts,
+    reconciliationJobs,
+    outboxMetrics,
+  ] = await Promise.all([
+    fetchUsers(),
+    backendClient.from('courses').select('*').order('updated_at', { ascending: false }),
+    backendClient.from('bookings').select('*').order('created_at', { ascending: false }),
+    backendClient.from('providers').select('id,name,user_id,category,verified').order('name', { ascending: true }),
+    backendClient.from('projects').select('*').order('created_at', { ascending: false }),
+    backendClient.from('project_history').select('*').order('date', { ascending: false }).limit(6),
+    fetchAdminFinanceOverview(),
+    fetchDexPayProviderTransactions(30),
+    fetchDexPayWebhookReceipts(30),
+    fetchDexPayReconciliationJobs(20),
+    fetchOutboxMetrics(),
+  ]);
+
+  if (coursesRes.error) throw new Error(coursesRes.error.message);
+  if (bookingsRes.error) throw new Error(bookingsRes.error.message);
+  if (providersRes.error) throw new Error(providersRes.error.message);
+  if (projectsRes.error) throw new Error(projectsRes.error.message);
+  if (historyRes.error) throw new Error(historyRes.error.message);
+
+  return {
+    users: users as AdminDashboardManagedUser[],
+    courses: (coursesRes.data as AdminDashboardCourse[]) || [],
+    bookings: (bookingsRes.data as AdminDashboardBooking[]) || [],
+    providers: (providersRes.data as AdminDashboardProviderOption[]) || [],
+    projects: (projectsRes.data as AdminDashboardProject[]) || [],
+    history: (historyRes.data as AdminDashboardHistoryItem[]) || [],
+    escrows: financeOverview.escrowCases || [],
+    subscriptions: financeOverview.subscriptions || [],
+    commissionTotal: (financeOverview.commissionEntries || []).reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    providerHealth: {
+      pending: providerTransactions.filter((item) => ['initiated', 'pending_provider', 'processing'].includes(String(item.lifecycleStatus || item.providerStatus).toLowerCase())).length,
+      failed: providerTransactions.filter((item) => ['failed', 'error', 'cancelled', 'canceled'].includes(String(item.lifecycleStatus || item.providerStatus).toLowerCase())).length,
+      receiptsKo: webhookReceipts.filter((item) => ['failed', 'rejected'].includes(String(item.status).toLowerCase())).length,
+      jobsRunning: reconciliationJobs.filter((item) => String(item.status).toLowerCase() === 'running').length,
+      outboxDead: outboxMetrics.counts.dead,
+      outboxFailed: outboxMetrics.counts.failed,
+    },
+  } satisfies AdminDashboardSnapshot;
+}
+
+export async function assignAdminBookingProvider(params: {
+  booking: AdminDashboardBooking;
+  provider: AdminDashboardProviderOption;
+  adminUserId: string;
+}) {
+  const now = new Date().toISOString();
+  const { data, error } = await backendClient
+    .from<AdminDashboardBooking>('bookings')
+    .update({
+      provider_id: params.provider.id,
+      requested_provider_id: params.booking.requested_provider_id ?? params.provider.id,
+      requested_provider_name: params.booking.requested_provider_name ?? null,
+      status: 'confirmed',
+      assignment_status: 'assigned',
+      assigned_by_c2p: params.adminUserId,
+      assigned_at: now,
+      updated_at: now,
+    })
+    .eq('id', params.booking.id)
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  await Promise.all([
+    params.booking.client_id
+      ? notifyClientBookingAssignedByC2P(
+          params.booking.client_id,
+          params.booking.service || 'Mission',
+          params.provider.name,
+        )
+      : Promise.resolve(false),
+    params.provider.user_id
+      ? notifyProviderMissionAssignedByC2P(
+          params.provider.user_id,
+          params.booking.service || 'Mission',
+        )
+      : Promise.resolve(false),
+  ]);
+
+  return (data as AdminDashboardBooking | null) || {
+    ...params.booking,
+    provider_id: params.provider.id,
+    provider: params.provider,
+    status: 'confirmed',
+    assignment_status: 'assigned',
+    updated_at: now,
+  };
+}
+
+export async function updateAdminEscrowStatus(id: string, status: 'released' | 'refunded') {
+  return apiRequest<{ escrow: unknown }>(`/payments/admin/escrows/${encodeURIComponent(id)}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function updateAdminPayoutStatus(id: string, status: 'approved' | 'paid' | 'rejected') {
+  return apiRequest<{ request: unknown }>(`/payments/admin/payouts/${encodeURIComponent(id)}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function updateAdminTransactionStatusCommand(id: string, status: 'completed' | 'pending' | 'failed') {
+  return apiRequest<{ transaction: AdminPaymentTransaction }>(`/payments/admin/transactions/${encodeURIComponent(id)}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function refundAdminTransaction(id: string) {
+  return apiRequest<{ transaction: AdminPaymentTransaction }>(`/payments/admin/transactions/${encodeURIComponent(id)}/refund`, {
+    method: 'POST',
+  });
+}
+
+export async function fetchOutboxMetrics() {
+  return apiRequest<OutboxMetrics>('/outbox/metrics');
+}
+
+export async function fetchOutboxDeadLetter(limit = 25) {
+  return apiRequest<OutboxDeadLetterEvent[]>(`/outbox/dead-letter?limit=${encodeURIComponent(String(limit))}`);
+}
+
+export async function fetchOutboxDeliveries(limit = 50, channel?: string) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (channel) query.set('channel', channel);
+  return apiRequest<NotificationDeliveryRow[]>(`/outbox/deliveries?${query.toString()}`);
+}
+
+export async function fetchWebhookDispatchHistory(limit = 50, status?: string) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (status) query.set('status', status);
+  return apiRequest<WebhookDispatchHistoryRow[]>(`/outbox/webhooks/history?${query.toString()}`);
+}
+
+export async function processOutboxNow(limit = 25) {
+  return apiRequest<{ claimed: number; processed: number; failed: number; dead: number }>(`/outbox/process?limit=${encodeURIComponent(String(limit))}`, {
+    method: 'POST',
+  });
+}
+
+export async function requeueOutboxEvent(eventId: string, reason?: string) {
+  return apiRequest<{ eventId: string; status: string }>(`/outbox/events/${encodeURIComponent(eventId)}/requeue`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function ignoreOutboxEvent(eventId: string, reason?: string) {
+  return apiRequest<{ eventId: string; status: string }>(`/outbox/events/${encodeURIComponent(eventId)}/ignore`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function replayOutboxEvent(eventId: string, reason?: string) {
+  return apiRequest<{ replayEventId: string; eventType: string }>(`/outbox/events/${encodeURIComponent(eventId)}/replay`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function reconcileDexPay(limit = 25, options?: { onlyPending?: boolean; providerReference?: string }) {
+  return apiRequest<{ jobId: string; summary: Record<string, unknown> }>(`/payments/admin/providers/dexpay/reconcile`, {
+    method: 'POST',
+    body: JSON.stringify({
+      limit,
+      onlyPending: options?.onlyPending ?? true,
+      providerReference: options?.providerReference,
+    }),
+  });
+}
+
+export async function fetchDexPayReconciliationJobs(limit = 50) {
+  return apiRequest<DexPayReconciliationJob[]>(`/payments/admin/providers/dexpay/reconciliation-jobs?limit=${encodeURIComponent(String(limit))}`);
+}
+
+export async function fetchDexPayWebhookReceipts(limit = 50, status?: string) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (status) query.set('status', status);
+  return apiRequest<DexPayWebhookReceipt[]>(`/payments/admin/providers/dexpay/webhook-receipts?${query.toString()}`);
+}
+
+export async function fetchDexPayProviderTransactions(limit = 50, status?: string) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (status) query.set('status', status);
+  return apiRequest<DexPayProviderTransaction[]>(`/payments/admin/providers/dexpay/transactions?${query.toString()}`);
+}
+
+export async function fetchDexPayProviderTransactionCapabilities(providerReference: string) {
+  return fetchFinanceCapabilities('provider_transaction', providerReference);
+}
+
+export async function fetchDexPayPaymentIntents(limit = 50, status?: string) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (status) query.set('status', status);
+  return apiRequest<DexPayPaymentIntent[]>(`/payments/admin/providers/dexpay/intents?${query.toString()}`);
+}
+
+export async function fetchDexPayPaymentIntentCapabilities(intentId: string) {
+  return fetchFinanceCapabilities('payment_intent', intentId);
+}
+
+export async function reprocessDexPayWebhookReceipt(receiptId: string, reason?: string) {
+  return apiRequest<{ receiptId: string; providerReference: string; matched: boolean; status: string }>(
+    `/payments/admin/providers/dexpay/webhook-receipts/${encodeURIComponent(receiptId)}/reprocess`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    },
+  );
+}
+
+export async function forceSyncDexPayProviderTransaction(providerReference: string, reason?: string) {
+  return apiRequest<{ providerReference: string; matched: boolean; status: string; transactionId?: string | null }>(
+    `/payments/admin/providers/dexpay/transactions/${encodeURIComponent(providerReference)}/force-sync`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    },
+  );
 }
 
 export async function fetchAdminAnalytics() {
@@ -277,7 +748,7 @@ export async function fetchAdminAnalytics() {
       users: bookings.length,
       revenue: `${bookings.reduce((sum, booking) => sum + Number(booking.price || 0), 0).toLocaleString('fr-FR')} FCFA`,
       growth: `+${Math.max(8, Math.round(bookings.length / 4))}%`,
-      color: 'bg-[#14B8A6]',
+      color: 'bg-[#5fa6f3]',
     },
     {
       name: 'Espace Numerique',
@@ -311,7 +782,7 @@ export async function fetchAdminAnalytics() {
     stats: [
       { label: 'Utilisateurs actifs', value: activeUsers.toLocaleString('fr-FR'), change: `+${Math.max(6, Math.round(activeUsers / 80))}%`, icon: 'ri-user-line', color: 'bg-teal-500' },
       { label: 'Revenus totaux', value: `${(totalRevenue / 1000000).toFixed(1)}M FCFA`, change: '+8%', icon: 'ri-money-dollar-circle-line', color: 'bg-green-500' },
-      { label: 'Transactions', value: successfulTransactions.toLocaleString('fr-FR'), change: `+${Math.max(12, Math.round(successfulTransactions / 20))}%`, icon: 'ri-exchange-line', color: 'bg-[#14B8A6]' },
+      { label: 'Transactions', value: successfulTransactions.toLocaleString('fr-FR'), change: `+${Math.max(12, Math.round(successfulTransactions / 20))}%`, icon: 'ri-exchange-line', color: 'bg-[#5fa6f3]' },
       { label: 'Taux de satisfaction', value: `${avgRating.toFixed(1)}/5`, change: '+0.2', icon: 'ri-star-line', color: 'bg-yellow-500' },
     ],
     moduleStats,

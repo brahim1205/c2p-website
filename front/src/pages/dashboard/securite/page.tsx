@@ -118,7 +118,7 @@ export default function SecurityPage() {
                     En cas d oubli du mot de passe, un code SMS est desormais demande avant toute reinitialisation.
                   </p>
                 </div>
-                <span className="inline-flex items-center rounded-full bg-[#14B8A6]/10 px-3 py-1.5 text-xs font-semibold text-[#0D9488] border border-[#14B8A6]/20">
+                <span className="inline-flex items-center rounded-full bg-[#5fa6f3]/10 px-3 py-1.5 text-xs font-semibold text-[#27346b] border border-[#5fa6f3]/20">
                   Verification SMS active
                 </span>
               </div>
@@ -133,7 +133,7 @@ export default function SecurityPage() {
                     type="password"
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                   />
                 </div>
                 <div>
@@ -142,7 +142,7 @@ export default function SecurityPage() {
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                   />
                 </div>
                 <div>
@@ -151,14 +151,14 @@ export default function SecurityPage() {
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                   />
                 </div>
               </div>
               <div className="mt-5 flex justify-end">
                 <button
                   onClick={handlePasswordChange}
-                  className="px-5 py-2.5 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488]"
+                  className="px-5 py-2.5 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b]"
                 >
                   Mettre a jour
                 </button>
@@ -183,13 +183,13 @@ export default function SecurityPage() {
                 {loading && <p className="text-sm text-gray-500">Chargement des sessions...</p>}
 
                 {currentSession && (
-                  <div className="rounded-xl border border-[#14B8A6]/20 bg-[#14B8A6]/5 p-4">
+                  <div className="rounded-xl border border-[#5fa6f3]/20 bg-[#5fa6f3]/5 p-4">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div>
                         <p className="font-medium text-gray-900">{currentSession.device}</p>
                         <p className="text-sm text-gray-600">{currentSession.location} · {currentSession.ip}</p>
                       </div>
-                      <span className="inline-flex w-fit items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0D9488] border border-[#14B8A6]/20">
+                      <span className="inline-flex w-fit items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#27346b] border border-[#5fa6f3]/20">
                         Session actuelle
                       </span>
                     </div>

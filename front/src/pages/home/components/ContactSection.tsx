@@ -70,23 +70,23 @@ export default function ContactSection() {
   };
 
   return (
-    <section ref={sectionRef} className="py-24 lg:py-32 px-4 sm:px-6 lg:px-20 bg-[#faf8f3] relative overflow-hidden">
+    <section ref={sectionRef} className="py-24 lg:py-32 px-4 sm:px-6 lg:px-20 bg-[#ffffff] relative overflow-hidden">
       {/* Decorative background */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#14B8A6]/5 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-[#1a2b4a]/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#5fa6f3]/5 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-[#06053a]/5 rounded-full blur-[100px] pointer-events-none"></div>
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
           {/* Left column - Newsletter + Info */}
           <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}>
             <div className="inline-flex items-center gap-2 mb-5">
-              <div className="w-3 h-3 bg-[#14B8A6] rotate-45"></div>
-              <span className="text-[#1a2b4a] text-sm font-medium uppercase tracking-wider">Contact</span>
+              <div className="w-3 h-3 bg-[#5fa6f3] rotate-45"></div>
+              <span className="text-[#06053a] text-sm font-medium uppercase tracking-wider">Contact</span>
             </div>
 
-            <h2 className="text-[#1a2b4a] font-bold text-2xl sm:text-3xl lg:text-[48px] leading-tight mb-4 sm:mb-6">
+            <h2 className="text-[#06053a] font-bold text-2xl sm:text-3xl lg:text-[48px] leading-tight mb-4 sm:mb-6">
               Restons en<br />
-              <span className="text-[#14B8A6]">Contact</span>
+              <span className="text-[#5fa6f3]">Contact</span>
             </h2>
 
             <p className="text-gray-600 text-sm sm:text-base lg:text-lg leading-relaxed mb-8 lg:mb-10 max-w-lg">
@@ -96,12 +96,12 @@ export default function ContactSection() {
             {/* Newsletter mini-card */}
             <div className="bg-white rounded-2xl p-6 lg:p-8 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 mb-8">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#14B8A6]/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-[#5fa6f3]/10 flex items-center justify-center">
                   <div className="w-5 h-5 flex items-center justify-center">
-                    <i className="ri-mail-send-line text-[#14B8A6]"></i>
+                    <i className="ri-mail-send-line text-[#5fa6f3]"></i>
                   </div>
                 </div>
-                <h3 className="font-semibold text-[#1a2b4a] text-lg">Newsletter C2P</h3>
+                <h3 className="font-semibold text-[#06053a] text-lg">Newsletter C2P</h3>
               </div>
               <p className="text-gray-500 text-sm mb-4 leading-relaxed">
                 Recevez nos meilleures offres de formation, les nouveaux services AlloPresta et les opportunités de financement chaque semaine.
@@ -119,13 +119,13 @@ export default function ContactSection() {
                   onChange={(e) => setNewsletterEmail(e.target.value)}
                   placeholder="Votre email"
                   required
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/30 focus:border-[#14B8A6] transition-all bg-gray-50/50"
+                  className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/30 focus:border-[#5fa6f3] transition-all bg-gray-50/50"
                 />
                 <input type="hidden" name="subject" value="newsletter" />
                 <button
                   type="submit"
                   disabled={newsletterState === 'loading'}
-                  className="px-6 py-3 bg-[#14B8A6] text-white text-sm font-semibold rounded-xl hover:bg-[#0D9488] hover:scale-105 active:scale-95 transition-all duration-300 whitespace-nowrap flex items-center justify-center gap-2"
+                  className="px-6 py-3 bg-[#5fa6f3] text-white text-sm font-semibold rounded-xl hover:bg-[#27346b] hover:scale-105 active:scale-95 transition-all duration-300 whitespace-nowrap flex items-center justify-center gap-2"
                 >
                   {newsletterState === 'loading' ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -171,14 +171,14 @@ export default function ContactSection() {
                   key={i}
                   className="flex items-start gap-3 p-4 rounded-xl hover:bg-white/80 transition-colors duration-300"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#14B8A6]/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#5fa6f3]/10 flex items-center justify-center flex-shrink-0">
                     <div className="w-5 h-5 flex items-center justify-center">
-                      <i className={`${item.icon} text-[#14B8A6]`}></i>
+                      <i className={`${item.icon} text-[#5fa6f3]`}></i>
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">{item.label}</div>
-                    <div className="text-[#1a2b4a] text-sm font-medium leading-snug">{item.value}</div>
+                    <div className="text-[#06053a] text-sm font-medium leading-snug">{item.value}</div>
                   </div>
                 </div>
               ))}
@@ -197,7 +197,7 @@ export default function ContactSection() {
                   rel="noreferrer"
                   target={s.href.startsWith('http') ? '_blank' : undefined}
                   aria-label={s.label}
-                  className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#14B8A6] hover:border-[#14B8A6] hover:bg-[#14B8A6]/5 transition-all duration-300"
+                  className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#5fa6f3] hover:border-[#5fa6f3] hover:bg-[#5fa6f3]/5 transition-all duration-300"
                 >
                   <div className="w-5 h-5 flex items-center justify-center">
                     <i className={s.icon}></i>
@@ -210,7 +210,7 @@ export default function ContactSection() {
           {/* Right column - Contact form */}
           <div className={`transition-all duration-1000 delay-200 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}>
             <div className="bg-white rounded-2xl p-6 sm:p-8 lg:p-10 border border-gray-100 shadow-sm">
-              <h3 className="font-semibold text-[#1a2b4a] text-xl mb-1">Envoyez-nous un message</h3>
+              <h3 className="font-semibold text-[#06053a] text-xl mb-1">Envoyez-nous un message</h3>
               <p className="text-gray-500 text-sm mb-6">Nous vous répondons sous 24h ouvrées.</p>
 
               <form onSubmit={handleContactSubmit} id="contact-form-main" className="space-y-4">
@@ -223,7 +223,7 @@ export default function ContactSection() {
                       value={prenom}
                       onChange={(e) => setPrenom(e.target.value)}
                       required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/30 focus:border-[#14B8A6] transition-all bg-gray-50/50"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/30 focus:border-[#5fa6f3] transition-all bg-gray-50/50"
                       placeholder="Jean"
                     />
                   </div>
@@ -235,7 +235,7 @@ export default function ContactSection() {
                       value={nom}
                       onChange={(e) => setNom(e.target.value)}
                       required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/30 focus:border-[#14B8A6] transition-all bg-gray-50/50"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/30 focus:border-[#5fa6f3] transition-all bg-gray-50/50"
                       placeholder="Dupont"
                     />
                   </div>
@@ -249,7 +249,7 @@ export default function ContactSection() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/30 focus:border-[#14B8A6] transition-all bg-gray-50/50"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/30 focus:border-[#5fa6f3] transition-all bg-gray-50/50"
                     placeholder="jean.dupont@email.com"
                   />
                 </div>
@@ -260,7 +260,7 @@ export default function ContactSection() {
                     name="subject"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/30 focus:border-[#14B8A6] transition-all bg-gray-50/50 appearance-none cursor-pointer"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/30 focus:border-[#5fa6f3] transition-all bg-gray-50/50 appearance-none cursor-pointer"
                   >
                     <option value="general">Question générale</option>
                     <option value="formation">Formation / Cours</option>
@@ -279,7 +279,7 @@ export default function ContactSection() {
                     required
                     rows={5}
                     maxLength={500}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/30 focus:border-[#14B8A6] transition-all bg-gray-50/50 resize-none"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/30 focus:border-[#5fa6f3] transition-all bg-gray-50/50 resize-none"
                     placeholder="Décrivez votre demande..."
                   />
                   <div className="text-right text-xs text-gray-400 mt-1">{message.length}/500</div>
@@ -288,7 +288,7 @@ export default function ContactSection() {
                 <button
                   type="submit"
                   disabled={contactState === 'loading'}
-                  className="w-full group inline-flex items-center justify-center gap-3 bg-[#1a2b4a] text-white px-6 py-4 rounded-xl font-semibold text-sm hover:bg-[#14B8A6] hover:scale-[1.02] active:scale-95 transition-all duration-300 whitespace-nowrap"
+                  className="w-full group inline-flex items-center justify-center gap-3 bg-[#06053a] text-white px-6 py-4 rounded-xl font-semibold text-sm hover:bg-[#5fa6f3] hover:scale-[1.02] active:scale-95 transition-all duration-300 whitespace-nowrap"
                 >
                   {contactState === 'loading' ? (
                     <>
@@ -322,7 +322,7 @@ export default function ContactSection() {
             <div className="mt-6 flex flex-col sm:flex-row gap-4">
               <Link
                 to="/a-propos"
-                className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-gray-200 text-sm font-medium text-[#1a2b4a] hover:border-[#14B8A6] hover:text-[#14B8A6] hover:bg-[#14B8A6]/5 transition-all duration-300 whitespace-nowrap"
+                className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-gray-200 text-sm font-medium text-[#06053a] hover:border-[#5fa6f3] hover:text-[#5fa6f3] hover:bg-[#5fa6f3]/5 transition-all duration-300 whitespace-nowrap"
               >
                 <div className="w-5 h-5 flex items-center justify-center">
                   <i className="ri-information-line"></i>
@@ -331,7 +331,7 @@ export default function ContactSection() {
               </Link>
               <Link
                 to="/auth/register"
-                className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#14B8A6]/10 text-sm font-medium text-[#14B8A6] hover:bg-[#14B8A6]/20 transition-all duration-300 whitespace-nowrap"
+                className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#5fa6f3]/10 text-sm font-medium text-[#5fa6f3] hover:bg-[#5fa6f3]/20 transition-all duration-300 whitespace-nowrap"
               >
                 <div className="w-5 h-5 flex items-center justify-center">
                   <i className="ri-user-add-line"></i>

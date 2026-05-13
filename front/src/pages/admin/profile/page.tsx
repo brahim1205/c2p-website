@@ -126,8 +126,10 @@ export default function AdminProfilePage() {
             <p className="text-gray-600 mt-1">Coordonnees, presentation et securite du compte admin.</p>
           </div>
           <button
+            type="button"
             onClick={() => setIsEditing((prev) => !prev)}
-            className="px-5 py-2.5 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488]"
+            aria-pressed={isEditing}
+            className="px-5 py-2.5 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b]"
           >
             {isEditing ? 'Annuler' : 'Modifier'}
           </button>
@@ -154,70 +156,76 @@ export default function AdminProfilePage() {
 
             <div className="grid gap-4 mt-6 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Prenom</label>
+                <label htmlFor="admin-profile-first-name" className="block text-sm font-medium text-gray-700 mb-1">Prenom</label>
                 <input
+                  id="admin-profile-first-name"
                   type="text"
                   value={formData.firstName}
                   onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                <label htmlFor="admin-profile-last-name" className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
                 <input
+                  id="admin-profile-last-name"
                   type="text"
                   value={formData.lastName}
                   onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label htmlFor="admin-profile-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
+                  id="admin-profile-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Telephone</label>
+                <label htmlFor="admin-profile-phone" className="block text-sm font-medium text-gray-700 mb-1">Telephone</label>
                 <input
+                  id="admin-profile-phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
+                <label htmlFor="admin-profile-location" className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
                 <input
+                  id="admin-profile-location"
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Biographie</label>
+                <label htmlFor="admin-profile-bio" className="block text-sm font-medium text-gray-700 mb-1">Biographie</label>
                 <textarea
+                  id="admin-profile-bio"
                   rows={4}
                   value={formData.bio}
                   onChange={(e) => setFormData((prev) => ({ ...prev, bio: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                 />
               </div>
             </div>
 
             {isEditing && (
               <div className="mt-6 flex justify-end">
-                <button onClick={handleSave} className="px-5 py-2.5 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488]">
+                <button type="button" onClick={handleSave} className="px-5 py-2.5 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b]">
                   Enregistrer
                 </button>
               </div>
@@ -229,35 +237,38 @@ export default function AdminProfilePage() {
               <h2 className="text-xl font-semibold text-gray-900">Securite</h2>
               <div className="grid gap-4 mt-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe actuel</label>
+                  <label htmlFor="admin-profile-current-password" className="block text-sm font-medium text-gray-700 mb-1">Mot de passe actuel</label>
                   <input
+                    id="admin-profile-current-password"
                     type="password"
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
+                  <label htmlFor="admin-profile-new-password" className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
                   <input
+                    id="admin-profile-new-password"
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirmation</label>
+                  <label htmlFor="admin-profile-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">Confirmation</label>
                   <input
+                    id="admin-profile-confirm-password"
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
                   />
                 </div>
               </div>
               <div className="mt-5 flex justify-end">
-                <button onClick={handlePasswordChange} className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <button type="button" onClick={handlePasswordChange} className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
                   Changer le mot de passe
                 </button>
               </div>
@@ -276,7 +287,7 @@ export default function AdminProfilePage() {
                         <p className="text-xs text-gray-500 mt-1">{formatDateTime(session.lastActive)}</p>
                       </div>
                       {session.current && (
-                        <span className="rounded-full bg-[#14B8A6]/10 px-3 py-1 text-xs font-medium text-[#0D9488]">
+                        <span className="rounded-full bg-[#5fa6f3]/10 px-3 py-1 text-xs font-medium text-[#27346b]">
                           Active
                         </span>
                       )}

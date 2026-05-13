@@ -251,7 +251,7 @@ export default function VideoPlayer({
 
       {isFocusMode && (
         <div className="absolute inset-0 bg-black flex items-center justify-center">
-          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_rgba(20,184,166,0.15)_0%,_transparent_70%)]"></div>
+          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_rgba(95,166,243,0.15)_0%,_transparent_70%)]"></div>
         </div>
       )}
 

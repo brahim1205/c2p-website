@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useBackendMessaging } from '@/hooks/useBackendMessaging';
 import { useNotifications } from '@/hooks/useNotifications';
 import { fetchPublicContactSubmissions } from '@/lib/communicationsApi';
+import GlobalSearch from '@/pages/dashboard/components/GlobalSearch';
 
 const adminNavItems = [
   { label: 'Tableau de bord', icon: 'ri-dashboard-line', path: '/admin/dashboard' },
@@ -32,6 +33,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { totalUnread: messageUnreadCount } = useBackendMessaging();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
 
   const handleLogout = () => {
     logout();
@@ -70,17 +72,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }, [user?.role]);
 
   const topbarMessageCount = messageUnreadCount + supportUnreadCount;
+  const userInitials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.trim().toUpperCase() || 'AD';
 
   return (
     <div className="admin-layout h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       <LiveNotifications notifications={notifications} />
       {/* Top Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16">
-        <div className="h-full px-4 lg:px-6 flex items-center justify-between">
-          {/* Left: Logo + hamburger */}
-          <div className="flex items-center space-x-3">
+      <nav className="fixed top-0 left-0 right-0 z-40 h-16 border-b border-gray-200 bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+        <div className="flex h-full items-center justify-between gap-4 px-4 lg:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <button
-              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               <div className="w-5 h-5 flex items-center justify-center">
@@ -99,13 +101,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             />
           </div>
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="hidden max-w-3xl flex-1 md:block">
+            <GlobalSearch
+              context="admin"
+              variant="inline"
+              placeholder="Rechercher un utilisateur, un contenu, un paiement..."
+            />
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
             <Link
               to="/admin/messages"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="relative flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
               title="Messages support"
             >
-              <i className="ri-message-3-line text-lg text-gray-600 dark:text-gray-300"></i>
+              <i className="ri-mail-line text-lg text-gray-600 dark:text-gray-300"></i>
               {topbarMessageCount > 0 && (
                 <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                   {topbarMessageCount > 9 ? '9+' : topbarMessageCount}
@@ -115,7 +125,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
             <Link
               to="/admin/notifications"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="relative flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
               title="Notifications"
             >
               <i className="ri-notification-3-line text-lg text-gray-600 dark:text-gray-300"></i>
@@ -126,20 +136,30 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               )}
             </Link>
 
-            <Link
-              to="/admin/settings"
-              className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Parametres"
+            <select
+              value={selectedYear}
+              onChange={(event) => setSelectedYear(event.target.value)}
+              className="hidden rounded-2xl border border-teal-500 bg-white px-4 py-2.5 text-sm font-medium text-gray-900 focus:outline-none lg:block"
+              aria-label="Année active"
             >
-              <i className="ri-settings-3-line text-lg text-gray-600 dark:text-gray-300"></i>
-            </Link>
+              {['2024', '2025', '2026', '2027'].map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
 
             <Link
               to="/admin/profile"
-              className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-3 rounded-2xl bg-white px-2 py-1.5 hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
               title="Profil"
             >
-              <i className="ri-user-line text-lg text-gray-600 dark:text-gray-300"></i>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">
+                {userInitials}
+              </div>
+              <div className="hidden text-left lg:block">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{`${user?.firstName || 'Admin'} ${user?.lastName || ''}`.trim()}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Administrateur</p>
+              </div>
+              <i className="ri-arrow-down-s-line text-lg text-gray-400"></i>
             </Link>
           </div>
         </div>
@@ -156,11 +176,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="h-full pt-16">
         {/* Sidebar */}
         <aside
-          className={`fixed top-16 left-0 bottom-0 z-30 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-200
+          className={`fixed top-16 left-0 bottom-0 z-30 flex w-64 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 transition-transform duration-200
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         >
-          <nav className="flex-1 overflow-y-auto py-4 px-3">
-            <ul className="space-y-0.5">
+          <nav className="flex-1 overflow-y-auto px-3 py-4">
+            <ul className="space-y-1">
               {adminNavItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
@@ -168,9 +188,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <Link
                       to={item.path}
                       onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer
+                      className={`flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition-colors cursor-pointer
                         ${isActive
-                          ? 'bg-[#14B8A6] text-white'
+                          ? 'bg-teal-50 text-teal-700'
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                     >
@@ -186,10 +206,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
 
           {/* Sidebar footer - logout */}
-          <div className="border-t border-gray-200 dark:border-gray-700 p-3">
+          <div className="border-t border-gray-200 p-3 dark:border-gray-700">
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
+              className="flex w-full items-center space-x-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
             >
               <div className="w-5 h-5 flex items-center justify-center">
                 <i className="ri-logout-box-line text-base"></i>

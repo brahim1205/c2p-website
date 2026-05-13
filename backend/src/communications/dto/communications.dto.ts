@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+export const campaignAudienceValues = [
+  'all_users',
+  'all_apprenants',
+  'active_clients',
+  'project_holders',
+  'verified_providers',
+] as const;
+
+export const campaignAudienceSchema = z.enum(campaignAudienceValues);
+export type CampaignAudience = z.infer<typeof campaignAudienceSchema>;
+
 export const smsTestSchema = z.object({
   phone: z.string().trim().min(8).max(24),
   message: z.string().trim().min(3).max(480),
@@ -14,7 +25,7 @@ export const emailTestSchema = z.object({
 export const dispatchCampaignSchema = z.object({
   title: z.string().trim().min(3).max(120),
   type: z.enum(['email', 'sms', 'push', 'all']),
-  target: z.string().trim().min(3).max(120),
+  target: campaignAudienceSchema,
   content: z.string().trim().min(3).max(480),
 });
 

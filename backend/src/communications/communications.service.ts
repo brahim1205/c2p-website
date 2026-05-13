@@ -1,15 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service.js';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service.js';
 import type { AuthUser, Role } from '../auth/auth.store.js';
-import { appendAppRows, persistAppStoreToDatabase, syncAppStoreFromDatabase } from '../data/data.controller.js';
+import { buildNotificationDispatchOutboxEvent } from '../notifications/notification-outbox.js';
+import { createAppNotificationRow } from '../notifications/notification-payloads.js';
+import { buildOutboxEvent } from '../outbox/outbox-contract.js';
 import { EmailService } from './email.service.js';
+import { OutboxService } from '../outbox/outbox.service.js';
 import { SmsService } from './sms.service.js';
+import type { CampaignAudience } from './dto/communications.dto.js';
 
 interface CampaignDispatchPayload {
   title: string;
   type: 'email' | 'sms' | 'push' | 'all';
-  target: string;
+  target: CampaignAudience;
   content: string;
 }
 
@@ -26,10 +29,10 @@ type DirectoryUser = Awaited<ReturnType<AuthService['listAllUsers']>>[number];
 @Injectable()
 export class CommunicationsService {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly authService: AuthService,
     private readonly smsService: SmsService,
     private readonly emailService: EmailService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   async dispatchCampaign(actor: AuthUser, payload: CampaignDispatchPayload) {
@@ -40,19 +43,24 @@ export class CommunicationsService {
       sms: this.emptyChannelSummary(this.smsService.getStatus().provider),
       push: this.emptyChannelSummary('in-app'),
     };
+    const queuedEvents: Array<{ id: string; eventType: string }> = [];
 
     if (payload.type === 'email' || payload.type === 'all') {
       const emailRecipients = recipients.filter((user) => Boolean(user.email));
       summary.email.attempted = emailRecipients.length;
       if (emailRecipients.length > 0) {
-        const results = await this.emailService.sendBulk(
-          emailRecipients.map((user) => ({ userId: user.id, email: user.email })),
-          payload.title,
-          payload.content,
-          `campaign:${payload.title}`,
-        );
-        summary.email.delivered = results.filter((result) => result.ok).length;
-        summary.email.failed = results.filter((result) => !result.ok).length;
+        queuedEvents.push(...await this.outboxService.enqueueMany([buildOutboxEvent({
+          eventType: 'communications.email.send',
+          aggregateId: payload.title,
+          actorId: actor.id,
+          payload: {
+            recipients: emailRecipients.map((user) => ({ userId: user.id, email: user.email })),
+            subject: payload.title,
+            message: payload.content,
+            purpose: `campaign:${payload.title}`,
+          },
+          metadata: { channel: 'email', recipientCount: emailRecipients.length },
+        })]));
       }
     } else {
       summary.email.skipped = recipients.length;
@@ -62,13 +70,17 @@ export class CommunicationsService {
       const smsRecipients = recipients.filter((user) => Boolean(user.phone));
       summary.sms.attempted = smsRecipients.length;
       if (smsRecipients.length > 0) {
-        const results = await this.smsService.sendBulk(
-          smsRecipients.map((user) => ({ userId: user.id, phone: user.phone })),
-          payload.content,
-          `campaign:${payload.title}`,
-        );
-        summary.sms.delivered = results.filter((result) => result.ok).length;
-        summary.sms.failed = results.filter((result) => !result.ok).length;
+        queuedEvents.push(...await this.outboxService.enqueueMany([buildOutboxEvent({
+          eventType: 'communications.sms.send',
+          aggregateId: payload.title,
+          actorId: actor.id,
+          payload: {
+            recipients: smsRecipients.map((user) => ({ userId: user.id, phone: user.phone })),
+            message: payload.content,
+            purpose: `campaign:${payload.title}`,
+          },
+          metadata: { channel: 'sms', recipientCount: smsRecipients.length },
+        })]));
       }
     } else {
       summary.sms.skipped = recipients.length;
@@ -76,24 +88,35 @@ export class CommunicationsService {
 
     if (payload.type === 'push' || payload.type === 'all') {
       summary.push.attempted = recipients.length;
-      const delivered = await this.createInAppNotifications(actor, recipients, payload.title, payload.content);
-      summary.push.delivered = delivered;
-      summary.push.failed = Math.max(recipients.length - delivered, 0);
+      queuedEvents.push(...await this.outboxService.enqueueMany([buildNotificationDispatchOutboxEvent({
+        eventType: 'communications.notification.dispatch',
+        aggregateId: payload.title,
+        actorId: actor.id,
+        notifications: recipients.map((recipient) => createAppNotificationRow({
+          userId: recipient.id,
+          title: payload.title,
+          message: payload.content,
+          type: 'communication',
+          link: this.getDefaultNotificationLink(recipient.role),
+          metadata: {
+            actor_id: actor.id,
+            actor_role: actor.role,
+            channel: 'in-app',
+          },
+        })),
+        metadata: { channel: 'in-app', recipientCount: recipients.length },
+      })]));
     } else {
       summary.push.skipped = recipients.length;
     }
 
     return {
       recipients: recipients.length,
-      dispatched:
-        summary.email.delivered
-        + summary.sms.delivered
-        + summary.push.delivered,
-      failed:
-        summary.email.failed
-        + summary.sms.failed
-        + summary.push.failed,
+      queued: queuedEvents.length,
+      dispatched: queuedEvents.length,
+      failed: 0,
       channels: summary,
+      events: queuedEvents,
     };
   }
 
@@ -108,24 +131,28 @@ export class CommunicationsService {
       return 0;
     }
 
-    await syncAppStoreFromDatabase(this.prisma);
-    appendAppRows('notifications', recipients.map((recipient) => ({
-      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${recipient.id}`,
-      user_id: recipient.id,
-      title,
-      message,
-      type: overrides.type ?? 'communication',
-      is_read: false,
-      link: overrides.link ?? this.getDefaultNotificationLink(recipient.role),
+    await this.outboxService.enqueue(buildNotificationDispatchOutboxEvent({
+      eventType: 'communications.notification.dispatch',
+      aggregateId: title,
+      actorId: actor.id,
+      notifications: recipients.map((recipient) => createAppNotificationRow({
+        userId: recipient.id,
+        title,
+        message,
+        type: overrides.type ?? 'communication',
+        link: overrides.link ?? this.getDefaultNotificationLink(recipient.role),
+        metadata: {
+          actor_id: actor.id,
+          actor_role: actor.role,
+          channel: 'in-app',
+          ...(overrides.metadata ?? {}),
+        },
+      })),
       metadata: {
-        actor_id: actor.id,
-        actor_role: actor.role,
         channel: 'in-app',
-        ...(overrides.metadata ?? {}),
+        recipientCount: recipients.length,
       },
-      created_at: new Date().toISOString(),
-    })));
-    await persistAppStoreToDatabase(this.prisma);
+    }));
     return recipients.length;
   }
 
@@ -139,23 +166,30 @@ export class CommunicationsService {
     };
   }
 
-  private resolveRecipients(target: string, users: DirectoryUser[]) {
-    const normalized = target.trim().toLowerCase();
+  private resolveRecipients(target: CampaignAudience, users: DirectoryUser[]) {
     const byRole = (role: Role) => users.filter((user) => user.role === role);
 
-    if (normalized.includes('apprenant')) return byRole('apprenant');
-    if (normalized.includes('client')) return byRole('client');
-    if (normalized.includes('porteur')) return byRole('porteur');
-    if (normalized.includes('prestataire')) return byRole('prestataire');
-    if (normalized.includes('partenaire')) return byRole('partenaire');
-    if (normalized.includes('formateur')) return byRole('formateur');
-    return users;
+    switch (target) {
+      case 'all_users':
+        return users;
+      case 'all_apprenants':
+        return byRole('apprenant');
+      case 'active_clients':
+        return byRole('client');
+      case 'project_holders':
+        return byRole('porteur');
+      case 'verified_providers':
+        return byRole('prestataire');
+      default:
+        throw new BadRequestException('Audience de campagne non prise en charge.');
+    }
   }
 
   private getDefaultNotificationLink(role: Role) {
     if (role === 'admin') return '/admin/communications';
     if (role === 'formateur') return '/dashboard/formateur';
     if (role === 'apprenant') return '/dashboard/apprenant';
+    if (role === 'parent') return '/dashboard/parent';
     if (role === 'prestataire') return '/dashboard/prestataire';
     if (role === 'client') return '/dashboard/client';
     if (role === 'porteur') return '/dashboard/porteur';

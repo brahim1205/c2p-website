@@ -45,6 +45,8 @@ services:
     build:
       context: ./backend
     depends_on:
+      backend-migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -62,6 +64,26 @@ services:
     networks:
       - app
       - monitoring
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  backend-migrate:
+    build:
+      context: ./backend
+      target: migrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ${BACKEND_ENV_FILE:-./ops/env/backend.production.env}
+    restart: "no"
+    networks:
+      - app
     read_only: true
     tmpfs:
       - /tmp
@@ -124,6 +146,7 @@ services:
     volumes:
       - ./ops/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./ops/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./ops/monitoring/prometheus/secrets:/etc/prometheus/secrets:ro
       - prometheus-data:/prometheus
     restart: unless-stopped
     expose:

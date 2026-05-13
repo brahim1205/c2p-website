@@ -29,17 +29,17 @@ export default class AppErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-[#0b0b0b] px-6 text-white">
-          <div className="max-w-md rounded-[28px] border border-white/10 bg-white/[0.05] p-8 text-center shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+        <div className="min-h-screen flex items-center justify-center bg-c2p-bg px-6 text-c2p-text">
+          <div className="c2p-card max-w-md rounded-[28px] p-8 text-center shadow-c2p-lg">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.32em] text-[#d5b46f]">Incident</p>
             <h1 className="text-2xl font-semibold">Une erreur est survenue</h1>
-            <p className="mt-3 text-sm leading-7 text-white/62">
+            <p className="mt-3 text-sm leading-7 text-[#5b6778]">
               L&apos;interface a ete reinitialisee pour proteger votre session. Rechargez la page pour continuer.
             </p>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-6 rounded-full bg-[#d5b46f] px-6 py-3 text-sm font-semibold text-[#111] transition-colors hover:bg-white"
+              className="c2p-btn-accent mt-6 px-6 py-3"
             >
               Recharger
             </button>

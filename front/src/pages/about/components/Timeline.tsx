@@ -61,11 +61,11 @@ export default function Timeline() {
       <div className="max-w-5xl mx-auto relative z-10">
         <div className={`text-center mb-16 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-3 h-3 bg-[#14B8A6] rotate-45"></div>
-            <span className="text-[#1a2b4a] text-sm font-medium uppercase tracking-wider">Notre Parcours</span>
+            <div className="w-3 h-3 bg-[#5fa6f3] rotate-45"></div>
+            <span className="text-[#06053a] text-sm font-medium uppercase tracking-wider">Notre Parcours</span>
           </div>
-          <h2 className="text-[#1a2b4a] font-bold text-2xl sm:text-3xl lg:text-[42px] leading-tight mb-4">
-            Une Histoire de <span className="text-[#14B8A6]">Croissance</span>
+          <h2 className="text-[#06053a] font-bold text-2xl sm:text-3xl lg:text-[42px] leading-tight mb-4">
+            Une Histoire de <span className="text-[#5fa6f3]">Croissance</span>
           </h2>
           <p className="text-gray-600 text-sm sm:text-base max-w-xl mx-auto">
             De la fondation à la vision 2030, découvrez les étapes clés qui ont façonné C2P.
@@ -85,11 +85,11 @@ export default function Timeline() {
               >
                 {/* Left content */}
                 <div className={`lg:w-[calc(50%-40px)] ${isLeft ? 'lg:text-right lg:pr-12' : 'lg:order-3 lg:text-left lg:pl-12'}`}>
-                  <div className={`bg-[#faf8f3] rounded-2xl p-5 lg:p-6 border border-gray-100 hover:border-[#14B8A6]/20 hover:shadow-lg transition-all duration-300 group ${isLeft ? '' : ''}`}>
-                    <span className="inline-block text-[#14B8A6] font-bold text-sm mb-2 bg-[#14B8A6]/10 px-3 py-1 rounded-full">
+                  <div className={`bg-[#ffffff] rounded-2xl p-5 lg:p-6 border border-gray-100 hover:border-[#5fa6f3]/20 hover:shadow-lg transition-all duration-300 group ${isLeft ? '' : ''}`}>
+                    <span className="inline-block text-[#5fa6f3] font-bold text-sm mb-2 bg-[#5fa6f3]/10 px-3 py-1 rounded-full">
                       {m.year}
                     </span>
-                    <h3 className="font-semibold text-[#1a2b4a] text-lg mb-2 group-hover:text-[#14B8A6] transition-colors">
+                    <h3 className="font-semibold text-[#06053a] text-lg mb-2 group-hover:text-[#5fa6f3] transition-colors">
                       {m.title}
                     </h3>
                     <p className="text-gray-500 text-sm leading-relaxed">{m.desc}</p>
@@ -98,9 +98,9 @@ export default function Timeline() {
 
                 {/* Center dot */}
                 <div className="hidden lg:flex lg:w-20 items-center justify-center lg:order-2 relative z-10">
-                  <div className="w-12 h-12 rounded-full bg-white border-2 border-[#14B8A6] flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 rounded-full bg-white border-2 border-[#5fa6f3] flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                     <div className="w-6 h-6 flex items-center justify-center">
-                      <i className={`${m.icon} text-[#14B8A6] text-lg`}></i>
+                      <i className={`${m.icon} text-[#5fa6f3] text-lg`}></i>
                     </div>
                   </div>
                 </div>

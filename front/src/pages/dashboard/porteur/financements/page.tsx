@@ -2,15 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
-import { backendClient } from '@/lib/backendClient';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { fetchFundingRoundsForOwner, fetchOwnerProjects, type FundingRound, type ProjectRecord } from '@/lib/projectApi';
+import { createOwnerFundingRound, fetchFundingRoundsForOwner, fetchOwnerProjects, type FundingRound, type ProjectRecord } from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
 
 export default function PorteurFinancementsPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [rounds, setRounds] = useState<FundingRound[]>([]);
@@ -24,6 +26,7 @@ export default function PorteurFinancementsPage() {
     deadline: '',
     description: '',
   });
+  const subscriptionGate = gateFor('project_funding_manage');
 
   const loadRounds = useCallback(async () => {
     if (!user?.id) {
@@ -71,25 +74,24 @@ export default function PorteurFinancementsPage() {
   }, [rounds]);
 
   const handleCreateFunding = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!newRound.projectId || !newRound.targetAmount || !newRound.deadline) {
       error('Champs incomplets', 'Renseignez le projet, le montant cible et la date limite.');
       return;
     }
+    if (!user?.id) return;
 
     try {
-      const { error: apiError } = await backendClient.from('project_funding_rounds').insert({
-        project_id: Number(newRound.projectId),
+      await createOwnerFundingRound(user.id, {
+        projectId: Number(newRound.projectId),
         type: newRound.type,
-        target_amount: Number(newRound.targetAmount),
-        raised_amount: 0,
+        targetAmount: Number(newRound.targetAmount),
         deadline: newRound.deadline,
-        start_date: new Date().toISOString().slice(0, 10),
-        status: 'en_cours',
         description: newRound.description,
-        pitch_deck: false,
-        business_plan: false,
       });
-      if (apiError) throw new Error(apiError.message);
       success('Levee creee', 'La nouvelle levee de fonds est visible dans votre portefeuille projet.');
       setShowCreateModal(false);
       setNewRound({ projectId: '', type: 'amorcage', targetAmount: '', deadline: '', description: '' });
@@ -104,6 +106,7 @@ export default function PorteurFinancementsPage() {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Porteur', path: '/dashboard/porteur' }, { label: 'Financements' }]} />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes financements</h1>
@@ -133,7 +136,17 @@ export default function PorteurFinancementsPage() {
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowCreateModal(true)} className="px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+            <button
+              onClick={() => {
+                if (!subscriptionGate.allowed) {
+                  error(subscriptionGate.title, subscriptionGate.message);
+                  return;
+                }
+                setShowCreateModal(true);
+              }}
+              disabled={!subscriptionGate.allowed}
+              className="px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
               Nouvelle levee
             </button>
           </div>
@@ -185,16 +198,16 @@ export default function PorteurFinancementsPage() {
             </div>
             <div className="grid gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Projet</label>
-                <select value={newRound.projectId} onChange={(e) => setNewRound((prev) => ({ ...prev, projectId: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20">
+                <label htmlFor="porteur-round-project" className="block text-sm font-medium text-gray-700 mb-1">Projet</label>
+                <select id="porteur-round-project" value={newRound.projectId} onChange={(e) => setNewRound((prev) => ({ ...prev, projectId: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20">
                   <option value="">Selectionnez un projet</option>
                   {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
                 </select>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <select value={newRound.type} onChange={(e) => setNewRound((prev) => ({ ...prev, type: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20">
+                  <label htmlFor="porteur-round-type" className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <select id="porteur-round-type" value={newRound.type} onChange={(e) => setNewRound((prev) => ({ ...prev, type: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20">
                     <option value="amorcage">Amorcage</option>
                     <option value="subvention">Subvention</option>
                     <option value="concours">Concours</option>
@@ -202,22 +215,22 @@ export default function PorteurFinancementsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Objectif</label>
-                  <input type="number" value={newRound.targetAmount} onChange={(e) => setNewRound((prev) => ({ ...prev, targetAmount: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20" />
+                  <label htmlFor="porteur-round-target" className="block text-sm font-medium text-gray-700 mb-1">Objectif</label>
+                  <input id="porteur-round-target" type="number" value={newRound.targetAmount} onChange={(e) => setNewRound((prev) => ({ ...prev, targetAmount: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date limite</label>
-                <input type="date" value={newRound.deadline} onChange={(e) => setNewRound((prev) => ({ ...prev, deadline: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20" />
+                <label htmlFor="porteur-round-deadline" className="block text-sm font-medium text-gray-700 mb-1">Date limite</label>
+                <input id="porteur-round-deadline" type="date" value={newRound.deadline} onChange={(e) => setNewRound((prev) => ({ ...prev, deadline: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea rows={4} value={newRound.description} onChange={(e) => setNewRound((prev) => ({ ...prev, description: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20" />
+                <label htmlFor="porteur-round-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="porteur-round-description" rows={4} value={newRound.description} onChange={(e) => setNewRound((prev) => ({ ...prev, description: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20" />
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
-              <button onClick={handleCreateFunding} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Creer</button>
+              <button onClick={handleCreateFunding} disabled={!subscriptionGate.allowed} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60">Creer</button>
             </div>
           </div>
         </div>

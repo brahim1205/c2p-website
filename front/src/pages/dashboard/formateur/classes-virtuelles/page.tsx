@@ -1,15 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonList } from '@/components/base/Skeleton';
-import { backendClient } from '@/lib/backendClient';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  createFormateurVirtualClass,
+  deleteFormateurVirtualClass,
+  fetchFormateurVirtualClasses,
+  updateFormateurVirtualClass,
+  updateFormateurVirtualClassStatus,
+} from '@/lib/formateurDashboardApi';
 
 
 interface VirtualClass {
-  id: number;
-  course_id: number | null;
+  id: string | number;
+  course_id: string | number | null;
   title: string;
   course_name: string | null;
   class_date: string;
@@ -140,12 +148,13 @@ function validateVirtualClassForm(
 export default function FormateurClassesPage() {
   const { success, error } = useToast();
   const { user } = useAuth();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState<VirtualClass[]>([]);
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'live' | 'ended'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newClass, setNewClass] = useState(DEFAULT_CLASS_FORM);
-  const [instructorCourses, setInstructorCourses] = useState<{ id: number; title: string }[]>([]);
+  const [instructorCourses, setInstructorCourses] = useState<{ id: string | number; title: string }[]>([]);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<VirtualClass | null>(null);
   const [editForm, setEditForm] = useState<Partial<VirtualClass>>();
@@ -155,6 +164,15 @@ export default function FormateurClassesPage() {
   const [editFormMessage, setEditFormMessage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const isMountedRef = useRef(true);
+  const subscriptionGate = gateFor('trainer_live_classes_manage');
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const availableCourseIds = new Set(instructorCourses.map((course) => String(course.id)));
 
@@ -170,58 +188,37 @@ export default function FormateurClassesPage() {
     setEditFormMessage(null);
   };
 
-  const fetchClasses = useCallback(async () => {
-    setLoading(true);
+  const loadPage = useCallback(async () => {
+    if (!user?.id) {
+      if (isMountedRef.current) {
+        setClasses([]);
+        setInstructorCourses([]);
+        setLoading(false);
+      }
+      return;
+    }
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
     try {
-      const { data, error: err } = await backendClient
-        .from('virtual_classes')
-        .select('*')
-        .order('class_date', { ascending: true });
-
-      if (err) throw err;
-      setClasses((data || []).map((virtualClass) => ({
-        class_time: '',
-        duration: null,
-        max_students: 30,
-        provider: 'jitsi',
-        meeting_slug: null,
-        recording_enabled: true,
-        recording_status: 'pending',
-        recording_url: null,
-        room_link: null,
-        started_at: null,
-        ended_at: null,
-        instructor_notes: null,
-        allow_chat: true,
-        status: 'scheduled',
-        students_count: 0,
-        ...virtualClass,
-      })));
+      const snapshot = await fetchFormateurVirtualClasses(user.id);
+      if (!isMountedRef.current) return;
+      setClasses(snapshot.classes as VirtualClass[]);
+      setInstructorCourses(snapshot.courses);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de charger les classes virtuelles.');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [error]);
-
-  const fetchCourses = useCallback(async () => {
-    try {
-      const { data, error: err } = await backendClient
-        .from('courses')
-        .select('id, title')
-        .order('title', { ascending: true });
-      if (err) throw err;
-      setInstructorCourses(data || []);
-    } catch (err: unknown) {
-      console.error('Failed to load courses', err);
-    }
-  }, []);
+  }, [error, user?.id]);
 
   useEffect(() => {
-    fetchClasses();
-    fetchCourses();
-  }, [fetchClasses, fetchCourses]);
+    void loadPage();
+  }, [loadPage]);
 
   const filteredClasses = filter === 'all' ? classes : classes.filter((c) => c.status === filter);
 
@@ -251,40 +248,67 @@ export default function FormateurClassesPage() {
   };
 
   const handleStartLive = async (cls: VirtualClass) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     try {
-      const { error: err } = await backendClient
-        .from('virtual_classes')
-        .update({ status: 'live' })
-        .eq('id', cls.id);
-
-      if (err) throw err;
+      if (!user?.id) throw new Error('Classe introuvable.');
+      await updateFormateurVirtualClassStatus(user.id, cls.id, 'live');
+      if (!isMountedRef.current) return;
+      setClasses((current) => current.map((entry) => (
+        String(entry.id) === String(cls.id)
+          ? {
+            ...entry,
+            status: 'live',
+            started_at: new Date().toISOString(),
+          }
+          : entry
+      )));
       success('En direct !', `La classe "${cls.title}" est maintenant en direct.`);
-      fetchClasses();
+      void loadPage();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de démarrer le direct.');
       console.error(err);
     }
   };
 
   const handleEndClass = async (cls: VirtualClass) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     try {
-      const { error: err } = await backendClient
-        .from('virtual_classes')
-        .update({ status: 'ended' })
-        .eq('id', cls.id);
-
-      if (err) throw err;
+      if (!user?.id) throw new Error('Classe introuvable.');
+      await updateFormateurVirtualClassStatus(user.id, cls.id, 'ended');
+      if (!isMountedRef.current) return;
+      setClasses((current) => current.map((entry) => (
+        String(entry.id) === String(cls.id)
+          ? {
+            ...entry,
+            status: 'ended',
+            ended_at: new Date().toISOString(),
+            recording_status: entry.recording_enabled ? 'processing' : entry.recording_status,
+          }
+          : entry
+      )));
       success('Terminée', cls.recording_enabled
         ? `La classe "${cls.title}" est terminée. Le replay passe en préparation.`
         : `La classe "${cls.title}" est maintenant terminée.`);
-      fetchClasses();
+      void loadPage();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de terminer la classe.');
       console.error(err);
     }
   };
 
   const handleCreateClass = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!user?.id) {
       error('Session invalide', 'Impossible d identifier le formateur.');
       return;
@@ -304,56 +328,61 @@ export default function FormateurClassesPage() {
     }
     setIsCreating(true);
     try {
-      const { error: err } = await backendClient.from('virtual_classes').insert({
-        instructor_id: user.id,
-        course_id: Number(newClass.course_id),
+      await createFormateurVirtualClass(user.id, {
+        course_id: newClass.course_id,
         title: newClass.title,
         course_name: selectedCourse.title,
         class_date: newClass.class_date,
         class_time: newClass.class_time,
-        duration: newClass.duration || null,
+        duration: newClass.duration,
         max_students: newClass.max_students || 30,
-        students_count: 0,
         provider: newClass.provider,
-        meeting_slug: newClass.meeting_slug || null,
-        room_link: newClass.room_link || null,
+        meeting_slug: newClass.meeting_slug,
+        room_link: newClass.room_link,
         recording_enabled: newClass.recording_enabled,
-        recording_url: newClass.recording_url || null,
-        instructor_notes: newClass.instructor_notes || null,
+        recording_url: newClass.recording_url,
+        instructor_notes: newClass.instructor_notes,
         allow_chat: newClass.allow_chat,
-        status: 'scheduled',
       });
-
-      if (err) throw err;
+      if (!isMountedRef.current) return;
       success('Classe créée', 'La classe virtuelle a été programmée avec succès.');
       setShowCreateModal(false);
       setNewClass(DEFAULT_CLASS_FORM);
       setCreateErrors({});
       setCreateFormMessage(null);
-      fetchClasses();
+      void loadPage();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setCreateFormMessage('Impossible de créer la classe virtuelle.');
       error('Erreur', 'Impossible de créer la classe.');
       console.error(err);
     } finally {
-      setIsCreating(false);
+      if (isMountedRef.current) {
+        setIsCreating(false);
+      }
     }
   };
 
   const handleDeleteClass = async (cls: VirtualClass) => {
+    if (!user?.id) return;
     if (!window.confirm(`Voulez-vous vraiment supprimer "${cls.title}" ?`)) return;
     try {
-      const { error: err } = await backendClient.from('virtual_classes').delete().eq('id', cls.id);
-      if (err) throw err;
+      await deleteFormateurVirtualClass(user.id, cls.id);
+      if (!isMountedRef.current) return;
       success('Supprimée', `"${cls.title}" a été supprimée.`);
-      fetchClasses();
+      void loadPage();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de supprimer la classe.');
       console.error(err);
     }
   };
 
   const handleEditClick = (cls: VirtualClass) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setSelectedClass(cls);
     setEditForm({ ...cls });
     setEditErrors({});
@@ -362,7 +391,11 @@ export default function FormateurClassesPage() {
   };
 
   const confirmEdit = async () => {
-    if (!selectedClass) return;
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
+    if (!selectedClass || !user?.id) return;
     const nextErrors = validateVirtualClassForm(editForm, availableCourseIds);
     setEditErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -378,40 +411,39 @@ export default function FormateurClassesPage() {
     }
     setIsUpdating(true);
     try {
-      const { error: err } = await backendClient
-        .from('virtual_classes')
-        .update({
-          title: editForm.title,
-          course_id: Number(editForm.course_id),
-          course_name: selectedCourse.title,
-          class_date: editForm.class_date,
-          class_time: editForm.class_time,
-          duration: editForm.duration || null,
-          max_students: editForm.max_students,
-          provider: editForm.provider,
-          meeting_slug: editForm.meeting_slug || null,
-          room_link: editForm.room_link || null,
-          recording_enabled: editForm.recording_enabled,
-          recording_url: editForm.recording_url || null,
-          instructor_notes: editForm.instructor_notes || null,
-          allow_chat: editForm.allow_chat,
-        })
-        .eq('id', selectedClass.id);
-
-      if (err) throw err;
+      await updateFormateurVirtualClass(user.id, selectedClass.id, {
+        title: editForm.title,
+        course_id: editForm.course_id,
+        course_name: selectedCourse.title,
+        class_date: editForm.class_date,
+        class_time: editForm.class_time,
+        duration: editForm.duration || null,
+        max_students: editForm.max_students,
+        provider: editForm.provider,
+        meeting_slug: editForm.meeting_slug || null,
+        room_link: editForm.room_link || null,
+        recording_enabled: editForm.recording_enabled,
+        recording_url: editForm.recording_url || null,
+        instructor_notes: editForm.instructor_notes || null,
+        allow_chat: editForm.allow_chat,
+      });
+      if (!isMountedRef.current) return;
       success('Mise à jour', `"${editForm.title}" a été modifiée.`);
       setShowDetailModal(false);
       setSelectedClass(null);
       setEditForm({});
       setEditErrors({});
       setEditFormMessage(null);
-      fetchClasses();
+      void loadPage();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setEditFormMessage('Impossible de modifier la classe.');
       error('Erreur', 'Impossible de modifier la classe.');
       console.error(err);
     } finally {
-      setIsUpdating(false);
+      if (isMountedRef.current) {
+        setIsUpdating(false);
+      }
     }
   };
 
@@ -445,6 +477,7 @@ export default function FormateurClassesPage() {
             { label: 'Classes virtuelles' },
           ]}
         />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
@@ -452,8 +485,15 @@ export default function FormateurClassesPage() {
             <p className="text-gray-600 text-sm md:text-base">Organisez et animez vos sessions en direct</p>
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap flex items-center gap-2"
+            onClick={() => {
+              if (!subscriptionGate.allowed) {
+                error(subscriptionGate.title, subscriptionGate.message);
+                return;
+              }
+              setShowCreateModal(true);
+            }}
+            disabled={!subscriptionGate.allowed}
+            className="px-4 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <div className="w-5 h-5 flex items-center justify-center">
               <i className="ri-video-add-line text-base"></i>
@@ -657,8 +697,11 @@ export default function FormateurClassesPage() {
                   {createErrors.title ? <p className="mt-1 text-xs text-red-600">{createErrors.title}</p> : null}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Formation associée</label>
+                  <label htmlFor="create-virtual-class-course-id" className="block text-sm font-medium text-gray-700 mb-1">
+                    Formation associée
+                  </label>
                   <select
+                    id="create-virtual-class-course-id"
                     value={newClass.course_id}
                     onChange={(e) => {
                       const selected = instructorCourses.find((course) => String(course.id) === e.target.value);
@@ -670,6 +713,7 @@ export default function FormateurClassesPage() {
                       setCreateErrors((current) => ({ ...current, course_id: undefined }));
                       setCreateFormMessage(null);
                     }}
+                    aria-label="Formation associée"
                     aria-invalid={Boolean(createErrors.course_id)}
                     className={getFieldClass(Boolean(createErrors.course_id))}
                   >
@@ -860,19 +904,23 @@ export default function FormateurClassesPage() {
                   {editErrors.title ? <p className="mt-1 text-xs text-red-600">{editErrors.title}</p> : null}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Formation associée</label>
+                  <label htmlFor="edit-virtual-class-course-id" className="block text-sm font-medium text-gray-700 mb-1">
+                    Formation associée
+                  </label>
                   <select
+                    id="edit-virtual-class-course-id"
                     value={String(editForm.course_id || '')}
                     onChange={(e) => {
                       const selected = instructorCourses.find((course) => String(course.id) === e.target.value);
                       setEditForm((current) => ({
                         ...(current || {}),
-                        course_id: e.target.value ? Number(e.target.value) : null,
+                        course_id: e.target.value ? e.target.value : null,
                         course_name: selected?.title || '',
                       }));
                       setEditErrors((current) => ({ ...current, course_id: undefined }));
                       setEditFormMessage(null);
                     }}
+                    aria-label="Formation associée"
                     aria-invalid={Boolean(editErrors.course_id)}
                     className={getFieldClass(Boolean(editErrors.course_id))}
                   >

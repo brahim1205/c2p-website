@@ -129,35 +129,42 @@ export default function AdminUsersPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl">
         <Breadcrumb items={[{ label: 'Admin', path: '/admin/dashboard' }, { label: 'Utilisateurs' }]} />
 
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion des utilisateurs</h1>
-            <p className="text-gray-600 mt-1">Validation, suspension et suivi des comptes plateforme.</p>
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-medium text-teal-600">Administration</p>
+              <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">Gestion des utilisateurs</h1>
+              <p className="mt-2 text-sm text-gray-600 md:text-base">Validation, suspension et suivi des comptes plateforme.</p>
+            </div>
+            <button
+              onClick={handleExport}
+              className="rounded-2xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700"
+            >
+              Exporter
+            </button>
           </div>
-          <button
-            onClick={handleExport}
-            className="px-5 py-2.5 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488]"
-          >
-            Exporter
-          </button>
-        </div>
+        </section>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Filtres utilisateurs</h2>
+            <p className="text-sm text-gray-500">Gardez la liste lisible en filtrant par rôle, statut ou recherche directe.</p>
+          </div>
           <div className="grid gap-3 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
             <input
               type="text"
               placeholder="Rechercher un utilisateur..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+              className="w-full rounded-2xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
             />
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as 'all' | UserRole)}
-              className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+              className="rounded-2xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
             >
               <option value="all">Tous les roles</option>
               {Object.entries(ROLE_LABELS).map(([role, label]) => (
@@ -167,7 +174,7 @@ export default function AdminUsersPage() {
             <select
               value={activeTab}
               onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
-              className="rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+              className="rounded-2xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
             >
               <option value="all">Tous les statuts</option>
               <option value="pending">En attente</option>
@@ -175,23 +182,23 @@ export default function AdminUsersPage() {
               <option value="suspended">Suspendus</option>
             </select>
           </div>
-        </div>
+        </section>
 
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 px-6 py-4">
             <div className="flex flex-wrap items-center gap-5">
-              <button onClick={() => setActiveTab('all')} className={`text-sm font-medium ${activeTab === 'all' ? 'text-[#14B8A6]' : 'text-gray-500'}`}>Tous ({counts.all})</button>
-              <button onClick={() => setActiveTab('pending')} className={`text-sm font-medium ${activeTab === 'pending' ? 'text-[#14B8A6]' : 'text-gray-500'}`}>En attente ({counts.pending})</button>
-              <button onClick={() => setActiveTab('active')} className={`text-sm font-medium ${activeTab === 'active' ? 'text-[#14B8A6]' : 'text-gray-500'}`}>Actifs ({counts.active})</button>
-              <button onClick={() => setActiveTab('suspended')} className={`text-sm font-medium ${activeTab === 'suspended' ? 'text-[#14B8A6]' : 'text-gray-500'}`}>Suspendus ({counts.suspended})</button>
+              <button onClick={() => setActiveTab('all')} className={`text-sm font-medium ${activeTab === 'all' ? 'text-[#5fa6f3]' : 'text-gray-500'}`}>Tous ({counts.all})</button>
+              <button onClick={() => setActiveTab('pending')} className={`text-sm font-medium ${activeTab === 'pending' ? 'text-[#5fa6f3]' : 'text-gray-500'}`}>En attente ({counts.pending})</button>
+              <button onClick={() => setActiveTab('active')} className={`text-sm font-medium ${activeTab === 'active' ? 'text-[#5fa6f3]' : 'text-gray-500'}`}>Actifs ({counts.active})</button>
+              <button onClick={() => setActiveTab('suspended')} className={`text-sm font-medium ${activeTab === 'suspended' ? 'text-[#5fa6f3]' : 'text-gray-500'}`}>Suspendus ({counts.suspended})</button>
             </div>
           </div>
 
           {selectedUsers.length > 0 && (
-            <div className="flex flex-col gap-3 border-b border-[#14B8A6]/20 bg-[#14B8A6]/10 px-6 py-4 md:flex-row md:items-center md:justify-between">
-              <p className="text-sm font-medium text-[#0D9488]">{selectedUsers.length} compte(s) selectionne(s)</p>
+            <div className="flex flex-col gap-3 border-b border-[#5fa6f3]/20 bg-[#5fa6f3]/10 px-6 py-4 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm font-medium text-[#27346b]">{selectedUsers.length} compte(s) selectionne(s)</p>
               <div className="flex gap-2">
-                <button onClick={() => applyBulkStatus('active')} className="px-4 py-2 rounded-lg bg-white border border-[#14B8A6]/30 text-[#0D9488] text-sm font-medium hover:bg-[#14B8A6]/5">Valider</button>
+                <button onClick={() => applyBulkStatus('active')} className="px-4 py-2 rounded-lg bg-white border border-[#5fa6f3]/30 text-[#27346b] text-sm font-medium hover:bg-[#5fa6f3]/5">Valider</button>
                 <button onClick={() => applyBulkStatus('suspended')} className="px-4 py-2 rounded-lg bg-white border border-red-200 text-red-700 text-sm font-medium hover:bg-red-50">Suspendre</button>
               </div>
             </div>
@@ -206,7 +213,7 @@ export default function AdminUsersPage() {
                       type="checkbox"
                       checked={filteredUsers.length > 0 && selectedUsers.length === filteredUsers.length}
                       onChange={handleSelectAll}
-                      className="h-4 w-4 rounded border-gray-300 text-[#14B8A6] focus:ring-[#14B8A6]"
+                      className="h-4 w-4 rounded border-gray-300 text-[#5fa6f3] focus:ring-[#5fa6f3]"
                     />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Utilisateur</th>
@@ -230,7 +237,7 @@ export default function AdminUsersPage() {
                         type="checkbox"
                         checked={selectedUsers.includes(user.id)}
                         onChange={() => handleToggleUser(user.id)}
-                        className="h-4 w-4 rounded border-gray-300 text-[#14B8A6] focus:ring-[#14B8A6]"
+                        className="h-4 w-4 rounded border-gray-300 text-[#5fa6f3] focus:ring-[#5fa6f3]"
                       />
                     </td>
                     <td className="px-6 py-4">
@@ -300,7 +307,7 @@ export default function AdminUsersPage() {
                         ) : (
                           <button
                             onClick={() => syncUserStatus(user.id, 'active')}
-                            className="px-3 py-1.5 rounded-lg border border-[#14B8A6]/20 text-[#0D9488] text-xs font-medium hover:bg-[#14B8A6]/5"
+                            className="px-3 py-1.5 rounded-lg border border-[#5fa6f3]/20 text-[#27346b] text-xs font-medium hover:bg-[#5fa6f3]/5"
                           >
                             Reactiver
                           </button>

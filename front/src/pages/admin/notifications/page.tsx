@@ -67,6 +67,7 @@ export default function AdminNotificationsPage() {
           <div className="flex flex-wrap items-center gap-2">
             {unreadCount > 0 && (
               <button
+                type="button"
                 onClick={() => void markAllAsRead()}
                 className="rounded-xl bg-teal-50 px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-100"
               >
@@ -76,8 +77,10 @@ export default function AdminNotificationsPage() {
           </div>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Filtrer les notifications admin">
           <button
+            type="button"
+            aria-pressed={filter === 'all'}
             onClick={() => setFilter('all')}
             className={`rounded-lg px-4 py-2 text-sm font-medium ${filter === 'all' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
           >
@@ -86,6 +89,8 @@ export default function AdminNotificationsPage() {
           {(['message', 'system', 'paiement', 'projet', 'prestation'] as NotificationType[]).map((type) => (
             <button
               key={type}
+              type="button"
+              aria-pressed={filter === type}
               onClick={() => setFilter(type)}
               className={`rounded-lg px-4 py-2 text-sm font-medium ${filter === type ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
             >
@@ -123,6 +128,7 @@ export default function AdminNotificationsPage() {
                       <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
                         {!notification.read && (
                           <button
+                            type="button"
                             onClick={() => void markAsRead(notification.id)}
                             className="font-medium text-gray-600 hover:text-gray-900"
                           >
@@ -135,6 +141,7 @@ export default function AdminNotificationsPage() {
                           </Link>
                         )}
                         <button
+                          type="button"
                           onClick={() => void deleteNotification(notification.id)}
                           className="font-medium text-red-600 hover:text-red-700"
                         >

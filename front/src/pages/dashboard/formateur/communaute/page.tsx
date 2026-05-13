@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { backendClient } from '@/lib/backendClient';
+import {
+  createFormateurFaq,
+  fetchFormateurCommunity,
+  moderateFormateurCommunityComment,
+  replyToFormateurCommunityComment,
+  updateFormateurFaqStatus,
+} from '@/lib/formateurDashboardApi';
 
 interface CommunityCourse {
   id: string | number;
@@ -36,7 +45,9 @@ interface CommunityFaq {
 }
 
 export default function FormateurCommunityPage() {
+  const { user } = useAuth();
   const { success, error } = useToast();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'comments' | 'faq'>('comments');
   const [courses, setCourses] = useState<CommunityCourse[]>([]);
@@ -50,30 +61,47 @@ export default function FormateurCommunityPage() {
     answer: '',
     status: 'published' as CommunityFaq['status'],
   });
+  const isMountedRef = useRef(true);
+  const subscriptionGate = gateFor('trainer_community_manage');
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadPage = useCallback(async () => {
-    setLoading(true);
+    if (!user?.id) {
+      if (isMountedRef.current) {
+        setCourses([]);
+        setComments([]);
+        setFaqs([]);
+        setLoading(false);
+      }
+      return;
+    }
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
     try {
-      const [coursesRes, commentsRes, faqsRes] = await Promise.all([
-        backendClient.from<CommunityCourse>('courses').select('*').order('updated_at', { ascending: false }),
-        backendClient.from<CommunityComment>('lesson_comments').select('*').order('created_at', { ascending: false }),
-        backendClient.from<CommunityFaq>('course_faq_items').select('*').order('position', { ascending: true }),
-      ]);
-      if (coursesRes.error) throw coursesRes.error;
-      if (commentsRes.error) throw commentsRes.error;
-      if (faqsRes.error) throw faqsRes.error;
-      const nextCourses = coursesRes.data || [];
+      const snapshot = await fetchFormateurCommunity(user.id);
+      const nextCourses = snapshot.courses || [];
+      if (!isMountedRef.current) return;
       setCourses(nextCourses);
-      setComments(commentsRes.data || []);
-      setFaqs(faqsRes.data || []);
+      setComments(snapshot.comments as CommunityComment[]);
+      setFaqs(snapshot.faqs as CommunityFaq[]);
       setFaqForm((current) => ({ ...current, course_id: current.course_id || String(nextCourses[0]?.id || '') }));
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.error(err);
       error('Erreur', 'Impossible de charger l’espace communauté formateur.');
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [error]);
+  }, [error, user?.id]);
 
   useEffect(() => {
     void loadPage();
@@ -101,70 +129,88 @@ export default function FormateurCommunityPage() {
   }, [filteredComments]);
 
   const moderateComment = async (comment: CommunityComment, patch: Partial<CommunityComment>) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     try {
-      const response = await backendClient.from('lesson_comments').update(patch).eq('id', comment.id);
-      if (response.error) throw response.error;
+      if (!user?.id) throw new Error('Commentaire introuvable.');
+      await moderateFormateurCommunityComment(user.id, comment.id, patch);
+      if (!isMountedRef.current) return;
       success('Commentaire mis à jour', 'La modération du commentaire a été enregistrée.');
       await loadPage();
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.error(err);
       error('Erreur', 'Impossible de modifier ce commentaire.');
     }
   };
 
   const sendReply = async (comment: CommunityComment) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     const content = (replyDrafts[comment.id] || '').trim();
     if (!content) {
       error('Réponse vide', 'Saisissez une réponse avant l’envoi.');
       return;
     }
     try {
-      const response = await backendClient.from('lesson_comments').insert({
-        course_id: comment.course_id,
-        lesson_id: comment.lesson_id,
-        section_id: undefined,
-        parent_id: comment.id,
-        content,
-      });
-      if (response.error) throw response.error;
+      if (!user?.id) throw new Error('Commentaire introuvable.');
+      await replyToFormateurCommunityComment(user.id, comment.id, content);
+      if (!isMountedRef.current) return;
       setReplyDrafts((current) => ({ ...current, [comment.id]: '' }));
       success('Réponse envoyée', 'Votre réponse a été ajoutée à la discussion.');
       await loadPage();
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.error(err);
       error('Erreur', 'Impossible d’envoyer la réponse.');
     }
   };
 
   const createFaq = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!faqForm.course_id || !faqForm.question.trim() || !faqForm.answer.trim()) {
       error('Champs requis', 'Renseignez le cours, la question et la réponse.');
       return;
     }
     try {
-      const response = await backendClient.from('course_faq_items').insert({
+      if (!user?.id) throw new Error('FAQ inaccessible.');
+      await createFormateurFaq(user.id, {
         course_id: faqForm.course_id,
         question: faqForm.question,
         answer: faqForm.answer,
         status: faqForm.status,
       });
-      if (response.error) throw response.error;
+      if (!isMountedRef.current) return;
       success('FAQ ajoutée', 'La nouvelle entrée FAQ a été enregistrée.');
       setFaqForm((current) => ({ ...current, question: '', answer: '' }));
       await loadPage();
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.error(err);
       error('Erreur', 'Impossible d’ajouter cette FAQ.');
     }
   };
 
   const updateFaqStatus = async (faq: CommunityFaq, status: CommunityFaq['status']) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     try {
-      const response = await backendClient.from('course_faq_items').update({ status }).eq('id', faq.id);
-      if (response.error) throw response.error;
+      if (!user?.id) throw new Error('FAQ inaccessible.');
+      await updateFormateurFaqStatus(user.id, faq.id, status);
+      if (!isMountedRef.current) return;
       success('FAQ mise à jour', 'Le statut de la FAQ a été enregistré.');
       await loadPage();
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.error(err);
       error('Erreur', 'Impossible de mettre à jour cette FAQ.');
     }
@@ -174,6 +220,7 @@ export default function FormateurCommunityPage() {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Formateur', path: '/dashboard/formateur' }, { label: 'Communauté' }]} />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Commentaires, réponses et FAQ</h1>
@@ -208,10 +255,10 @@ export default function FormateurCommunityPage() {
                     <div className="mt-2 text-sm text-gray-500">{comment.lesson_title || 'Leçon'} • {new Date(comment.created_at).toLocaleString('fr-FR')}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={() => void moderateComment(comment, { pinned: !comment.pinned })} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                    <button onClick={() => void moderateComment(comment, { pinned: !comment.pinned })} disabled={!subscriptionGate.allowed} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60">
                       {comment.pinned ? 'Désépingler' : 'Épingler'}
                     </button>
-                    <button onClick={() => void moderateComment(comment, { status: comment.status === 'visible' ? 'hidden' : 'visible' })} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                    <button onClick={() => void moderateComment(comment, { status: comment.status === 'visible' ? 'hidden' : 'visible' })} disabled={!subscriptionGate.allowed} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60">
                       {comment.status === 'visible' ? 'Masquer' : 'Rendre visible'}
                     </button>
                   </div>
@@ -239,7 +286,7 @@ export default function FormateurCommunityPage() {
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
                   />
                   <div className="flex justify-end">
-                    <button onClick={() => void sendReply(comment)} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                    <button onClick={() => void sendReply(comment)} disabled={!subscriptionGate.allowed} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
                       Répondre
                     </button>
                   </div>
@@ -261,6 +308,7 @@ export default function FormateurCommunityPage() {
                     <select
                       value={faq.status}
                       onChange={(event) => void updateFaqStatus(faq, event.target.value as CommunityFaq['status'])}
+                      disabled={!subscriptionGate.allowed}
                       className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
                     >
                       <option value="draft">Brouillon</option>
@@ -287,7 +335,7 @@ export default function FormateurCommunityPage() {
                   <option value="published">Publier immédiatement</option>
                   <option value="draft">Garder en brouillon</option>
                 </select>
-                <button onClick={() => void createFaq()} className="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                <button onClick={() => void createFaq()} disabled={!subscriptionGate.allowed} className="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
                   Ajouter la FAQ
                 </button>
               </div>

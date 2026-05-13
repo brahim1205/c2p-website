@@ -16,6 +16,7 @@ export interface AuthContext {
 export interface AuthenticatedRequest extends Request {
   auth?: AuthContext;
   requestId?: string;
+  rawBody?: Buffer;
 }
 
 export interface ResponseWithLocals extends Response {

@@ -107,7 +107,7 @@ export default function AdminAccreditationsPage() {
           <div className="border-b border-gray-200">
             <div className="flex space-x-8 px-6 overflow-x-auto">
               {(['pending', 'approved', 'rejected'] as const).map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab ? 'border-[#14B8A6] text-[#14B8A6]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab ? 'border-[#5fa6f3] text-[#5fa6f3]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                   {tab === 'pending' && `En attente (${accreditations.filter((item) => item.status === 'pending').length})`}
                   {tab === 'approved' && `Approuvees (${accreditations.filter((item) => item.status === 'approved').length})`}
                   {tab === 'rejected' && `Rejetees (${accreditations.filter((item) => item.status === 'rejected').length})`}
@@ -139,7 +139,7 @@ export default function AdminAccreditationsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <button onClick={() => { setSelectedAccreditation(item); setShowDocsModal(true); }} className="px-4 py-2 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0D9488] transition-colors text-sm font-medium whitespace-nowrap">Voir les documents</button>
+                      <button onClick={() => { setSelectedAccreditation(item); setShowDocsModal(true); }} className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg hover:bg-[#27346b] transition-colors text-sm font-medium whitespace-nowrap">Voir les documents</button>
                       {item.status === 'pending' && (
                         <>
                           <button onClick={() => void handleApprove(item)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap">Approuver</button>
@@ -165,7 +165,7 @@ export default function AdminAccreditationsPage() {
                 {selectedAccreditation.documents.map((doc) => (
                   <div key={doc} className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
                     <span className="text-sm text-gray-700">{doc}</span>
-                    <button onClick={() => handlePreviewDocument(selectedAccreditation, doc)} className="text-sm text-[#14B8A6] font-medium">Consulter</button>
+                    <button onClick={() => handlePreviewDocument(selectedAccreditation, doc)} className="text-sm text-[#5fa6f3] font-medium">Consulter</button>
                   </div>
                 ))}
               </div>
@@ -180,7 +180,7 @@ export default function AdminAccreditationsPage() {
                 <h3 className="text-lg font-bold text-gray-900">Motif du rejet</h3>
                 <button onClick={() => { setShowRejectReasonModal(false); setPendingReject(null); setRejectReason(''); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"><i className="ri-close-line text-gray-500 text-xl"></i></button>
               </div>
-              <textarea rows={4} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Precisez le motif du rejet..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#14B8A6]"></textarea>
+              <textarea rows={4} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Precisez le motif du rejet..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]"></textarea>
               <div className="flex gap-3 mt-6">
                 <button onClick={() => { setShowRejectReasonModal(false); setPendingReject(null); setRejectReason(''); }} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Annuler</button>
                 <button onClick={() => void handleReject()} disabled={!rejectReason.trim()} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${rejectReason.trim() ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>Confirmer</button>

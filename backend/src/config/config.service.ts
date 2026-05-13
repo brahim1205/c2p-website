@@ -106,6 +106,14 @@ export class ConfigService {
     return (this.configService.get('COOKIE_SAMESITE') ?? 'lax') as 'strict' | 'lax' | 'none';
   }
 
+  get prismaPlatformSyncEnabled(): boolean {
+    return this.configService.get('PRISMA_PLATFORM_SYNC_ENABLED') !== 'false';
+  }
+
+  get prismaPlatformSyncOnBoot(): boolean {
+    return this.configService.get('PRISMA_PLATFORM_SYNC_ON_BOOT') !== 'false';
+  }
+
   get trustProxy(): boolean {
     return this.configService.get('TRUST_PROXY') === 'true';
   }
@@ -126,8 +134,20 @@ export class ConfigService {
     return Number(this.configService.get('LOGIN_RATE_LIMIT_MAX') ?? '30');
   }
 
+  get authRateLimitMax(): number {
+    return Number(this.configService.get('AUTH_RATE_LIMIT_MAX') ?? '45');
+  }
+
   get globalRateLimitMax(): number {
     return Number(this.configService.get('GLOBAL_RATE_LIMIT_MAX') ?? '180');
+  }
+
+  get financeRateLimitMax(): number {
+    return Number(this.configService.get('FINANCE_RATE_LIMIT_MAX') ?? '90');
+  }
+
+  get providerWebhookRateLimitMax(): number {
+    return Number(this.configService.get('PROVIDER_WEBHOOK_RATE_LIMIT_MAX') ?? '120');
   }
 
   get csrfCookieName(): string {
@@ -148,6 +168,10 @@ export class ConfigService {
 
   get metricsEnabled(): boolean {
     return this.configService.get('ENABLE_METRICS') !== 'false';
+  }
+
+  get metricsAuthToken(): string {
+    return String(this.configService.get('METRICS_AUTH_TOKEN') ?? '');
   }
 
   get smsProvider(): 'disabled' | 'mock' | 'sendtext' {
@@ -285,6 +309,15 @@ export class ConfigService {
 
   get dexPayTimeoutMs(): number {
     return Number(this.configService.get('DEXPAY_TIMEOUT_MS') ?? '12000');
+  }
+
+  get dexPayWebhookSecret(): string | undefined {
+    const value = this.configService.get('DEXPAY_WEBHOOK_SECRET');
+    return value ? String(value) : undefined;
+  }
+
+  get dexPayWebhookSignatureHeader(): string {
+    return String(this.configService.get('DEXPAY_WEBHOOK_SIGNATURE_HEADER') ?? 'x-dexpay-signature').toLowerCase();
   }
 
   get dexPayDefaultAsset(): string {

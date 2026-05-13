@@ -2,15 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
-import { backendClient } from '@/lib/backendClient';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { fetchOwnerProjects, type ProjectRecord } from '@/lib/projectApi';
+import { fetchOwnerProjects, type ProjectRecord, updateOwnerProject } from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
 
 export default function PorteurMesProjetsPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('tous');
@@ -18,6 +20,7 @@ export default function PorteurMesProjetsPage() {
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ title: '', description: '', status: 'pre-incubation' });
+  const subscriptionGate = gateFor('project_manage');
 
   const loadProjects = useCallback(async () => {
     if (!user?.id) {
@@ -50,6 +53,10 @@ export default function PorteurMesProjetsPage() {
   }, [projects, search, statusFilter]);
 
   const openEdit = (project: ProjectRecord) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setSelectedProject(project);
     setEditForm({
       title: project.title,
@@ -60,18 +67,13 @@ export default function PorteurMesProjetsPage() {
   };
 
   const handleSave = async () => {
-    if (!selectedProject) return;
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
+    if (!selectedProject || !user?.id) return;
     try {
-      const { error: apiError } = await backendClient
-        .from('projects')
-        .update({
-          title: editForm.title,
-          description: editForm.description,
-          status: editForm.status,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', selectedProject.id);
-      if (apiError) throw new Error(apiError.message);
+      await updateOwnerProject(user.id, selectedProject.id, editForm);
       success('Projet mis a jour', 'Les modifications ont ete enregistrees.');
       setShowEditModal(false);
       setSelectedProject(null);
@@ -109,6 +111,7 @@ export default function PorteurMesProjetsPage() {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Porteur', path: '/dashboard/porteur' }, { label: 'Mes projets' }]} />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes projets</h1>
@@ -129,7 +132,7 @@ export default function PorteurMesProjetsPage() {
               placeholder="Rechercher un projet..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20"
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
             />
             <div className="flex gap-2 flex-wrap">
               {['tous', 'pre-incubation', 'incubation', 'acceleration', 'termine'].map((status) => (
@@ -177,7 +180,7 @@ export default function PorteurMesProjetsPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <button onClick={() => openEdit(project)} className="flex-1 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">
+                  <button onClick={() => openEdit(project)} disabled={!subscriptionGate.allowed} className="flex-1 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60">
                     Modifier
                   </button>
                   <Link to={`/dashboard/porteur/mes-projets/${project.id}`} className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 text-center">
@@ -201,8 +204,9 @@ export default function PorteurMesProjetsPage() {
 
               <div className="grid gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
+                  <label htmlFor="porteur-project-title" className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
                   <input
+                    id="porteur-project-title"
                     type="text"
                     value={editForm.title}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
@@ -210,8 +214,9 @@ export default function PorteurMesProjetsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label htmlFor="porteur-project-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
+                    id="porteur-project-description"
                     rows={4}
                     value={editForm.description}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
@@ -219,8 +224,9 @@ export default function PorteurMesProjetsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                  <label htmlFor="porteur-project-status" className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
                   <select
+                    id="porteur-project-status"
                     value={editForm.status}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
                     className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
@@ -237,7 +243,7 @@ export default function PorteurMesProjetsPage() {
                 <button onClick={() => setShowEditModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
                   Annuler
                 </button>
-                <button onClick={handleSave} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                <button onClick={handleSave} disabled={!subscriptionGate.allowed} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60">
                   Enregistrer
                 </button>
               </div>

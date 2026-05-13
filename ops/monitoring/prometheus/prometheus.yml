@@ -14,6 +14,9 @@ alerting:
 scrape_configs:
   - job_name: c2p-backend
     metrics_path: /api/metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/metrics-token
     static_configs:
       - targets:
           - backend:3000

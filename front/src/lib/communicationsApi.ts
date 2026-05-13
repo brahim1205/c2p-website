@@ -12,6 +12,13 @@ export interface PublicContactSubmission {
   handledAt: string | null;
 }
 
+export type CampaignAudience =
+  | 'all_users'
+  | 'all_apprenants'
+  | 'active_clients'
+  | 'project_holders'
+  | 'verified_providers';
+
 export async function fetchSmsGatewayStatus() {
   return apiRequest<{
     provider: 'disabled' | 'mock' | 'sendtext';
@@ -34,7 +41,7 @@ export async function fetchEmailGatewayStatus() {
 export async function dispatchSmsCampaign(payload: {
   title: string;
   type: 'email' | 'sms' | 'push' | 'all';
-  target: string;
+  target: CampaignAudience;
   content: string;
 }) {
   return apiRequest<{
@@ -52,8 +59,8 @@ export async function dispatchSmsCampaign(payload: {
   });
 }
 
-export async function fetchPublicContactSubmissions() {
-  return apiRequest<PublicContactSubmission[]>('/public/contact-submissions');
+export async function fetchPublicContactSubmissions(limit = 100) {
+  return apiRequest<PublicContactSubmission[]>(`/public/contact-submissions?limit=${encodeURIComponent(String(limit))}`);
 }
 
 export async function markPublicContactSubmissionHandled(id: string) {

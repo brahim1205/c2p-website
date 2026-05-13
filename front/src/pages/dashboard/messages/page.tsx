@@ -6,16 +6,20 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { fetchDirectoryUsers } from '@/lib/accountApi';
 import { downloadTextFile } from '@/lib/downloads';
+import { canMessageDirectoryUser, getMessagingAudienceHint } from '@/lib/messagingPolicy';
 import { useSearchParams } from 'react-router-dom';
 
 interface ContactOption {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
   role: string;
   avatar?: string;
+  publicTitle?: string;
+  expertVerified?: boolean;
 }
+
+const SUPPORT_ONLY_ROLES = new Set(['client', 'prestataire', 'porteur', 'partenaire', 'parent']);
 
 export default function MessagesPage() {
   const [searchParams] = useSearchParams();
@@ -58,27 +62,48 @@ export default function MessagesPage() {
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const supportBootstrapDoneRef = useRef(false);
   const conversationBootstrapDoneRef = useRef(false);
+  const participantBootstrapDoneRef = useRef(false);
+  const isMountedRef = useRef(true);
   const [callDuration, setCallDuration] = useState(0);
 
   const currentConversation = conversations.find(c => c.id === activeConversationId);
   const currentMessages = activeConversationId ? getConversationMessages(activeConversationId) : [];
+  const allowedContacts = user
+    ? contacts.filter((contact) => canMessageDirectoryUser(user.role, contact))
+    : [];
 
   useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
     void (async () => {
       try {
         const users = await fetchDirectoryUsers();
+        if (cancelled || !isMountedRef.current) return;
         setContacts(users.filter((entry) => entry.id !== user?.id).map((entry) => ({
           id: entry.id,
           firstName: entry.firstName,
           lastName: entry.lastName,
-          email: entry.email,
           role: entry.role,
           avatar: entry.avatar,
+          publicTitle: entry.publicTitle,
+          expertVerified: entry.expertVerified,
         })));
       } catch (err) {
+        if (cancelled || !isMountedRef.current) return;
         console.error(err);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   // Auto-scroll to bottom when messages change
@@ -103,11 +128,23 @@ export default function MessagesPage() {
   }, [conversations, activeConversationId, setActiveConversationId]);
 
   useEffect(() => {
-    if (supportBootstrapDoneRef.current || searchParams.get('support') !== '1' || !user) {
+    if (messagesLoading || !activeConversationId) {
       return;
     }
 
-    supportBootstrapDoneRef.current = true;
+    const stillVisible = conversations.some((conversation) => conversation.id === activeConversationId);
+    if (!stillVisible) {
+      setActiveConversationId(null);
+    }
+  }, [activeConversationId, conversations, messagesLoading, setActiveConversationId]);
+
+  useEffect(() => {
+    const supportRequested = searchParams.get('support') === '1';
+    const shouldAutoOpenSupport = Boolean(user && SUPPORT_ONLY_ROLES.has(user.role));
+
+    if ((!supportRequested && !shouldAutoOpenSupport) || !user || messagesLoading) {
+      return;
+    }
 
     const supportConversation = conversations.find((conversation) =>
       conversation.type === 'individual'
@@ -116,10 +153,22 @@ export default function MessagesPage() {
     );
 
     if (supportConversation) {
-      setActiveConversationId(supportConversation.id);
-      success('Support ouvert', 'La conversation avec l administration est prete.');
+      const shouldNotify = !supportBootstrapDoneRef.current || activeConversationId !== supportConversation.id;
+      supportBootstrapDoneRef.current = true;
+      if (activeConversationId !== supportConversation.id) {
+        setActiveConversationId(supportConversation.id);
+      }
+      if (shouldNotify) {
+        success('Support ouvert', 'La conversation avec l equipe C2P est prete.');
+      }
       return;
     }
+
+    if (supportBootstrapDoneRef.current || conversations.length > 0) {
+      return;
+    }
+
+    supportBootstrapDoneRef.current = true;
 
     void (async () => {
       const created = await createConversation({
@@ -132,12 +181,13 @@ export default function MessagesPage() {
 
       if (created) {
         setActiveConversationId(created.id);
-        success('Support ouvert', 'La conversation avec l administration a ete creee.');
+        success('Support ouvert', 'La conversation avec l equipe C2P a ete creee.');
       } else {
+        supportBootstrapDoneRef.current = false;
         error('Support indisponible', 'Impossible d ouvrir la conversation support.');
       }
     })();
-  }, [conversations, createConversation, error, searchParams, setActiveConversationId, success, user]);
+  }, [activeConversationId, conversations, createConversation, error, messagesLoading, searchParams, setActiveConversationId, success, user]);
 
   useEffect(() => {
     const targetConversationId = searchParams.get('conversation');
@@ -153,6 +203,72 @@ export default function MessagesPage() {
     conversationBootstrapDoneRef.current = true;
     setActiveConversationId(matchingConversation.id);
   }, [conversations, searchParams, setActiveConversationId]);
+
+  useEffect(() => {
+    const targetParticipantId = searchParams.get('student');
+    const targetParticipantName = searchParams.get('name');
+
+    if (!targetParticipantId || !user || messagesLoading) {
+      return;
+    }
+
+    if (contacts.length > 0) {
+      const targetContact = contacts.find((contact) => contact.id === targetParticipantId);
+      if (!targetContact) {
+        participantBootstrapDoneRef.current = true;
+        error('Conversation indisponible', 'Le destinataire est introuvable.');
+        return;
+      }
+      if (!canMessageDirectoryUser(user.role, targetContact)) {
+        participantBootstrapDoneRef.current = true;
+        error('Conversation indisponible', 'Ce role ne peut pas etre contacte directement.');
+        return;
+      }
+    }
+
+    const existingConversation = conversations.find((conversation) =>
+      conversation.type === 'individual'
+      && conversation.participants.includes(user.id)
+      && conversation.participants.includes(targetParticipantId)
+      && conversation.participants.length === 2,
+    );
+
+    if (existingConversation) {
+      const shouldNotify = !participantBootstrapDoneRef.current || activeConversationId !== existingConversation.id;
+      participantBootstrapDoneRef.current = true;
+      if (activeConversationId !== existingConversation.id) {
+        setActiveConversationId(existingConversation.id);
+      }
+      if (shouldNotify) {
+        success('Conversation ouverte', `Conversation avec ${existingConversation.name} prete.`);
+      }
+      return;
+    }
+
+    if (participantBootstrapDoneRef.current) {
+      return;
+    }
+
+    participantBootstrapDoneRef.current = true;
+
+    void (async () => {
+      const created = await createConversation({
+        name: targetParticipantName || 'Contact C2P',
+        role: 'Contact',
+        participants: [user.id, targetParticipantId],
+        type: 'individual',
+        members: 2,
+      });
+
+      if (created) {
+        setActiveConversationId(created.id);
+        success('Conversation creee', `Conversation avec ${created.name} prete.`);
+      } else {
+        participantBootstrapDoneRef.current = false;
+        error('Conversation indisponible', 'Impossible d ouvrir cette conversation.');
+      }
+    })();
+  }, [activeConversationId, conversations, createConversation, error, messagesLoading, searchParams, setActiveConversationId, success, user]);
 
   // Close menus on outside click
   useEffect(() => {
@@ -198,6 +314,9 @@ export default function MessagesPage() {
     const haystack = `${message.senderName} ${message.content}`.toLowerCase();
     return haystack.includes(messageSearchQuery.toLowerCase());
   });
+  const filteredComposeContacts = allowedContacts.filter((contact) =>
+    `${contact.firstName} ${contact.lastName} ${contact.publicTitle ?? ''} ${contact.role}`.toLowerCase().includes(composeQuery.toLowerCase()),
+  );
 
   const sharedAttachments = currentMessages.flatMap((message) =>
     (message.attachments || []).map((attachment) => ({ ...attachment, messageId: message.id, senderName: message.senderName })),
@@ -275,6 +394,10 @@ export default function MessagesPage() {
 
   const handleCreateConversation = async (contact: ContactOption) => {
     if (!user) return;
+    if (!canMessageDirectoryUser(user.role, contact)) {
+      error('Conversation indisponible', 'Ce destinataire doit passer par C2P.');
+      return;
+    }
 
     const existingConversation = conversations.find((conversation) =>
       conversation.type === 'individual'
@@ -384,19 +507,21 @@ export default function MessagesPage() {
             <p className="text-white text-xl font-mono">{formatCallDuration(callDuration)}</p>
           </div>
           <div className="flex items-center gap-6 mt-12">
-            <button className="w-14 h-14 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-white transition-colors">
+            <button type="button" aria-label="Couper le microphone" className="w-14 h-14 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-white transition-colors">
               <i className="ri-mic-line text-xl"></i>
             </button>
             {callType === 'video' && (
-              <button className="w-14 h-14 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-white transition-colors">
+              <button type="button" aria-label="Couper la caméra" className="w-14 h-14 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-white transition-colors">
                 <i className="ri-camera-off-line text-xl"></i>
               </button>
             )}
-            <button className="w-14 h-14 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-white transition-colors">
+            <button type="button" aria-label="Activer le haut-parleur" className="w-14 h-14 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-white transition-colors">
               <i className="ri-volume-up-line text-xl"></i>
             </button>
             <button
+              type="button"
               onClick={handleEndCall}
+              aria-label="Terminer l'appel"
               className="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-colors"
             >
               <i className="ri-phone-line text-2xl"></i>
@@ -405,9 +530,9 @@ export default function MessagesPage() {
         </div>
       )}
 
-      <div className="flex gap-6 h-[calc(100vh-8rem)] overflow-hidden">
+      <div className="flex flex-col gap-4 lg:h-[calc(100vh-8rem)] lg:flex-row lg:gap-6 lg:overflow-hidden">
         {/* Conversations List */}
-        <div className="w-96 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col flex-shrink-0">
+        <div className="w-full max-h-[28rem] rounded-xl border border-gray-200 bg-white shadow-sm lg:flex lg:max-h-none lg:w-96 lg:flex-col lg:flex-shrink-0">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -417,8 +542,11 @@ export default function MessagesPage() {
                 )}
               </div>
               <button
+                type="button"
                 onClick={() => setShowComposeModal(true)}
-                className="w-10 h-10 bg-[#14B8A6] text-white rounded-lg flex items-center justify-center hover:bg-[#0D9488] transition-colors"
+                aria-label="Ouvrir une nouvelle conversation"
+                title="Nouvelle conversation"
+                className="w-10 h-10 bg-[#5fa6f3] text-white rounded-lg flex items-center justify-center hover:bg-[#27346b] transition-colors"
               >
                 <i className="ri-add-line text-xl"></i>
               </button>
@@ -431,8 +559,9 @@ export default function MessagesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Rechercher une conversation"
                 placeholder="Rechercher une conversation..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
               />
             </div>
           </div>
@@ -454,22 +583,25 @@ export default function MessagesPage() {
               filteredConversations.map((conv) => (
                 <button
                   key={conv.id}
+                  type="button"
                   onClick={() => setActiveConversationId(conv.id)}
-                  className={`w-full p-4 flex items-start gap-3 hover:bg-gray-50 transition-colors border-b border-gray-100 text-left ${activeConversationId === conv.id ? 'bg-[#14B8A6]/10' : ''}`}
+                  aria-pressed={activeConversationId === conv.id}
+                  aria-label={`Ouvrir la conversation avec ${conv.name}`}
+                  className={`w-full p-4 flex items-start gap-3 hover:bg-gray-50 transition-colors border-b border-gray-100 text-left ${activeConversationId === conv.id ? 'bg-[#5fa6f3]/10' : ''}`}
                 >
                   <div className="relative flex-shrink-0">
                     {conv.avatar ? (
                       <img src={conv.avatar} alt={conv.name} className="w-12 h-12 rounded-full object-cover" />
                     ) : (
-                      <div className="w-12 h-12 bg-[#14B8A6]/20 rounded-full flex items-center justify-center">
-                        <span className="text-[#14B8A6] font-bold text-sm">{conv.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
+                      <div className="w-12 h-12 bg-[#5fa6f3]/20 rounded-full flex items-center justify-center">
+                        <span className="text-[#5fa6f3] font-bold text-sm">{conv.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
                       </div>
                     )}
                     {conv.online && (
                       <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                     )}
                     {conv.type === 'group' && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#14B8A6] text-white rounded-full flex items-center justify-center text-xs">
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#5fa6f3] text-white rounded-full flex items-center justify-center text-xs">
                         <i className="ri-group-line text-[10px]"></i>
                       </div>
                     )}
@@ -482,7 +614,7 @@ export default function MessagesPage() {
                       </h3>
                       <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{formatTimestamp(conv.lastMessageAt)}</span>
                     </div>
-                    <p className="text-xs text-[#14B8A6] mb-1">{conv.role}</p>
+                    <p className="text-xs text-[#5fa6f3] mb-1">{conv.role}</p>
                     <p className="text-sm text-gray-600 truncate">{conv.lastMessage}</p>
                   </div>
                   {conv.unreadCount > 0 && (
@@ -496,15 +628,15 @@ export default function MessagesPage() {
 
         {/* Chat Area */}
         {activeConversationId && currentConversation ? (
-          <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-w-0">
+          <div className="min-h-[28rem] min-w-0 flex-1 rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="p-4 lg:p-6 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   {currentConversation.avatar ? (
                     <img src={currentConversation.avatar} alt={currentConversation.name} className="w-12 h-12 rounded-full object-cover" />
                   ) : (
-                    <div className="w-12 h-12 bg-[#14B8A6]/20 rounded-full flex items-center justify-center">
-                      <span className="text-[#14B8A6] font-bold">{currentConversation.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
+                    <div className="w-12 h-12 bg-[#5fa6f3]/20 rounded-full flex items-center justify-center">
+                      <span className="text-[#5fa6f3] font-bold">{currentConversation.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</span>
                     </div>
                   )}
                   {currentConversation.online && (
@@ -516,12 +648,14 @@ export default function MessagesPage() {
                     {currentConversation.name}
                     {currentConversation.type === 'group' && <span className="text-sm text-gray-500 ml-2">({currentConversation.members} membres)</span>}
                   </h3>
-                  <p className="text-sm text-[#14B8A6]">{currentConversation.online ? 'En ligne' : currentConversation.role}</p>
+                  <p className="text-sm text-[#5fa6f3]">{currentConversation.online ? 'En ligne' : currentConversation.role}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => handleCall('audio')}
+                  aria-label={`Lancer un appel audio avec ${currentConversation.name}`}
                   className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                   title="Appel audio"
                 >
@@ -530,7 +664,9 @@ export default function MessagesPage() {
                   </div>
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleCall('video')}
+                  aria-label={`Lancer un appel vidéo avec ${currentConversation.name}`}
                   className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                   title="Appel vidéo"
                 >
@@ -540,7 +676,9 @@ export default function MessagesPage() {
                 </button>
                 <div className="relative" ref={moreMenuRef}>
                   <button
+                    type="button"
                     onClick={() => setShowMoreMenu(!showMoreMenu)}
+                    aria-label="Ouvrir les options de conversation"
                     className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showMoreMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
                     title="Plus d'options"
                   >
@@ -628,7 +766,7 @@ export default function MessagesPage() {
                     <p className="text-sm font-semibold text-gray-900">
                       {panelMode === 'info' ? 'Infos de la conversation' : panelMode === 'media' ? 'Medias et fichiers' : 'Recherche dans la conversation'}
                     </p>
-                    <button onClick={() => setPanelMode('none')} className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-white hover:text-gray-700">Fermer</button>
+                    <button type="button" onClick={() => setPanelMode('none')} className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-white hover:text-gray-700">Fermer</button>
                   </div>
                   {panelMode === 'info' && (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -647,7 +785,7 @@ export default function MessagesPage() {
                               <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
                               <p className="text-xs text-gray-500">{attachment.type} · {attachment.size} · {attachment.senderName}</p>
                             </div>
-                            <button onClick={() => handleDownloadAttachment(attachment.name, attachment.size, attachment.type)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Telecharger</button>
+                            <button type="button" aria-label={`Télécharger ${attachment.name}`} onClick={() => handleDownloadAttachment(attachment.name, attachment.size, attachment.type)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50">Telecharger</button>
                           </div>
                         ))}
                       </div>
@@ -661,8 +799,9 @@ export default function MessagesPage() {
                         type="text"
                         value={messageSearchQuery}
                         onChange={(e) => setMessageSearchQuery(e.target.value)}
+                        aria-label="Rechercher dans la conversation"
                         placeholder="Rechercher un mot, un auteur ou une phrase..."
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#14B8A6] focus:outline-none"
+                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#5fa6f3] focus:outline-none"
                       />
                       <p className="text-xs text-gray-500">{visibleMessages.length} message(s) correspondant(s).</p>
                     </div>
@@ -683,29 +822,29 @@ export default function MessagesPage() {
                       {!isMe && message.senderName && (
                         <p className="text-xs text-gray-500 mb-1 ml-1">{message.senderName}</p>
                       )}
-                      <div className={`rounded-2xl px-4 py-3 ${isMe ? 'bg-[#14B8A6] text-white' : 'bg-gray-100 text-gray-900'}`}>
+                      <div className={`rounded-2xl px-4 py-3 ${isMe ? 'bg-[#5fa6f3] text-white' : 'bg-gray-100 text-gray-900'}`}>
                         {message.content && (
                           <p className="text-sm leading-relaxed">{message.content}</p>
                         )}
                         {message.attachments && message.attachments.length > 0 && (
                           <div className="mt-2 space-y-2">
                             {message.attachments.map((attachment, index) => (
-                              <div key={index} className={`flex items-center gap-3 p-3 rounded-lg ${isMe ? 'bg-[#0D9488]' : 'bg-white'}`}>
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isMe ? 'bg-[#0F766E]' : 'bg-[#14B8A6]/20'}`}>
+                              <div key={index} className={`flex items-center gap-3 p-3 rounded-lg ${isMe ? 'bg-[#27346b]' : 'bg-white'}`}>
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isMe ? 'bg-[#0F766E]' : 'bg-[#5fa6f3]/20'}`}>
                                   <div className="w-5 h-5 flex items-center justify-center">
                                     <i className={`${
                                       attachment.type === 'pdf' ? 'ri-file-pdf-line' :
                                       attachment.type === 'docx' ? 'ri-file-word-line' :
                                       attachment.type === 'figma' ? 'ri-pen-nib-line' :
                                       'ri-file-line'
-                                    } text-lg ${isMe ? 'text-white' : 'text-[#14B8A6]'}`}></i>
+                                    } text-lg ${isMe ? 'text-white' : 'text-[#5fa6f3]'}`}></i>
                                   </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">{attachment.name}</p>
                                   <p className={`text-xs ${isMe ? 'text-white/70' : 'text-gray-500'}`}>{attachment.size}</p>
                                 </div>
-                                <button onClick={() => handleDownloadAttachment(attachment.name, attachment.size, attachment.type)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors flex-shrink-0">
+                                <button type="button" aria-label={`Télécharger ${attachment.name}`} onClick={() => handleDownloadAttachment(attachment.name, attachment.size, attachment.type)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors flex-shrink-0">
                                   <div className="w-4 h-4 flex items-center justify-center">
                                     <i className={`ri-download-line ${isMe ? 'text-white' : 'text-gray-600'} text-sm`}></i>
                                   </div>
@@ -719,7 +858,7 @@ export default function MessagesPage() {
                         <span>{formatTimestamp(message.timestamp)}</span>
                         {isMe && (
                           <div className="w-4 h-4 flex items-center justify-center">
-                            <i className={`${message.read ? 'ri-check-double-line text-[#14B8A6]' : 'ri-check-line'}`}></i>
+                            <i className={`${message.read ? 'ri-check-double-line text-[#5fa6f3]' : 'ri-check-line'}`}></i>
                           </div>
                         )}
                       </div>
@@ -734,7 +873,9 @@ export default function MessagesPage() {
               <div className="flex items-end gap-2">
                 <div className="relative" ref={attachmentMenuRef}>
                   <button
+                    type="button"
                     onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                    aria-label="Ajouter une pièce jointe"
                     className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <div className="w-5 h-5 flex items-center justify-center">
@@ -744,13 +885,13 @@ export default function MessagesPage() {
                   {showAttachmentMenu && (
                     <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-48 z-10">
                       <button onClick={() => handleFileAttach('pdf')} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                        <i className="ri-file-line text-[#14B8A6]"></i><span>Document</span>
+                        <i className="ri-file-line text-[#5fa6f3]"></i><span>Document</span>
                       </button>
                       <button onClick={() => handleFileAttach('image')} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                        <i className="ri-image-line text-[#14B8A6]"></i><span>Image</span>
+                        <i className="ri-image-line text-[#5fa6f3]"></i><span>Image</span>
                       </button>
                       <button onClick={() => handleFileAttach('video')} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                        <i className="ri-video-line text-[#14B8A6]"></i><span>Vidéo</span>
+                        <i className="ri-video-line text-[#5fa6f3]"></i><span>Vidéo</span>
                       </button>
                     </div>
                   )}
@@ -761,19 +902,22 @@ export default function MessagesPage() {
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     onKeyPress={handleKeyPress}
+                    aria-label="Écrire un message"
                     placeholder="Écrivez votre message..."
                     rows={1}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] resize-none text-sm"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] resize-none text-sm"
                     style={{ minHeight: '44px', maxHeight: '120px' }}
                   />
                 </div>
                 <div className="relative" ref={emojiPickerRef}>
                   <button
+                    type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showEmojiPicker ? 'bg-[#14B8A6]/20 text-[#14B8A6]' : 'hover:bg-gray-100'}`}
+                    aria-label="Ouvrir le sélecteur d'emoji"
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${showEmojiPicker ? 'bg-[#5fa6f3]/20 text-[#5fa6f3]' : 'hover:bg-gray-100'}`}
                   >
                     <div className="w-5 h-5 flex items-center justify-center">
-                      <i className={`ri-emotion-line text-lg ${showEmojiPicker ? 'text-[#14B8A6]' : 'text-gray-600'}`}></i>
+                      <i className={`ri-emotion-line text-lg ${showEmojiPicker ? 'text-[#5fa6f3]' : 'text-gray-600'}`}></i>
                     </div>
                   </button>
                   {showEmojiPicker && (
@@ -786,7 +930,7 @@ export default function MessagesPage() {
                               onClick={() => setActiveEmojiCategory(idx)}
                               className={`px-3 py-2 text-xs font-medium whitespace-nowrap rounded-t-lg transition-colors ${
                                 activeEmojiCategory === idx
-                                  ? 'text-[#14B8A6] border-b-2 border-[#14B8A6]'
+                                  ? 'text-[#5fa6f3] border-b-2 border-[#5fa6f3]'
                                   : 'text-gray-500 hover:text-gray-700'
                               }`}
                             >
@@ -812,6 +956,7 @@ export default function MessagesPage() {
                       <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                         <span className="text-xs text-gray-400">Cliquez pour insérer</span>
                         <button
+                          type="button"
                           onClick={() => setShowEmojiPicker(false)}
                           className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-200 transition-colors"
                         >
@@ -822,11 +967,13 @@ export default function MessagesPage() {
                   )}
                 </div>
                 <button
+                  type="button"
                   onClick={handleSendMessage}
+                  aria-label="Envoyer le message"
                   disabled={!messageText.trim() || !activeConversationId}
                   className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
                     messageText.trim() && activeConversationId
-                      ? 'bg-[#14B8A6] text-white hover:bg-[#0D9488]'
+                      ? 'bg-[#5fa6f3] text-white hover:bg-[#27346b]'
                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
@@ -847,19 +994,20 @@ export default function MessagesPage() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Sélectionnez une conversation</h3>
               <p className="text-gray-600">Choisissez une conversation pour commencer à échanger</p>
+              {user ? <p className="mt-2 text-sm text-gray-500">{getMessagingAudienceHint(user.role)}</p> : null}
             </div>
           </div>
         )}
       </div>
       {showComposeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+          <div role="dialog" aria-modal="true" aria-labelledby="messages-compose-title" className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Nouvelle conversation</h3>
-                <p className="text-sm text-gray-500">Choisissez un contact puis, si besoin, ajoutez un premier message.</p>
+                <h3 id="messages-compose-title" className="text-lg font-bold text-gray-900">Nouvelle conversation</h3>
+                <p className="text-sm text-gray-500">{user ? getMessagingAudienceHint(user.role) : 'Choisissez un contact puis, si besoin, ajoutez un premier message.'}</p>
               </div>
-              <button onClick={() => { setShowComposeModal(false); setComposeQuery(''); setComposeMessage(''); }} className="h-9 w-9 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+              <button type="button" aria-label="Fermer la fenêtre de nouvelle conversation" onClick={() => { setShowComposeModal(false); setComposeQuery(''); setComposeMessage(''); }} className="h-9 w-9 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                 <i className="ri-close-line text-xl"></i>
               </button>
             </div>
@@ -867,42 +1015,53 @@ export default function MessagesPage() {
               type="text"
               value={composeQuery}
               onChange={(e) => setComposeQuery(e.target.value)}
+              aria-label="Rechercher un utilisateur"
               placeholder="Rechercher un utilisateur..."
-              className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#14B8A6] focus:outline-none"
+              className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#5fa6f3] focus:outline-none"
             />
             <textarea
               value={composeMessage}
               onChange={(e) => setComposeMessage(e.target.value)}
+              aria-label="Message d'introduction"
               placeholder="Message d'introduction facultatif..."
               rows={3}
-              className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#14B8A6] focus:outline-none"
+              className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none"
             />
             <div className="max-h-80 space-y-2 overflow-y-auto">
-              {contacts
-                .filter((contact) => `${contact.firstName} ${contact.lastName} ${contact.email} ${contact.role}`.toLowerCase().includes(composeQuery.toLowerCase()))
+              {filteredComposeContacts
                 .map((contact) => (
                   <button
                     key={contact.id}
+                    type="button"
                     onClick={() => void handleCreateConversation(contact)}
+                    aria-label={`Créer une conversation avec ${contact.firstName} ${contact.lastName}`}
                     disabled={creatingConversation}
-                    className="flex w-full items-center justify-between rounded-xl border border-gray-200 p-4 text-left transition-colors hover:border-[#14B8A6]/40 hover:bg-[#14B8A6]/5 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex w-full items-center justify-between rounded-xl border border-gray-200 p-4 text-left transition-colors hover:border-[#5fa6f3]/40 hover:bg-[#5fa6f3]/5 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <div className="flex items-center gap-3">
                       {contact.avatar ? (
                         <img src={contact.avatar} alt={contact.firstName} className="h-11 w-11 rounded-full object-cover" />
                       ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#14B8A6]/15 text-sm font-bold text-[#14B8A6]">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#5fa6f3]/15 text-sm font-bold text-[#5fa6f3]">
                           {contact.firstName[0]}{contact.lastName[0]}
                         </div>
                       )}
                       <div>
                         <p className="text-sm font-medium text-gray-900">{contact.firstName} {contact.lastName}</p>
-                        <p className="text-xs text-gray-500">{contact.email}</p>
+                        <p className="text-xs text-gray-500">
+                          {contact.publicTitle || contact.role}
+                          {contact.expertVerified ? ' • Verifie' : ''}
+                        </p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium uppercase tracking-[0.12em] text-[#14B8A6]">{contact.role}</span>
+                    <span className="text-xs font-medium uppercase tracking-[0.12em] text-[#5fa6f3]">{contact.role}</span>
                   </button>
                 ))}
+              {filteredComposeContacts.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-500">
+                  Aucun destinataire direct disponible pour ce role.
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

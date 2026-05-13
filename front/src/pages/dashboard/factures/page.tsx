@@ -1,46 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
-import { backendClient } from '@/lib/backendClient';
 import { downloadCsvFile, downloadHtmlFile, printHtmlDocument } from '@/lib/downloads';
+import { fetchInvoiceCapabilities, fetchInvoices, type FinanceCapabilitySnapshot, type InvoiceRecord } from '@/lib/saasApi';
+import { hasFinanceCapabilityAction } from '@/lib/paymentStatus';
 
 type InvoiceStatus = 'paid' | 'pending' | 'overdue' | 'cancelled';
 type InvoiceType = 'formation' | 'prestation' | 'projet' | 'abonnement';
 
-interface Invoice {
-  id: string;
-  user_id?: string;
-  number: string;
-  type: InvoiceType;
-  description: string;
-  amount: number;
-  currency: string;
-  status: InvoiceStatus;
-  issueDate: string;
-  dueDate: string;
-  paidDate?: string | null;
-  recipient: {
-    name: string;
-    email: string;
-  };
-  items: {
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-  }[];
-}
+type Invoice = InvoiceRecord;
 
 export default function FacturesPage() {
   const { user } = useAuth();
   const { success } = useToast();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filterStatus, setFilterStatus] = useState<InvoiceStatus | 'all'>('all');
   const [filterType, setFilterType] = useState<InvoiceType | 'all'>('all');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoiceCapabilities, setInvoiceCapabilities] = useState<Record<string, FinanceCapabilitySnapshot>>({});
+  const contextFinancialOperationId = searchParams.get('financialOperationId')?.trim() || '';
+  const contextInvoiceNumber = searchParams.get('invoice')?.trim() || '';
+  const contextTransactionId = searchParams.get('transaction')?.trim() || '';
 
   useEffect(() => {
     const loadInvoices = async () => {
@@ -50,15 +36,8 @@ export default function FacturesPage() {
       }
 
       try {
-        const { data, error } = await backendClient
-          .from<Invoice>('invoices')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('issueDate', { ascending: false });
-        if (error) {
-          throw error;
-        }
-        setInvoices((data || []) as Invoice[]);
+        const data = await fetchInvoices();
+        setInvoices(data);
       } catch (error) {
         console.error(error);
         setInvoices([]);
@@ -101,8 +80,58 @@ export default function FacturesPage() {
   const filteredInvoices = invoices.filter(inv => {
     if (filterStatus !== 'all' && inv.status !== filterStatus) return false;
     if (filterType !== 'all' && inv.type !== filterType) return false;
+    if (contextInvoiceNumber && inv.number !== contextInvoiceNumber) return false;
+    if (contextFinancialOperationId && String(inv.financial_operation_id || '') !== contextFinancialOperationId) return false;
     return true;
   });
+
+  useEffect(() => {
+    const candidateIds = Array.from(new Set(
+      [
+        ...filteredInvoices.map((invoice) => String(invoice.id)),
+        selectedInvoice ? String(selectedInvoice.id) : null,
+      ].filter((value): value is string => Boolean(value)),
+    ));
+    const missingIds = candidateIds.filter((id) => !invoiceCapabilities[id]);
+    if (!missingIds.length) {
+      return;
+    }
+
+    let cancelled = false;
+    void Promise.allSettled(
+      missingIds.map(async (id) => [id, await fetchInvoiceCapabilities(id)] as const),
+    ).then((results) => {
+      if (cancelled) {
+        return;
+      }
+
+      const nextEntries: Record<string, FinanceCapabilitySnapshot> = {};
+      for (const result of results) {
+        if (result.status !== 'fulfilled') {
+          continue;
+        }
+        const [id, snapshot] = result.value;
+        nextEntries[id] = snapshot;
+      }
+
+      if (Object.keys(nextEntries).length > 0) {
+        setInvoiceCapabilities((current) => ({ ...current, ...nextEntries }));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredInvoices, invoiceCapabilities, selectedInvoice]);
+
+  const hasInvoiceContext = Boolean(contextFinancialOperationId || contextInvoiceNumber || contextTransactionId);
+
+  const invoiceStats = useMemo(() => ({
+    paid: invoices.filter((invoice) => invoice.status === 'paid').length,
+    pending: invoices.filter((invoice) => invoice.status === 'pending').length,
+    overdue: invoices.filter((invoice) => invoice.status === 'overdue').length,
+    paidAmount: invoices.filter((invoice) => invoice.status === 'paid').reduce((sum, invoice) => sum + invoice.amount, 0),
+  }), [invoices]);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -184,6 +213,58 @@ export default function FacturesPage() {
     success('Export', `${filteredInvoices.length} facture(s) exportee(s) au format CSV.`);
   };
 
+  const getInvoiceCapabilitySnapshot = (invoice: Invoice) => invoiceCapabilities[String(invoice.id)] ?? null;
+
+  const getInvoiceState = (invoice: Invoice): InvoiceStatus => {
+    const currentState = getInvoiceCapabilitySnapshot(invoice)?.currentState;
+    if (currentState && ['paid', 'pending', 'overdue', 'cancelled'].includes(currentState)) {
+      return currentState as InvoiceStatus;
+    }
+    return invoice.status;
+  };
+
+  const getInvoiceContext = (invoice: Invoice) => {
+    const snapshot = getInvoiceCapabilitySnapshot(invoice);
+    return {
+      sourceType: String(snapshot?.correlation.sourceType || invoice.source_type || invoice.type || ''),
+      sourceId: snapshot?.correlation.sourceId || invoice.source_id || invoice.payment_transaction_id || invoice.financial_operation_id || null,
+      financialOperationId: snapshot?.correlation.financialOperationId || invoice.financial_operation_id || null,
+      paymentTransactionId: snapshot?.correlation.paymentTransactionId || invoice.payment_transaction_id || null,
+      invoiceNumber: snapshot?.correlation.invoiceNumber || invoice.number || null,
+      currentState: getInvoiceState(invoice),
+      finality: snapshot?.finality || 'mutable',
+      canOpenFinancialContext: snapshot ? hasFinanceCapabilityAction(snapshot, 'open_financial_context') : Boolean(invoice.financial_operation_id || invoice.source_id),
+      canOpenLinkedTransactions: snapshot ? hasFinanceCapabilityAction(snapshot, 'open_linked_transactions') : Boolean(invoice.financial_operation_id || invoice.payment_transaction_id),
+      canDownload: snapshot ? hasFinanceCapabilityAction(snapshot, 'download_invoice') : true,
+    };
+  };
+
+  const openFinanceContext = (invoice: Invoice) => {
+    const context = getInvoiceContext(invoice);
+    const params = new URLSearchParams();
+    if (context.financialOperationId) {
+      params.set('financialOperationId', context.financialOperationId);
+    }
+    if (context.invoiceNumber) {
+      params.set('invoice', context.invoiceNumber);
+    }
+    if (context.paymentTransactionId) {
+      params.set('transaction', context.paymentTransactionId);
+    }
+    navigate(`/dashboard/paiements${params.toString() ? `?${params.toString()}` : ''}`);
+  };
+
+  const clearInvoiceContext = () => {
+    setSearchParams({});
+  };
+
+  useEffect(() => {
+    if (!hasInvoiceContext || selectedInvoice || filteredInvoices.length !== 1) {
+      return;
+    }
+    setSelectedInvoice(filteredInvoices[0]);
+  }, [filteredInvoices, hasInvoiceContext, selectedInvoice]);
+
   return (
     <DashboardLayout>
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Factures' }]} />
@@ -191,6 +272,50 @@ export default function FacturesPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Factures</h1>
         <p className="text-gray-600">Consultez et gérez vos factures</p>
       </div>
+
+      {hasInvoiceContext && (
+        <div className="mb-6 rounded-2xl border border-teal-200 bg-teal-50 p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-sm font-medium text-teal-700">Contexte facture lié</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {contextInvoiceNumber ? (
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                    Facture {contextInvoiceNumber}
+                  </span>
+                ) : null}
+                {contextFinancialOperationId ? (
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                    Opération {contextFinancialOperationId}
+                  </span>
+                ) : null}
+                {contextTransactionId ? (
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                    Transaction {contextTransactionId}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-3 text-sm text-gray-600">
+                {filteredInvoices.length} facture(s) liée(s) au contexte courant.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => navigate(`/dashboard/paiements${searchParams.toString() ? `?${searchParams.toString()}` : ''}`)}
+                className="rounded-lg border border-teal-300 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-white"
+              >
+                Ouvrir les paiements liés
+              </button>
+              <button
+                onClick={clearInvoiceContext}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-white"
+              >
+                Effacer le contexte
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -200,7 +325,7 @@ export default function FacturesPage() {
               <div className="w-5 h-5 flex items-center justify-center"><i className="ri-check-line text-lg text-green-600"></i></div>
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 mb-1">{invoices.filter(i => i.status === 'paid').length}</p>
+          <p className="text-2xl font-bold text-gray-900 mb-1">{invoiceStats.paid}</p>
           <p className="text-sm text-gray-600">Factures payées</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -209,7 +334,7 @@ export default function FacturesPage() {
               <div className="w-5 h-5 flex items-center justify-center"><i className="ri-time-line text-lg text-yellow-600"></i></div>
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 mb-1">{invoices.filter(i => i.status === 'pending').length}</p>
+          <p className="text-2xl font-bold text-gray-900 mb-1">{invoiceStats.pending}</p>
           <p className="text-sm text-gray-600">En attente</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -218,7 +343,7 @@ export default function FacturesPage() {
               <div className="w-5 h-5 flex items-center justify-center"><i className="ri-alert-line text-lg text-red-600"></i></div>
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 mb-1">{invoices.filter(i => i.status === 'overdue').length}</p>
+          <p className="text-2xl font-bold text-gray-900 mb-1">{invoiceStats.overdue}</p>
           <p className="text-sm text-gray-600">En retard</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -227,7 +352,7 @@ export default function FacturesPage() {
               <div className="w-5 h-5 flex items-center justify-center"><i className="ri-money-dollar-circle-line text-lg text-teal-600"></i></div>
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 mb-1">{formatAmount(invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.amount, 0), 'XAF')}</p>
+          <p className="text-2xl font-bold text-gray-900 mb-1">{formatAmount(invoiceStats.paidAmount, 'XAF')}</p>
           <p className="text-sm text-gray-600">Total payé</p>
         </div>
       </div>
@@ -289,21 +414,28 @@ export default function FacturesPage() {
                   <td className="px-6 py-4">
                     <p className="text-sm text-gray-900">{invoice.description}</p>
                     <p className="text-xs text-gray-500">{invoice.recipient.name}</p>
+                    {(invoice.financial_operation_id || invoice.source_id) && (
+                      <p className="mt-1 text-xs text-teal-700">
+                        {invoice.source_type || invoice.type} · {String(invoice.source_id || invoice.financial_operation_id)}
+                      </p>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap"><span className="text-sm text-gray-600">{getTypeLabel(invoice.type)}</span></td>
                   <td className="px-6 py-4 whitespace-nowrap"><p className="text-sm font-medium text-gray-900">{formatAmount(invoice.amount, invoice.currency)}</p></td>
                   <td className="px-6 py-4 whitespace-nowrap"><p className="text-sm text-gray-600">{formatDate(invoice.dueDate)}</p></td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>{getStatusLabel(invoice.status)}</span>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(getInvoiceState(invoice))}`}>{getStatusLabel(getInvoiceState(invoice))}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       <button onClick={() => setSelectedInvoice(invoice)} className="p-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors" title="Voir détails">
                         <div className="w-4 h-4 flex items-center justify-center"><i className="ri-eye-line text-base"></i></div>
                       </button>
-                      <button onClick={() => downloadInvoice(invoice)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Télécharger">
-                        <div className="w-4 h-4 flex items-center justify-center"><i className="ri-download-line text-base"></i></div>
-                      </button>
+                      {getInvoiceContext(invoice).canDownload ? (
+                        <button onClick={() => downloadInvoice(invoice)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Télécharger">
+                          <div className="w-4 h-4 flex items-center justify-center"><i className="ri-download-line text-base"></i></div>
+                        </button>
+                      ) : null}
                       <button onClick={() => printInvoice(invoice)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Imprimer">
                         <div className="w-4 h-4 flex items-center justify-center"><i className="ri-printer-line text-base"></i></div>
                       </button>
@@ -345,7 +477,7 @@ export default function FacturesPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-gray-900 mb-1">{selectedInvoice.number}</p>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedInvoice.status)}`}>{getStatusLabel(selectedInvoice.status)}</span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(getInvoiceState(selectedInvoice))}`}>{getStatusLabel(getInvoiceState(selectedInvoice))}</span>
                 </div>
               </div>
               <div className="mb-6">
@@ -366,6 +498,48 @@ export default function FacturesPage() {
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">Date de paiement</p>
                     <p className="text-sm text-gray-900">{formatDate(selectedInvoice.paidDate)}</p>
+                  </div>
+                )}
+              </div>
+              <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-900">Contexte métier</p>
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(getInvoiceContext(selectedInvoice).currentState)}`}>
+                    {getStatusLabel(getInvoiceContext(selectedInvoice).currentState)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Source</p>
+                    <p className="text-sm text-gray-900">{getInvoiceContext(selectedInvoice).sourceType || 'Document financier'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Source ID</p>
+                    <p className="text-sm text-gray-900 break-all">{String(getInvoiceContext(selectedInvoice).sourceId || '-')}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Opération financière</p>
+                    <p className="text-sm text-gray-900 break-all">{getInvoiceContext(selectedInvoice).financialOperationId || '-'}</p>
+                  </div>
+                </div>
+                {(getInvoiceContext(selectedInvoice).canOpenFinancialContext || getInvoiceContext(selectedInvoice).canOpenLinkedTransactions) && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {getInvoiceContext(selectedInvoice).canOpenFinancialContext ? (
+                      <button
+                        onClick={() => openFinanceContext(selectedInvoice)}
+                        className="rounded-lg border border-teal-200 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
+                      >
+                        Ouvrir le contexte financier
+                      </button>
+                    ) : null}
+                    {getInvoiceContext(selectedInvoice).canOpenLinkedTransactions ? (
+                      <button
+                        onClick={() => openFinanceContext(selectedInvoice)}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white"
+                      >
+                        Ouvrir les paiements liés
+                      </button>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -398,10 +572,12 @@ export default function FacturesPage() {
                 </div>
               </div>
               <div className="flex space-x-3">
-                <button onClick={() => downloadInvoice(selectedInvoice)} className="flex-1 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap">
-                  <div className="w-4 h-4 inline-flex items-center justify-center mr-2"><i className="ri-download-line text-base"></i></div>
-                  Télécharger PDF
-                </button>
+                {getInvoiceContext(selectedInvoice).canDownload ? (
+                  <button onClick={() => downloadInvoice(selectedInvoice)} className="flex-1 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap">
+                    <div className="w-4 h-4 inline-flex items-center justify-center mr-2"><i className="ri-download-line text-base"></i></div>
+                    Télécharger PDF
+                  </button>
+                ) : null}
                 <button onClick={() => printInvoice(selectedInvoice)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
                   <div className="w-4 h-4 inline-flex items-center justify-center mr-2"><i className="ri-printer-line text-base"></i></div>
                   Imprimer

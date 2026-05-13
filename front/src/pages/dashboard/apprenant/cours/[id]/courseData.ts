@@ -5,11 +5,11 @@ export const courseData: Record<string, Course> = {
     id: 1,
     title: 'Marketing Digital Avancé',
     instructor: 'Sophie Nkomo',
-    instructorAvatar: 'https://readdy.ai/api/search-image?query=african%20woman%20professional%20portrait%20modern%20office%20friendly%20confident&width=80&height=80&seq=app-det-sophie&orientation=squarish',
+    instructorAvatar: '/images/brand/image3.jpeg',
     category: 'Marketing',
     level: 'Avancé',
     duration: '24h',
-    thumbnail: 'https://readdy.ai/api/search-image?query=digital%20marketing%20modern%20workspace%20laptop%20analytics%20dashboard%20colorful%20data%20visualization%20professional%20clean&width=800&height=400&seq=app-det-thumb-1&orientation=landscape',
+    thumbnail: '/images/home/academy.jpg',
     description: 'Maîtrisez les stratégies avancées de marketing digital : SEO, SEA, réseaux sociaux, email marketing et analytics. Cette formation vous prépare à piloter des campagnes performantes sur le marché africain.',
     progress: 78,
     totalLessons: 24,
@@ -19,7 +19,7 @@ export const courseData: Record<string, Course> = {
         id: 1,
         title: 'Fondamentaux du Marketing Digital',
         lessons: [
-          { id: 101, title: 'Introduction au marketing digital', duration: '45 min', type: 'video', completed: true, description: 'Vue d\'ensemble du marketing digital et de son évolution.', chapters: [{ time: 0, label: 'Début' }, { time: 180, label: 'Historique' }, { time: 420, label: 'Outils clés' }, { time: 720, label: 'Tendances 2026' }, { time: 2100, label: 'Conclusion' }], thumbnail: 'https://readdy.ai/api/search-image?query=digital%20marketing%20overview%20presentation%20slide%20modern%20clean%20professional%20workspace%20laptop%20screen%20with%20charts%20and%20graphs%20teal%20accents&width=320&height=180&seq=app-lesson-thumb-101&orientation=landscape' },
+          { id: 101, title: 'Introduction au marketing digital', duration: '45 min', type: 'video', completed: true, description: 'Vue d\'ensemble du marketing digital et de son évolution.', chapters: [{ time: 0, label: 'Début' }, { time: 180, label: 'Historique' }, { time: 420, label: 'Outils clés' }, { time: 720, label: 'Tendances 2026' }, { time: 2100, label: 'Conclusion' }], thumbnail: '/images/home/academy.jpg' },
           { id: 102, title: 'Écosystème digital africain', duration: '30 min', type: 'video', completed: true, description: 'Comprendre les spécificités du marché digital africain.' },
           { id: 103, title: 'Funnel de conversion', duration: '40 min', type: 'reading', completed: true, description: 'Construire un funnel de conversion efficace.' },
           { id: 104, title: 'Quiz : Fondamentaux', duration: '15 min', type: 'quiz', completed: true, description: 'Testez vos connaissances sur les bases.' },
@@ -29,9 +29,9 @@ export const courseData: Record<string, Course> = {
         id: 2,
         title: 'SEO et Content Marketing',
         lessons: [
-          { id: 201, title: 'SEO on-page avancé', duration: '1h', type: 'video', completed: true, description: 'Techniques avancées d\'optimisation on-page.', chapters: [{ time: 0, label: 'Intro' }, { time: 300, label: 'Méta-tags' }, { time: 900, label: 'Structure URL' }, { time: 1800, label: 'Balisage sémantique' }, { time: 2700, label: 'Récap' }], thumbnail: 'https://readdy.ai/api/search-image?query=SEO%20search%20engine%20optimization%20on%20page%20modern%20workspace%20laptop%20screen%20showing%20analytics%20graphs%20and%20keyword%20tools%20clean%20professional&width=320&height=180&seq=app-lesson-thumb-201&orientation=landscape' },
-          { id: 202, title: 'Stratégie de contenu', duration: '50 min', type: 'video', completed: true, description: 'Créer un calendrier éditorial performant.', thumbnail: 'https://readdy.ai/api/search-image?query=content%20strategy%20editorial%20calendar%20planning%20modern%20workspace%20colorful%20sticky%20notes%20laptop%20screen%20clean%20professional&width=320&height=180&seq=app-lesson-thumb-202&orientation=landscape' },
-          { id: 203, title: 'Link building', duration: '45 min', type: 'video', completed: true, description: 'Construire un profil de backlinks de qualité.', thumbnail: 'https://readdy.ai/api/search-image?query=link%20building%20backlink%20network%20visualization%20modern%20digital%20screen%20connected%20nodes%20graph%20professional%20clean&width=320&height=180&seq=app-lesson-thumb-203&orientation=landscape' },
+          { id: 201, title: 'SEO on-page avancé', duration: '1h', type: 'video', completed: true, description: 'Techniques avancées d\'optimisation on-page.', chapters: [{ time: 0, label: 'Intro' }, { time: 300, label: 'Méta-tags' }, { time: 900, label: 'Structure URL' }, { time: 1800, label: 'Balisage sémantique' }, { time: 2700, label: 'Récap' }], thumbnail: '/images/home/academy.jpg' },
+          { id: 202, title: 'Stratégie de contenu', duration: '50 min', type: 'video', completed: true, description: 'Créer un calendrier éditorial performant.', thumbnail: '/images/home/academy.jpg' },
+          { id: 203, title: 'Link building', duration: '45 min', type: 'video', completed: true, description: 'Construire un profil de backlinks de qualité.', thumbnail: '/images/home/academy.jpg' },
           { id: 204, title: 'SEO local et mobile', duration: '35 min', type: 'video', completed: false, description: 'Optimiser pour la recherche locale et mobile.' },
           { id: 205, title: 'Exercice pratique SEO', duration: '1h', type: 'exercise', completed: false, description: 'Audit SEO complet d\'un site web.' },
         ]
@@ -40,7 +40,7 @@ export const courseData: Record<string, Course> = {
         id: 3,
         title: 'Social Media Marketing',
         lessons: [
-          { id: 301, title: 'Stratégie multi-plateformes', duration: '1h', type: 'video', completed: true, description: 'Aligner votre présence sur Facebook, Instagram, LinkedIn et TikTok.', thumbnail: 'https://readdy.ai/api/search-image?query=social%20media%20platforms%20strategy%20facebook%20instagram%20linkedin%20tiktok%20icons%20modern%20workspace%20laptop%20screen%20clean%20professional&width=320&height=180&seq=app-lesson-thumb-301&orientation=landscape' },
+          { id: 301, title: 'Stratégie multi-plateformes', duration: '1h', type: 'video', completed: true, description: 'Aligner votre présence sur Facebook, Instagram, LinkedIn et TikTok.', thumbnail: '/images/home/academy.jpg' },
           { id: 302, title: 'Création de contenu viral', duration: '45 min', type: 'video', completed: true, description: 'Techniques de création de contenu engageant.' },
           { id: 303, title: 'Publicités sociales', duration: '1h 15min', type: 'video', completed: true, description: 'Créer et optimiser des campagnes publicitaires sociales.' },
           { id: 304, title: 'Influence marketing', duration: '40 min', type: 'reading', completed: false, description: 'Collaborer efficacement avec des influenceurs.' },
@@ -73,20 +73,20 @@ export const courseData: Record<string, Course> = {
       { id: 5, title: 'Exemples de campagnes réussies', type: 'PDF', size: '3.2 MB', icon: 'ri-file-pdf-line' },
     ],
     comments: [
-      { id: 1, user: 'Ibrahim Touré', avatar: 'https://readdy.ai/api/search-image?query=young%20african%20man%20student%20casual%20portrait%20smiling%20confident%20university%20campus%20background&width=40&height=40&seq=app-det-ibrahim&orientation=squarish', content: 'Le module sur le SEO local est incroyablement pertinent pour le marché africain. Merci Mme Nkomo !', date: 'Il y a 2 jours', likes: 8 },
-      { id: 2, user: 'Fatou Sow', avatar: 'https://readdy.ai/api/search-image?query=african%20woman%20student%20professional%20portrait%20confident%20smile%20modern%20classroom%20background&width=40&height=40&seq=app-det-fatou&orientation=squarish', content: 'Les templates fournis m\'ont fait gagner un temps fou. La formation vaut vraiment le coup.', date: 'Il y a 5 jours', likes: 12 },
-      { id: 3, user: 'Aminata Diop', avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20woman%20entrepreneur%20elegant%20portrait%20modern%20office%20confident&width=40&height=40&seq=app-det-aminata&orientation=squarish', content: 'J\'applique déjà les techniques enseignées sur mon business. Résultats visibles en 3 semaines.', date: 'Il y a 1 semaine', likes: 5 },
+      { id: 1, user: 'Ibrahim Touré', avatar: '/images/brand/image3.jpeg', content: 'Le module sur le SEO local est incroyablement pertinent pour le marché africain. Merci Mme Nkomo !', date: 'Il y a 2 jours', likes: 8 },
+      { id: 2, user: 'Fatou Sow', avatar: '/images/brand/image3.jpeg', content: 'Les templates fournis m\'ont fait gagner un temps fou. La formation vaut vraiment le coup.', date: 'Il y a 5 jours', likes: 12 },
+      { id: 3, user: 'Aminata Diop', avatar: '/images/brand/image3.jpeg', content: 'J\'applique déjà les techniques enseignées sur mon business. Résultats visibles en 3 semaines.', date: 'Il y a 1 semaine', likes: 5 },
     ]
   },
   '2': {
     id: 2,
     title: 'Développement Web React',
     instructor: 'Jean Mbarga',
-    instructorAvatar: 'https://readdy.ai/api/search-image?query=african%20businessman%20professional%20portrait%20suit%20modern%20office%20confident%20smile&width=80&height=80&seq=app-det-jean&orientation=squarish',
+    instructorAvatar: '/images/brand/image3.jpeg',
     category: 'Tech',
     level: 'Intermédiaire',
     duration: '30h',
-    thumbnail: 'https://readdy.ai/api/search-image?query=web%20development%20code%20editor%20modern%20screen%20programming%20react%20javascript%20colorful%20syntax%20professional%20clean&width=800&height=400&seq=app-det-thumb-2&orientation=landscape',
+    thumbnail: '/images/home/academy.jpg',
     description: 'Devenez développeur React complet. Apprenez les hooks, le state management, les tests et le déploiement. Projet final : une application web complète.',
     progress: 45,
     totalLessons: 30,
@@ -96,9 +96,9 @@ export const courseData: Record<string, Course> = {
         id: 1,
         title: 'Fondamentaux React',
         lessons: [
-          { id: 101, title: 'Introduction à React', duration: '45 min', type: 'video', completed: true, description: 'Pourquoi React domine le développement frontend.', thumbnail: 'https://readdy.ai/api/search-image?query=react%20javascript%20development%20modern%20code%20editor%20screen%20component%20tree%20colorful%20syntax%20highlighting%20clean%20professional&width=320&height=180&seq=app-lesson-thumb-react-101&orientation=landscape' },
-          { id: 102, title: 'JSX et Components', duration: '1h', type: 'video', completed: true, description: 'Créer des composants réutilisables avec JSX.', thumbnail: 'https://readdy.ai/api/search-image?query=JSX%20components%20react%20UI%20building%20blocks%20modern%20code%20editor%20screen%20colorful%20syntax%20clean%20professional&width=320&height=180&seq=app-lesson-thumb-react-102&orientation=landscape' },
-          { id: 103, title: 'Props et State', duration: '50 min', type: 'video', completed: true, description: 'Gérer les données dans vos composants.', thumbnail: 'https://readdy.ai/api/search-image?query=react%20props%20state%20data%20flow%20diagram%20modern%20screen%20colorful%20arrows%20clean%20professional&width=320&height=180&seq=app-lesson-thumb-react-103&orientation=landscape' },
+          { id: 101, title: 'Introduction à React', duration: '45 min', type: 'video', completed: true, description: 'Pourquoi React domine le développement frontend.', thumbnail: '/images/home/academy.jpg' },
+          { id: 102, title: 'JSX et Components', duration: '1h', type: 'video', completed: true, description: 'Créer des composants réutilisables avec JSX.', thumbnail: '/images/home/academy.jpg' },
+          { id: 103, title: 'Props et State', duration: '50 min', type: 'video', completed: true, description: 'Gérer les données dans vos composants.', thumbnail: '/images/home/academy.jpg' },
           { id: 104, title: 'Exercice : Todo List', duration: '1h 30min', type: 'exercise', completed: true, description: 'Créer une todo list fonctionnelle.' },
         ]
       },
@@ -106,7 +106,7 @@ export const courseData: Record<string, Course> = {
         id: 2,
         title: 'Hooks avancés',
         lessons: [
-          { id: 201, title: 'useEffect et useMemo', duration: '1h 15min', type: 'video', completed: true, description: 'Maîtriser les effets de bord et la mémoisation.', thumbnail: 'https://readdy.ai/api/search-image?query=react%20hooks%20useEffect%20useMemo%20lifecycle%20diagram%20modern%20screen%20colorful%20flowchart%20clean%20professional&width=320&height=180&seq=app-lesson-thumb-react-201&orientation=landscape' },
+          { id: 201, title: 'useEffect et useMemo', duration: '1h 15min', type: 'video', completed: true, description: 'Maîtriser les effets de bord et la mémoisation.', thumbnail: '/images/home/academy.jpg' },
           { id: 202, title: 'Custom Hooks', duration: '1h', type: 'video', completed: false, description: 'Créer vos propres hooks réutilisables.' },
           { id: 203, title: 'useReducer et useContext', duration: '1h 10min', type: 'video', completed: false, description: 'Gestion d\'état avancée sans librairie externe.' },
           { id: 204, title: 'Quiz : Hooks', duration: '20 min', type: 'quiz', completed: false, description: 'Testez vos connaissances sur les hooks.' },
@@ -116,7 +116,7 @@ export const courseData: Record<string, Course> = {
         id: 3,
         title: 'Routing et API',
         lessons: [
-          { id: 301, title: 'React Router v7', duration: '1h', type: 'video', completed: false, description: 'Navigation SPA avec React Router.', thumbnail: 'https://readdy.ai/api/search-image?query=react%20router%20navigation%20SPA%20routing%20diagram%20modern%20screen%20colorful%20paths%20clean%20professional&width=320&height=180&seq=app-lesson-thumb-react-301&orientation=landscape' },
+          { id: 301, title: 'React Router v7', duration: '1h', type: 'video', completed: false, description: 'Navigation SPA avec React Router.', thumbnail: '/images/home/academy.jpg' },
           { id: 302, title: 'Fetch et Axios', duration: '45 min', type: 'video', completed: false, description: 'Consommer des APIs REST.' },
           { id: 303, title: 'Authentification JWT', duration: '1h 30min', type: 'video', completed: false, description: 'Sécuriser votre application.' },
           { id: 304, title: 'Projet API', duration: '2h', type: 'exercise', completed: false, description: 'Connecter votre app à une API réelle.' },
@@ -136,19 +136,19 @@ export const courseData: Record<string, Course> = {
       { id: 3, title: 'Guide testing React', type: 'PDF', size: '1.5 MB', icon: 'ri-file-pdf-line' },
     ],
     comments: [
-      { id: 1, user: 'Mamadou Seck', avatar: 'https://readdy.ai/api/search-image?query=african%20male%20software%20developer%20programmer%20working%20on%20laptop%20professional%20tech%20portrait%20modern%20office&width=40&height=40&seq=app-det-mamadou&orientation=squarish', content: 'Les explications sur les custom hooks sont les meilleures que j\'ai trouvées. Clair et concis.', date: 'Il y a 3 jours', likes: 7 },
-      { id: 2, user: 'Khadija Mbaye', avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20female%20student%20portrait%20clean%20white%20background%20happy%20smile%20casual%20attire&width=40&height=40&seq=app-det-khadija&orientation=squarish', content: 'J\'ai réussi mon premier entretien technique grâce à cette formation. Merci !', date: 'Il y a 1 semaine', likes: 15 },
+      { id: 1, user: 'Mamadou Seck', avatar: '/images/brand/image3.jpeg', content: 'Les explications sur les custom hooks sont les meilleures que j\'ai trouvées. Clair et concis.', date: 'Il y a 3 jours', likes: 7 },
+      { id: 2, user: 'Khadija Mbaye', avatar: '/images/brand/image3.jpeg', content: 'J\'ai réussi mon premier entretien technique grâce à cette formation. Merci !', date: 'Il y a 1 semaine', likes: 15 },
     ]
   },
   '3': {
     id: 3,
     title: 'Comptabilité pour PME',
     instructor: 'Fatima Diallo',
-    instructorAvatar: 'https://readdy.ai/api/search-image?query=african%20woman%20professional%20portrait%20elegant%20modern%20office%20confident%20warm&width=80&height=80&seq=app-det-fatima&orientation=squarish',
+    instructorAvatar: '/images/brand/image3.jpeg',
     category: 'Finance',
     level: 'Débutant',
     duration: '18h',
-    thumbnail: 'https://readdy.ai/api/search-image?query=accounting%20business%20documents%20calculator%20modern%20office%20desk%20professional%20clean%20setting%20organized&width=800&height=400&seq=app-det-thumb-3&orientation=landscape',
+    thumbnail: '/images/home/academy.jpg',
     description: 'Apprenez à gérer la comptabilité de votre PME de A à Z. Facturation, TVA, bilan, trésorerie et conformité fiscale au Sénégal.',
     progress: 92,
     totalLessons: 18,
@@ -193,18 +193,18 @@ export const courseData: Record<string, Course> = {
       { id: 3, title: 'Guide fiscalité Sénégal 2026', type: 'PDF', size: '1.8 MB', icon: 'ri-file-pdf-line' },
     ],
     comments: [
-      { id: 1, user: 'Ousmane Ba', avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20male%20entrepreneur%20portrait%20clean%20white%20background%20happy%20smile%20business%20casual&width=40&height=40&seq=app-det-ousmane&orientation=squarish', content: 'Enfin une formation comptabilité adaptée au contexte sénégalais. Excellente pédagogie.', date: 'Il y a 4 jours', likes: 9 },
+      { id: 1, user: 'Ousmane Ba', avatar: '/images/brand/image3.jpeg', content: 'Enfin une formation comptabilité adaptée au contexte sénégalais. Excellente pédagogie.', date: 'Il y a 4 jours', likes: 9 },
     ]
   },
   '4': {
     id: 4,
     title: 'Design UI/UX Fondamentaux',
     instructor: 'David Kouassi',
-    instructorAvatar: 'https://readdy.ai/api/search-image?query=african%20man%20young%20professional%20portrait%20modern%20office%20friendly%20confident&width=80&height=80&seq=app-det-david&orientation=squarish',
+    instructorAvatar: '/images/brand/image3.jpeg',
     category: 'Design',
     level: 'Débutant',
     duration: '20h',
-    thumbnail: 'https://readdy.ai/api/search-image?query=UI%20UX%20design%20wireframe%20mockup%20modern%20interface%20design%20tools%20colorful%20professional%20workspace%20creative&width=800&height=400&seq=app-det-thumb-4&orientation=landscape',
+    thumbnail: '/images/home/academy.jpg',
     description: 'Apprenez les principes du design d\'interface et de l\'expérience utilisateur. Wireframes, prototypes, design systems et tests utilisateurs.',
     progress: 100,
     totalLessons: 20,
@@ -238,18 +238,18 @@ export const courseData: Record<string, Course> = {
       { id: 2, title: 'Guide accessibilité WCAG', type: 'PDF', size: '1.4 MB', icon: 'ri-file-pdf-line' },
     ],
     comments: [
-      { id: 1, user: 'Sophie Kamga', avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20woman%20interior%20designer%20portrait%20confident%20smile%20modern%20studio%20background%20clean%20simple&width=40&height=40&seq=app-det-sophie&orientation=squarish', content: 'J\'ai utilisé les principes enseignés pour refaire le site de mon agence. Les clients adorent !', date: 'Il y a 2 semaines', likes: 11 },
+      { id: 1, user: 'Sophie Kamga', avatar: '/images/brand/image3.jpeg', content: 'J\'ai utilisé les principes enseignés pour refaire le site de mon agence. Les clients adorent !', date: 'Il y a 2 semaines', likes: 11 },
     ]
   },
   '5': {
     id: 5,
     title: 'Gestion de Projet Agile',
     instructor: 'Aminata Sow',
-    instructorAvatar: 'https://readdy.ai/api/search-image?query=african%20woman%20student%20professional%20portrait%20confident%20smile%20modern%20classroom%20background&width=80&height=80&seq=app-det-aminata&orientation=squarish',
+    instructorAvatar: '/images/brand/image3.jpeg',
     category: 'Management',
     level: 'Intermédiaire',
     duration: '15h',
-    thumbnail: 'https://readdy.ai/api/search-image?query=agile%20project%20management%20kanban%20board%20sticky%20notes%20modern%20office%20team%20collaboration%20professional%20organized&width=800&height=400&seq=app-det-thumb-5&orientation=landscape',
+    thumbnail: '/images/home/academy.jpg',
     description: 'Maîtrisez Scrum, Kanban et les méthodes agiles. Gérez vos équipes et livrez des projets dans les délais et le budget.',
     progress: 0,
     totalLessons: 15,
@@ -283,18 +283,18 @@ export const courseData: Record<string, Course> = {
       { id: 2, title: 'Guide facilitation rétrospective', type: 'PDF', size: '900 KB', icon: 'ri-file-pdf-line' },
     ],
     comments: [
-      { id: 1, user: 'Jean Mbarga', avatar: 'https://readdy.ai/api/search-image?query=african%20businessman%20professional%20portrait%20suit%20modern%20office%20confident%20smile&width=40&height=40&seq=app-det-jean-2&orientation=squarish', content: 'Hâte de commencer cette formation. Mon équipe en a vraiment besoin.', date: 'Il y a 1 jour', likes: 3 },
+      { id: 1, user: 'Jean Mbarga', avatar: '/images/brand/image3.jpeg', content: 'Hâte de commencer cette formation. Mon équipe en a vraiment besoin.', date: 'Il y a 1 jour', likes: 3 },
     ]
   },
   '6': {
     id: 6,
     title: 'Analyse de Données avec Python',
     instructor: 'Ibrahim Touré',
-    instructorAvatar: 'https://readdy.ai/api/search-image?query=young%20african%20man%20student%20casual%20portrait%20smiling%20confident%20university%20campus%20background&width=80&height=80&seq=app-det-ibrahim&orientation=squarish',
+    instructorAvatar: '/images/brand/image3.jpeg',
     category: 'Data',
     level: 'Avancé',
     duration: '28h',
-    thumbnail: 'https://readdy.ai/api/search-image?query=data%20analysis%20python%20programming%20charts%20graphs%20modern%20analytics%20dashboard%20professional%20colorful%20clean%20screen&width=800&height=400&seq=app-det-thumb-6&orientation=landscape',
+    thumbnail: '/images/home/academy.jpg',
     description: 'De la collecte de données à la visualisation. Maîtrisez Pandas, NumPy, Matplotlib et les bases du Machine Learning.',
     progress: 12,
     totalLessons: 28,
@@ -328,7 +328,7 @@ export const courseData: Record<string, Course> = {
       { id: 2, title: 'Dataset pratique Sénégal', type: 'CSV', size: '2.8 MB', icon: 'ri-table-line' },
     ],
     comments: [
-      { id: 1, user: 'Fatou Sow', avatar: 'https://readdy.ai/api/search-image?query=african%20woman%20student%20professional%20portrait%20confident%20smile%20modern%20classroom%20background&width=40&height=40&seq=app-det-fatou-2&orientation=squarish', content: 'Les datasets sur le Sénégal sont super pour s\'entraîner sur des données réelles.', date: 'Il y a 6 jours', likes: 6 },
+      { id: 1, user: 'Fatou Sow', avatar: '/images/brand/image3.jpeg', content: 'Les datasets sur le Sénégal sont super pour s\'entraîner sur des données réelles.', date: 'Il y a 6 jours', likes: 6 },
     ]
   }
 };

@@ -22,13 +22,13 @@ export default function LegalPageTemplate({
 }: LegalPageTemplateProps) {
   return (
     <PublicLayout>
-      <section className="bg-[#050505] pt-32 text-white">
+      <section className="bg-c2p-surface-soft pt-32 text-c2p-text">
         <div className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8 lg:pb-20">
           <div className="max-w-4xl">
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#d5b46f]">{eyebrow}</p>
             <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">{title}</h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-white/70 sm:text-lg">{intro}</p>
-            <p className="mt-6 text-sm text-white/42">Derniere mise a jour : {updatedAt}</p>
+            <p className="mt-5 max-w-3xl text-base leading-7 text-[#5b6778] sm:text-lg">{intro}</p>
+            <p className="mt-6 text-sm text-[#7c8698]">Derniere mise a jour : {updatedAt}</p>
           </div>
         </div>
       </section>

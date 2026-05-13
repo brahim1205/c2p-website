@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import ImageUploadField from '@/components/base/ImageUploadField';
 import { useToast } from '@/hooks/useToast';
-import { backendClient } from '@/lib/backendClient';
+import type { CourseDeliveryMode } from '@/lib/courseDelivery';
+import { createFormateurCourseBundle } from '@/lib/formateurDashboardApi';
 import {
   fetchUploadStrategy,
   uploadFileToServer,
   uploadVideoToServer,
   type UploadStrategyPayload,
 } from '@/lib/uploadApi';
+import { getWizardStorageKey } from './wizardStorage';
 
 type CourseLevel = 'beginner' | 'intermediate' | 'advanced' | 'all_levels';
 type LessonType = 'video' | 'article' | 'pdf' | 'quiz' | 'assignment' | 'live' | 'practice' | 'coding';
@@ -19,7 +21,21 @@ interface CourseCreationWizardProps {
   open: boolean;
   userId?: string | null;
   onClose: () => void;
-  onCreated: (payload: { id: string | number; title: string }) => Promise<void> | void;
+  onCreated: (payload: {
+    id: string | number;
+    title: string;
+    category: string;
+    description: string;
+    level: CourseLevel;
+    delivery_mode: CourseDeliveryMode;
+    duration: string;
+    is_free: boolean;
+    price: number;
+    promotion_percentage: number;
+    trailer_url: string | null;
+    thumbnail: string | null;
+    modules: number;
+  }) => Promise<void> | void;
 }
 
 interface CourseBasicsDraft {
@@ -27,6 +43,7 @@ interface CourseBasicsDraft {
   category: string;
   description: string;
   level: CourseLevel;
+  delivery_mode: CourseDeliveryMode;
   duration: string;
   is_free: boolean;
   price: number;
@@ -119,7 +136,7 @@ interface WizardDraftState {
 }
 
 type CourseFieldErrors = Partial<Record<
-  'title' | 'category' | 'description' | 'level' | 'duration' | 'price' | 'promotion_percentage' | 'thumbnail' | 'trailer_url',
+  'title' | 'category' | 'description' | 'level' | 'delivery_mode' | 'duration' | 'price' | 'promotion_percentage' | 'thumbnail' | 'trailer_url',
   string
 >>;
 
@@ -135,6 +152,12 @@ const COURSE_LEVEL_LABELS: Record<CourseLevel, string> = {
   intermediate: 'Intermédiaire',
   advanced: 'Avancé',
   all_levels: 'Tous niveaux',
+};
+
+const COURSE_DELIVERY_LABELS: Record<CourseDeliveryMode, string> = {
+  online: 'En ligne',
+  onsite: 'Présentiel',
+  hybrid: 'Hybride',
 };
 
 const LESSON_TYPE_LABELS: Record<LessonType, string> = {
@@ -258,6 +281,7 @@ function makeDefaultCourseBasics(): CourseBasicsDraft {
     category: '',
     description: '',
     level: 'intermediate',
+    delivery_mode: 'online',
     duration: '1h',
     is_free: false,
     price: 0,
@@ -282,10 +306,6 @@ function makeDefaultWizardState(): WizardDraftState {
     selectedLessonId: firstLesson.id,
     selectedExamId: firstExam.id,
   };
-}
-
-export function getWizardStorageKey(userId: string) {
-  return `c2p:trainer-course-wizard:${userId}`;
 }
 
 function getFieldClass(hasError?: boolean) {
@@ -356,6 +376,10 @@ function validateCourseBasics(course: CourseBasicsDraft) {
 
   if (course.description.trim().length > 500) {
     errors.description = 'La description ne peut pas dépasser 500 caractères.';
+  }
+
+  if (!['online', 'onsite', 'hybrid'].includes(course.delivery_mode)) {
+    errors.delivery_mode = 'Sélectionnez un format valide.';
   }
 
   if (!course.duration.trim()) {
@@ -525,6 +549,7 @@ export default function CourseCreationWizard({
             category: String(parsedLegacy.category ?? ''),
             description: String(parsedLegacy.description ?? ''),
             level: (parsedLegacy.level as CourseLevel) || next.course.level,
+            delivery_mode: (parsedLegacy.delivery_mode as CourseDeliveryMode) || next.course.delivery_mode,
             duration: String(parsedLegacy.duration ?? next.course.duration),
             is_free: Boolean(parsedLegacy.is_free),
             price: Number(parsedLegacy.price ?? 0),
@@ -1070,165 +1095,24 @@ export default function CourseCreationWizard({
     setIsSubmitting(true);
     setStepMessage(null);
 
-    let createdCourseId: string | number | null = null;
     try {
-      const { data: createdCourse, error: createCourseError } = await backendClient.from<{ id: string | number; title: string }>('courses').insert({
-        instructor_id: userId,
-        title: wizard.course.title.trim(),
-        category: wizard.course.category.trim(),
-        level: wizard.course.level,
-        description: wizard.course.description.trim(),
-        status: 'draft',
-        modules: wizard.sections.length || 1,
-        duration: wizard.course.duration.trim(),
-        price: wizard.course.is_free ? 0 : wizard.course.price,
-        access_type: wizard.course.is_free ? 'free' : 'paid',
-        is_free: wizard.course.is_free,
-        promotion_percentage: wizard.course.promotion_percentage,
-        trailer_url: wizard.course.trailer_url.trim() || null,
-        thumbnail: wizard.course.thumbnail.trim() || null,
+      const createdPayload = await createFormateurCourseBundle(userId, {
+        course: wizard.course,
+        sections: normalizeSections(wizard.sections),
+        assets: wizard.assets,
+        exams: wizard.exams,
       });
-
-      if (createCourseError || !createdCourse?.id) {
-        throw createCourseError ?? new Error('Création du cours impossible.');
-      }
-
-      createdCourseId = createdCourse.id;
-      const sectionIdMap = new Map<string, string | number>();
-      const lessonIdMap = new Map<string, string | number>();
-      const lessonSectionMap = new Map<string, string>();
-
-      for (const section of normalizeSections(wizard.sections)) {
-        const { data: createdSection, error: sectionError } = await backendClient.from<{ id: string | number }>('course_sections').insert({
-          course_id: createdCourseId,
-          title: section.title.trim(),
-          description: section.description.trim(),
-          status: section.status,
-          position: section.position,
-        });
-
-        if (sectionError || !createdSection?.id) {
-          throw sectionError ?? new Error(`Création du chapitre "${section.title}" impossible.`);
-        }
-
-        sectionIdMap.set(section.id, createdSection.id);
-
-        for (const lesson of section.lessons) {
-          const { data: createdLesson, error: lessonError } = await backendClient.from<{ id: string | number }>('course_lessons').insert({
-            course_id: createdCourseId,
-            section_id: createdSection.id,
-            title: lesson.title.trim(),
-            description: lesson.description.trim(),
-            type: lesson.type,
-            duration: lesson.duration.trim() || null,
-            content: lesson.content.trim() || null,
-            code_language: lesson.code_language.trim() || 'markdown',
-            code_sample: lesson.code_sample.trim() || null,
-            exercise_instructions: lesson.exercise_instructions.trim() || null,
-            is_preview: lesson.is_preview,
-            status: lesson.status,
-            position: lesson.position,
-          });
-
-          if (lessonError || !createdLesson?.id) {
-            throw lessonError ?? new Error(`Création de la leçon "${lesson.title}" impossible.`);
-          }
-
-          lessonIdMap.set(lesson.id, createdLesson.id);
-          lessonSectionMap.set(lesson.id, section.id);
-        }
-      }
-
-      for (const asset of wizard.assets.filter((entry) => entry.url.trim())) {
-        const lessonId = lessonIdMap.get(asset.lessonId);
-        const sectionDraftId = lessonSectionMap.get(asset.lessonId);
-        const sectionId = sectionDraftId ? sectionIdMap.get(sectionDraftId) : null;
-        if (!lessonId || !sectionId) continue;
-
-        const { error: assetError } = await backendClient.from('lesson_assets').insert({
-          lesson_id: lessonId,
-          section_id: sectionId,
-          course_id: createdCourseId,
-          title: asset.title.trim() || asset.lessonTitle,
-          asset_type: asset.asset_type,
-          url: asset.url.trim(),
-          thumbnail_url: asset.thumbnail_url.trim() || null,
-          mime_type: asset.mime_type.trim() || null,
-          size_bytes: asset.size_bytes,
-          status: asset.asset_type === 'video' ? 'processing' : 'ready',
-        });
-
-        if (assetError) {
-          throw assetError;
-        }
-      }
-
-      for (const exam of wizard.exams) {
-        const { data: createdExam, error: examError } = await backendClient.from<{ id: string | number }>('exams').insert({
-          instructor_id: userId,
-          course_id: createdCourseId,
-          title: exam.title.trim(),
-          type: exam.type,
-          exam_date: exam.exam_date,
-          participants: exam.participants,
-          submitted: 0,
-          avg_grade: null,
-          status: 'upcoming',
-          max_grade: exam.max_grade,
-        });
-
-        if (examError || !createdExam?.id) {
-          throw examError ?? new Error(`Création de l évaluation "${exam.title}" impossible.`);
-        }
-
-        for (let questionIndex = 0; questionIndex < exam.questions.length; questionIndex += 1) {
-          const question = exam.questions[questionIndex];
-          const { data: createdQuestion, error: questionError } = await backendClient.from<{ id: string | number }>('quiz_questions').insert({
-            exam_id: createdExam.id,
-            prompt: question.prompt.trim(),
-            type: question.type,
-            points: question.points,
-            explanation: question.explanation.trim(),
-            required: question.required,
-            position: questionIndex + 1,
-          });
-
-          if (questionError || !createdQuestion?.id) {
-            throw questionError ?? new Error(`Création de la question "${question.prompt}" impossible.`);
-          }
-
-          for (let choiceIndex = 0; choiceIndex < question.choices.length; choiceIndex += 1) {
-            const choice = question.choices[choiceIndex];
-            if (!choice.label.trim()) continue;
-            const { error: choiceError } = await backendClient.from('quiz_choices').insert({
-              question_id: createdQuestion.id,
-              label: choice.label.trim(),
-              value: choice.value.trim() || choice.label.trim(),
-              is_correct: choice.is_correct,
-              position: choiceIndex + 1,
-            });
-
-            if (choiceError) {
-              throw choiceError;
-            }
-          }
-        }
-      }
 
       success('Parcours de création terminé', `La formation "${wizard.course.title}" a été créée avec son programme initial.`);
       resetWizard();
-      await onCreated({ id: createdCourseId, title: wizard.course.title.trim() });
       onClose();
+      await onCreated(createdPayload);
     } catch (reason) {
       console.error(reason);
       const detail = reason && typeof reason === 'object' && 'message' in reason
         ? String(reason.message)
         : 'Impossible de finaliser la création de la formation.';
-      setStepMessage(
-        createdCourseId
-          ? `${detail} Le cours a été créé partiellement. Reprenez-le ensuite depuis la liste.`
-          : detail,
-      );
+      setStepMessage(detail);
       error('Création incomplète', detail);
     } finally {
       setIsSubmitting(false);
@@ -1288,6 +1172,21 @@ export default function CourseCreationWizard({
               ))}
             </select>
             {courseErrors.level ? <p className="mt-1 text-xs text-red-600">{courseErrors.level}</p> : null}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Format *</label>
+            <select
+              value={wizard.course.delivery_mode}
+              onChange={(event) => updateCourse('delivery_mode', event.target.value as CourseDeliveryMode)}
+              aria-invalid={Boolean(courseErrors.delivery_mode)}
+              className={getFieldClass(Boolean(courseErrors.delivery_mode))}
+            >
+              {Object.entries(COURSE_DELIVERY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            {courseErrors.delivery_mode ? <p className="mt-1 text-xs text-red-600">{courseErrors.delivery_mode}</p> : null}
           </div>
 
           <div className="md:col-span-2">

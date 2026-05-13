@@ -9,11 +9,14 @@ import {
   Query,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service.js';
 import type { AuthUser, CertificationItem, PaymentSettings, PortfolioItem, Role, SocialLinks } from './auth.store.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
+import { PermissionGuard } from './permission.guard.js';
+import { RequirePermission } from './require-permission.decorator.js';
 
 @Controller('auth')
 export class AuthController {
@@ -97,6 +100,8 @@ export class AuthController {
   }
 
   @Get('users')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('users.read')
   getUsers(@Req() request: AuthenticatedRequest) {
     return this.authService.getUsers(request);
   }
@@ -107,6 +112,8 @@ export class AuthController {
   }
 
   @Patch('users/:id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('users.manage')
   patchUser(
     @Req() request: AuthenticatedRequest,
     @Param('id') id: string,
@@ -142,8 +149,8 @@ export class AuthController {
   }
 
   @Get('public-profile/:id')
-  getPublicProfile(@Param('id') id: string) {
-    return this.authService.getPublicInstructorProfile(id);
+  getPublicProfile(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return this.authService.getPublicInstructorProfile(request, id);
   }
 
   @Get('profile/:id')

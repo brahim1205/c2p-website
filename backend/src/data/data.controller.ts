@@ -4,6 +4,7 @@ import {
   ConflictException,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -13,35 +14,60 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { WalletService } from '../database/wallet.service.js';
 import { AuthService } from '../auth/auth.service.js';
 import { findUserById, type AuthUser } from '../auth/auth.store.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
+import type { OutboxEventInput } from '../outbox/outbox.types.js';
 import { createInitialStore, type Row, type Store } from './mock-store.js';
+import {
+  ADMIN_ONLY_TABLES,
+  APPEND_ONLY_TABLES,
+  canReadWithoutAuth,
+  getRequiredPermissionForTable,
+} from './data-access-policy.js';
+import { filterRowsForActor as filterRowsForActorByPolicy } from './data-row-access.js';
+import {
+  ensureConstraints as ensureInsertConstraints,
+  prepareInsert as prepareInsertByPolicy,
+} from './data-write-policy.js';
+import {
+  recomputeDerivedData as recomputeDerivedDataByPolicy,
+} from './data-derived-data.js';
+import {
+  applyBookingCreateSideEffects as applyBookingCreateSideEffectsByPolicy,
+  applyBookingUpdateSideEffects as applyBookingUpdateSideEffectsByPolicy,
+  applyEscrowUpdateSideEffects as applyEscrowUpdateSideEffectsByPolicy,
+  applyPayoutRequestUpdateSideEffects as applyPayoutRequestUpdateSideEffectsByPolicy,
+  applySubscriptionMutationSideEffects as applySubscriptionMutationSideEffectsByPolicy,
+  type FinanceSideEffectsContext,
+} from './data-finance-side-effects.js';
+import {
+  isConversationAllowedForActor,
+  sanitizeConversationParticipants,
+} from './data-messaging-policy.js';
+import {
+  canCreateUserNotification,
+  normalizeNotificationType,
+} from './data-notification-policy.js';
+import {
+  appendVirtualClassCreateEvents,
+  appendVirtualClassUpdateEvents,
+} from './data-virtual-class-events.js';
+import {
+  applyProviderVerificationDecision,
+  issueProviderVisibilityPass,
+  syncProviderStateFromSubscription,
+} from './data-provider-visibility.js';
 
 const initialStore: Store = createInitialStore();
 const store: Store = clone(initialStore);
-const PUBLIC_READ_TABLES = new Set([
-  'providers',
-  'provider_services',
-  'provider_reviews',
-  'courses',
-  'projects',
-]);
-const ADMIN_ONLY_TABLES = new Set([
-  'admin_accreditations',
-  'admin_content_items',
-  'admin_campaigns',
-  'admin_reports',
-  'admin_platform_categories',
-  'admin_platform_rules',
-  'admin_integrations',
-  'admin_backups',
-  'admin_security_alerts',
-  'admin_audit_logs',
-  'auth_users',
-  'auth_sessions',
-]);
+let appStoreHydrated = false;
+let appStoreHydratedAt = 0;
+let syncAppStorePromise: Promise<void> | null = null;
+const APP_STORE_SYNC_TTL_MS = 60_000;
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -71,7 +97,7 @@ function matches(row: Row, query: Record<string, string | string[] | undefined>)
   });
 }
 
-function withId(row: Row): Row {
+export function withId(row: Row): Row {
   return {
     id: row.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     created_at: row.created_at ?? new Date().toISOString(),
@@ -144,51 +170,70 @@ function buildAppRows() {
   );
 }
 
-export async function syncAppStoreFromDatabase(prisma: PrismaService) {
+function buildAppRowRecord(table: string, row: Row): Prisma.AppRowCreateManyInput {
+  return {
+    key: `${table}::${String(row.id)}`,
+    table,
+    rowId: String(row.id),
+    data: clone(row) as Prisma.InputJsonValue,
+  };
+}
+
+export async function syncAppStoreFromDatabase(prisma: PrismaService, options: { force?: boolean } = {}) {
   if (!prisma.isConnected) {
     recomputeDerivedData();
+    appStoreHydrated = true;
     return;
   }
 
-  const knownTables = new Set(
-    (await prisma.appRow.findMany({ distinct: ['table'], select: { table: true } })).map((entry) => entry.table),
-  );
+  if (appStoreHydrated && !options.force && (Date.now() - appStoreHydratedAt) < APP_STORE_SYNC_TTL_MS) {
+    return;
+  }
 
-  const missingRows = Object.entries(initialStore)
-    .filter(([table, rows]) => rows.length > 0 && !knownTables.has(table))
-    .flatMap(([table, rows]) =>
-      rows.map((row) => ({
-        key: `${table}::${String(row.id)}`,
-        table,
-        rowId: String(row.id),
-        data: row as Prisma.InputJsonValue,
-      })),
+  if (syncAppStorePromise) {
+    return syncAppStorePromise;
+  }
+
+  syncAppStorePromise = (async () => {
+    const knownTables = new Set(
+      (await prisma.appRow.findMany({ distinct: ['table'], select: { table: true } })).map((entry) => entry.table),
     );
 
-  if (missingRows.length > 0) {
-    await prisma.appRow.createMany({
-      data: missingRows,
-      skipDuplicates: true,
-    });
-  }
+    const missingRows = Object.entries(initialStore)
+      .filter(([table, rows]) => rows.length > 0 && !knownTables.has(table))
+      .flatMap(([table, rows]) => rows.map((row) => buildAppRowRecord(table, row)));
 
-  const records = await prisma.appRow.findMany();
-  const nextStore: Store = {};
-  for (const record of records) {
-    if (!nextStore[record.table]) {
-      nextStore[record.table] = [];
+    if (missingRows.length > 0) {
+      await prisma.appRow.createMany({
+        data: missingRows,
+        skipDuplicates: true,
+      });
     }
-    nextStore[record.table].push(clone(record.data as Row));
-  }
 
-  for (const table of Object.keys(initialStore)) {
-    if (!nextStore[table]) {
-      nextStore[table] = [];
+    const records = await prisma.appRow.findMany();
+    const nextStore: Store = {};
+    for (const record of records) {
+      if (!nextStore[record.table]) {
+        nextStore[record.table] = [];
+      }
+      nextStore[record.table].push(clone(record.data as Row));
     }
-  }
 
-  resetStore(nextStore);
-  recomputeDerivedData();
+    for (const table of Object.keys(initialStore)) {
+      if (!nextStore[table]) {
+        nextStore[table] = [];
+      }
+    }
+
+    resetStore(nextStore);
+    recomputeDerivedData();
+    appStoreHydrated = true;
+    appStoreHydratedAt = Date.now();
+  })().finally(() => {
+    syncAppStorePromise = null;
+  });
+
+  return syncAppStorePromise;
 }
 
 export async function persistAppStoreToDatabase(prisma: PrismaService) {
@@ -203,6 +248,7 @@ export async function persistAppStoreToDatabase(prisma: PrismaService) {
       await tx.appRow.createMany({ data: records });
     }
   });
+  appStoreHydratedAt = Date.now();
 }
 
 export function appendAppRows(table: string, rows: Row[]) {
@@ -242,8 +288,26 @@ function hydrateRow(table: string, row: Row): Row {
   const hydrated = clone(row);
 
   if (table === 'providers') {
+    const activeSubscription = hydrated.user_id
+      ? (store.user_subscriptions ?? []).find(
+          (entry) => String(entry.user_id) === String(hydrated.user_id) && String(entry.status) === 'active',
+        )
+      : null;
+    const activePlan = activeSubscription ? findRow('subscription_plans', activeSubscription.plan_id) : null;
     hydrated.reviews = hydrated.reviews ?? hydrated.reviews_count ?? 0;
     hydrated.reviews_count = hydrated.reviews_count ?? hydrated.reviews ?? 0;
+    hydrated.public_alias = trimText(hydrated.public_alias) ?? `Profil C2P #${String(hydrated.id ?? '').trim() || 'senprest'}`;
+    hydrated.public_profile_level = trimText(hydrated.public_profile_level)
+      ?? (parseBoolean(activePlan?.verified_badge) || parseBoolean(hydrated.verified) ? 'verified' : activeSubscription ? 'subscriber' : 'visitor');
+    hydrated.identity_mode = trimText(hydrated.identity_mode) ?? (parseBoolean(hydrated.verified) ? 'full_profile' : 'alias_only');
+    hydrated.visibility_tier = trimText(hydrated.visibility_tier)
+      ?? (trimText(activePlan?.priority_matching) === 'high' ? 'premium' : trimText(activePlan?.priority_matching) === 'medium' ? 'priority' : 'standard');
+    hydrated.operations_managed = parseBoolean(hydrated.operations_managed, true);
+    hydrated.alerts_enabled = parseBoolean(hydrated.alerts_enabled, Boolean(activeSubscription));
+    hydrated.plan_name = hydrated.plan_name ?? activeSubscription?.plan_name ?? activePlan?.name ?? null;
+    hydrated.subscription_status = hydrated.subscription_status ?? activeSubscription?.status ?? null;
+    hydrated.verified_badge_enabled = parseBoolean(hydrated.verified_badge_enabled, parseBoolean(activePlan?.verified_badge));
+    hydrated.verified = parseBoolean(hydrated.verified, false) || parseBoolean(activePlan?.verified_badge);
     return hydrated;
   }
 
@@ -264,6 +328,19 @@ function hydrateRow(table: string, row: Row): Row {
         image: provider.image,
       };
     }
+    const requestedProvider = findRow('providers', hydrated.requested_provider_id);
+    if (requestedProvider) {
+      hydrated.requested_provider = {
+        id: requestedProvider.id,
+        name: requestedProvider.name,
+        image: requestedProvider.image,
+      };
+      hydrated.requested_provider_name = hydrated.requested_provider_name ?? requestedProvider.name;
+    }
+    hydrated.request_channel = hydrated.request_channel ?? 'c2p_managed';
+    hydrated.assignment_status = hydrated.assignment_status ?? (hydrated.provider_id ? 'assigned' : 'pending_review');
+    hydrated.wallet_flow = hydrated.wallet_flow ?? 'escrow';
+    hydrated.matching_candidates = buildMatchingCandidates(hydrated);
     return hydrated;
   }
 
@@ -277,7 +354,14 @@ function hydrateRow(table: string, row: Row): Row {
     const basePrice = requireNumberOrFallback(hydrated.price, 0);
     const promotionPercentage = requireNumberOrFallback(hydrated.promotion_percentage, 0);
     const isFree = parseBoolean(hydrated.is_free, basePrice <= 0);
-    hydrated.level = hydrated.level ?? 'intermediate';
+    const instructor = findUserById(String(hydrated.instructor_id ?? ''));
+    hydrated.level = normalizeCourseLevel(hydrated.level) ?? 'intermediate';
+    hydrated.program_branch = normalizeCourseBranch(hydrated.program_branch) ?? 'form_actions';
+    hydrated.delivery_mode = trimText(hydrated.delivery_mode) ?? 'online';
+    if (!new Set(['online', 'onsite', 'hybrid']).has(String(hydrated.delivery_mode))) {
+      hydrated.delivery_mode = 'online';
+    }
+    hydrated.instructor_name = hydrated.instructor_name ?? (instructor ? `${instructor.firstName} ${instructor.lastName}`.trim() : null);
     hydrated.is_free = isFree;
     hydrated.access_type = hydrated.access_type ?? (isFree ? 'free' : 'paid');
     hydrated.promotion_percentage = Math.max(0, Math.min(100, promotionPercentage));
@@ -287,6 +371,16 @@ function hydrateRow(table: string, row: Row): Row {
       ? 0
       : Math.max(0, Math.round(basePrice * (1 - ((toNumber(hydrated.promotion_percentage) ?? 0) / 100))));
     hydrated.views = hydrated.views ?? Math.max((toNumber(hydrated.students_count) ?? 0) * 6, 0);
+    return hydrated;
+  }
+
+  if (table === 'student_guardians') {
+    const student = findUserById(String(hydrated.student_id ?? ''));
+    hydrated.student_name = hydrated.student_name ?? (student ? `${student.firstName} ${student.lastName}`.trim() : null);
+    hydrated.student_avatar = hydrated.student_avatar ?? student?.avatar ?? null;
+    hydrated.relationship = trimText(hydrated.relationship) ?? 'Parent';
+    hydrated.status = trimText(hydrated.status) ?? 'active';
+    hydrated.alert_channel = trimText(hydrated.alert_channel) ?? 'dashboard';
     return hydrated;
   }
 
@@ -311,6 +405,31 @@ function hydrateRow(table: string, row: Row): Row {
     hydrated.certificate_issued_at = hydrated.certificate_issued_at ?? null;
     hydrated.certificate_number = hydrated.certificate_number ?? null;
     hydrated.courses = course ? clone(course) : null;
+    return hydrated;
+  }
+
+  if (table === 'lesson_progress') {
+    const course = findRow('courses', hydrated.course_id);
+    const section = findRow('course_sections', hydrated.section_id);
+    const lesson = findRow('course_lessons', hydrated.lesson_id);
+    hydrated.course_name = hydrated.course_name ?? course?.title ?? null;
+    hydrated.section_title = hydrated.section_title ?? section?.title ?? null;
+    hydrated.lesson_title = hydrated.lesson_title ?? lesson?.title ?? null;
+    hydrated.progress = Math.max(0, Math.min(100, requireNumberOrFallback(hydrated.progress, 0)));
+    hydrated.completed = parseBoolean(hydrated.completed, (toNumber(hydrated.progress) ?? 0) >= 100);
+    hydrated.status = hydrated.status ?? (hydrated.completed ? 'completed' : ((toNumber(hydrated.progress) ?? 0) > 0 ? 'in_progress' : 'not_started'));
+    hydrated.last_viewed_at = hydrated.last_viewed_at ?? hydrated.updated_at ?? hydrated.created_at ?? null;
+    hydrated.first_viewed_at = hydrated.first_viewed_at ?? hydrated.last_viewed_at ?? null;
+    hydrated.completed_at = hydrated.completed_at ?? null;
+    return hydrated;
+  }
+
+  if (table === 'course_reviews') {
+    const course = findRow('courses', hydrated.course_id);
+    hydrated.course_name = hydrated.course_name ?? course?.title ?? null;
+    hydrated.rating = requireNumberOrFallback(hydrated.rating, 0);
+    hydrated.status = hydrated.status ?? 'published';
+    hydrated.student_avatar = trimText(hydrated.student_avatar);
     return hydrated;
   }
 
@@ -359,6 +478,135 @@ function hydrateRow(table: string, row: Row): Row {
     const course = findRow('courses', hydrated.course_id);
     hydrated.course_name = hydrated.course_name ?? course?.title ?? null;
     hydrated.status = hydrated.status ?? 'draft';
+    return hydrated;
+  }
+
+  if (table === 'wallet_accounts') {
+    const userId = String(hydrated.user_id ?? '');
+    const escrowOutgoing = (store.escrow_cases ?? [])
+      .filter((entry) => String(entry.client_id) === userId && new Set(['funded', 'assigned', 'in_progress', 'delivery_review']).has(String(entry.status)))
+      .reduce((sum, entry) => sum + requireNumberOrFallback(entry.amount_total, 0), 0);
+    const escrowIncoming = (store.escrow_cases ?? [])
+      .filter((entry) => String(entry.provider_user_id) === userId && new Set(['assigned', 'in_progress', 'delivery_review']).has(String(entry.status)))
+      .reduce((sum, entry) => sum + requireNumberOrFallback(entry.provider_amount, 0), 0);
+    const pendingPayoutAmount = getPendingPayoutReservations(userId);
+    const subscription = (store.user_subscriptions ?? []).find((entry) => String(entry.user_id) === userId && String(entry.status) === 'active');
+    hydrated.currency = hydrated.currency ?? 'XAF';
+    hydrated.held_balance = escrowOutgoing;
+    hydrated.pending_release_balance = escrowIncoming;
+    hydrated.pending_payout_amount = pendingPayoutAmount;
+    hydrated.available_balance = Math.max(0, requireNumberOrFallback(hydrated.balance, 0) - pendingPayoutAmount);
+    hydrated.subscription_status = subscription?.status ?? null;
+    hydrated.subscription_plan_name = subscription?.plan_name ?? null;
+    return hydrated;
+  }
+
+  if (table === 'subscription_plans') {
+    hydrated.currency = hydrated.currency ?? 'XAF';
+    hydrated.price_monthly = requireNumberOrFallback(hydrated.price_monthly, 0);
+    hydrated.commission_rate = requireNumberOrFallback(hydrated.commission_rate, 0);
+    hydrated.active = Boolean(hydrated.active ?? true);
+    hydrated.features = Array.isArray(hydrated.features) ? hydrated.features : [];
+    return hydrated;
+  }
+
+  if (table === 'user_subscriptions') {
+    const plan = findRow('subscription_plans', hydrated.plan_id);
+    const renewsAt = typeof hydrated.renews_at === 'string' ? Date.parse(hydrated.renews_at) : Number.NaN;
+    hydrated.role = hydrated.role ?? plan?.role ?? null;
+    hydrated.plan_name = hydrated.plan_name ?? plan?.name ?? null;
+    hydrated.currency = hydrated.currency ?? plan?.currency ?? 'XAF';
+    hydrated.amount = requireNumberOrFallback(hydrated.amount, requireNumberOrFallback(plan?.price_monthly, 0));
+    hydrated.commission_rate = requireNumberOrFallback(hydrated.commission_rate, requireNumberOrFallback(plan?.commission_rate, 0));
+    hydrated.status = hydrated.status ?? 'pending';
+    hydrated.auto_renew = parseBoolean(hydrated.auto_renew, true);
+    hydrated.plan = plan ? clone(plan) : null;
+    hydrated.days_remaining = Number.isNaN(renewsAt) ? null : Math.max(0, Math.ceil((renewsAt - Date.now()) / 86_400_000));
+    hydrated.is_expiring_soon = typeof hydrated.days_remaining === 'number' ? hydrated.days_remaining <= 7 : false;
+    return hydrated;
+  }
+
+  if (table === 'provider_visibility_products') {
+    hydrated.role = hydrated.role ?? 'prestataire';
+    hydrated.tier = hydrated.tier ?? 'priority';
+    hydrated.currency = hydrated.currency ?? 'XAF';
+    hydrated.price = requireNumberOrFallback(hydrated.price, 0);
+    hydrated.duration_days = requireNumberOrFallback(hydrated.duration_days, 30);
+    hydrated.alerts_enabled = parseBoolean(hydrated.alerts_enabled, true);
+    hydrated.verification_eligible = parseBoolean(hydrated.verification_eligible, false);
+    hydrated.matching_priority = trimText(hydrated.matching_priority) ?? 'low';
+    hydrated.features = Array.isArray(hydrated.features) ? hydrated.features : [];
+    hydrated.active = parseBoolean(hydrated.active, true);
+    return hydrated;
+  }
+
+  if (table === 'provider_visibility_passes') {
+    const provider = findRow('providers', hydrated.provider_id);
+    const plan = findRow('subscription_plans', hydrated.plan_id);
+    const product = findRow('provider_visibility_products', hydrated.product_id ?? hydrated.plan_id);
+    const expiresAt = typeof hydrated.expires_at === 'string' ? Date.parse(hydrated.expires_at) : Number.NaN;
+    hydrated.provider_name = hydrated.provider_name ?? provider?.name ?? provider?.public_alias ?? null;
+    hydrated.plan_name = hydrated.plan_name ?? plan?.name ?? product?.name ?? null;
+    hydrated.product_name = hydrated.product_name ?? product?.name ?? null;
+    hydrated.pass_label = hydrated.pass_label ?? 'Billet standard';
+    hydrated.pass_tier = hydrated.pass_tier ?? 'standard';
+    hydrated.status = hydrated.status ?? 'active';
+    hydrated.alerts_enabled = parseBoolean(hydrated.alerts_enabled, false);
+    hydrated.verification_eligible = parseBoolean(hydrated.verification_eligible, false);
+    hydrated.matching_priority = trimText(hydrated.matching_priority) ?? 'low';
+    hydrated.is_expired = Number.isNaN(expiresAt) ? false : expiresAt < Date.now();
+    return hydrated;
+  }
+
+  if (table === 'provider_visibility_orders') {
+    const product = findRow('provider_visibility_products', hydrated.product_id);
+    const pass = findRow('provider_visibility_passes', hydrated.pass_id);
+    hydrated.product_name = hydrated.product_name ?? product?.name ?? null;
+    hydrated.currency = hydrated.currency ?? product?.currency ?? 'XAF';
+    hydrated.amount = requireNumberOrFallback(hydrated.amount, requireNumberOrFallback(product?.price, 0));
+    hydrated.status = hydrated.status ?? 'pending';
+    hydrated.pass_tier = hydrated.pass_tier ?? product?.tier ?? pass?.pass_tier ?? 'standard';
+    hydrated.pass_code = hydrated.pass_code ?? pass?.code ?? null;
+    hydrated.pass_label = hydrated.pass_label ?? pass?.pass_label ?? null;
+    hydrated.expires_at = hydrated.expires_at ?? pass?.expires_at ?? null;
+    return hydrated;
+  }
+
+  if (table === 'provider_verification_requests') {
+    const provider = findRow('providers', hydrated.provider_id);
+    const reviewer = findUserById(String(hydrated.reviewed_by ?? ''));
+    hydrated.provider_name = hydrated.provider_name ?? provider?.name ?? provider?.public_alias ?? null;
+    hydrated.requested_level = hydrated.requested_level ?? 'verified';
+    hydrated.status = hydrated.status ?? 'pending';
+    hydrated.source = hydrated.source ?? 'self_service';
+    hydrated.note = trimText(hydrated.note) ?? '';
+    hydrated.admin_notes = trimText(hydrated.admin_notes);
+    hydrated.reviewed_by_name = reviewer ? `${reviewer.firstName} ${reviewer.lastName}`.trim() : null;
+    return hydrated;
+  }
+
+  if (table === 'escrow_cases') {
+    const booking = findRow('bookings', hydrated.booking_id);
+    const provider = findRow('providers', hydrated.provider_id);
+    const client = findUserById(String(hydrated.client_id ?? booking?.client_id ?? ''));
+    hydrated.currency = hydrated.currency ?? 'XAF';
+    hydrated.booking = booking ? clone(booking) : null;
+    hydrated.booking_title = hydrated.booking_title ?? booking?.service ?? hydrated.service ?? null;
+    hydrated.client_name = hydrated.client_name ?? booking?.client_name ?? (client ? `${client.firstName} ${client.lastName}`.trim() : null);
+    hydrated.provider_name = hydrated.provider_name ?? provider?.name ?? null;
+    hydrated.provider_user_id = hydrated.provider_user_id ?? provider?.user_id ?? null;
+    hydrated.status = normalizeEscrowStatus(hydrated.status, 'awaiting_funding');
+    hydrated.last_event_at = hydrated.released_at ?? hydrated.refunded_at ?? hydrated.funded_at ?? booking?.updated_at ?? booking?.created_at ?? null;
+    return hydrated;
+  }
+
+  if (table === 'commission_ledger') {
+    const actor = findUserById(String(hydrated.user_id ?? ''));
+    const beneficiary = findUserById(String(hydrated.beneficiary_user_id ?? ''));
+    hydrated.currency = hydrated.currency ?? 'XAF';
+    hydrated.status = hydrated.status ?? 'recognized';
+    hydrated.actor_name = actor ? `${actor.firstName} ${actor.lastName}`.trim() : hydrated.actor_name ?? null;
+    hydrated.beneficiary_name = beneficiary ? `${beneficiary.firstName} ${beneficiary.lastName}`.trim() : hydrated.beneficiary_name ?? null;
     return hydrated;
   }
 
@@ -522,545 +770,32 @@ function hydrateRows(table: string, rows: Row[]) {
   return rows.map((row) => hydrateRow(table, row));
 }
 
-function prepareInsert(table: string, row: Row): Row {
-  const now = new Date().toISOString();
-
-  if (table === 'course_enrollments') {
-    return {
-      progress: 0,
-      status: 'active',
-      enrolled_at: now,
-      last_active: now,
-      grade: null,
-      ...row,
-    };
-  }
-
-  if (table === 'provider_reviews') {
-    return {
-      helpful: 0,
-      response: null,
-      ...row,
-    };
-  }
-
-  if (table === 'notifications') {
-    return {
-      is_read: false,
-      metadata: {},
-      ...row,
-    };
-  }
-
-  if (table === 'messages') {
-    return {
-      read: false,
-      attachments: [],
-      ...row,
-    };
-  }
-
-  if (table === 'projects') {
-    return {
-      status: 'pre-incubation',
-      phase: 'idee',
-      funding: 0,
-      team_size: 1,
-      mentors: 0,
-      progress: 0,
-      looking_for: [],
-      ...row,
-    };
-  }
-
-  if (table === 'project_funding_rounds') {
-    return {
-      raised_amount: 0,
-      status: 'en_cours',
-      pitch_deck: false,
-      business_plan: false,
-      ...row,
-    };
-  }
-
-  if (table === 'project_collaborations') {
-    return {
-      meetings: 0,
-      deliverables: [],
-      status: 'en_negociation',
-      ...row,
-    };
-  }
-
-  if (table === 'project_tracking') {
-    return {
-      status: 'actif',
-      invested_amount: 0,
-      roi: 0,
-      ...row,
-    };
-  }
-
-  if (table === 'course_sections') {
-    const existingPositions = (store.course_sections ?? [])
-      .filter((section) => String(section.course_id) === String(row.course_id))
-      .map((section) => toNumber(section.position) ?? 0);
-    return {
-      status: 'draft',
-      position: existingPositions.length ? Math.max(...existingPositions) + 1 : 1,
-      ...row,
-    };
-  }
-
-  if (table === 'course_lessons') {
-    const existingPositions = (store.course_lessons ?? [])
-      .filter((lesson) => String(lesson.section_id) === String(row.section_id))
-      .map((lesson) => toNumber(lesson.position) ?? 0);
-    return {
-      status: 'draft',
-      is_preview: false,
-      position: existingPositions.length ? Math.max(...existingPositions) + 1 : 1,
-      ...row,
-    };
-  }
-
-  if (table === 'lesson_assets') {
-    const existingPositions = (store.lesson_assets ?? [])
-      .filter((asset) => String(asset.lesson_id) === String(row.lesson_id))
-      .map((asset) => toNumber(asset.position) ?? 0);
-    return {
-      status: 'ready',
-      position: existingPositions.length ? Math.max(...existingPositions) + 1 : 1,
-      size_bytes: null,
-      thumbnail_url: null,
-      mime_type: null,
-      ...row,
-    };
-  }
-
-  if (table === 'quiz_questions') {
-    const existingPositions = (store.quiz_questions ?? [])
-      .filter((question) => String(question.exam_id) === String(row.exam_id))
-      .map((question) => toNumber(question.position) ?? 0);
-    return {
-      required: true,
-      position: existingPositions.length ? Math.max(...existingPositions) + 1 : 1,
-      explanation: '',
-      ...row,
-    };
-  }
-
-  if (table === 'quiz_choices') {
-    const existingPositions = (store.quiz_choices ?? [])
-      .filter((choice) => String(choice.question_id) === String(row.question_id))
-      .map((choice) => toNumber(choice.position) ?? 0);
-    return {
-      is_correct: false,
-      position: existingPositions.length ? Math.max(...existingPositions) + 1 : 1,
-      ...row,
-    };
-  }
-
-  if (table === 'lesson_comments') {
-    return {
-      status: 'visible',
-      likes: 0,
-      pinned: false,
-      parent_id: null,
-      ...row,
-    };
-  }
-
-  if (table === 'course_faq_items') {
-    const existingPositions = (store.course_faq_items ?? [])
-      .filter((item) => String(item.course_id) === String(row.course_id))
-      .map((item) => toNumber(item.position) ?? 0);
-    return {
-      status: 'draft',
-      position: existingPositions.length ? Math.max(...existingPositions) + 1 : 1,
-      ...row,
-    };
-  }
-
-  if (table === 'payout_accounts') {
-    return {
-      status: 'active',
-      is_default: false,
-      ...row,
-    };
-  }
-
-  if (table === 'payout_requests') {
-    return {
-      status: 'pending',
-      currency: 'XAF',
-      requested_at: now,
-      processed_at: null,
-      ...row,
-    };
-  }
-
-  if (table === 'virtual_classes') {
-    return {
-      provider: getDefaultLiveProvider(),
-      recording_enabled: true,
-      allow_chat: true,
-      recording_status: 'pending',
-      started_at: null,
-      ended_at: null,
-      instructor_notes: null,
-      ...row,
-    };
-  }
-
-  return row;
+export function prepareInsert(table: string, row: Row): Row {
+  return prepareInsertByPolicy(table, row, {
+    store,
+    getDefaultLiveProvider,
+    getPlatformRuleNumber,
+  });
 }
 
 function ensureConstraints(table: string, rows: Row[]) {
-  for (const row of rows) {
-    if (table === 'course_enrollments') {
-      const duplicate = (store.course_enrollments ?? []).find(
-        (existing) =>
-          String(existing.course_id) === String(row.course_id) &&
-          String(existing.student_id) === String(row.student_id),
-      );
-
-      if (duplicate) {
-        throw new ConflictException('duplicate enrollment');
-      }
-    }
-
-    if (table === 'project_tracking') {
-      const duplicate = (store.project_tracking ?? []).find(
-        (existing) =>
-          String(existing.project_id) === String(row.project_id) &&
-          String(existing.partner_id) === String(row.partner_id),
-      );
-
-      if (duplicate) {
-        throw new ConflictException('duplicate tracking');
-      }
-    }
-
-    if (table === 'client_favorites') {
-      const duplicate = (store.client_favorites ?? []).find(
-        (existing) =>
-          String(existing.client_id) === String(row.client_id) &&
-          String(existing.provider_id) === String(row.provider_id),
-      );
-
-      if (duplicate) {
-        throw new ConflictException('duplicate favorite');
-      }
-    }
-
-    if (table === 'submissions') {
-      const duplicate = (store.submissions ?? []).find(
-        (existing) =>
-          String(existing.exam_id) === String(row.exam_id) &&
-          String(existing.student_id) === String(row.student_id),
-      );
-
-      if (duplicate) {
-        throw new ConflictException('duplicate submission');
-      }
-    }
-  }
+  ensureInsertConstraints(table, rows, store);
 }
 
 function recomputeDerivedData() {
-  const courses = store.courses ?? [];
-  const courseSections = store.course_sections ?? [];
-  const courseLessons = store.course_lessons ?? [];
-  const lessonAssets = store.lesson_assets ?? [];
-  const enrollments = store.course_enrollments ?? [];
-  const reviews = store.provider_reviews ?? [];
-  const bookings = store.bookings ?? [];
-  const providers = store.providers ?? [];
-  const services = store.provider_services ?? [];
-  const exams = store.exams ?? [];
-  const quizQuestions = store.quiz_questions ?? [];
-  const quizChoices = store.quiz_choices ?? [];
-  const submissions = store.submissions ?? [];
-  const certificates = store.certificates ?? [];
-  const virtualClasses = store.virtual_classes ?? [];
-  const conversations = store.conversations ?? [];
-  const messages = store.messages ?? [];
-  const projects = store.projects ?? [];
-  const projectMilestones = store.project_milestones ?? [];
-  const projectDocuments = store.project_documents ?? [];
-  const projectHistory = store.project_history ?? [];
-  const projectFundingRounds = store.project_funding_rounds ?? [];
-  const projectPartnerships = store.project_partnerships ?? [];
-  const projectTracking = store.project_tracking ?? [];
-  const projectCollaborations = store.project_collaborations ?? [];
-  const fundingInvestors = store.funding_investors ?? [];
-
-  for (const course of courses) {
-    const courseEnrollments = enrollments.filter((enrollment) => String(enrollment.course_id) === String(course.id));
-    const courseStudents = new Set(courseEnrollments.map((enrollment) => String(enrollment.student_id)));
-    const totalProgress = courseEnrollments.reduce((sum, enrollment) => sum + (toNumber(enrollment.progress) ?? 0), 0);
-    const price = toNumber(course.price) ?? 0;
-    const sections = courseSections.filter((section) => String(section.course_id) === String(course.id));
-    const lessons = courseLessons.filter((lesson) => String(lesson.course_id) === String(course.id));
-    const assets = lessonAssets.filter((asset) => String(asset.course_id) === String(course.id));
-
-    course.students_count = courseStudents.size;
-    course.completion_rate = courseEnrollments.length ? Math.round(totalProgress / courseEnrollments.length) : 0;
-    course.revenue = courseStudents.size * price;
-    course.modules = sections.length > 0 ? sections.length : Math.max(toNumber(course.modules) ?? 0, 1);
-    course.lessons_count = lessons.length;
-    course.preview_lessons_count = lessons.filter((lesson) => Boolean(lesson.is_preview)).length;
-    course.published_lessons_count = lessons.filter((lesson) => String(lesson.status) === 'published').length;
-    course.assets_count = assets.length;
-  }
-
-  for (const enrollment of enrollments) {
-    const course = findRow('courses', enrollment.course_id);
-    const courseSectionsForEnrollment = courseSections.filter((section) => String(section.course_id) === String(enrollment.course_id));
-    const courseLessonsForEnrollment = courseLessons.filter((lesson) => String(lesson.course_id) === String(enrollment.course_id));
-    const courseExamsForEnrollment = exams.filter((exam) => String(exam.course_id) === String(enrollment.course_id));
-    const enrollmentSubmissions = submissions.filter((submission) => {
-      if (String(submission.student_id) !== String(enrollment.student_id)) return false;
-      return courseExamsForEnrollment.some((exam) => String(exam.id) === String(submission.exam_id));
-    });
-    const gradedSubmissions = enrollmentSubmissions.filter((submission) => submission.grade !== null && submission.grade !== undefined);
-    const latestSubmission = clone(enrollmentSubmissions).sort((left, right) => compareValues(right.submitted_at ?? right.created_at, left.submitted_at ?? left.created_at))[0];
-    const certificate = certificates.find(
-      (item) =>
-        String(item.student_id) === String(enrollment.student_id) &&
-        String(item.course_id) === String(enrollment.course_id),
-    );
-    const normalizedProgress = Math.min(100, Math.max(0, toNumber(enrollment.progress) ?? 0));
-    const sectionsCount = courseSectionsForEnrollment.length > 0 ? courseSectionsForEnrollment.length : Math.max(toNumber(course?.modules) ?? 0, 0);
-    const lessonsCount = courseLessonsForEnrollment.length;
-    const completedSectionsEstimate = sectionsCount > 0 ? Math.round((normalizedProgress / 100) * sectionsCount) : 0;
-    const completedLessonsEstimate = lessonsCount > 0 ? Math.round((normalizedProgress / 100) * lessonsCount) : 0;
-    const daysSinceActive = getDaysSince(enrollment.last_active) ?? 0;
-    let attentionLevel = 'on_track';
-
-    if (normalizedProgress >= 100 || String(enrollment.status) === 'completed') {
-      attentionLevel = 'completed';
-    } else if (String(enrollment.status) === 'inactive' || daysSinceActive >= 14 || (daysSinceActive >= 7 && normalizedProgress < 40)) {
-      attentionLevel = 'at_risk';
-    } else if (daysSinceActive >= 5 || normalizedProgress < 25) {
-      attentionLevel = 'watch';
-    }
-
-    enrollment.course_name = enrollment.course_name ?? course?.title ?? null;
-    enrollment.course_category = enrollment.course_category ?? course?.category ?? null;
-    enrollment.course_sections_count = sectionsCount;
-    enrollment.course_lessons_count = lessonsCount;
-    enrollment.completed_sections_estimate = completedSectionsEstimate;
-    enrollment.remaining_sections_estimate = Math.max(sectionsCount - completedSectionsEstimate, 0);
-    enrollment.completed_lessons_estimate = completedLessonsEstimate;
-    enrollment.remaining_lessons_estimate = Math.max(lessonsCount - completedLessonsEstimate, 0);
-    enrollment.days_since_active = daysSinceActive;
-    enrollment.submissions_count = enrollmentSubmissions.length;
-    enrollment.graded_submissions_count = gradedSubmissions.length;
-    enrollment.pending_grading_count = enrollmentSubmissions.filter((submission) => String(submission.status) === 'pending').length;
-    enrollment.avg_submission_grade = gradedSubmissions.length
-      ? Number((gradedSubmissions.reduce((sum, submission) => sum + (toNumber(submission.grade) ?? 0), 0) / gradedSubmissions.length).toFixed(1))
-      : null;
-    enrollment.latest_submission_at = latestSubmission?.submitted_at ?? latestSubmission?.created_at ?? null;
-    enrollment.attention_level = attentionLevel;
-    enrollment.certificate_status = certificate?.status ?? (normalizedProgress >= 100 ? 'ready' : 'pending');
-    enrollment.certificate_issued_at = certificate?.issued_at ?? null;
-    enrollment.certificate_number = certificate?.certificate_number ?? certificate?.certificate_id ?? null;
-  }
-
-  for (const section of courseSections) {
-    const course = findRow('courses', section.course_id);
-    const lessons = courseLessons.filter((lesson) => String(lesson.section_id) === String(section.id));
-    section.course_name = section.course_name ?? course?.title ?? null;
-    section.instructor_id = section.instructor_id ?? course?.instructor_id ?? null;
-    section.lessons_count = lessons.length;
-  }
-
-  for (const lesson of courseLessons) {
-    const course = findRow('courses', lesson.course_id);
-    const section = findRow('course_sections', lesson.section_id);
-    const assets = lessonAssets.filter((asset) => String(asset.lesson_id) === String(lesson.id));
-    lesson.course_name = lesson.course_name ?? course?.title ?? null;
-    lesson.section_title = lesson.section_title ?? section?.title ?? null;
-    lesson.instructor_id = lesson.instructor_id ?? course?.instructor_id ?? null;
-    lesson.assets_count = assets.length;
-  }
-
-  for (const asset of lessonAssets) {
-    const course = findRow('courses', asset.course_id);
-    const section = findRow('course_sections', asset.section_id);
-    const lesson = findRow('course_lessons', asset.lesson_id);
-    asset.course_name = asset.course_name ?? course?.title ?? null;
-    asset.section_title = asset.section_title ?? section?.title ?? null;
-    asset.lesson_title = asset.lesson_title ?? lesson?.title ?? null;
-    asset.instructor_id = asset.instructor_id ?? course?.instructor_id ?? null;
-  }
-
-  syncCourseModerationItems();
-
-  for (const provider of providers) {
-    const providerReviews = reviews.filter((review) => String(review.provider_id) === String(provider.id));
-    const providerBookings = bookings.filter((booking) => String(booking.provider_id) === String(provider.id));
-    const completedBookings = providerBookings.filter((booking) => booking.status === 'completed').length;
-    const avgRating = providerReviews.length
-      ? providerReviews.reduce((sum, review) => sum + (toNumber(review.rating) ?? 0), 0) / providerReviews.length
-      : toNumber(provider.rating) ?? 0;
-
-    provider.rating = Number(avgRating.toFixed(1));
-    provider.reviews = providerReviews.length;
-    provider.reviews_count = providerReviews.length;
-    provider.completed_jobs = Math.max(toNumber(provider.completed_jobs) ?? 0, completedBookings);
-  }
-
-  for (const service of services) {
-    const matchingBookings = bookings.filter(
-      (booking) =>
-        String(booking.provider_id) === String(service.provider_id) &&
-        (normalizeText(booking.service) === normalizeText(service.title) ||
-          normalizeText(booking.service).includes(normalizeText(service.title)) ||
-          normalizeText(service.title).includes(normalizeText(booking.service))),
-    );
-    const matchingReviews = reviews.filter(
-      (review) =>
-        String(review.provider_id) === String(service.provider_id) &&
-        normalizeText(review.service) === normalizeText(service.title),
-    );
-    const avgRating = matchingReviews.length
-      ? matchingReviews.reduce((sum, review) => sum + (toNumber(review.rating) ?? 0), 0) / matchingReviews.length
-      : 0;
-
-    service.bookings = matchingBookings.length;
-    service.rating = Number(avgRating.toFixed(1));
-  }
-
-  for (const exam of exams) {
-    const examSubmissions = submissions.filter((submission) => String(submission.exam_id) === String(exam.id));
-    const questions = quizQuestions.filter((question) => String(question.exam_id) === String(exam.id));
-    const graded = examSubmissions.filter((submission) => submission.grade !== null && submission.grade !== undefined);
-    const avgGrade = graded.length
-      ? graded.reduce((sum, submission) => sum + (toNumber(submission.grade) ?? 0), 0) / graded.length
-      : null;
-    const course = findRow('courses', exam.course_id);
-
-    exam.course_name = exam.course_name ?? course?.title ?? null;
-    exam.instructor_id = exam.instructor_id ?? course?.instructor_id ?? null;
-    exam.submitted = examSubmissions.length;
-    exam.participants = Math.max(toNumber(exam.participants) ?? 0, examSubmissions.length);
-    exam.avg_grade = avgGrade === null ? null : Number(avgGrade.toFixed(1));
-    exam.questions_count = questions.length;
-    exam.open_questions_count = questions.filter((question) => String(question.type) === 'open').length;
-    exam.auto_gradable = exam.open_questions_count === 0;
-
-    if (String(exam.type) === 'quiz' && questions.length > 0) {
-      exam.max_grade = questions.reduce((sum, question) => sum + (toNumber(question.points) ?? 0), 0);
-    }
-  }
-
-  for (const question of quizQuestions) {
-    const exam = findRow('exams', question.exam_id);
-    const course = findRow('courses', question.course_id ?? exam?.course_id);
-    const choices = quizChoices.filter((choice) => String(choice.question_id) === String(question.id));
-    question.exam_title = question.exam_title ?? exam?.title ?? null;
-    question.course_id = question.course_id ?? exam?.course_id ?? null;
-    question.course_name = question.course_name ?? course?.title ?? null;
-    question.instructor_id = question.instructor_id ?? exam?.instructor_id ?? course?.instructor_id ?? null;
-    question.required = question.required ?? true;
-    question.choices_count = choices.length;
-    question.correct_choices_count = choices.filter((choice) => Boolean(choice.is_correct)).length;
-  }
-
-  for (const choice of quizChoices) {
-    const question = findRow('quiz_questions', choice.question_id);
-    const exam = findRow('exams', choice.exam_id ?? question?.exam_id);
-    const course = findRow('courses', choice.course_id ?? question?.course_id ?? exam?.course_id);
-    choice.question_prompt = choice.question_prompt ?? question?.prompt ?? null;
-    choice.question_type = choice.question_type ?? question?.type ?? null;
-    choice.exam_id = choice.exam_id ?? question?.exam_id ?? null;
-    choice.exam_title = choice.exam_title ?? exam?.title ?? null;
-    choice.course_id = choice.course_id ?? question?.course_id ?? exam?.course_id ?? null;
-    choice.course_name = choice.course_name ?? course?.title ?? null;
-    choice.instructor_id = choice.instructor_id ?? exam?.instructor_id ?? course?.instructor_id ?? null;
-  }
-
-  for (const certificate of certificates) {
-    const course = findRow('courses', certificate.course_id);
-    certificate.course_name = certificate.course_name ?? course?.title ?? null;
-    certificate.title = certificate.title ?? certificate.course_name ?? null;
-    certificate.grade = certificate.grade ?? certificate.final_grade ?? null;
-    certificate.final_grade = certificate.final_grade ?? certificate.grade ?? null;
-    certificate.certificate_number = certificate.certificate_number ?? certificate.certificate_id ?? null;
-  }
-
-  for (const vclass of virtualClasses) {
-    const course = findRow('courses', vclass.course_id);
-    const relatedEnrollments = enrollments.filter((enrollment) => String(enrollment.course_id) === String(vclass.course_id));
-    vclass.course_name = vclass.course_name ?? course?.title ?? null;
-    vclass.students_count = Math.max(toNumber(vclass.students_count) ?? 0, relatedEnrollments.length);
-  }
-
-  for (const conversation of conversations) {
-    const conversationMessages = messages
-      .filter((message) => String(message.conversation_id) === String(conversation.id))
-      .sort((left, right) => compareValues(left.created_at, right.created_at));
-    const lastMessage = conversationMessages[conversationMessages.length - 1];
-    conversation.updated_at = lastMessage?.created_at ?? conversation.updated_at ?? conversation.created_at;
-  }
-
-  for (const project of projects) {
-    const docs = projectDocuments.filter((document) => String(document.project_id) === String(project.id));
-    const history = projectHistory.filter((entry) => String(entry.project_id) === String(project.id));
-    const milestones = projectMilestones.filter((milestone) => String(milestone.project_id) === String(project.id));
-    const partnerships = projectPartnerships.filter((partnership) => String(partnership.project_id) === String(project.id));
-    const progressFromFunding = (toNumber(project.funding_goal) ?? 0) > 0
-      ? Math.round(((toNumber(project.funding) ?? 0) / (toNumber(project.funding_goal) ?? 1)) * 100)
-      : 0;
-    const pendingMilestone = milestones
-      .filter((milestone) => milestone.status !== 'completed')
-      .sort((left, right) => compareValues(left.due_date, right.due_date))[0];
-    const latestHistory = history.sort((left, right) => compareValues(right.date, left.date))[0];
-
-    project.sector = project.sector ?? project.category ?? null;
-    project.progress = Math.max(toNumber(project.progress) ?? 0, progressFromFunding);
-    project.documents_count = docs.length;
-    project.reports_count = docs.filter((document) => normalizeText(document.category) === 'report').length;
-    project.partnerships_count = partnerships.length;
-    project.last_update = project.last_update ?? latestHistory?.date ?? project.created_at;
-    project.next_milestone = project.next_milestone ?? pendingMilestone?.title ?? null;
-  }
-
-  for (const round of projectFundingRounds) {
-    const project = findRow('projects', round.project_id);
-    const investors = fundingInvestors.filter((investor) => String(investor.funding_round_id) === String(round.id));
-    round.project_title = round.project_title ?? project?.title ?? null;
-    round.project_name = round.project_name ?? project?.title ?? null;
-    round.investors = investors.length;
-    round.progress_percent = (toNumber(round.target_amount) ?? 0) > 0
-      ? Math.round(((toNumber(round.raised_amount) ?? 0) / (toNumber(round.target_amount) ?? 1)) * 100)
-      : 0;
-  }
-
-  for (const tracking of projectTracking) {
-    const project = findRow('projects', tracking.project_id);
-    tracking.title = tracking.title ?? project?.title ?? null;
-    tracking.description = tracking.description ?? project?.description ?? null;
-    tracking.sector = tracking.sector ?? project?.sector ?? project?.category ?? null;
-    tracking.progress = project?.progress ?? tracking.progress ?? 0;
-    tracking.documents = project?.documents_count ?? tracking.documents ?? 0;
-    tracking.reports = project?.reports_count ?? tracking.reports ?? 0;
-    tracking.location = tracking.location ?? project?.location ?? null;
-    tracking.impact = tracking.impact ?? project?.impact ?? null;
-    tracking.team_size = tracking.team_size ?? project?.team_size ?? null;
-    tracking.revenue = tracking.revenue ?? project?.revenue ?? 0;
-    tracking.valuation = tracking.valuation ?? project?.valuation ?? 0;
-    tracking.next_milestone = tracking.next_milestone ?? project?.next_milestone ?? null;
-    tracking.last_update = tracking.last_update ?? project?.last_update ?? project?.created_at;
-  }
-
-  for (const collaboration of projectCollaborations) {
-    const project = findRow('projects', collaboration.project_id);
-    collaboration.project_title = collaboration.project_title ?? project?.title ?? null;
-  }
+  recomputeDerivedDataByPolicy(store, {
+    clone,
+    compareValues,
+    computeBookingFinancials,
+    findRow,
+    getDaysSince,
+    normalizeEscrowStatus,
+    normalizeText,
+    parseBoolean,
+    requireNumberOrFallback,
+    syncCourseModerationItems,
+    toNumber,
+  });
 }
 
 recomputeDerivedData();
@@ -1081,6 +816,12 @@ function getStudentCourseIds(userId: string) {
   return (store.course_enrollments ?? [])
     .filter((enrollment) => String(enrollment.student_id) === String(userId))
     .map((enrollment) => String(enrollment.course_id));
+}
+
+function getLinkedStudentIdsForParent(userId: string) {
+  return (store.student_guardians ?? [])
+    .filter((link) => String(link.parent_id) === String(userId) && String(link.status ?? 'active') === 'active')
+    .map((link) => String(link.student_id));
 }
 
 function getLessonIdsForCourses(courseIds: string[]) {
@@ -1108,7 +849,7 @@ function getConversationIdsForUser(userId: string) {
     .map((conversation) => String(conversation.id));
 }
 
-function canNotifyUser(actor: AuthUser, targetUserId: string) {
+function canNotifyUser(actor: AuthUser, targetUserId: string, notificationType?: string) {
   if (String(targetUserId) === String(actor.id)) {
     return true;
   }
@@ -1122,91 +863,7 @@ function canNotifyUser(actor: AuthUser, targetUserId: string) {
     return true;
   }
 
-  const sharesConversation = (store.conversations ?? []).some((conversation) => (
-    Array.isArray(conversation.participants)
-    && conversation.participants.map(String).includes(String(actor.id))
-    && conversation.participants.map(String).includes(String(targetUserId))
-  ));
-
-  if (sharesConversation) {
-    return true;
-  }
-
-  const allowedPairs = new Set([
-    'client:prestataire',
-    'prestataire:client',
-    'formateur:apprenant',
-    'apprenant:formateur',
-    'porteur:partenaire',
-    'partenaire:porteur',
-  ]);
-
-  return allowedPairs.has(`${actor.role}:${targetUser.role}`);
-}
-
-function buildVirtualClassNotificationRows(
-  vclass: Row,
-  eventType: 'live-scheduled' | 'live-updated' | 'live-started' | 'live-ended' | 'replay-ready',
-) {
-  const recipients = (store.course_enrollments ?? [])
-    .filter((enrollment) => String(enrollment.course_id) === String(vclass.course_id))
-    .map((enrollment) => ({
-      user_id: String(enrollment.student_id),
-      student_name: String(enrollment.student_name ?? 'Apprenant'),
-    }));
-
-  if (recipients.length === 0) {
-    return [];
-  }
-
-  const title = String(vclass.title ?? 'Classe virtuelle');
-  const scheduleLabel = `${String(vclass.class_date ?? '')} à ${String(vclass.class_time ?? '')}`.trim();
-  const link = `/espace-numerique/classe-virtuelle/${String(vclass.id)}`;
-
-  const template = {
-    'live-scheduled': {
-      notificationTitle: 'Nouveau live programme',
-      notificationMessage: `Le live "${title}" est programme le ${scheduleLabel}.`,
-    },
-    'live-updated': {
-      notificationTitle: 'Live mis a jour',
-      notificationMessage: `Le live "${title}" a ete mis a jour. Verifiez l horaire et le lien de connexion.`,
-    },
-    'live-started': {
-      notificationTitle: 'Live en cours',
-      notificationMessage: `Le live "${title}" vient de demarrer. Rejoignez la session maintenant.`,
-    },
-    'live-ended': {
-      notificationTitle: 'Replay en preparation',
-      notificationMessage: `Le live "${title}" est termine. Le replay est en cours de preparation.`,
-    },
-    'replay-ready': {
-      notificationTitle: 'Replay disponible',
-      notificationMessage: `Le replay du live "${title}" est disponible.`,
-    },
-  }[eventType];
-
-  return recipients.map((recipient) => ({
-    id: `notif-live-${Date.now()}-${Math.random().toString(36).slice(2, 9)}-${recipient.user_id}`,
-    user_id: recipient.user_id,
-    title: template.notificationTitle,
-    message: template.notificationMessage,
-    type: 'live',
-    is_read: false,
-    link,
-    metadata: {
-      class_id: vclass.id,
-      course_id: vclass.course_id,
-      course_name: vclass.course_name ?? null,
-      channel: 'system',
-      event: eventType,
-    },
-    created_at: new Date().toISOString(),
-  }));
-}
-
-function canReadWithoutAuth(table: string) {
-  return PUBLIC_READ_TABLES.has(table);
+  return canCreateUserNotification(actor, targetUser, normalizeNotificationType(notificationType), store);
 }
 
 function assertAuthenticated(table: string, user: AuthUser | null) {
@@ -1216,216 +873,50 @@ function assertAuthenticated(table: string, user: AuthUser | null) {
 }
 
 function filterRowsForActor(table: string, rows: Row[], user: AuthUser | null) {
-  if (!user) {
-    return canReadWithoutAuth(table) ? rows : [];
-  }
-
-  if (user.role === 'admin') {
-    return rows;
-  }
-
-  const providerIds = getProviderIdsForUser(user.id);
-  const courseIds = getInstructorCourseIds(user.id);
-  const studentCourseIds = getStudentCourseIds(user.id);
-  const lessonIds = getLessonIdsForCourses(user.role === 'formateur' ? courseIds : studentCourseIds);
-  const ownerProjectIds = getOwnerProjectIds(user.id);
-  const trackedProjectIds = getTrackedProjectIds(user.id);
-  const conversationIds = getConversationIdsForUser(user.id);
-
-  switch (table) {
-    case 'providers':
-      return rows;
-    case 'projects':
-      return rows;
-    case 'courses':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => String(row.instructor_id) === user.id);
-      }
-      return rows;
-    case 'course_sections':
-    case 'course_lessons':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => courseIds.includes(String(row.course_id)));
-      }
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => studentCourseIds.includes(String(row.course_id)));
-      }
-      return [];
-    case 'lesson_assets':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => courseIds.includes(String(row.course_id)) || lessonIds.includes(String(row.lesson_id)));
-      }
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => studentCourseIds.includes(String(row.course_id)) || lessonIds.includes(String(row.lesson_id)));
-      }
-      return [];
-    case 'lesson_comments':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => courseIds.includes(String(row.course_id)));
-      }
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => studentCourseIds.includes(String(row.course_id)));
-      }
-      return [];
-    case 'course_faq_items':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => courseIds.includes(String(row.course_id)));
-      }
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => studentCourseIds.includes(String(row.course_id)));
-      }
-      return [];
-    case 'virtual_classes':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => String(row.instructor_id) === user.id || courseIds.includes(String(row.course_id)));
-      }
-      return rows;
-    case 'notifications':
-    case 'payment_transactions':
-    case 'wallet_accounts':
-    case 'invoices':
-    case 'payout_accounts':
-    case 'payout_requests':
-      return rows.filter((row) => String(row.user_id) === user.id);
-    case 'client_orders':
-    case 'client_favorites':
-      return rows.filter((row) => String(row.client_id) === user.id);
-    case 'bookings':
-      if (user.role === 'client') {
-        return rows.filter((row) => String(row.client_id) === user.id);
-      }
-      if (user.role === 'prestataire') {
-        return rows.filter((row) => providerIds.includes(String(row.provider_id)));
-      }
-      return [];
-    case 'provider_services':
-      if (user.role === 'prestataire') {
-        return rows.filter((row) => providerIds.includes(String(row.provider_id)));
-      }
-      return rows;
-    case 'provider_reviews':
-      if (user.role === 'client') {
-        return rows.filter((row) => String(row.client_id) === user.id);
-      }
-      if (user.role === 'prestataire') {
-        return rows.filter((row) => providerIds.includes(String(row.provider_id)));
-      }
-      return rows;
-    case 'course_enrollments':
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => String(row.student_id) === user.id);
-      }
-      if (user.role === 'formateur') {
-        return rows.filter((row) => courseIds.includes(String(row.course_id)));
-      }
-      return [];
-    case 'exams':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => String(row.instructor_id) === user.id || courseIds.includes(String(row.course_id)));
-      }
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => studentCourseIds.includes(String(row.course_id)));
-      }
-      return [];
-    case 'quiz_questions':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => {
-          const exam = findRow('exams', row.exam_id);
-          return exam ? (String(exam.instructor_id) === user.id || courseIds.includes(String(exam.course_id))) : false;
-        });
-      }
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => {
-          const exam = findRow('exams', row.exam_id);
-          return exam ? studentCourseIds.includes(String(exam.course_id)) : false;
-        });
-      }
-      return [];
-    case 'quiz_choices':
-      if (user.role === 'formateur') {
-        return rows.filter((row) => {
-          const question = findRow('quiz_questions', row.question_id);
-          const exam = question ? findRow('exams', question.exam_id) : findRow('exams', row.exam_id);
-          return exam ? (String(exam.instructor_id) === user.id || courseIds.includes(String(exam.course_id))) : false;
-        });
-      }
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => {
-          const question = findRow('quiz_questions', row.question_id);
-          const exam = question ? findRow('exams', question.exam_id) : findRow('exams', row.exam_id);
-          return exam ? studentCourseIds.includes(String(exam.course_id)) : false;
-        });
-      }
-      return [];
-    case 'submissions':
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => String(row.student_id) === user.id);
-      }
-      if (user.role === 'formateur') {
-        return rows.filter((row) => {
-          const exam = findRow('exams', row.exam_id);
-          return exam ? (String(exam.instructor_id) === user.id || courseIds.includes(String(exam.course_id))) : false;
-        });
-      }
-      return [];
-    case 'certificates':
-      if (user.role === 'apprenant') {
-        return rows.filter((row) => String(row.student_id) === user.id);
-      }
-      if (user.role === 'formateur') {
-        return rows.filter((row) => courseIds.includes(String(row.course_id)));
-      }
-      return [];
-    case 'conversations':
-      return rows.filter((row) => Array.isArray(row.participants) && row.participants.map(String).includes(String(user.id)));
-    case 'messages':
-      return rows.filter((row) => conversationIds.includes(String(row.conversation_id)));
-    case 'project_milestones':
-    case 'project_documents':
-    case 'project_history':
-    case 'project_partnerships':
-    case 'project_funding_rounds':
-      if (user.role === 'porteur') {
-        return rows.filter((row) => ownerProjectIds.includes(String(row.project_id)));
-      }
-      if (user.role === 'partenaire') {
-        return rows.filter((row) => trackedProjectIds.includes(String(row.project_id)));
-      }
-      return [];
-    case 'funding_investors':
-      if (user.role === 'porteur' || user.role === 'partenaire') {
-        return rows.filter((row) => {
-          const round = findRow('project_funding_rounds', row.funding_round_id);
-          return round
-            ? (user.role === 'porteur'
-              ? ownerProjectIds.includes(String(round.project_id))
-              : trackedProjectIds.includes(String(round.project_id)))
-            : false;
-        });
-      }
-      return [];
-    case 'project_tracking':
-    case 'project_collaborations':
-      if (user.role === 'partenaire') {
-        return rows.filter((row) => String(row.partner_id) === user.id);
-      }
-      if (user.role === 'porteur') {
-        return rows.filter((row) => ownerProjectIds.includes(String(row.project_id)));
-      }
-      return [];
-    default:
-      if (ADMIN_ONLY_TABLES.has(table)) return [];
-      return rows;
-  }
+  return filterRowsForActorByPolicy(table, rows, user, {
+    findRow,
+    findUserById,
+    getProviderIdsForUser,
+    getInstructorCourseIds,
+    getStudentCourseIds,
+    getLinkedStudentIdsForParent,
+    getLessonIdsForCourses,
+    getOwnerProjectIds,
+    getTrackedProjectIds,
+    getConversationIdsForUser,
+  });
 }
 
-function assertTableAccess(table: string, user: AuthUser | null, method: 'GET' | 'POST' | 'PATCH' | 'DELETE') {
+async function assertTableAccess(
+  table: string,
+  user: AuthUser | null,
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  authService: AuthService,
+) {
   assertAuthenticated(table, user);
+  const permissionContext = {
+    targetType: 'data_table',
+    targetId: table,
+    httpMethod: method,
+    route: `/data/${table}`,
+    reason: `data:${table}:${method.toLowerCase()}`,
+  } as const;
+  if (table === 'admin_reports' && method === 'POST' && user?.role === 'client') {
+    await authService.assertPermissionForActor(user, 'support.request', permissionContext);
+    return;
+  }
   if (user?.role !== 'admin' && ADMIN_ONLY_TABLES.has(table)) {
     throw new UnauthorizedException('Acces refuse.');
   }
   if (!user && method !== 'GET') {
     throw new UnauthorizedException('Authentification requise.');
+  }
+  if (!user) {
+    return;
+  }
+  const requiredPermission = getRequiredPermissionForTable(table, method);
+  if (requiredPermission) {
+    await authService.assertPermissionForActor(user, requiredPermission, permissionContext);
   }
 }
 
@@ -1551,6 +1042,440 @@ function parseBoolean(value: unknown, fallback = false) {
     if (value === 'false') return false;
   }
   return fallback;
+}
+
+function normalizeCourseLevel(value: unknown) {
+  const normalized = (trimText(value) ?? 'intermediate')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const mapping: Record<string, 'beginner' | 'intermediate' | 'advanced' | 'all_levels'> = {
+    beginner: 'beginner',
+    debutant: 'beginner',
+    debutants: 'beginner',
+    intermediate: 'intermediate',
+    intermediaire: 'intermediate',
+    intermediaires: 'intermediate',
+    advanced: 'advanced',
+    avance: 'advanced',
+    avances: 'advanced',
+    all_levels: 'all_levels',
+    alllevel: 'all_levels',
+    tous_niveaux: 'all_levels',
+    tousniveaux: 'all_levels',
+  };
+
+  return mapping[normalized] ?? null;
+}
+
+function normalizeCourseBranch(value: unknown) {
+  const normalized = (trimText(value) ?? 'form_actions')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const mapping: Record<string, 'form_actions' | 'end'> = {
+    form_actions: 'form_actions',
+    formactions: 'form_actions',
+    'form-action': 'form_actions',
+    'form actions': 'form_actions',
+    postformation: 'form_actions',
+    end: 'end',
+    ecole_numerique_de_dakar: 'end',
+    ecolenumeriquededakar: 'end',
+    ecole_numerique: 'end',
+    'ecole numerique': 'end',
+  };
+
+  return mapping[normalized] ?? null;
+}
+
+function getPlatformRuleNumber(ruleId: string, fallback: number) {
+  const rule = (store.admin_platform_rules ?? []).find((entry) => String(entry.id) === ruleId);
+  return requireNumberOrFallback(rule?.value, fallback);
+}
+
+function normalizeBookingRequestType(value: unknown) {
+  const requestType = trimText(value) ?? 'booking';
+  if (!new Set(['booking', 'quote', 'appointment']).has(requestType)) {
+    throw new BadRequestException('Le type de demande est invalide.');
+  }
+  return requestType as 'booking' | 'quote' | 'appointment';
+}
+
+function normalizeBookingStatus(value: unknown, fallback: string) {
+  const status = trimText(value) ?? fallback;
+  if (!new Set(['pending', 'confirmed', 'in_progress', 'completed', 'declined', 'cancelled']).has(status)) {
+    throw new BadRequestException('Le statut de la demande est invalide.');
+  }
+  return status as 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'declined' | 'cancelled';
+}
+
+function getUserActiveSubscription(userId: string) {
+  return (store.user_subscriptions ?? []).find(
+    (entry) => String(entry.user_id) === String(userId) && String(entry.status) === 'active',
+  ) ?? null;
+}
+
+const SUBSCRIPTION_REQUIRED_WRITE_TABLES: Record<string, ReadonlySet<string>> = {
+  prestataire: new Set(['provider_services']),
+  formateur: new Set([
+    'courses',
+    'course_sections',
+    'course_lessons',
+    'lesson_assets',
+    'virtual_classes',
+    'exams',
+    'quiz_questions',
+    'quiz_choices',
+    'course_faq_items',
+  ]),
+  porteur: new Set([
+    'projects',
+    'project_milestones',
+    'project_documents',
+    'project_history',
+    'project_funding_rounds',
+  ]),
+};
+
+function assertSubscriptionRequiredForWrite(table: string, user: AuthUser) {
+  if (user.role === 'admin') {
+    return;
+  }
+
+  if (user.role === 'formateur' && (table === 'lesson_comments' || table === 'submissions')) {
+    const activeSubscription = getUserActiveSubscription(user.id);
+    if (activeSubscription) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'Un abonnement formateur actif est requis pour gérer la communauté et corriger les évaluations.',
+    );
+  }
+
+  const restrictedTables = SUBSCRIPTION_REQUIRED_WRITE_TABLES[user.role];
+  if (!restrictedTables || !restrictedTables.has(table)) {
+    return;
+  }
+
+  const activeSubscription = getUserActiveSubscription(user.id);
+  if (activeSubscription) {
+    return;
+  }
+
+  const defaultPlan = getDefaultPlanForRole(user.role);
+  const actionLabel = user.role === 'prestataire'
+    ? 'publier ou gérer vos services'
+    : user.role === 'formateur'
+      ? 'gérer vos formations et classes'
+      : 'gérer vos projets et levées';
+
+  throw new ForbiddenException(
+    defaultPlan
+      ? `Un abonnement actif est requis pour ${actionLabel}. Activez au moins le plan ${String(defaultPlan.name ?? 'de base')}.`
+      : `Un abonnement actif est requis pour ${actionLabel}.`,
+  );
+}
+
+function computeBookingFinancials(price: number | null, providerUserId?: string | null) {
+  const subscriptionCommissionRate = providerUserId
+    ? requireNumberOrFallback(getUserActiveSubscription(String(providerUserId))?.commission_rate, Number.NaN)
+    : Number.NaN;
+  const commissionRate = Math.max(
+    0,
+    Math.min(
+      100,
+      Number.isFinite(subscriptionCommissionRate)
+        ? subscriptionCommissionRate
+        : getPlatformRuleNumber('commission_rate', 15),
+    ),
+  );
+  if (price === null) {
+    return {
+      commissionRate,
+      platformFeeAmount: null,
+      providerPayoutAmount: null,
+    };
+  }
+
+  const sanitizedPrice = Math.max(0, Math.round(price));
+  const platformFeeAmount = Math.round(sanitizedPrice * (commissionRate / 100));
+  const providerPayoutAmount = Math.max(0, sanitizedPrice - platformFeeAmount);
+  return {
+    commissionRate,
+    platformFeeAmount,
+    providerPayoutAmount,
+  };
+}
+
+function addDaysIso(base: string | Date | number, days: number) {
+  const date = new Date(base);
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
+
+function createSyntheticId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createReference(prefix: string) {
+  return `${prefix}-${Date.now()}`;
+}
+
+function normalizeEscrowStatus(value: unknown, fallback: string) {
+  const status = trimText(value) ?? fallback;
+  if (!new Set(['awaiting_quote', 'awaiting_funding', 'funded', 'assigned', 'in_progress', 'delivery_review', 'released', 'refunded', 'cancelled']).has(status)) {
+    throw new BadRequestException('Le statut du sequestre est invalide.');
+  }
+  return status as
+    | 'awaiting_quote'
+    | 'awaiting_funding'
+    | 'funded'
+    | 'assigned'
+    | 'in_progress'
+    | 'delivery_review'
+    | 'released'
+    | 'refunded'
+    | 'cancelled';
+}
+
+function getWalletAccountRow(userId: string) {
+  return (store.wallet_accounts ?? []).find((row) => String(row.user_id) === String(userId)) ?? null;
+}
+
+function getPendingPayoutReservations(userId: string) {
+  return (store.payout_requests ?? [])
+    .filter((request) => (
+      String(request.user_id) === String(userId)
+      && new Set(['pending', 'approved']).has(String(request.status))
+    ))
+    .reduce((sum, request) => sum + Math.max(0, requireNumberOrFallback(request.amount, 0)), 0);
+}
+
+function getWalletAvailableBalance(userId: string) {
+  const wallet = getWalletAccountRow(userId);
+  const balance = requireNumberOrFallback(wallet?.balance, 0);
+  return Math.max(0, balance - getPendingPayoutReservations(userId));
+}
+
+function findSubscriptionPlan(planId: unknown) {
+  const parsedPlanId = requireIdentifier(planId, 'Le plan d abonnement est invalide.');
+  const plan = findRow('subscription_plans', parsedPlanId);
+  if (!plan) {
+    throw new BadRequestException('Le plan d abonnement est introuvable.');
+  }
+  return { plan, parsedPlanId };
+}
+
+function getDefaultPlanForRole(role: string) {
+  return (store.subscription_plans ?? []).find(
+    (plan) => String(plan.role) === role && requireNumberOrFallback(plan.price_monthly, 0) === 0,
+  ) ?? null;
+}
+
+function findEscrowByBookingId(bookingId: unknown) {
+  return (store.escrow_cases ?? []).find((row) => String(row.booking_id) === String(bookingId)) ?? null;
+}
+
+function buildMatchingCandidates(booking: Row) {
+  const requestedCategory = normalizeText(booking.requested_category);
+  const requestedProviderId = trimText(booking.requested_provider_id);
+  const requestedService = normalizeText(booking.service);
+
+  return (store.providers ?? [])
+    .map((provider) => {
+      let score = 0;
+      const reasons: string[] = [];
+
+      if (requestedProviderId && String(provider.id) === requestedProviderId) {
+        score += 40;
+        reasons.push('Prestataire prefere par le client');
+      }
+      if (requestedCategory && normalizeText(provider.category) === requestedCategory) {
+        score += 25;
+        reasons.push('Categorie parfaitement alignee');
+      }
+      const services = Array.isArray(provider.services) ? provider.services.map((entry) => normalizeText(entry)) : [];
+      if (requestedService && services.some((entry) => entry.includes(requestedService) || requestedService.includes(entry))) {
+        score += 22;
+        reasons.push('Service deja maitrise');
+      }
+      if (Boolean(provider.verified)) {
+        score += 8;
+        reasons.push('Profil verifie');
+      }
+      const rating = requireNumberOrFallback(provider.rating, 0);
+      score += Math.round(rating * 3);
+      if (rating >= 4.6) {
+        reasons.push('Tres bonne note client');
+      }
+      const completedJobs = requireNumberOrFallback(provider.completed_jobs, 0);
+      score += Math.min(15, Math.round(completedJobs / 15));
+      const distanceKm = requireNumberOrFallback(provider.distance_km, 99);
+      score += Math.max(0, 10 - Math.round(distanceKm));
+      if (distanceKm <= 5) {
+        reasons.push('Proximite logistique');
+      }
+      const availability = String(provider.availability_status ?? '');
+      if (availability === 'today') {
+        score += 8;
+        reasons.push('Disponible rapidement');
+      } else if (availability === 'tomorrow') {
+        score += 4;
+      }
+
+      return {
+        id: provider.id,
+        user_id: provider.user_id ?? null,
+        name: provider.name,
+        category: provider.category ?? null,
+        verified: Boolean(provider.verified),
+        rating,
+        distance_km: distanceKm,
+        availability_status: availability || null,
+        completed_jobs: completedJobs,
+        score,
+        reasons: reasons.slice(0, 3),
+      };
+    })
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 3);
+}
+
+function sanitizeBookingCreateRecord(row: Row, user: AuthUser) {
+  if (user.role !== 'client' || String(row.client_id ?? user.id) !== user.id) {
+    throw new UnauthorizedException('Acces refuse.');
+  }
+
+  const bookingDate = requireText(row.booking_date, 'La date souhaitee est obligatoire.');
+  ensureFutureDateString(bookingDate, 'La date souhaitee doit etre dans le futur.');
+  const bookingTime = trimText(row.booking_time) ?? '09:00';
+  const price = row.price === null || row.price === undefined ? null : requireNumberInRange(row.price, 0, 100_000_000, 'Le budget est invalide.');
+  const requestedProviderId = trimText(row.requested_provider_id ?? row.provider_id);
+  const requestedProvider = requestedProviderId ? findRow('providers', requestedProviderId) : null;
+  const financials = computeBookingFinancials(price, trimText(requestedProvider?.user_id));
+
+  return {
+    ...row,
+    client_id: user.id,
+    client_name: `${user.firstName} ${user.lastName}`.trim(),
+    client_email: user.email ?? trimText(row.client_email),
+    provider_id: null,
+    requested_provider_id: requestedProvider ? requestedProvider.id : requestedProviderId,
+    requested_provider_name: requestedProvider?.name ?? null,
+    requested_category: trimText(row.requested_category) ?? trimText(requestedProvider?.category),
+    service: requireText(row.service, 'Le service souhaite est obligatoire.'),
+    description: requireText(row.description, 'La description du besoin est obligatoire.'),
+    address: requireText(row.address, 'L adresse ou le lieu d intervention est obligatoire.'),
+    booking_date: bookingDate,
+    booking_time: bookingTime,
+    request_type: normalizeBookingRequestType(row.request_type),
+    payment_method: trimText(row.payment_method) ?? 'wallet',
+    status: 'pending',
+    request_channel: 'c2p_managed',
+    assignment_status: 'pending_review',
+    assigned_by_c2p: null,
+    assigned_at: null,
+    wallet_flow: 'escrow',
+    price,
+    commission_rate: financials.commissionRate,
+    platform_fee_amount: financials.platformFeeAmount,
+    provider_payout_amount: financials.providerPayoutAmount,
+  };
+}
+
+function sanitizeBookingUpdateRecord(existingRow: Row, payload: Row, user: AuthUser) {
+  const currentStatus = normalizeBookingStatus(existingRow.status, 'pending');
+  const nextStatus = normalizeBookingStatus(payload.status, currentStatus);
+
+  if (user.role === 'client') {
+    if (String(existingRow.client_id) !== user.id) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    if (nextStatus !== 'cancelled') {
+      throw new UnauthorizedException('Le client ne peut qu annuler sa demande.');
+    }
+    if (!new Set(['pending', 'confirmed']).has(currentStatus)) {
+      throw new BadRequestException('Cette demande ne peut plus etre annulee.');
+    }
+    return {
+      status: 'cancelled',
+      cancellation_reason: trimText(payload.cancellation_reason) ?? 'Annulation client',
+      cancelled_at: new Date().toISOString(),
+    };
+  }
+
+  if (user.role === 'prestataire') {
+    const currentProviderId = String(existingRow.provider_id ?? '');
+    const providerIds = getProviderIdsForUser(user.id);
+    if (!providerIds.includes(currentProviderId)) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+
+    const allowedTransitions = new Map<string, string[]>([
+      ['confirmed', ['in_progress', 'declined']],
+      ['in_progress', ['completed']],
+      ['completed', []],
+      ['declined', []],
+      ['pending', []],
+      ['cancelled', []],
+    ]);
+
+    const allowedNextStatuses = allowedTransitions.get(currentStatus) ?? [];
+    if (!allowedNextStatuses.includes(nextStatus)) {
+      throw new BadRequestException('Transition de mission invalide.');
+    }
+
+    return {
+      status: nextStatus,
+      provider_progress_note: trimText(payload.provider_progress_note) ?? trimText(existingRow.provider_progress_note),
+    };
+  }
+
+  if (user.role === 'admin') {
+    const providerIdCandidate = payload.provider_id === null
+      ? null
+      : payload.provider_id !== undefined
+        ? toNumber(payload.provider_id)
+        : toNumber(existingRow.provider_id);
+
+    if (payload.provider_id !== undefined && payload.provider_id !== null && providerIdCandidate === null) {
+      throw new BadRequestException('Le prestataire assigne est invalide.');
+    }
+
+    const assignedProvider = providerIdCandidate !== null ? findRow('providers', providerIdCandidate) : null;
+    if (providerIdCandidate !== null && !assignedProvider) {
+      throw new BadRequestException('Le prestataire assigne est introuvable.');
+    }
+
+    const nextPrice = payload.price === undefined
+      ? (existingRow.price === null || existingRow.price === undefined ? null : requireNumberInRange(existingRow.price, 0, 100_000_000, 'Le montant est invalide.'))
+      : (payload.price === null ? null : requireNumberInRange(payload.price, 0, 100_000_000, 'Le montant est invalide.'));
+    const financials = computeBookingFinancials(nextPrice, trimText(assignedProvider?.user_id) ?? trimText(findRow('providers', existingRow.provider_id)?.user_id));
+
+    return {
+      provider_id: assignedProvider?.id ?? null,
+      requested_provider_id: payload.requested_provider_id ?? existingRow.requested_provider_id ?? null,
+      requested_provider_name: payload.requested_provider_name ?? existingRow.requested_provider_name ?? null,
+      status: nextStatus,
+      assignment_status: assignedProvider ? 'assigned' : 'pending_review',
+      assigned_by_c2p: assignedProvider ? user.id : null,
+      assigned_at: assignedProvider ? (trimText(payload.assigned_at) ?? new Date().toISOString()) : null,
+      c2p_note: trimText(payload.c2p_note) ?? trimText(existingRow.c2p_note),
+      payment_method: trimText(payload.payment_method) ?? trimText(existingRow.payment_method) ?? 'wallet',
+      price: nextPrice,
+      commission_rate: financials.commissionRate,
+      platform_fee_amount: financials.platformFeeAmount,
+      provider_payout_amount: financials.providerPayoutAmount,
+      wallet_flow: trimText(payload.wallet_flow) ?? trimText(existingRow.wallet_flow) ?? 'escrow',
+      request_channel: trimText(payload.request_channel) ?? trimText(existingRow.request_channel) ?? 'c2p_managed',
+    };
+  }
+
+  throw new UnauthorizedException('Acces refuse.');
 }
 
 function getCourseReadinessIssues(course: Row) {
@@ -1783,9 +1708,14 @@ function sanitizeCourseRecord(row: Row, user: AuthUser) {
   normalized.description = trimText(normalized.description) ?? '';
   normalized.duration = requireText(normalized.duration, 'La duree de la formation est obligatoire.');
   normalized.modules = requireInteger(normalized.modules, 1, 200, 'Le nombre de modules doit etre compris entre 1 et 200.');
-  normalized.level = trimText(normalized.level) ?? 'intermediate';
-  if (!new Set(['beginner', 'intermediate', 'advanced', 'all_levels']).has(String(normalized.level))) {
+  normalized.level = normalizeCourseLevel(normalized.level);
+  if (!normalized.level) {
     throw new BadRequestException('Le niveau de la formation est invalide.');
+  }
+  normalized.program_branch = normalizeCourseBranch(normalized.program_branch) ?? 'form_actions';
+  normalized.delivery_mode = trimText(normalized.delivery_mode) ?? 'online';
+  if (!new Set(['online', 'onsite', 'hybrid']).has(String(normalized.delivery_mode))) {
+    throw new BadRequestException('La modalite de la formation est invalide.');
   }
   normalized.price = requireNumberInRange(normalized.price ?? 0, 0, 1000000000, 'Le prix de la formation est invalide.');
   normalized.is_free = parseBoolean(normalized.is_free, (toNumber(normalized.price) ?? 0) <= 0);
@@ -1818,10 +1748,11 @@ function sanitizeCourseRecord(row: Row, user: AuthUser) {
   normalized.status = status;
 
   if (user.role !== 'admin') {
+    const requestedInstructorId = trimText(normalized.instructor_id);
+    if (requestedInstructorId && requestedInstructorId !== user.id) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
     normalized.instructor_id = user.id;
-  }
-  if (user.role !== 'admin' && String(normalized.instructor_id) !== user.id) {
-    throw new UnauthorizedException('Acces refuse.');
   }
 
   if (status === 'review' || status === 'published') {
@@ -1896,7 +1827,7 @@ function sanitizeCourseLessonRecord(row: Row, user: AuthUser) {
   return normalized;
 }
 
-function sanitizePayoutAccountRecord(row: Row, user: AuthUser) {
+export function sanitizePayoutAccountRecord(row: Row, user: AuthUser) {
   const normalized = clone(row);
   const existing = normalized.id !== undefined && normalized.id !== null ? findRow('payout_accounts', normalized.id) : null;
   const targetUserId = user.role === 'admin'
@@ -1925,7 +1856,7 @@ function sanitizePayoutAccountRecord(row: Row, user: AuthUser) {
   return normalized;
 }
 
-function sanitizePayoutRequestRecord(row: Row, user: AuthUser) {
+export function sanitizePayoutRequestRecord(row: Row, user: AuthUser) {
   const normalized = clone(row);
   const existing = normalized.id !== undefined && normalized.id !== null ? findRow('payout_requests', normalized.id) : null;
   const targetUserId = user.role === 'admin'
@@ -1948,6 +1879,9 @@ function sanitizePayoutRequestRecord(row: Row, user: AuthUser) {
   normalized.account_label = account.label ?? null;
   normalized.account_identifier = account.account_identifier ?? null;
   normalized.amount = requireNumberInRange(normalized.amount, 1000, 1000000000, 'Le montant du retrait est invalide.');
+  if (!existing && user.role !== 'admin' && requireNumberOrFallback(normalized.amount, 0) > getWalletAvailableBalance(targetUserId)) {
+    throw new BadRequestException('Le montant demande depasse le solde disponible pour retrait.');
+  }
   normalized.currency = trimText(normalized.currency) ?? 'XAF';
   normalized.note = trimText(normalized.note) ?? '';
   const currentStatus = trimText(existing?.status) ?? 'pending';
@@ -1974,6 +1908,231 @@ function sanitizePayoutRequestRecord(row: Row, user: AuthUser) {
   }
 
   normalized.requested_at = existing?.requested_at ?? new Date().toISOString();
+  return normalized;
+}
+
+export function sanitizeUserSubscriptionRecord(row: Row, user: AuthUser) {
+  const normalized = clone(row);
+  const existing = normalized.id !== undefined && normalized.id !== null ? findRow('user_subscriptions', normalized.id) : null;
+  const targetUserId = user.role === 'admin'
+    ? requireIdentifier(normalized.user_id ?? existing?.user_id, 'Le titulaire de l abonnement est invalide.')
+    : user.id;
+
+  if (user.role !== 'admin' && existing && String(existing.user_id) !== user.id) {
+    throw new UnauthorizedException('Acces refuse.');
+  }
+
+  const targetUser = findUserById(targetUserId);
+  if (!targetUser) {
+    throw new BadRequestException('Le titulaire de l abonnement est introuvable.');
+  }
+  if (!new Set(['prestataire', 'formateur', 'porteur', 'partenaire']).has(targetUser.role)) {
+    throw new BadRequestException('Ce role ne peut pas souscrire a un abonnement SaaS.');
+  }
+
+  const { plan, parsedPlanId } = findSubscriptionPlan(normalized.plan_id ?? existing?.plan_id);
+  if (!Boolean(plan.active ?? true)) {
+    throw new BadRequestException('Ce plan d abonnement n est plus disponible.');
+  }
+
+  if (user.role !== 'admin' && String(plan.role) !== targetUser.role) {
+    throw new UnauthorizedException('Ce plan ne correspond pas a votre role.');
+  }
+
+  const nowIso = new Date().toISOString();
+  const renewNow = parseBoolean(normalized.renew_now, false);
+  const planChanged = existing ? String(existing.plan_id) !== parsedPlanId : true;
+  const allowedStatuses = new Set(['trialing', 'active', 'past_due', 'expired', 'cancelled']);
+  const requestedStatus = trimText(normalized.status) ?? trimText(existing?.status) ?? 'active';
+  const requiresCharge = user.role !== 'admin' && requestedStatus !== 'cancelled' && (!existing || renewNow || planChanged);
+  if (!allowedStatuses.has(requestedStatus)) {
+    throw new BadRequestException('Le statut de l abonnement est invalide.');
+  }
+
+  normalized.user_id = targetUserId;
+  normalized.role = String(plan.role);
+  normalized.plan_id = parsedPlanId;
+  normalized.plan_name = String(plan.name);
+  normalized.currency = String(plan.currency ?? 'XAF');
+  normalized.amount = requireNumberOrFallback(plan.price_monthly, 0);
+  normalized.commission_rate = requireNumberOrFallback(plan.commission_rate, 0);
+  normalized.auto_renew = parseBoolean(normalized.auto_renew, existing ? Boolean(existing.auto_renew) : true);
+  if (requiresCharge && requireNumberOrFallback(normalized.amount, 0) > getWalletAvailableBalance(targetUserId)) {
+    throw new BadRequestException('Solde insuffisant pour activer ou renouveler cet abonnement.');
+  }
+
+  if (user.role === 'admin') {
+    normalized.status = requestedStatus;
+    normalized.started_at = trimText(normalized.started_at) ?? trimText(existing?.started_at) ?? nowIso;
+    normalized.renews_at = trimText(normalized.renews_at) ?? trimText(existing?.renews_at) ?? addDaysIso(nowIso, 30);
+    normalized.last_billed_at = trimText(normalized.last_billed_at) ?? trimText(existing?.last_billed_at) ?? nowIso;
+  } else if (requestedStatus === 'cancelled') {
+    normalized.status = 'cancelled';
+    normalized.started_at = trimText(existing?.started_at) ?? nowIso;
+    normalized.renews_at = trimText(existing?.renews_at) ?? addDaysIso(nowIso, 30);
+    normalized.last_billed_at = trimText(existing?.last_billed_at) ?? nowIso;
+  } else {
+    const billingAnchor = existing && !planChanged && !renewNow && trimText(existing.renews_at)
+      ? String(existing.renews_at)
+      : nowIso;
+    normalized.status = 'active';
+    normalized.started_at = trimText(existing?.started_at) ?? nowIso;
+    normalized.renews_at = addDaysIso(billingAnchor, 30);
+    normalized.last_billed_at = nowIso;
+  }
+
+  delete normalized.renew_now;
+  return normalized;
+}
+
+function sanitizeProviderVerificationRequestRecord(row: Row, user: AuthUser) {
+  const normalized = clone(row);
+  const existing = normalized.id !== undefined && normalized.id !== null ? findRow('provider_verification_requests', normalized.id) : null;
+  const providerId = requireIdentifier(normalized.provider_id ?? existing?.provider_id, 'Le prestataire associe est invalide.');
+  const provider = findRow('providers', providerId);
+  if (!provider) {
+    throw new BadRequestException('Le prestataire associe est introuvable.');
+  }
+
+  const ownerUserId = String(provider.user_id ?? existing?.user_id ?? normalized.user_id ?? '');
+  if (!ownerUserId) {
+    throw new BadRequestException('Le titulaire du prestataire est introuvable.');
+  }
+
+  if (user.role !== 'admin') {
+    if (user.role !== 'prestataire' || ownerUserId !== user.id) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    if (existing && String(existing.user_id ?? '') !== user.id) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const activePass = [...(store.provider_visibility_passes ?? [])]
+    .filter((pass) =>
+      String(pass.provider_id) === providerId
+      && String(pass.user_id ?? '') === ownerUserId
+      && String(pass.status ?? '') === 'active'
+      && parseBoolean(pass.verification_eligible, false),
+    )
+    .sort((left, right) => compareValues(right.issued_at ?? right.created_at, left.issued_at ?? left.created_at))
+    .find((pass) => {
+      if (!pass.expires_at) return true;
+      const expiresAt = Date.parse(String(pass.expires_at));
+      return Number.isNaN(expiresAt) || expiresAt >= Date.now();
+    });
+
+  if (user.role !== 'admin' && !activePass) {
+    throw new BadRequestException('Un billet SenPresta eligible est requis avant la demande de verification.');
+  }
+
+  const currentStatus = trimText(existing?.status) ?? 'pending';
+  const requestedStatus = trimText(normalized.status) ?? currentStatus;
+  const allowedStatuses = new Set(['pending', 'in_review', 'approved', 'rejected', 'cancelled']);
+  if (!allowedStatuses.has(requestedStatus)) {
+    throw new BadRequestException('Le statut de la demande de verification est invalide.');
+  }
+
+  normalized.provider_id = providerId;
+  normalized.provider_name = trimText(normalized.provider_name) ?? trimText(provider.name) ?? trimText(provider.public_alias) ?? `Prestataire #${providerId}`;
+  normalized.user_id = ownerUserId;
+  normalized.requested_level = 'verified';
+  normalized.pass_id = trimText(existing?.pass_id) ?? trimText(normalized.pass_id) ?? trimText(activePass?.id);
+  normalized.pass_code = trimText(existing?.pass_code) ?? trimText(normalized.pass_code) ?? trimText(activePass?.code);
+  normalized.pass_tier = trimText(existing?.pass_tier) ?? trimText(normalized.pass_tier) ?? trimText(activePass?.pass_tier) ?? null;
+  normalized.source = trimText(existing?.source) ?? trimText(normalized.source) ?? 'self_service';
+  normalized.note = trimText(normalized.note) ?? trimText(existing?.note) ?? '';
+
+  if (String(normalized.note).length > 1200) {
+    throw new BadRequestException('La note de verification est trop longue.');
+  }
+
+  if (user.role === 'admin') {
+    normalized.status = requestedStatus;
+    normalized.admin_notes = trimText(normalized.admin_notes) ?? trimText(existing?.admin_notes);
+    if (normalized.admin_notes && String(normalized.admin_notes).length > 1200) {
+      throw new BadRequestException('La note administrateur est trop longue.');
+    }
+
+    if (requestedStatus === 'pending') {
+      normalized.reviewed_at = null;
+      normalized.reviewed_by = null;
+    } else if (requestedStatus === 'in_review') {
+      normalized.reviewed_at = existing?.reviewed_at ?? null;
+      normalized.reviewed_by = user.id;
+    } else {
+      normalized.reviewed_at = new Date().toISOString();
+      normalized.reviewed_by = user.id;
+    }
+  } else {
+    normalized.status = !existing
+      ? 'pending'
+      : currentStatus === 'pending' && requestedStatus === 'cancelled'
+        ? 'cancelled'
+        : currentStatus;
+    normalized.reviewed_at = existing?.reviewed_at ?? null;
+    normalized.reviewed_by = existing?.reviewed_by ?? null;
+    normalized.admin_notes = existing?.admin_notes ?? null;
+  }
+
+  normalized.requested_at = trimText(existing?.requested_at) ?? nowIso;
+  return normalized;
+}
+
+function sanitizeEscrowCaseRecord(row: Row, user: AuthUser) {
+  if (user.role !== 'admin') {
+    throw new UnauthorizedException('Acces refuse.');
+  }
+
+  const normalized = clone(row);
+  const existing = normalized.id !== undefined && normalized.id !== null ? findRow('escrow_cases', normalized.id) : null;
+  const bookingId = requireIdentifier(normalized.booking_id ?? existing?.booking_id, 'La mission associee est invalide.');
+  const booking = findRow('bookings', bookingId);
+  if (!booking) {
+    throw new BadRequestException('La mission associee est introuvable.');
+  }
+
+  const currentStatus = normalizeEscrowStatus(existing?.status, booking.price ? 'awaiting_funding' : 'awaiting_quote');
+  const nextStatus = normalizeEscrowStatus(normalized.status, currentStatus);
+  const allowedTransitions = new Map<string, string[]>([
+    ['awaiting_quote', ['awaiting_funding', 'cancelled']],
+    ['awaiting_funding', ['funded', 'cancelled', 'refunded']],
+    ['funded', ['assigned', 'refunded', 'cancelled']],
+    ['assigned', ['in_progress', 'refunded', 'cancelled']],
+    ['in_progress', ['delivery_review', 'refunded']],
+    ['delivery_review', ['released', 'refunded']],
+    ['released', []],
+    ['refunded', []],
+    ['cancelled', []],
+  ]);
+
+  if (existing && nextStatus !== currentStatus && !(allowedTransitions.get(currentStatus) ?? []).includes(nextStatus)) {
+    throw new BadRequestException('Transition de sequestre invalide.');
+  }
+
+  const provider = findRow('providers', normalized.provider_id ?? existing?.provider_id ?? booking.provider_id ?? normalized.requested_provider_id ?? existing?.requested_provider_id ?? booking.requested_provider_id);
+  normalized.booking_id = booking.id;
+  normalized.client_id = booking.client_id;
+  normalized.provider_id = provider?.id ?? booking.provider_id ?? existing?.provider_id ?? null;
+  normalized.provider_user_id = provider?.user_id ?? existing?.provider_user_id ?? null;
+  normalized.requested_provider_id = normalized.requested_provider_id ?? existing?.requested_provider_id ?? booking.requested_provider_id ?? null;
+  normalized.service = booking.service ?? existing?.service ?? null;
+  normalized.currency = trimText(normalized.currency) ?? trimText(existing?.currency) ?? 'XAF';
+  normalized.amount_total = requireNumberOrFallback(normalized.amount_total, requireNumberOrFallback(booking.price, 0));
+  normalized.platform_fee_amount = requireNumberOrFallback(normalized.platform_fee_amount, requireNumberOrFallback(booking.platform_fee_amount, 0));
+  normalized.provider_amount = requireNumberOrFallback(normalized.provider_amount, requireNumberOrFallback(booking.provider_payout_amount, 0));
+  normalized.status = nextStatus;
+  normalized.note = trimText(normalized.note) ?? trimText(existing?.note);
+  normalized.funded_at = nextStatus === 'funded' || nextStatus === 'assigned' || nextStatus === 'in_progress' || nextStatus === 'delivery_review' || nextStatus === 'released'
+    ? trimText(normalized.funded_at) ?? trimText(existing?.funded_at) ?? new Date().toISOString()
+    : trimText(existing?.funded_at);
+  normalized.released_at = nextStatus === 'released'
+    ? trimText(normalized.released_at) ?? new Date().toISOString()
+    : trimText(existing?.released_at);
+  normalized.refunded_at = nextStatus === 'refunded'
+    ? trimText(normalized.refunded_at) ?? new Date().toISOString()
+    : trimText(existing?.refunded_at);
   return normalized;
 }
 
@@ -2037,6 +2196,122 @@ function sanitizeLessonCommentRecord(row: Row, user: AuthUser) {
     normalized.pinned = parseBoolean(normalized.pinned, Boolean(existing?.pinned));
   }
   normalized.likes = toNumber(existing?.likes) ?? 0;
+  return normalized;
+}
+
+function sanitizeLessonProgressRecord(row: Row, user: AuthUser) {
+  const normalized = clone(row);
+  const existing = normalized.id !== undefined && normalized.id !== null ? findRow('lesson_progress', normalized.id) : null;
+  const parsedLessonId = requireIdentifier(normalized.lesson_id ?? existing?.lesson_id, 'La lecon associee est invalide.');
+  const lesson = findRow('course_lessons', parsedLessonId);
+  if (!lesson) {
+    throw new BadRequestException('La lecon associee est introuvable.');
+  }
+  const parsedSectionId = requireIdentifier(lesson.section_id, 'La section associee est invalide.');
+  const parsedCourseId = requireIdentifier(lesson.course_id, 'La formation associee est invalide.');
+  const course = findRow('courses', parsedCourseId);
+  if (!course) {
+    throw new BadRequestException('La formation associee est introuvable.');
+  }
+
+  const targetStudentId = requireIdentifier(normalized.student_id ?? existing?.student_id ?? user.id, 'L apprenant associe est invalide.');
+  if (user.role !== 'admin') {
+    if (user.role !== 'apprenant') {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    if (targetStudentId !== user.id) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    if (!getStudentCourseIds(user.id).includes(parsedCourseId)) {
+      throw new UnauthorizedException('Inscription requise.');
+    }
+  }
+
+  const requestedProgress = toNumber(normalized.progress);
+  if (requestedProgress !== null && (requestedProgress < 0 || requestedProgress > 100)) {
+    throw new BadRequestException('La progression de la lecon est invalide.');
+  }
+
+  const completed = parseBoolean(
+    normalized.completed,
+    parseBoolean(existing?.completed, false) || (requestedProgress ?? requireNumberOrFallback(existing?.progress, 0)) >= 100,
+  );
+  const progress = completed
+    ? 100
+    : Math.round(
+        Math.max(
+          0,
+          Math.min(
+            100,
+            requestedProgress ?? requireNumberOrFallback(existing?.progress, 0),
+          ),
+        ),
+      );
+
+  normalized.course_id = parsedCourseId;
+  normalized.section_id = parsedSectionId;
+  normalized.lesson_id = parsedLessonId;
+  normalized.course_name = String(course.title);
+  normalized.lesson_title = String(lesson.title);
+  normalized.student_id = targetStudentId;
+  normalized.student_name = existing?.student_name ?? `${user.firstName} ${user.lastName}`.trim();
+  normalized.progress = progress;
+  normalized.completed = completed;
+  normalized.status = completed ? 'completed' : (progress > 0 ? 'in_progress' : 'not_started');
+  normalized.first_viewed_at = trimText(existing?.first_viewed_at) ?? new Date().toISOString();
+  normalized.last_viewed_at = new Date().toISOString();
+  normalized.completed_at = completed ? trimText(existing?.completed_at) ?? new Date().toISOString() : null;
+  return normalized;
+}
+
+function sanitizeCourseReviewRecord(row: Row, user: AuthUser) {
+  const normalized = clone(row);
+  const existing = normalized.id !== undefined && normalized.id !== null ? findRow('course_reviews', normalized.id) : null;
+  const parsedCourseId = requireIdentifier(normalized.course_id ?? existing?.course_id, 'La formation associee est invalide.');
+  const course = findRow('courses', parsedCourseId);
+  if (!course) {
+    throw new BadRequestException('La formation associee est introuvable.');
+  }
+
+  const targetStudentId = requireIdentifier(normalized.student_id ?? existing?.student_id ?? user.id, 'L apprenant associe est invalide.');
+  if (user.role !== 'admin') {
+    if (user.role !== 'apprenant') {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    if (targetStudentId !== user.id) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    if (existing && String(existing.student_id) !== user.id) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    const enrollment = (store.course_enrollments ?? []).find(
+      (entry) =>
+        String(entry.student_id) === user.id &&
+        String(entry.course_id) === parsedCourseId,
+    );
+    if (!enrollment) {
+      throw new UnauthorizedException('Inscription requise.');
+    }
+    const progress = toNumber(enrollment.progress) ?? 0;
+    if (progress <= 0 && String(enrollment.status) !== 'completed') {
+      throw new BadRequestException('Suivez au moins une lecon avant de publier un avis.');
+    }
+  }
+
+  normalized.course_id = parsedCourseId;
+  normalized.course_name = String(course.title);
+  normalized.student_id = targetStudentId;
+  normalized.student_name = existing?.student_name ?? `${user.firstName} ${user.lastName}`.trim();
+  normalized.student_avatar = trimText(existing?.student_avatar) ?? trimText(user.avatar);
+  normalized.rating = requireInteger(normalized.rating ?? existing?.rating, 1, 5, 'La note doit etre comprise entre 1 et 5.');
+  normalized.comment = requireText(normalized.comment ?? existing?.comment, 'Le commentaire de l avis est obligatoire.');
+  normalized.status = trimText(normalized.status) ?? trimText(existing?.status) ?? 'published';
+  if (!new Set(['published', 'hidden']).has(String(normalized.status))) {
+    throw new BadRequestException('Le statut de l avis est invalide.');
+  }
+  if (user.role !== 'admin') {
+    normalized.status = 'published';
+  }
   return normalized;
 }
 
@@ -2410,7 +2685,51 @@ function sanitizeSubmissionRecord(row: Row, user: AuthUser) {
   return normalized;
 }
 
+function sanitizeConversationCreateRecord(row: Row, user: AuthUser) {
+  const normalized = sanitizeConversationParticipants(user, row.participants, findUserById);
+  if (!normalized) {
+    throw new UnauthorizedException('Acces refuse.');
+  }
+
+  return {
+    name: normalized.conversationName,
+    role: normalized.conversationRole,
+    avatar: normalized.conversationAvatar,
+    participants: normalized.participants,
+    type: 'individual',
+    members: 2,
+  };
+}
+
+function sanitizeMessageCreateRecord(row: Row, user: AuthUser) {
+  if (String(row.sender_id) !== user.id) {
+    throw new UnauthorizedException('Acces refuse.');
+  }
+
+  const conversation = findRow('conversations', row.conversation_id);
+  if (!conversation || !isConversationAllowedForActor(user, conversation.participants, findUserById)) {
+    throw new UnauthorizedException('Acces refuse.');
+  }
+
+  const attachments = Array.isArray(row.attachments) ? row.attachments : [];
+  const content = trimText(row.content);
+  if (!content && attachments.length === 0) {
+    throw new BadRequestException('Le message est obligatoire.');
+  }
+
+  return {
+    conversation_id: conversation.id,
+    sender_id: user.id,
+    sender_name: `${user.firstName} ${user.lastName}`.trim(),
+    sender_avatar: user.avatar ?? null,
+    content: content ?? '',
+    attachments,
+    read: false,
+  };
+}
+
 function sanitizeUpdatePayload(table: string, existingRow: Row, payload: Row, user: AuthUser) {
+  assertSubscriptionRequiredForWrite(table, user);
   switch (table) {
     case 'courses':
       return sanitizeCourseRecord({ ...existingRow, ...payload }, user);
@@ -2434,10 +2753,39 @@ function sanitizeUpdatePayload(table: string, existingRow: Row, payload: Row, us
       return sanitizePayoutAccountRecord({ ...existingRow, ...payload }, user);
     case 'payout_requests':
       return sanitizePayoutRequestRecord({ ...existingRow, ...payload }, user);
+    case 'user_subscriptions':
+      return sanitizeUserSubscriptionRecord({ ...existingRow, ...payload }, user);
+    case 'provider_verification_requests':
+      return sanitizeProviderVerificationRequestRecord({ ...existingRow, ...payload }, user);
+    case 'escrow_cases':
+      return sanitizeEscrowCaseRecord({ ...existingRow, ...payload }, user);
     case 'lesson_comments':
       return sanitizeLessonCommentRecord({ ...existingRow, ...payload }, user);
+    case 'lesson_progress':
+      return sanitizeLessonProgressRecord({ ...existingRow, ...payload }, user);
+    case 'course_reviews':
+      return sanitizeCourseReviewRecord({ ...existingRow, ...payload }, user);
     case 'course_faq_items':
       return sanitizeCourseFaqRecord({ ...existingRow, ...payload }, user);
+    case 'conversations':
+      if (!isConversationAllowedForActor(user, existingRow.participants, findUserById)) {
+        throw new UnauthorizedException('Acces refuse.');
+      }
+      return {
+        updated_at: payload.updated_at ?? new Date().toISOString(),
+      };
+    case 'messages':
+      if (!isConversationAllowedForActor(user, findRow('conversations', existingRow.conversation_id)?.participants, findUserById)) {
+        throw new UnauthorizedException('Acces refuse.');
+      }
+      if (String(existingRow.sender_id) === user.id) {
+        throw new UnauthorizedException('Acces refuse.');
+      }
+      return {
+        read: payload.read === true,
+      };
+    case 'bookings':
+      return sanitizeBookingUpdateRecord(existingRow, payload, user);
     default:
       return payload;
   }
@@ -2447,6 +2795,7 @@ function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
   const providerIds = getProviderIdsForUser(user.id);
   const ownerProjectIds = getOwnerProjectIds(user.id);
   const courseIds = getInstructorCourseIds(user.id);
+  assertSubscriptionRequiredForWrite(table, user);
 
   switch (table) {
     case 'courses':
@@ -2474,24 +2823,41 @@ function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
       if (user.role !== 'admin' && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
       return sanitizeQuizChoiceRecord(row, user);
     case 'payout_accounts':
-      if (user.role !== 'admin' && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'admin' && !new Set(['formateur', 'prestataire', 'porteur']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
       return sanitizePayoutAccountRecord(row, user);
     case 'payout_requests':
-      if (user.role !== 'admin' && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'admin' && !new Set(['formateur', 'prestataire', 'porteur']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
       return sanitizePayoutRequestRecord(row, user);
+    case 'user_subscriptions':
+      if (user.role !== 'admin' && !new Set(['formateur', 'prestataire', 'porteur', 'partenaire']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      return sanitizeUserSubscriptionRecord(row, user);
+    case 'provider_verification_requests':
+      if (user.role !== 'admin' && user.role !== 'prestataire') throw new UnauthorizedException('Acces refuse.');
+      return sanitizeProviderVerificationRequestRecord(row, user);
+    case 'escrow_cases':
+      if (user.role !== 'admin') throw new UnauthorizedException('Acces refuse.');
+      return sanitizeEscrowCaseRecord(row, user);
     case 'lesson_comments':
       if (!new Set(['admin', 'formateur', 'apprenant']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
       return sanitizeLessonCommentRecord(row, user);
+    case 'lesson_progress':
+      if (!new Set(['admin', 'apprenant']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      return sanitizeLessonProgressRecord(row, user);
+    case 'course_reviews':
+      if (!new Set(['admin', 'apprenant']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      return sanitizeCourseReviewRecord(row, user);
     case 'course_faq_items':
       if (user.role !== 'admin' && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
       return sanitizeCourseFaqRecord(row, user);
     case 'notifications': {
       const targetUserId = String(row.user_id ?? '');
-      if (!canNotifyUser(user, targetUserId)) {
+      const notificationType = normalizeNotificationType(row.type);
+      if (!canNotifyUser(user, targetUserId, notificationType)) {
         throw new UnauthorizedException('Acces refuse.');
       }
       return {
         ...row,
+        type: notificationType,
         metadata: {
           ...(typeof row.metadata === 'object' && row.metadata !== null ? row.metadata : {}),
           actor_id: user.id,
@@ -2505,8 +2871,7 @@ function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
       if (String(row.user_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
       return row;
     case 'bookings':
-      if (user.role !== 'client' || String(row.client_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
-      return row;
+      return sanitizeBookingCreateRecord(row, user);
     case 'client_orders':
     case 'client_favorites':
       if (user.role !== 'client' || String(row.client_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
@@ -2514,6 +2879,23 @@ function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
     case 'provider_reviews':
       if (user.role !== 'client' || String(row.client_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
       return row;
+    case 'admin_reports':
+      if (user.role !== 'admin' && user.role !== 'client') throw new UnauthorizedException('Acces refuse.');
+      return {
+        reporter: `${user.firstName} ${user.lastName}`.trim(),
+        reporter_id: user.id,
+        reported: requireText(row.reported, 'La cible du signalement est obligatoire.'),
+        target_id: trimText(row.target_id),
+        target_table: trimText(row.target_table),
+        type: requireText(row.type, 'Le type du signalement est obligatoire.'),
+        reason: requireText(row.reason, 'Le motif du signalement est obligatoire.'),
+        description: requireText(row.description, 'La description du signalement est obligatoire.'),
+        priority: ['high', 'medium', 'low'].includes(String(row.priority)) ? row.priority : 'medium',
+        status: 'pending',
+        adminAction: null,
+        date: row.date ?? new Date().toISOString(),
+        source: 'client_dashboard',
+      };
     case 'provider_services':
       if (user.role !== 'prestataire' || !providerIds.includes(String(row.provider_id))) throw new UnauthorizedException('Acces refuse.');
       return row;
@@ -2527,14 +2909,9 @@ function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
       if (user.role !== 'formateur' || !courseIds.includes(String(row.course_id))) throw new UnauthorizedException('Acces refuse.');
       return row;
     case 'conversations':
-      if (!Array.isArray(row.participants) || !row.participants.map(String).includes(String(user.id))) {
-        throw new UnauthorizedException('Acces refuse.');
-      }
-      return row;
+      return sanitizeConversationCreateRecord(row, user);
     case 'messages':
-      if (String(row.sender_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
-      if (!getConversationIdsForUser(user.id).includes(String(row.conversation_id))) throw new UnauthorizedException('Acces refuse.');
-      return row;
+      return sanitizeMessageCreateRecord(row, user);
     case 'projects':
       if (user.role !== 'porteur' || String(row.owner_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
       return row;
@@ -2563,10 +2940,250 @@ function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
   }
 }
 
+export function mergeRowsToPersist(target: Record<string, Row[]>, table: string, rows: Row[]) {
+  if (rows.length === 0) return;
+  target[table] = [...(target[table] ?? []), ...rows.map((row) => clone(row))];
+}
+
+export function collectRowsByIds(table: string, ids: Array<string | number>) {
+  const allowed = new Set(ids.map(String));
+  return listAppRows(table).filter((row) => allowed.has(String(row.id)));
+}
+
+export function ensureWalletAccount(userId: string, rowsToPersist: Record<string, Row[]>) {
+  const existing = getWalletAccountRow(userId);
+  if (existing) return existing;
+
+  const created = withId(prepareInsert('wallet_accounts', {
+    id: createSyntheticId('wallet'),
+    user_id: userId,
+    balance: 0,
+    currency: 'XAF',
+  }));
+  appendAppRows('wallet_accounts', [created]);
+  mergeRowsToPersist(rowsToPersist, 'wallet_accounts', collectRowsByIds('wallet_accounts', [String(created.id)]));
+  return findRow('wallet_accounts', created.id) ?? created;
+}
+
+function createFinanceSideEffectsContext(): FinanceSideEffectsContext {
+  return {
+    store,
+    clone,
+    withId,
+    prepareInsert,
+    createSyntheticId,
+    createReference,
+    appendAppRows,
+    patchAppRows,
+    mergeRowsToPersist,
+    collectRowsByIds,
+    ensureWalletAccount,
+    findRow,
+    findEscrowByBookingId: (bookingId) => findEscrowByBookingId(bookingId) ?? undefined,
+    requireNumberOrFallback,
+    trimText,
+  };
+}
+
+function createProviderVisibilityContext() {
+  return {
+    store,
+    findRow,
+    appendAppRows,
+    patchAppRows,
+    mergeRowsToPersist,
+    collectRowsByIds,
+  };
+}
+
+function appendPaymentTransaction(
+  rowsToPersist: Record<string, Row[]>,
+  payload: Row,
+) {
+  const existing = (
+    (payload.id !== undefined ? findRow('payment_transactions', payload.id) : null)
+    ?? ((payload.financial_operation_id
+      ? (store.payment_transactions ?? []).find((row) => String(row.financial_operation_id ?? '') === String(payload.financial_operation_id))
+      : null) ?? null)
+  );
+
+  if (existing) {
+    patchAppRows('payment_transactions', (row) => String(row.id) === String(existing.id), {
+      ...existing,
+      ...payload,
+      currency: payload.currency ?? existing.currency ?? 'XAF',
+      status: payload.status ?? existing.status ?? 'completed',
+      date: payload.date ?? existing.date ?? new Date().toISOString(),
+      reference: payload.reference ?? existing.reference ?? createReference('REF'),
+      updated_at: new Date().toISOString(),
+    });
+    mergeRowsToPersist(rowsToPersist, 'payment_transactions', collectRowsByIds('payment_transactions', [String(existing.id)]));
+    return findRow('payment_transactions', existing.id) ?? existing;
+  }
+
+  const transaction = withId(prepareInsert('payment_transactions', {
+    id: payload.id ?? createReference('TRX'),
+    currency: 'XAF',
+    status: 'completed',
+    date: new Date().toISOString(),
+    reference: createReference('REF'),
+    ...payload,
+  }));
+  appendAppRows('payment_transactions', [transaction]);
+  mergeRowsToPersist(rowsToPersist, 'payment_transactions', collectRowsByIds('payment_transactions', [String(transaction.id)]));
+  return findRow('payment_transactions', transaction.id) ?? transaction;
+}
+
+function appendCommissionEntry(
+  rowsToPersist: Record<string, Row[]>,
+  payload: Row,
+) {
+  const existing = (
+    (payload.id !== undefined ? findRow('commission_ledger', payload.id) : null)
+    ?? ((payload.financial_operation_id
+      ? (store.commission_ledger ?? []).find((row) => String(row.financial_operation_id ?? '') === String(payload.financial_operation_id))
+      : null) ?? null)
+  );
+
+  if (existing) {
+    patchAppRows('commission_ledger', (row) => String(row.id) === String(existing.id), {
+      ...existing,
+      ...payload,
+      currency: payload.currency ?? existing.currency ?? 'XAF',
+      status: payload.status ?? existing.status ?? 'recognized',
+      recognized_at: payload.recognized_at ?? existing.recognized_at ?? new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    mergeRowsToPersist(rowsToPersist, 'commission_ledger', collectRowsByIds('commission_ledger', [String(existing.id)]));
+    return findRow('commission_ledger', existing.id) ?? existing;
+  }
+
+  const entry = withId(prepareInsert('commission_ledger', {
+    id: payload.id ?? createSyntheticId('com'),
+    currency: 'XAF',
+    status: 'recognized',
+    recognized_at: new Date().toISOString(),
+    beneficiary_user_id: 'usr-admin',
+    ...payload,
+  }));
+  appendAppRows('commission_ledger', [entry]);
+  mergeRowsToPersist(rowsToPersist, 'commission_ledger', collectRowsByIds('commission_ledger', [String(entry.id)]));
+  return findRow('commission_ledger', entry.id) ?? entry;
+}
+
+export function createWalletMutationHooks(rowsToPersist: Record<string, Row[]>) {
+  return {
+    syncWalletRow(wallet: Row) {
+      mergeRowsToPersist(rowsToPersist, 'wallet_accounts', collectRowsByIds('wallet_accounts', [String(wallet.id)]));
+    },
+    appendPaymentTransaction(payload: Row) {
+      return appendPaymentTransaction(rowsToPersist, payload);
+    },
+    appendCommissionEntry(payload: Row) {
+      return appendCommissionEntry(rowsToPersist, payload);
+    },
+  };
+}
+
+async function applyBookingCreateSideEffects(
+  bookings: Row[],
+  rowsToPersist: Record<string, Row[]>,
+  outboxEvents: OutboxEventInput[],
+  walletService: WalletService,
+  actorId?: string | null,
+) {
+  return applyBookingCreateSideEffectsByPolicy(
+    bookings,
+    rowsToPersist,
+    outboxEvents,
+    walletService,
+    actorId,
+    createFinanceSideEffectsContext(),
+  );
+}
+
+async function applyBookingUpdateSideEffects(
+  previousRows: Row[],
+  updatedRows: Row[],
+  rowsToPersist: Record<string, Row[]>,
+  outboxEvents: OutboxEventInput[],
+  walletService: WalletService,
+  actorId?: string | null,
+) {
+  return applyBookingUpdateSideEffectsByPolicy(
+    previousRows,
+    updatedRows,
+    rowsToPersist,
+    outboxEvents,
+    walletService,
+    actorId,
+    createFinanceSideEffectsContext(),
+  );
+}
+
+export async function applyEscrowUpdateSideEffects(
+  previousRows: Row[],
+  updatedRows: Row[],
+  rowsToPersist: Record<string, Row[]>,
+  outboxEvents: OutboxEventInput[],
+  walletService: WalletService,
+  actorId?: string | null,
+) {
+  return applyEscrowUpdateSideEffectsByPolicy(
+    previousRows,
+    updatedRows,
+    rowsToPersist,
+    outboxEvents,
+    walletService,
+    actorId,
+    createFinanceSideEffectsContext(),
+  );
+}
+
+export async function applyPayoutRequestUpdateSideEffects(
+  previousRows: Row[],
+  updatedRows: Row[],
+  rowsToPersist: Record<string, Row[]>,
+  outboxEvents: OutboxEventInput[],
+  walletService: WalletService,
+  actorId?: string | null,
+) {
+  return applyPayoutRequestUpdateSideEffectsByPolicy(
+    previousRows,
+    updatedRows,
+    rowsToPersist,
+    outboxEvents,
+    walletService,
+    actorId,
+    createFinanceSideEffectsContext(),
+  );
+}
+
+export async function applySubscriptionMutationSideEffects(
+  previousRows: Row[],
+  updatedRows: Row[],
+  rowsToPersist: Record<string, Row[]>,
+  outboxEvents: OutboxEventInput[],
+  walletService: WalletService,
+  actorId?: string | null,
+) {
+  return applySubscriptionMutationSideEffectsByPolicy(
+    previousRows,
+    updatedRows,
+    rowsToPersist,
+    outboxEvents,
+    walletService,
+    actorId,
+    createFinanceSideEffectsContext(),
+  );
+}
+
 @Controller('data')
 export class DataController {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly walletService: WalletService,
     private readonly authService: AuthService,
   ) {}
 
@@ -2577,7 +3194,7 @@ export class DataController {
     @Query() query: Record<string, string | string[] | undefined>,
   ) {
     await syncAppStoreFromDatabase(this.prisma);
-    assertTableAccess(table, request.auth?.user ?? null, 'GET');
+    await assertTableAccess(table, request.auth?.user ?? null, 'GET', this.authService);
     ensureTable(table);
     let rows = filterRowsForActor(table, clone(store[table] ?? []), request.auth?.user ?? null).filter((row) => matches(row, query));
 
@@ -2601,7 +3218,7 @@ export class DataController {
     @Body() payload: Row | Row[],
   ) {
     await syncAppStoreFromDatabase(this.prisma);
-    assertTableAccess(table, request.auth?.user ?? null, 'POST');
+    await assertTableAccess(table, request.auth?.user ?? null, 'POST', this.authService);
     ensureTable(table);
     const rawRows = Array.isArray(payload) ? payload : [payload];
     const user = request.auth?.user;
@@ -2610,13 +3227,41 @@ export class DataController {
 
     const rows = normalizedRows.map((row) => withId(prepareInsert(table, row)));
     const response = appendAppRows(table, rows);
-    if (table === 'virtual_classes') {
-      const notifications = response.flatMap((row) => buildVirtualClassNotificationRows(row, 'live-scheduled'));
-      if (notifications.length > 0) {
-        appendAppRows('notifications', notifications);
+    const rowsToPersist: Record<string, Row[]> = {
+      [table]: rows,
+    };
+    const outboxEvents: OutboxEventInput[] = [];
+    if (table === 'bookings') {
+      await applyBookingCreateSideEffects(response, rowsToPersist, outboxEvents, this.walletService, user?.id);
+    }
+    if (table === 'user_subscriptions') {
+      await applySubscriptionMutationSideEffects([], response, rowsToPersist, outboxEvents, this.walletService, user?.id);
+      const visibilityContext = createProviderVisibilityContext();
+      for (const subscription of response) {
+        syncProviderStateFromSubscription(subscription, rowsToPersist, visibilityContext);
+        issueProviderVisibilityPass(null, subscription, rowsToPersist, visibilityContext);
       }
     }
-    await persistAppStoreToDatabase(this.prisma);
+    if (table === 'provider_verification_requests') {
+      applyProviderVerificationDecision(response, rowsToPersist, createProviderVisibilityContext());
+    }
+    if (table === 'virtual_classes') {
+      appendVirtualClassCreateEvents({
+        getCourseEnrollments: (courseId) => (store.course_enrollments ?? [])
+          .filter((enrollment) => String(enrollment.course_id) === String(courseId))
+          .map((enrollment) => ({
+            user_id: String(enrollment.student_id),
+            student_name: String(enrollment.student_name ?? 'Apprenant'),
+          })),
+      }, response, outboxEvents, user?.id);
+    }
+    await this.platformPersistenceService.persistRows(rowsToPersist, {
+      actorId: user?.id,
+      reason: `data:${table}:create`,
+      beforeRowsByTable: {},
+      afterRowsByTable: rowsToPersist,
+      outboxEvents,
+    });
     return Array.isArray(payload) ? response : response[0];
   }
 
@@ -2628,7 +3273,10 @@ export class DataController {
     @Body() payload: Row,
   ) {
     await syncAppStoreFromDatabase(this.prisma);
-    assertTableAccess(table, request.auth?.user ?? null, 'PATCH');
+    await assertTableAccess(table, request.auth?.user ?? null, 'PATCH', this.authService);
+    if (APPEND_ONLY_TABLES.has(table)) {
+      throw new BadRequestException('Cette table est immutable. Utilisez une contre-ecriture.');
+    }
     ensureTable(table);
     const rows = store[table] ?? [];
     const actorRows = filterRowsForActor(table, rows, request.auth?.user ?? null);
@@ -2650,40 +3298,48 @@ export class DataController {
     store[table] = updated;
     recomputeDerivedData();
     const updatedRows = updated.filter((row) => matches(row, query) && actorRowIds.has(String(row.id)));
+    const rowsToPersist: Record<string, Row[]> = {
+      [table]: updatedRows,
+    };
+    const outboxEvents: OutboxEventInput[] = [];
     if (table === 'virtual_classes') {
-      const previousById = new Map(previousRows.map((row) => [String(row.id), row] as const));
-      const notifications = updatedRows.flatMap((row) => {
-        const previous = previousById.get(String(row.id));
-        if (!previous) return [];
-
-        if (String(previous.status) !== String(row.status)) {
-          if (String(row.status) === 'live') {
-            return buildVirtualClassNotificationRows(row, 'live-started');
-          }
-          if (String(row.status) === 'ended') {
-            return buildVirtualClassNotificationRows(row, row.recording_url ? 'replay-ready' : 'live-ended');
-          }
-        }
-
-        const relevantKeys = ['title', 'class_date', 'class_time', 'room_link', 'recording_url', 'recording_status'];
-        const changed = relevantKeys.some((key) => String(previous[key] ?? '') !== String(row[key] ?? ''));
-        if (changed) {
-          if (String(row.status) === 'ended' && row.recording_url && !previous.recording_url) {
-            return buildVirtualClassNotificationRows(row, 'replay-ready');
-          }
-          if (String(row.status) === 'scheduled') {
-            return buildVirtualClassNotificationRows(row, 'live-updated');
-          }
-        }
-
-        return [];
-      });
-
-      if (notifications.length > 0) {
-        appendAppRows('notifications', notifications);
+      appendVirtualClassUpdateEvents({
+        getCourseEnrollments: (courseId) => (store.course_enrollments ?? [])
+          .filter((enrollment) => String(enrollment.course_id) === String(courseId))
+          .map((enrollment) => ({
+            user_id: String(enrollment.student_id),
+            student_name: String(enrollment.student_name ?? 'Apprenant'),
+          })),
+      }, previousRows, updatedRows, outboxEvents, user?.id);
+    }
+    if (table === 'bookings') {
+      await applyBookingUpdateSideEffects(previousRows, updatedRows, rowsToPersist, outboxEvents, this.walletService, user?.id);
+    }
+    if (table === 'escrow_cases') {
+      await applyEscrowUpdateSideEffects(previousRows, updatedRows, rowsToPersist, outboxEvents, this.walletService, user?.id);
+    }
+    if (table === 'payout_requests') {
+      await applyPayoutRequestUpdateSideEffects(previousRows, updatedRows, rowsToPersist, outboxEvents, this.walletService, user?.id);
+    }
+    if (table === 'user_subscriptions') {
+      await applySubscriptionMutationSideEffects(previousRows, updatedRows, rowsToPersist, outboxEvents, this.walletService, user?.id);
+      const visibilityContext = createProviderVisibilityContext();
+      for (const subscription of updatedRows) {
+        const previous = previousRows.find((row) => String(row.id) === String(subscription.id)) ?? null;
+        syncProviderStateFromSubscription(subscription, rowsToPersist, visibilityContext);
+        issueProviderVisibilityPass(previous, subscription, rowsToPersist, visibilityContext);
       }
     }
-    await persistAppStoreToDatabase(this.prisma);
+    if (table === 'provider_verification_requests') {
+      applyProviderVerificationDecision(updatedRows, rowsToPersist, createProviderVisibilityContext());
+    }
+    await this.platformPersistenceService.persistRows(rowsToPersist, {
+      actorId: user?.id,
+      reason: `data:${table}:update`,
+      beforeRowsByTable: { [table]: previousRows },
+      afterRowsByTable: rowsToPersist,
+      outboxEvents,
+    });
     return hydrateRows(table, updatedRows);
   }
 
@@ -2694,7 +3350,10 @@ export class DataController {
     @Query() query: Record<string, string | string[] | undefined>,
   ) {
     await syncAppStoreFromDatabase(this.prisma);
-    assertTableAccess(table, request.auth?.user ?? null, 'DELETE');
+    await assertTableAccess(table, request.auth?.user ?? null, 'DELETE', this.authService);
+    if (APPEND_ONLY_TABLES.has(table)) {
+      throw new BadRequestException('Cette table est immutable et ne peut pas etre supprimee.');
+    }
     ensureTable(table);
     const rows = store[table] ?? [];
     const actorRows = filterRowsForActor(table, rows, request.auth?.user ?? null);
@@ -2704,53 +3363,177 @@ export class DataController {
     if (matchedIds.size > 0 && removed.length === 0) {
       throw new UnauthorizedException('Acces refuse.');
     }
+    const deletedRowIdsByTable: Record<string, string[]> = {
+      [table]: removed.map((row) => String(row.id)),
+    };
+    const registerDeleted = (targetTable: string, rowIds: string[]) => {
+      if (rowIds.length === 0) return;
+      deletedRowIdsByTable[targetTable] = [
+        ...(deletedRowIdsByTable[targetTable] ?? []),
+        ...rowIds,
+      ];
+    };
     store[table] = rows.filter((row) => !(matches(row, query) && actorRowIds.has(String(row.id))));
 
     if (table === 'course_sections') {
       const removedSectionIds = new Set(removed.map((row) => String(row.id)));
+      const removedLessonIds = (store.course_lessons ?? [])
+        .filter((lesson) => removedSectionIds.has(String(lesson.section_id)))
+        .map((lesson) => String(lesson.id));
+      registerDeleted('course_lessons', removedLessonIds);
       store.course_lessons = (store.course_lessons ?? []).filter((lesson) => !removedSectionIds.has(String(lesson.section_id)));
-      const remainingLessonIds = new Set((store.course_lessons ?? []).map((lesson) => String(lesson.id)));
-      store.lesson_assets = (store.lesson_assets ?? []).filter((asset) => remainingLessonIds.has(String(asset.lesson_id)));
-      store.lesson_comments = (store.lesson_comments ?? []).filter((comment) => remainingLessonIds.has(String(comment.lesson_id)));
+
+      const removedAssetIds = (store.lesson_assets ?? [])
+        .filter((asset) => removedLessonIds.includes(String(asset.lesson_id)))
+        .map((asset) => String(asset.id));
+      registerDeleted('lesson_assets', removedAssetIds);
+      store.lesson_assets = (store.lesson_assets ?? []).filter((asset) => !removedLessonIds.includes(String(asset.lesson_id)));
+
+      const removedCommentIds = (store.lesson_comments ?? [])
+        .filter((comment) => removedLessonIds.includes(String(comment.lesson_id)))
+        .map((comment) => String(comment.id));
+      registerDeleted('lesson_comments', removedCommentIds);
+      store.lesson_comments = (store.lesson_comments ?? []).filter((comment) => !removedLessonIds.includes(String(comment.lesson_id)));
+
+      const removedProgressIds = (store.lesson_progress ?? [])
+        .filter((entry) => removedLessonIds.includes(String(entry.lesson_id)))
+        .map((entry) => String(entry.id));
+      registerDeleted('lesson_progress', removedProgressIds);
+      store.lesson_progress = (store.lesson_progress ?? []).filter((entry) => !removedLessonIds.includes(String(entry.lesson_id)));
     }
 
     if (table === 'course_lessons') {
       const removedLessonIds = new Set(removed.map((row) => String(row.id)));
+      const removedAssetIds = (store.lesson_assets ?? [])
+        .filter((asset) => removedLessonIds.has(String(asset.lesson_id)))
+        .map((asset) => String(asset.id));
+      registerDeleted('lesson_assets', removedAssetIds);
       store.lesson_assets = (store.lesson_assets ?? []).filter((asset) => !removedLessonIds.has(String(asset.lesson_id)));
+
+      const removedCommentIds = (store.lesson_comments ?? [])
+        .filter((comment) => removedLessonIds.has(String(comment.lesson_id)))
+        .map((comment) => String(comment.id));
+      registerDeleted('lesson_comments', removedCommentIds);
       store.lesson_comments = (store.lesson_comments ?? []).filter((comment) => !removedLessonIds.has(String(comment.lesson_id)));
+
+      const removedProgressIds = (store.lesson_progress ?? [])
+        .filter((entry) => removedLessonIds.has(String(entry.lesson_id)))
+        .map((entry) => String(entry.id));
+      registerDeleted('lesson_progress', removedProgressIds);
+      store.lesson_progress = (store.lesson_progress ?? []).filter((entry) => !removedLessonIds.has(String(entry.lesson_id)));
     }
 
     if (table === 'quiz_questions') {
       const removedQuestionIds = new Set(removed.map((row) => String(row.id)));
+      const removedChoiceIds = (store.quiz_choices ?? [])
+        .filter((choice) => removedQuestionIds.has(String(choice.question_id)))
+        .map((choice) => String(choice.id));
+      registerDeleted('quiz_choices', removedChoiceIds);
       store.quiz_choices = (store.quiz_choices ?? []).filter((choice) => !removedQuestionIds.has(String(choice.question_id)));
     }
 
     if (table === 'exams') {
       const removedExamIds = new Set(removed.map((row) => String(row.id)));
+      const removedSubmissionIds = (store.submissions ?? [])
+        .filter((submission) => removedExamIds.has(String(submission.exam_id)))
+        .map((submission) => String(submission.id));
+      registerDeleted('submissions', removedSubmissionIds);
       store.submissions = (store.submissions ?? []).filter((submission) => !removedExamIds.has(String(submission.exam_id)));
+
+      const removedQuestionIds = (store.quiz_questions ?? [])
+        .filter((question) => removedExamIds.has(String(question.exam_id)))
+        .map((question) => String(question.id));
+      registerDeleted('quiz_questions', removedQuestionIds);
       store.quiz_questions = (store.quiz_questions ?? []).filter((question) => !removedExamIds.has(String(question.exam_id)));
-      const remainingQuestionIds = new Set((store.quiz_questions ?? []).map((question) => String(question.id)));
-      store.quiz_choices = (store.quiz_choices ?? []).filter((choice) => remainingQuestionIds.has(String(choice.question_id)));
+
+      const removedChoiceIds = (store.quiz_choices ?? [])
+        .filter((choice) => removedQuestionIds.includes(String(choice.question_id)))
+        .map((choice) => String(choice.id));
+      registerDeleted('quiz_choices', removedChoiceIds);
+      store.quiz_choices = (store.quiz_choices ?? []).filter((choice) => !removedQuestionIds.includes(String(choice.question_id)));
     }
 
     if (table === 'courses') {
       const removedCourseIds = new Set(removed.map((row) => String(row.id)));
+      const removedSectionIds = (store.course_sections ?? [])
+        .filter((section) => removedCourseIds.has(String(section.course_id)))
+        .map((section) => String(section.id));
+      registerDeleted('course_sections', removedSectionIds);
       store.course_sections = (store.course_sections ?? []).filter((section) => !removedCourseIds.has(String(section.course_id)));
+
+      const removedLessonIds = (store.course_lessons ?? [])
+        .filter((lesson) => removedCourseIds.has(String(lesson.course_id)))
+        .map((lesson) => String(lesson.id));
+      registerDeleted('course_lessons', removedLessonIds);
       store.course_lessons = (store.course_lessons ?? []).filter((lesson) => !removedCourseIds.has(String(lesson.course_id)));
+
+      const removedAssetIds = (store.lesson_assets ?? [])
+        .filter((asset) => removedCourseIds.has(String(asset.course_id)))
+        .map((asset) => String(asset.id));
+      registerDeleted('lesson_assets', removedAssetIds);
       store.lesson_assets = (store.lesson_assets ?? []).filter((asset) => !removedCourseIds.has(String(asset.course_id)));
+
+      const removedCommentIds = (store.lesson_comments ?? [])
+        .filter((comment) => removedCourseIds.has(String(comment.course_id)))
+        .map((comment) => String(comment.id));
+      registerDeleted('lesson_comments', removedCommentIds);
       store.lesson_comments = (store.lesson_comments ?? []).filter((comment) => !removedCourseIds.has(String(comment.course_id)));
+
+      const removedProgressIds = (store.lesson_progress ?? [])
+        .filter((entry) => removedCourseIds.has(String(entry.course_id)))
+        .map((entry) => String(entry.id));
+      registerDeleted('lesson_progress', removedProgressIds);
+      store.lesson_progress = (store.lesson_progress ?? []).filter((entry) => !removedCourseIds.has(String(entry.course_id)));
+
+      const removedReviewIds = (store.course_reviews ?? [])
+        .filter((review) => removedCourseIds.has(String(review.course_id)))
+        .map((review) => String(review.id));
+      registerDeleted('course_reviews', removedReviewIds);
+      store.course_reviews = (store.course_reviews ?? []).filter((review) => !removedCourseIds.has(String(review.course_id)));
+
+      const removedFaqIds = (store.course_faq_items ?? [])
+        .filter((item) => removedCourseIds.has(String(item.course_id)))
+        .map((item) => String(item.id));
+      registerDeleted('course_faq_items', removedFaqIds);
       store.course_faq_items = (store.course_faq_items ?? []).filter((item) => !removedCourseIds.has(String(item.course_id)));
+
+      const removedClassIds = (store.virtual_classes ?? [])
+        .filter((vclass) => removedCourseIds.has(String(vclass.course_id)))
+        .map((vclass) => String(vclass.id));
+      registerDeleted('virtual_classes', removedClassIds);
       store.virtual_classes = (store.virtual_classes ?? []).filter((vclass) => !removedCourseIds.has(String(vclass.course_id)));
+
+      const removedExamIds = (store.exams ?? [])
+        .filter((exam) => removedCourseIds.has(String(exam.course_id)))
+        .map((exam) => String(exam.id));
+      registerDeleted('exams', removedExamIds);
       store.exams = (store.exams ?? []).filter((exam) => !removedCourseIds.has(String(exam.course_id)));
-      const remainingExamIds = new Set((store.exams ?? []).map((exam) => String(exam.id)));
-      store.submissions = (store.submissions ?? []).filter((submission) => remainingExamIds.has(String(submission.exam_id)));
-      store.quiz_questions = (store.quiz_questions ?? []).filter((question) => remainingExamIds.has(String(question.exam_id)));
-      const remainingQuestionIds = new Set((store.quiz_questions ?? []).map((question) => String(question.id)));
-      store.quiz_choices = (store.quiz_choices ?? []).filter((choice) => remainingQuestionIds.has(String(choice.question_id)));
+
+      const removedSubmissionIds = (store.submissions ?? [])
+        .filter((submission) => removedExamIds.includes(String(submission.exam_id)))
+        .map((submission) => String(submission.id));
+      registerDeleted('submissions', removedSubmissionIds);
+      store.submissions = (store.submissions ?? []).filter((submission) => !removedExamIds.includes(String(submission.exam_id)));
+
+      const removedQuestionIds = (store.quiz_questions ?? [])
+        .filter((question) => removedExamIds.includes(String(question.exam_id)))
+        .map((question) => String(question.id));
+      registerDeleted('quiz_questions', removedQuestionIds);
+      store.quiz_questions = (store.quiz_questions ?? []).filter((question) => !removedExamIds.includes(String(question.exam_id)));
+
+      const removedChoiceIds = (store.quiz_choices ?? [])
+        .filter((choice) => removedQuestionIds.includes(String(choice.question_id)))
+        .map((choice) => String(choice.id));
+      registerDeleted('quiz_choices', removedChoiceIds);
+      store.quiz_choices = (store.quiz_choices ?? []).filter((choice) => !removedQuestionIds.includes(String(choice.question_id)));
     }
 
     recomputeDerivedData();
-    await persistAppStoreToDatabase(this.prisma);
+    await this.platformPersistenceService.deleteRows(deletedRowIdsByTable, {
+      actorId: request.auth?.user?.id,
+      reason: `data:${table}:delete`,
+      beforeRowsByTable: { [table]: removed },
+    });
     return hydrateRows(table, removed);
   }
 }

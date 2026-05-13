@@ -64,7 +64,7 @@ export default function AdminAnalyticsPage() {
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#14B8A6] focus:border-transparent text-sm"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5fa6f3] focus:border-transparent text-sm"
             >
               <option value="7">7 derniers jours</option>
               <option value="30">30 derniers jours</option>
@@ -73,7 +73,7 @@ export default function AdminAnalyticsPage() {
             </select>
             <button
               onClick={handleExport}
-              className="px-6 py-2 bg-[#14B8A6] text-white rounded-lg hover:bg-[#0D9488] transition-colors font-medium text-sm whitespace-nowrap"
+              className="px-6 py-2 bg-[#5fa6f3] text-white rounded-lg hover:bg-[#27346b] transition-colors font-medium text-sm whitespace-nowrap"
             >
               Exporter le rapport
             </button>
@@ -98,7 +98,7 @@ export default function AdminAnalyticsPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg lg:text-xl font-bold text-gray-900">Performance par module</h2>
-            <button onClick={loadAnalytics} className="text-sm text-[#14B8A6] hover:text-[#0D9488] font-medium">Actualiser</button>
+            <button onClick={loadAnalytics} className="text-sm text-[#5fa6f3] hover:text-[#27346b] font-medium">Actualiser</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {snapshot.moduleStats.map((module) => (

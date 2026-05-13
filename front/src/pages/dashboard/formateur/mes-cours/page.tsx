@@ -1,19 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonCard } from '@/components/base/Skeleton';
-import { backendClient } from '@/lib/backendClient';
 import ImageUploadField from '@/components/base/ImageUploadField';
-import CourseCreationWizard, { getWizardStorageKey } from './components/CourseCreationWizard';
+import CourseCreationWizard from './components/CourseCreationWizard';
+import { getWizardStorageKey } from './components/wizardStorage';
 import {
   courseStatusClasses,
   courseStatusLabels,
   getInstructorWorkflowAction,
   type CourseWorkflowStatus,
 } from '@/lib/courseWorkflow';
+import { getCourseDeliveryLabel, type CourseDeliveryMode } from '@/lib/courseDelivery';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
+import {
+  deleteFormateurCourse,
+  fetchFormateurCourses,
+  updateFormateurCourse,
+  updateFormateurCourseWorkflow,
+} from '@/lib/formateurDashboardApi';
 
 
 interface Course {
@@ -22,6 +31,7 @@ interface Course {
   category: string;
   description: string | null;
   level: 'beginner' | 'intermediate' | 'advanced' | 'all_levels';
+  delivery_mode: CourseDeliveryMode;
   access_type: 'free' | 'paid';
   is_free: boolean;
   promotion_percentage: number;
@@ -39,7 +49,7 @@ interface Course {
 }
 
 type CourseFormErrors = Partial<Record<
-  'title' | 'category' | 'description' | 'level' | 'modules' | 'duration' | 'price' | 'promotion_percentage' | 'thumbnail' | 'trailer_url',
+  'title' | 'category' | 'description' | 'level' | 'delivery_mode' | 'modules' | 'duration' | 'price' | 'promotion_percentage' | 'thumbnail' | 'trailer_url',
   string
 >>;
 
@@ -48,6 +58,12 @@ const COURSE_LEVEL_LABELS: Record<Course['level'], string> = {
   intermediate: 'Intermédiaire',
   advanced: 'Avancé',
   all_levels: 'Tous niveaux',
+};
+
+const COURSE_DELIVERY_LABELS: Record<CourseDeliveryMode, string> = {
+  online: 'En ligne',
+  onsite: 'Présentiel',
+  hybrid: 'Hybride',
 };
 
 function getFieldClass(hasError?: boolean) {
@@ -77,6 +93,7 @@ function validateCourseForm(form: Partial<Course>) {
   const thumbnail = String(form.thumbnail ?? '').trim();
   const trailerUrl = String(form.trailer_url ?? '').trim();
   const level = String(form.level ?? '').trim();
+  const deliveryMode = String(form.delivery_mode ?? '').trim();
   const isFree = Boolean(form.is_free);
 
   if (!title) errors.title = 'Le titre est obligatoire.';
@@ -88,6 +105,9 @@ function validateCourseForm(form: Partial<Course>) {
   if (description.length > 500) errors.description = 'La description ne peut pas dépasser 500 caractères.';
   if (!['beginner', 'intermediate', 'advanced', 'all_levels'].includes(level)) {
     errors.level = 'Sélectionnez un niveau valide.';
+  }
+  if (!['online', 'onsite', 'hybrid'].includes(deliveryMode)) {
+    errors.delivery_mode = 'Sélectionnez un format valide.';
   }
   if (!duration) errors.duration = 'La durée est obligatoire.';
   if (!Number.isFinite(modules) || modules < 1 || modules > 200) errors.modules = 'Le nombre de modules doit être compris entre 1 et 200.';
@@ -102,9 +122,22 @@ function validateCourseForm(form: Partial<Course>) {
   return errors;
 }
 
+function isIgnorableTransportError(err: unknown) {
+  if (!err || typeof err !== 'object') return false;
+  const message = 'message' in err ? String(err.message) : '';
+  const code = 'code' in err ? String(err.code) : '';
+  return (
+    code === 'NETWORK_ERROR'
+    || code === 'REQUEST_TIMEOUT'
+    || message === 'Failed to fetch'
+    || message === 'Erreur reseau.'
+  );
+}
+
 export default function FormateurCoursPage() {
   const { success, error } = useToast();
   const { user } = useAuth();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,6 +151,15 @@ export default function FormateurCoursPage() {
   const [editErrors, setEditErrors] = useState<CourseFormErrors>({});
   const [editFormMessage, setEditFormMessage] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const isMountedRef = useRef(true);
+  const subscriptionGate = gateFor('trainer_courses_manage');
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const updateEditForm = <K extends keyof Course>(field: K, value: Course[K] | undefined) => {
     setEditForm((current) => {
@@ -141,6 +183,10 @@ export default function FormateurCoursPage() {
   };
 
   const openCreateModal = () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (typeof window !== 'undefined' && user?.id) {
       window.localStorage.removeItem(getWizardStorageKey(user.id));
       window.localStorage.removeItem(`c2p:trainer-course-draft:${user.id}`);
@@ -149,41 +195,34 @@ export default function FormateurCoursPage() {
   };
 
   const fetchCourses = useCallback(async () => {
-    setLoading(true);
+    if (!user?.id) {
+      if (isMountedRef.current) {
+        setCourses([]);
+        setLoading(false);
+      }
+      return;
+    }
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
     try {
-      const { data, error: err } = await backendClient
-        .from('courses')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (err) throw err;
-      setCourses((data || []).map((course) => ({
-        category: 'General',
-        completion_rate: 0,
-        duration: 'N/A',
-        level: 'intermediate',
-        access_type: 'paid',
-        is_free: false,
-        promotion_percentage: 0,
-        trailer_url: null,
-        modules: 0,
-        price: 0,
-        revenue: 0,
-        students_count: 0,
-        thumbnail: null,
-        updated_at: new Date().toISOString(),
-        ...course,
-      })));
+      const data = await fetchFormateurCourses(user.id);
+      if (!isMountedRef.current) return;
+      setCourses(data as Course[]);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
+      if (isIgnorableTransportError(err)) return;
       error('Erreur', 'Impossible de charger les formations.');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [error]);
+  }, [error, user?.id]);
 
   useEffect(() => {
-    fetchCourses();
+    void fetchCourses();
   }, [fetchCourses]);
 
   const filteredCourses = courses.filter((c) => {
@@ -195,26 +234,31 @@ export default function FormateurCoursPage() {
   });
 
   const handleWorkflowAction = (course: Course) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setWorkflowCourse(course);
     setShowWorkflowModal(true);
   };
 
   const confirmWorkflowAction = async () => {
-    if (!workflowCourse) return;
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
+    if (!workflowCourse || !user?.id) return;
     const action = getInstructorWorkflowAction(workflowCourse.status);
     if (!action) return;
     try {
-      const { error: err } = await backendClient
-        .from('courses')
-        .update({ status: action.nextStatus, updated_at: new Date().toISOString() })
-        .eq('id', workflowCourse.id);
-
-      if (err) throw err;
+      await updateFormateurCourseWorkflow(user.id, workflowCourse.id, action.nextStatus);
+      if (!isMountedRef.current) return;
       success('Workflow mis à jour', `La formation "${workflowCourse.title}" est passée en ${courseStatusLabels[action.nextStatus].toLowerCase()}.`);
       setShowWorkflowModal(false);
       setWorkflowCourse(null);
-      fetchCourses();
+      void fetchCourses();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       const message = err && typeof err === 'object' && 'message' in err
         ? String(err.message)
         : 'Impossible de mettre à jour le statut de la formation.';
@@ -224,6 +268,10 @@ export default function FormateurCoursPage() {
   };
 
   const handleEdit = (course: Course) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setSelectedCourse(course);
     setEditForm({ ...course });
     setEditErrors({});
@@ -232,7 +280,7 @@ export default function FormateurCoursPage() {
   };
 
   const confirmEdit = async () => {
-    if (!selectedCourse) return;
+    if (!selectedCourse || !user?.id) return;
     const nextErrors = validateCourseForm(editForm || {});
     setEditErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -241,35 +289,33 @@ export default function FormateurCoursPage() {
     }
     setIsUpdating(true);
     try {
-      const { error: err } = await backendClient
-        .from('courses')
-        .update({
-          title: editForm.title,
-          category: editForm.category,
-          level: editForm.level,
-          status: editForm.status,
-          description: editForm.description,
-          duration: editForm.duration,
-          modules: editForm.modules,
-          price: editForm.price,
-          access_type: editForm.is_free ? 'free' : 'paid',
-          is_free: Boolean(editForm.is_free),
-          promotion_percentage: editForm.promotion_percentage ?? 0,
-          trailer_url: editForm.trailer_url || null,
-          thumbnail: editForm.thumbnail || selectedCourse.thumbnail,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', selectedCourse.id);
-
-      if (err) throw err;
+      await updateFormateurCourse(user.id, selectedCourse.id, {
+        title: editForm.title,
+        category: editForm.category,
+        level: editForm.level,
+        delivery_mode: editForm.delivery_mode,
+        status: editForm.status,
+        description: editForm.description,
+        duration: editForm.duration,
+        modules: editForm.modules,
+        price: editForm.price,
+        access_type: editForm.is_free ? 'free' : 'paid',
+        is_free: Boolean(editForm.is_free),
+        promotion_percentage: editForm.promotion_percentage ?? 0,
+        trailer_url: editForm.trailer_url || null,
+        thumbnail: editForm.thumbnail || selectedCourse.thumbnail,
+        updated_at: new Date().toISOString(),
+      });
+      if (!isMountedRef.current) return;
       success('Formation mise à jour', `"${editForm.title}" a été modifiée avec succès.`);
       setShowEditModal(false);
       setSelectedCourse(null);
       setEditForm({});
       setEditErrors({});
       setEditFormMessage(null);
-      fetchCourses();
+      void fetchCourses();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       const message = err && typeof err === 'object' && 'message' in err
         ? String(err.message)
         : 'Impossible de modifier la formation.';
@@ -277,19 +323,23 @@ export default function FormateurCoursPage() {
       error('Erreur', message);
       console.error(err);
     } finally {
-      setIsUpdating(false);
+      if (isMountedRef.current) {
+        setIsUpdating(false);
+      }
     }
   };
 
   const handleDelete = async (course: Course) => {
+    if (!user?.id) return;
     if (!window.confirm(`Voulez-vous vraiment supprimer "${course.title}" ? Cette action est irréversible.`))
       return;
     try {
-      const { error: err } = await backendClient.from('courses').delete().eq('id', course.id);
-      if (err) throw err;
+      await deleteFormateurCourse(user.id, course.id);
+      if (!isMountedRef.current) return;
       success('Formation supprimée', `"${course.title}" a été supprimée.`);
-      fetchCourses();
+      void fetchCourses();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       const message = err && typeof err === 'object' && 'message' in err
         ? String(err.message)
         : 'Impossible de supprimer la formation.';
@@ -321,6 +371,7 @@ export default function FormateurCoursPage() {
             { label: 'Mes cours' },
           ]}
         />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
@@ -420,6 +471,9 @@ export default function FormateurCoursPage() {
                     <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md">
                       {COURSE_LEVEL_LABELS[course.level] || 'Intermédiaire'}
                     </span>
+                    <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md">
+                      {getCourseDeliveryLabel(course.delivery_mode)}
+                    </span>
                   </div>
                 </div>
                 <div className="p-5">
@@ -462,8 +516,11 @@ export default function FormateurCoursPage() {
                       {getInstructorWorkflowAction(course.status) && (
                         <button
                           onClick={() => handleWorkflowAction(course)}
+                          disabled={!subscriptionGate.allowed}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                            course.status === 'published'
+                            !subscriptionGate.allowed
+                              ? 'cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400'
+                              : course.status === 'published'
                               ? 'border border-amber-200 text-amber-700 hover:bg-amber-50'
                               : course.status === 'review'
                                 ? 'border border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -475,6 +532,7 @@ export default function FormateurCoursPage() {
                       )}
                       <button
                         onClick={() => handleEdit(course)}
+                        disabled={!subscriptionGate.allowed}
                         className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                       >
                         <i className="ri-edit-line text-gray-600"></i>
@@ -507,8 +565,36 @@ export default function FormateurCoursPage() {
           open={showCreateWizard}
           userId={user?.id}
           onClose={() => setShowCreateWizard(false)}
-          onCreated={async () => {
-            await fetchCourses();
+          onCreated={async (createdCourse) => {
+            const optimisticCourse: Course = {
+              id: createdCourse.id,
+              title: createdCourse.title,
+              category: createdCourse.category || 'General',
+              description: createdCourse.description || null,
+              level: createdCourse.level,
+              delivery_mode: createdCourse.delivery_mode,
+              access_type: createdCourse.is_free ? 'free' : 'paid',
+              is_free: createdCourse.is_free,
+              promotion_percentage: createdCourse.promotion_percentage,
+              trailer_url: createdCourse.trailer_url,
+              students_count: 0,
+              completion_rate: 0,
+              status: 'draft',
+              revenue: 0,
+              modules: createdCourse.modules,
+              duration: createdCourse.duration || 'N/A',
+              updated_at: new Date().toISOString(),
+              thumbnail: createdCourse.thumbnail,
+              price: createdCourse.price,
+              current_price: createdCourse.price,
+            };
+
+            setCourses((current) => [
+              optimisticCourse,
+              ...current.filter((course) => String(course.id) !== String(createdCourse.id)),
+            ]);
+
+            void fetchCourses();
           }}
         />
 
@@ -623,6 +709,20 @@ export default function FormateurCoursPage() {
                       ))}
                     </select>
                     {editErrors.level ? <p className="mt-1 text-xs text-red-600">{editErrors.level}</p> : null}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Format</label>
+                    <select
+                      value={editForm.delivery_mode || 'online'}
+                      onChange={(e) => updateEditForm('delivery_mode', e.target.value as CourseDeliveryMode)}
+                      aria-invalid={Boolean(editErrors.delivery_mode)}
+                      className={getFieldClass(Boolean(editErrors.delivery_mode))}
+                    >
+                      {Object.entries(COURSE_DELIVERY_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                    {editErrors.delivery_mode ? <p className="mt-1 text-xs text-red-600">{editErrors.delivery_mode}</p> : null}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>

@@ -14,6 +14,11 @@ function normalizeEnvironmentConfig(rawConfig: Record<string, unknown>) {
     config.REDIS_DISABLED = 'true';
   }
 
+  const normalizedNodeEnv = String(config.NODE_ENV ?? 'development').trim().toLowerCase();
+  if (config.ENABLE_METRICS === 'true' && !config.METRICS_AUTH_TOKEN && normalizedNodeEnv !== 'production') {
+    config.METRICS_AUTH_TOKEN = 'local-metrics-token';
+  }
+
   return config;
 }
 
@@ -27,16 +32,22 @@ export const configValidationSchema = z.object({
   COOKIE_SECURE: booleanString.default('false'),
   TRUST_PROXY: booleanString.default('false'),
   COOKIE_SAMESITE: sameSiteSchema.default('lax'),
+  PRISMA_PLATFORM_SYNC_ENABLED: booleanString.default('true'),
+  PRISMA_PLATFORM_SYNC_ON_BOOT: booleanString.default('true'),
   ACCESS_TOKEN_TTL_MINUTES: z.string().default('15'),
   REFRESH_TOKEN_TTL_DAYS: z.string().default('14'),
   SESSION_ABSOLUTE_TIMEOUT_HOURS: z.string().default('12'),
   LOGIN_RATE_LIMIT_MAX: z.string().default('30'),
+  AUTH_RATE_LIMIT_MAX: z.string().default('45'),
   GLOBAL_RATE_LIMIT_MAX: z.string().default('180'),
+  FINANCE_RATE_LIMIT_MAX: z.string().default('90'),
+  PROVIDER_WEBHOOK_RATE_LIMIT_MAX: z.string().default('120'),
   CSRF_COOKIE_NAME: z.string().default('c2p_csrf'),
   SESSION_COOKIE_NAME: z.string().default('c2p_at'),
   REFRESH_COOKIE_NAME: z.string().default('c2p_rt'),
   FRONTEND_MONITORING_ENABLED: booleanString.default('true'),
   ENABLE_METRICS: booleanString.default('true'),
+  METRICS_AUTH_TOKEN: z.string().optional(),
   REDIS_HOST: z.string().default('redis'),
   REDIS_PORT: z.string().default('6379'),
   REDIS_DISABLED: booleanString.default('false'),
@@ -75,6 +86,8 @@ export const configValidationSchema = z.object({
   DEXPAY_API_KEY: z.string().optional(),
   DEXPAY_API_SECRET: z.string().optional(),
   DEXPAY_TIMEOUT_MS: z.string().default('12000'),
+  DEXPAY_WEBHOOK_SECRET: z.string().optional(),
+  DEXPAY_WEBHOOK_SIGNATURE_HEADER: z.string().default('x-dexpay-signature'),
   DEXPAY_DEFAULT_ASSET: z.string().default('DUSD'),
   DEXPAY_DEFAULT_CHAIN: z.string().default('BSC'),
   DEXPAY_ONRAMP_TYPE: z.enum(['BUY', 'SELL']).default('BUY'),
@@ -168,6 +181,14 @@ export const configValidationSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['REDIS_HOST'],
       message: 'REDIS_HOST or REDIS_URL is required when Redis is enabled.',
+    });
+  }
+
+  if (config.ENABLE_METRICS === 'true' && !config.METRICS_AUTH_TOKEN?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['METRICS_AUTH_TOKEN'],
+      message: 'METRICS_AUTH_TOKEN is required when ENABLE_METRICS=true.',
     });
   }
 });

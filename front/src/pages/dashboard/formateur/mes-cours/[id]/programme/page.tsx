@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import DashboardLayout from '../../../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { SkeletonList } from '@/components/base/Skeleton';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { backendClient } from '@/lib/backendClient';
 import {
   courseStatusClasses,
   courseStatusLabels,
@@ -12,6 +14,18 @@ import {
   getInstructorWorkflowAction,
   type CourseWorkflowStatus,
 } from '@/lib/courseWorkflow';
+import {
+  deleteFormateurCourseLesson,
+  deleteFormateurCourseSection,
+  deleteFormateurLessonAsset,
+  fetchFormateurCourseProgram,
+  reorderFormateurCourseLessons,
+  reorderFormateurCourseSections,
+  saveFormateurCourseLesson,
+  saveFormateurCourseSection,
+  saveFormateurLessonAsset,
+  updateFormateurCourseWorkflow,
+} from '@/lib/formateurDashboardApi';
 import { uploadFileToServer } from '@/lib/uploadApi';
 
 type CourseStatus = CourseWorkflowStatus;
@@ -261,7 +275,9 @@ function validateAssetForm(form: AssetFormState, availableLessonIds: Set<string>
 
 export default function FormateurCourseProgramPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { success, error, info } = useToast();
+  const { gateFor } = useSubscriptionAccess(user);
 
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState<Course | null>(null);
@@ -290,6 +306,7 @@ export default function FormateurCourseProgramPage() {
   const [isSavingLesson, setIsSavingLesson] = useState(false);
   const [isSavingAsset, setIsSavingAsset] = useState(false);
   const assetFileInputRef = useRef<HTMLInputElement>(null);
+  const subscriptionGate = gateFor('trainer_courses_manage');
 
   const groupedSections = useMemo(() => {
     return [...sections]
@@ -334,36 +351,14 @@ export default function FormateurCourseProgramPage() {
   };
 
   const fetchProgram = useCallback(async () => {
-    if (!id) return;
+    if (!id || !user?.id) return;
     setLoading(true);
     try {
-      const [
-        { data: courseData, error: courseError },
-        { data: sectionsData, error: sectionsError },
-        { data: lessonsData, error: lessonsError },
-        { data: assetsData, error: assetsError },
-      ] =
-        await Promise.all([
-          backendClient.from<Course>('courses').select('*').eq('id', id).single(),
-          backendClient.from<CourseSection>('course_sections').select('*').eq('course_id', id).order('position', { ascending: true }),
-          backendClient.from<CourseLesson>('course_lessons').select('*').eq('course_id', id).order('position', { ascending: true }),
-          backendClient.from<LessonAsset>('lesson_assets').select('*').eq('course_id', id).order('position', { ascending: true }),
-        ]);
-
-      if (courseError) throw courseError;
-      if (sectionsError) throw sectionsError;
-      if (lessonsError) throw lessonsError;
-      if (assetsError) throw assetsError;
-
-      setCourse(courseData);
-      setSections(sectionsData ?? []);
-      setLessons(
-        (lessonsData ?? []).map((lesson) => ({
-          ...lesson,
-          is_preview: Boolean(lesson.is_preview),
-        })),
-      );
-      setAssets(assetsData ?? []);
+      const snapshot = await fetchFormateurCourseProgram(user.id, id);
+      setCourse(snapshot.course as Course | null);
+      setSections(snapshot.sections as CourseSection[]);
+      setLessons(snapshot.lessons as CourseLesson[]);
+      setAssets(snapshot.assets as LessonAsset[]);
     } catch (err: unknown) {
       const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Impossible de charger le programme.';
       error('Erreur', message);
@@ -371,13 +366,17 @@ export default function FormateurCourseProgramPage() {
     } finally {
       setLoading(false);
     }
-  }, [error, id]);
+  }, [error, id, user?.id]);
 
   useEffect(() => {
     fetchProgram();
   }, [fetchProgram]);
 
   const openCreateSectionModal = () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setEditingSection(null);
     setSectionForm(emptySectionForm());
     setSectionErrors({});
@@ -386,6 +385,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const openEditSectionModal = (section: CourseSection) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setEditingSection(section);
     setSectionForm({
       title: section.title,
@@ -398,6 +401,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const openCreateLessonModal = (sectionId?: EntityId) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!groupedSections.length) {
       info('Programme requis', 'Créez d abord une section avant d ajouter une leçon.');
       return;
@@ -410,6 +417,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const openEditLessonModal = (lesson: CourseLesson) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setEditingLesson(lesson);
     setLessonForm({
       section_id: String(lesson.section_id),
@@ -430,6 +441,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const openAssetModal = (lesson: CourseLesson) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setActiveAssetLesson(lesson);
     setEditingAsset(null);
     setAssetForm(emptyAssetForm(String(lesson.id)));
@@ -439,6 +454,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const openEditAsset = (asset: LessonAsset) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     const lesson = lessons.find((candidate) => String(candidate.id) === String(asset.lesson_id));
     if (!lesson) return;
     setActiveAssetLesson(lesson);
@@ -459,7 +478,11 @@ export default function FormateurCourseProgramPage() {
   };
 
   const submitSection = async () => {
-    if (!id || !course) return;
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
+    if (!id || !course || !user?.id) return;
     const nextErrors = validateSectionForm(sectionForm);
     setSectionErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -467,21 +490,15 @@ export default function FormateurCourseProgramPage() {
       return;
     }
 
-    const payload = {
-      course_id: id,
-      title: sectionForm.title.trim(),
-      description: sectionForm.description.trim(),
-      status: sectionForm.status,
-      position: editingSection?.position,
-    };
-
     setIsSavingSection(true);
     try {
-      const response = editingSection
-        ? await backendClient.from('course_sections').update(payload).eq('id', editingSection.id)
-        : await backendClient.from('course_sections').insert(payload);
-
-      if (response.error) throw response.error;
+      await saveFormateurCourseSection(user.id, id, {
+        id: editingSection?.id,
+        title: sectionForm.title,
+        description: sectionForm.description,
+        status: sectionForm.status,
+        position: editingSection?.position,
+      });
       success(
         editingSection ? 'Section mise à jour' : 'Section créée',
         editingSection ? `La section "${sectionForm.title}" a été mise à jour.` : `La section "${sectionForm.title}" a été ajoutée à ${course.title}.`,
@@ -503,7 +520,11 @@ export default function FormateurCourseProgramPage() {
   };
 
   const submitLesson = async () => {
-    if (!id) return;
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
+    if (!id || !user?.id) return;
     const nextErrors = validateLessonForm(lessonForm, availableSectionIds);
     setLessonErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -511,29 +532,23 @@ export default function FormateurCourseProgramPage() {
       return;
     }
 
-    const payload = {
-      course_id: id,
-      section_id: lessonForm.section_id,
-      title: lessonForm.title.trim(),
-      description: lessonForm.description.trim(),
-      type: lessonForm.type,
-      duration: lessonForm.duration.trim() || null,
-      content: lessonForm.content.trim() || null,
-      code_language: lessonForm.code_language.trim() || 'markdown',
-      code_sample: lessonForm.code_sample.trim() || null,
-      exercise_instructions: lessonForm.exercise_instructions.trim() || null,
-      is_preview: lessonForm.is_preview,
-      status: lessonForm.status,
-      position: editingLesson?.position,
-    };
-
     setIsSavingLesson(true);
     try {
-      const response = editingLesson
-        ? await backendClient.from('course_lessons').update(payload).eq('id', editingLesson.id)
-        : await backendClient.from('course_lessons').insert(payload);
-
-      if (response.error) throw response.error;
+      await saveFormateurCourseLesson(user.id, id, {
+        id: editingLesson?.id,
+        section_id: lessonForm.section_id,
+        title: lessonForm.title,
+        description: lessonForm.description,
+        type: lessonForm.type,
+        duration: lessonForm.duration,
+        content: lessonForm.content,
+        code_language: lessonForm.code_language,
+        code_sample: lessonForm.code_sample,
+        exercise_instructions: lessonForm.exercise_instructions,
+        is_preview: lessonForm.is_preview,
+        status: lessonForm.status,
+        position: editingLesson?.position,
+      });
       success(
         editingLesson ? 'Leçon mise à jour' : 'Leçon créée',
         editingLesson ? `La leçon "${lessonForm.title}" a été mise à jour.` : `La leçon "${lessonForm.title}" a été ajoutée au programme.`,
@@ -555,6 +570,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const submitAsset = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (isAssetUploading) {
       setAssetFormMessage('Patientez jusqu’à la fin de l’upload avant d’enregistrer le contenu.');
       return;
@@ -566,25 +585,21 @@ export default function FormateurCourseProgramPage() {
       return;
     }
 
-    const payload = {
-      lesson_id: assetForm.lesson_id,
-      title: assetForm.title.trim(),
-      asset_type: assetForm.asset_type,
-      url: assetForm.url.trim(),
-      thumbnail_url: assetForm.thumbnail_url.trim() || null,
-      mime_type: assetForm.mime_type.trim() || null,
-      size_bytes: assetForm.size_bytes.trim() ? Number(assetForm.size_bytes) : null,
-      status: assetForm.status,
-      position: editingAsset?.position,
-    };
-
     setIsSavingAsset(true);
     try {
-      const response = editingAsset
-        ? await backendClient.from('lesson_assets').update(payload).eq('id', editingAsset.id)
-        : await backendClient.from('lesson_assets').insert(payload);
-
-      if (response.error) throw response.error;
+      if (!id || !user?.id) throw new Error('Formation introuvable ou inaccessible.');
+      await saveFormateurLessonAsset(user.id, id, {
+        id: editingAsset?.id,
+        lesson_id: assetForm.lesson_id,
+        title: assetForm.title,
+        asset_type: assetForm.asset_type,
+        url: assetForm.url,
+        thumbnail_url: assetForm.thumbnail_url,
+        mime_type: assetForm.mime_type,
+        size_bytes: assetForm.size_bytes,
+        status: assetForm.status,
+        position: editingAsset?.position,
+      });
       success(
         editingAsset ? 'Contenu mis à jour' : 'Contenu ajouté',
         editingAsset ? `Le contenu "${assetForm.title}" a été mis à jour.` : `Le contenu "${assetForm.title}" a été attaché à la leçon.`,
@@ -605,10 +620,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const deleteAsset = async (asset: LessonAsset) => {
+    if (!id || !user?.id) return;
     if (!window.confirm(`Supprimer le contenu "${asset.title}" ?`)) return;
     try {
-      const response = await backendClient.from('lesson_assets').delete().eq('id', asset.id);
-      if (response.error) throw response.error;
+      await deleteFormateurLessonAsset(user.id, id, asset.id);
       success('Contenu supprimé', `"${asset.title}" a été retiré de la leçon.`);
       if (editingAsset && String(editingAsset.id) === String(asset.id)) {
         setEditingAsset(null);
@@ -674,10 +689,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const deleteSection = async (section: CourseSection) => {
+    if (!id || !user?.id) return;
     if (!window.confirm(`Supprimer la section "${section.title}" et toutes ses leçons ?`)) return;
     try {
-      const response = await backendClient.from('course_sections').delete().eq('id', section.id);
-      if (response.error) throw response.error;
+      await deleteFormateurCourseSection(user.id, id, section.id);
       success('Section supprimée', `"${section.title}" a été retirée du programme.`);
       await fetchProgram();
     } catch (err: unknown) {
@@ -688,10 +703,10 @@ export default function FormateurCourseProgramPage() {
   };
 
   const deleteLesson = async (lesson: CourseLesson) => {
+    if (!id || !user?.id) return;
     if (!window.confirm(`Supprimer la leçon "${lesson.title}" ?`)) return;
     try {
-      const response = await backendClient.from('course_lessons').delete().eq('id', lesson.id);
-      if (response.error) throw response.error;
+      await deleteFormateurCourseLesson(user.id, id, lesson.id);
       success('Leçon supprimée', `"${lesson.title}" a été retirée du programme.`);
       await fetchProgram();
     } catch (err: unknown) {
@@ -702,6 +717,7 @@ export default function FormateurCourseProgramPage() {
   };
 
   const moveSection = async (sectionId: EntityId, direction: 'up' | 'down') => {
+    if (!id || !user?.id) return;
     const orderedSections = [...groupedSections];
     const currentIndex = orderedSections.findIndex((section) => String(section.id) === String(sectionId));
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
@@ -711,13 +727,7 @@ export default function FormateurCourseProgramPage() {
     if (!currentSection || !targetSection) return;
 
     try {
-      const [updateCurrent, updateTarget] = await Promise.all([
-        backendClient.from('course_sections').update({ position: targetSection.position }).eq('id', currentSection.id),
-        backendClient.from('course_sections').update({ position: currentSection.position }).eq('id', targetSection.id),
-      ]);
-
-      if (updateCurrent.error) throw updateCurrent.error;
-      if (updateTarget.error) throw updateTarget.error;
+      await reorderFormateurCourseSections(user.id, id, currentSection, targetSection);
       await fetchProgram();
     } catch (err: unknown) {
       const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Impossible de réordonner les sections.';
@@ -727,6 +737,7 @@ export default function FormateurCourseProgramPage() {
   };
 
   const moveLesson = async (sectionId: EntityId, lessonId: EntityId, direction: 'up' | 'down') => {
+    if (!id || !user?.id) return;
     const targetSection = groupedSections.find((section) => String(section.id) === String(sectionId));
     if (!targetSection) return;
 
@@ -739,13 +750,7 @@ export default function FormateurCourseProgramPage() {
     if (!currentLesson || !adjacentLesson) return;
 
     try {
-      const [updateCurrent, updateAdjacent] = await Promise.all([
-        backendClient.from('course_lessons').update({ position: adjacentLesson.position }).eq('id', currentLesson.id),
-        backendClient.from('course_lessons').update({ position: currentLesson.position }).eq('id', adjacentLesson.id),
-      ]);
-
-      if (updateCurrent.error) throw updateCurrent.error;
-      if (updateAdjacent.error) throw updateAdjacent.error;
+      await reorderFormateurCourseLessons(user.id, id, currentLesson, adjacentLesson);
       await fetchProgram();
     } catch (err: unknown) {
       const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Impossible de réordonner les leçons.';
@@ -770,6 +775,10 @@ export default function FormateurCourseProgramPage() {
   );
 
   const handleCourseWorkflowAction = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!courseWorkflowAction || !course) return;
 
     const confirmed = window.confirm(
@@ -785,12 +794,8 @@ export default function FormateurCourseProgramPage() {
     if (!confirmed) return;
 
     try {
-      const { error: err } = await backendClient
-        .from('courses')
-        .update({ status: courseWorkflowAction.nextStatus, updated_at: new Date().toISOString() })
-        .eq('id', course.id);
-
-      if (err) throw err;
+      if (!user?.id) throw new Error('Formation introuvable ou inaccessible.');
+      await updateFormateurCourseWorkflow(user.id, course.id, courseWorkflowAction.nextStatus);
 
       success('Statut mis à jour', `La formation est maintenant ${courseStatusLabels[courseWorkflowAction.nextStatus].toLowerCase()}.`);
       await fetchProgram();
@@ -817,6 +822,7 @@ export default function FormateurCourseProgramPage() {
             { label: 'Programme' },
           ]}
         />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
           <div>
@@ -842,27 +848,29 @@ export default function FormateurCourseProgramPage() {
             {courseWorkflowAction && course && (
               <button
                 onClick={() => void handleCourseWorkflowAction()}
+                disabled={!subscriptionGate.allowed}
                 className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   course.status === 'published'
                     ? 'border border-amber-200 text-amber-700 hover:bg-amber-50'
                     : course.status === 'review'
                       ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                       : 'bg-teal-600 text-white hover:bg-teal-700'
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 {courseWorkflowAction.description}
               </button>
             )}
             <button
               onClick={() => openCreateLessonModal()}
-              disabled={!groupedSections.length}
+              disabled={!groupedSections.length || !subscriptionGate.allowed}
               className="px-4 py-2.5 rounded-lg border border-teal-200 text-sm font-medium text-teal-700 hover:bg-teal-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Ajouter une leçon
             </button>
             <button
               onClick={openCreateSectionModal}
-              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+              disabled={!subscriptionGate.allowed}
+              className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
             >
               Ajouter une section
             </button>
@@ -956,7 +964,8 @@ export default function FormateurCourseProgramPage() {
                 </p>
                 <button
                   onClick={openCreateSectionModal}
-                  className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+                  disabled={!subscriptionGate.allowed}
+                  className="px-4 py-2.5 rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Créer la première section
                 </button>

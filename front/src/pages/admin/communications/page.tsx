@@ -3,7 +3,7 @@ import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { createAdminCampaign, deleteAdminCampaign, fetchAdminCampaigns, updateAdminCampaign, type AdminCampaign } from '@/lib/adminApi';
-import { dispatchSmsCampaign, fetchEmailGatewayStatus, fetchSmsGatewayStatus } from '@/lib/communicationsApi';
+import { dispatchSmsCampaign, fetchEmailGatewayStatus, fetchSmsGatewayStatus, type CampaignAudience } from '@/lib/communicationsApi';
 
 const channelConfig = {
   email: { icon: 'ri-mail-line', label: 'Email', color: 'bg-teal-500' },
@@ -19,6 +19,29 @@ const statusConfig = {
   cancelled: { label: 'Annulee', className: 'bg-red-100 text-red-700' },
 };
 
+const campaignAudienceOptions: Array<{ value: CampaignAudience; label: string }> = [
+  { value: 'all_users', label: 'Tous les utilisateurs' },
+  { value: 'all_apprenants', label: 'Tous les apprenants' },
+  { value: 'active_clients', label: 'Clients actifs' },
+  { value: 'project_holders', label: 'Porteurs de projet' },
+  { value: 'verified_providers', label: 'Prestataires verifies' },
+];
+
+function getCampaignAudienceLabel(value: CampaignAudience) {
+  return campaignAudienceOptions.find((option) => option.value === value)?.label ?? campaignAudienceOptions[0].label;
+}
+
+function resolveCampaignAudience(value: string): CampaignAudience {
+  const byValue = campaignAudienceOptions.find((option) => option.value === value);
+  if (byValue) {
+    return byValue.value;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  const byLabel = campaignAudienceOptions.find((option) => option.label.toLowerCase() === normalized);
+  return byLabel?.value ?? 'all_users';
+}
+
 export default function AdminCommunicationsPage() {
   const { success, error } = useToast();
   const [campaigns, setCampaigns] = useState<AdminCampaign[]>([]);
@@ -31,7 +54,7 @@ export default function AdminCommunicationsPage() {
   const [composeForm, setComposeForm] = useState({
     title: '',
     type: 'email' as AdminCampaign['type'],
-    target: 'Tous les utilisateurs',
+    target: 'all_users' as CampaignAudience,
     content: '',
     schedule: false,
     scheduleDate: '',
@@ -74,7 +97,7 @@ export default function AdminCommunicationsPage() {
   }, [campaigns]);
 
   const resetCompose = () => {
-    setComposeForm({ title: '', type: 'email', target: 'Tous les utilisateurs', content: '', schedule: false, scheduleDate: '' });
+    setComposeForm({ title: '', type: 'email', target: 'all_users', content: '', schedule: false, scheduleDate: '' });
   };
 
   const handleSendNow = async () => {
@@ -83,7 +106,7 @@ export default function AdminCommunicationsPage() {
       const created = await createAdminCampaign({
         title: composeForm.title,
         type: composeForm.type,
-        target: composeForm.target,
+        target: getCampaignAudienceLabel(composeForm.target),
         status: composeForm.schedule ? 'scheduled' : 'sent',
         sentCount: composeForm.schedule ? 0 : 2847,
         openRate: composeForm.schedule ? null : 72,
@@ -172,22 +195,24 @@ export default function AdminCommunicationsPage() {
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Communications</h1>
             <p className="text-gray-600 text-sm mt-1">Notifications globales, campagnes et messages aux utilisateurs</p>
+            <div className="mt-3 flex flex-wrap gap-2">
             {smsGatewayStatus && (
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600">
+              <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600">
                 <span className={`h-2 w-2 rounded-full ${smsGatewayStatus.configured ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 <span>SMS {smsGatewayStatus.provider}</span>
                 <span>{smsGatewayStatus.configured ? 'configure' : 'configuration requise'}</span>
               </div>
             )}
             {emailGatewayStatus && (
-              <div className="mt-3 ml-2 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600">
+              <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600">
                 <span className={`h-2 w-2 rounded-full ${emailGatewayStatus.configured ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                 <span>Email {emailGatewayStatus.provider}</span>
                 <span>{emailGatewayStatus.configured ? 'configure' : 'configuration requise'}</span>
               </div>
             )}
+            </div>
           </div>
-          <button onClick={() => setShowCompose(true)} className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium whitespace-nowrap flex items-center gap-2">
+          <button type="button" onClick={() => setShowCompose(true)} aria-label="Creer une nouvelle campagne de communication" className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium whitespace-nowrap flex items-center gap-2">
             <i className="ri-add-line"></i>
             Nouvelle campagne
           </button>
@@ -216,10 +241,15 @@ export default function AdminCommunicationsPage() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="border-b border-gray-200">
-            <div className="flex space-x-8 px-6 overflow-x-auto">
+            <div className="flex space-x-8 px-6 overflow-x-auto" role="tablist" aria-label="Filtres des campagnes">
               {(['all', 'draft', 'scheduled', 'sent'] as const).map((tab) => (
                 <button
                   key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab}
+                  aria-controls={`admin-communications-panel-${tab}`}
+                  id={`admin-communications-tab-${tab}`}
                   onClick={() => setActiveTab(tab)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                 >
@@ -232,7 +262,7 @@ export default function AdminCommunicationsPage() {
             </div>
           </div>
 
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4" role="tabpanel" id={`admin-communications-panel-${activeTab}`} aria-labelledby={`admin-communications-tab-${activeTab}`}>
             {filtered.map((campaign) => {
               const channel = channelConfig[campaign.type];
               const status = statusConfig[campaign.status];
@@ -256,16 +286,17 @@ export default function AdminCommunicationsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <button onClick={() => { setPreviewCampaign(campaign); setShowPreview(true); }} className="px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors whitespace-nowrap">
+                      <button type="button" onClick={() => { setPreviewCampaign(campaign); setShowPreview(true); }} className="px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors whitespace-nowrap">
                         Apercu
                       </button>
                       {campaign.status === 'draft' && (
                         <button
+                          type="button"
                           onClick={() => {
                             setComposeForm({
                               title: campaign.title,
                               type: campaign.type,
-                              target: campaign.target,
+                              target: resolveCampaignAudience(campaign.target),
                               content: campaign.content,
                               schedule: false,
                               scheduleDate: '',
@@ -278,14 +309,14 @@ export default function AdminCommunicationsPage() {
                         </button>
                       )}
                       {campaign.status === 'scheduled' && (
-                        <button onClick={() => handleCancelScheduled(campaign)} className="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors whitespace-nowrap">
+                        <button type="button" onClick={() => handleCancelScheduled(campaign)} className="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors whitespace-nowrap">
                           Annuler
                         </button>
                       )}
-                      <button onClick={() => handleDuplicateCampaign(campaign)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors" title="Dupliquer">
+                      <button type="button" onClick={() => handleDuplicateCampaign(campaign)} aria-label={`Dupliquer la campagne ${campaign.title}`} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors" title="Dupliquer">
                         <i className="ri-file-copy-line text-gray-500 text-sm"></i>
                       </button>
-                      <button onClick={() => handleDeleteCampaign(campaign.id)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors" title="Supprimer">
+                      <button type="button" onClick={() => handleDeleteCampaign(campaign.id)} aria-label={`Supprimer la campagne ${campaign.title}`} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors" title="Supprimer">
                         <i className="ri-delete-bin-line text-red-500 text-sm"></i>
                       </button>
                     </div>
@@ -298,40 +329,53 @@ export default function AdminCommunicationsPage() {
 
         {showCompose && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" role="dialog" aria-modal="true" aria-labelledby="admin-communications-compose-title">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Nouvelle campagne</h3>
-                <button onClick={() => setShowCompose(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
+                <h3 id="admin-communications-compose-title" className="text-lg font-bold text-gray-900">Nouvelle campagne</h3>
+                <button type="button" onClick={() => setShowCompose(false)} aria-label="Fermer la creation de campagne" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
                   <i className="ri-close-line text-gray-500 text-xl"></i>
                 </button>
               </div>
               <div className="space-y-4">
-                <input value={composeForm.title} onChange={(e) => setComposeForm({ ...composeForm, title: e.target.value })} placeholder="Titre de la campagne" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <select value={composeForm.type} onChange={(e) => setComposeForm({ ...composeForm, type: e.target.value as AdminCampaign['type'] })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
-                    <option value="email">Email</option>
-                    <option value="sms">SMS</option>
-                    <option value="push">Notification push</option>
-                    <option value="all">Multi-canal</option>
-                  </select>
-                  <select value={composeForm.target} onChange={(e) => setComposeForm({ ...composeForm, target: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
-                    <option>Tous les utilisateurs</option>
-                    <option>Tous les apprenants</option>
-                    <option>Clients actifs</option>
-                    <option>Porteurs de projet</option>
-                    <option>Prestataires verifies</option>
-                  </select>
+                <div>
+                  <label htmlFor="admin-campaign-title" className="mb-1 block text-sm font-medium text-gray-700">Titre de la campagne</label>
+                  <input id="admin-campaign-title" value={composeForm.title} onChange={(e) => setComposeForm({ ...composeForm, title: e.target.value })} placeholder="Titre de la campagne" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
                 </div>
-                <textarea value={composeForm.content} onChange={(e) => setComposeForm({ ...composeForm, content: e.target.value })} rows={6} maxLength={500} placeholder="Redigez votre message ici..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
-                <label className="flex items-center gap-3 text-sm text-gray-700">
-                  <input type="checkbox" checked={composeForm.schedule} onChange={(e) => setComposeForm({ ...composeForm, schedule: e.target.checked })} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="admin-campaign-channel" className="mb-1 block text-sm font-medium text-gray-700">Canal</label>
+                    <select id="admin-campaign-channel" value={composeForm.type} onChange={(e) => setComposeForm({ ...composeForm, type: e.target.value as AdminCampaign['type'] })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                      <option value="email">Email</option>
+                      <option value="sms">SMS</option>
+                      <option value="push">Notification push</option>
+                      <option value="all">Multi-canal</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="admin-campaign-target" className="mb-1 block text-sm font-medium text-gray-700">Audience cible</label>
+                    <select id="admin-campaign-target" value={composeForm.target} onChange={(e) => setComposeForm({ ...composeForm, target: e.target.value as CampaignAudience })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                      {campaignAudienceOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="admin-campaign-content" className="mb-1 block text-sm font-medium text-gray-700">Contenu du message</label>
+                  <textarea id="admin-campaign-content" value={composeForm.content} onChange={(e) => setComposeForm({ ...composeForm, content: e.target.value })} rows={6} maxLength={500} placeholder="Redigez votre message ici..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
+                </div>
+                <label htmlFor="admin-campaign-schedule-toggle" className="flex items-center gap-3 text-sm text-gray-700">
+                  <input id="admin-campaign-schedule-toggle" type="checkbox" checked={composeForm.schedule} onChange={(e) => setComposeForm({ ...composeForm, schedule: e.target.checked })} />
                   Planifier l envoi
                 </label>
-                {composeForm.schedule && <input type="datetime-local" value={composeForm.scheduleDate} onChange={(e) => setComposeForm({ ...composeForm, scheduleDate: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />}
+                {composeForm.schedule && <div>
+                  <label htmlFor="admin-campaign-schedule-date" className="mb-1 block text-sm font-medium text-gray-700">Date et heure d envoi</label>
+                  <input id="admin-campaign-schedule-date" type="datetime-local" value={composeForm.scheduleDate} onChange={(e) => setComposeForm({ ...composeForm, scheduleDate: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                </div>}
               </div>
               <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowCompose(false)} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Annuler</button>
-                <button onClick={handleSendNow} disabled={!composeForm.title.trim() || !composeForm.content.trim()} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${composeForm.title.trim() && composeForm.content.trim() ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+                <button type="button" onClick={() => setShowCompose(false)} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Annuler</button>
+                <button type="button" onClick={handleSendNow} disabled={!composeForm.title.trim() || !composeForm.content.trim()} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${composeForm.title.trim() && composeForm.content.trim() ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
                   {composeForm.schedule ? 'Planifier' : 'Envoyer maintenant'}
                 </button>
               </div>
@@ -341,10 +385,10 @@ export default function AdminCommunicationsPage() {
 
         {showPreview && previewCampaign && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-lg w-full p-6">
+            <div className="bg-white rounded-xl max-w-lg w-full p-6" role="dialog" aria-modal="true" aria-labelledby="admin-communications-preview-title">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Apercu de la campagne</h3>
-                <button onClick={() => setShowPreview(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
+                <h3 id="admin-communications-preview-title" className="text-lg font-bold text-gray-900">Apercu de la campagne</h3>
+                <button type="button" onClick={() => setShowPreview(false)} aria-label="Fermer l apercu de campagne" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors">
                   <i className="ri-close-line text-gray-500 text-xl"></i>
                 </button>
               </div>
@@ -359,7 +403,7 @@ export default function AdminCommunicationsPage() {
                 </div>
               </div>
               <div className="mt-6">
-                <button onClick={() => setShowPreview(false)} className="w-full px-4 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors">Fermer</button>
+                <button type="button" onClick={() => setShowPreview(false)} className="w-full px-4 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors">Fermer</button>
               </div>
             </div>
           </div>

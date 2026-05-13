@@ -1,28 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { backendClient } from '@/lib/backendClient';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonList } from '@/components/base/Skeleton';
-import { createNotification } from '@/hooks/useCreateNotification';
 import { useAuth } from '@/hooks/useAuth';
-import { fetchProviderByUserId } from '@/lib/providerApi';
-
-
-interface Review {
-  id: number;
-  provider_id: number;
-  client_id: string;
-  client_name: string;
-  client_avatar: string | null;
-  service: string;
-  rating: number;
-  comment: string;
-  date: string;
-  response: string | null;
-  helpful: number;
-  created_at: string;
-}
+import {
+  fetchPrestataireReviews,
+  incrementPrestataireReviewHelpful,
+  replyPrestataireReview,
+  type PrestataireReview as Review,
+} from '@/lib/prestataireDashboardApi';
 
 export default function PrestataireAvisPage() {
   const { user } = useAuth();
@@ -41,25 +28,7 @@ export default function PrestataireAvisPage() {
         return;
       }
 
-      const provider = await fetchProviderByUserId(user.id);
-      if (!provider?.id) {
-        setReviews([]);
-        return;
-      }
-
-      const { data, error } = await backendClient
-        .from('provider_reviews')
-        .select('*')
-        .eq('provider_id', provider.id)
-        .order('created_at', { ascending: false });
-      if (error) {
-        throw error;
-      }
-
-      setReviews((data || []).map((r: any) => ({
-        ...r,
-        date: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : '',
-      })) as Review[]);
+      setReviews(await fetchPrestataireReviews(user.id));
     } catch (error) {
       console.error(error);
       setReviews([]);
@@ -88,29 +57,17 @@ export default function PrestataireAvisPage() {
 
   const handleReply = async (reviewId: number) => {
     if (!replyText.trim()) return;
-    const { error } = await backendClient
-      .from('provider_reviews')
-      .update({ response: replyText.trim() })
-      .eq('id', reviewId);
-    if (error) {
-      console.error(error);
-      return;
-    }
-    setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, response: replyText.trim() } : r));
-    success('Réponse publiée', 'Votre réponse a été publiée avec succès.');
-    setReplyingTo(null);
-    setReplyText('');
-
-    // Notify the client that the provider responded
     const review = reviews.find(r => r.id === reviewId);
-    if (review) {
-      await createNotification(
-        review.client_id,
-        'Réponse à votre avis',
-        `Le prestataire a repondu a votre avis sur "${review.service}".`,
-        'review',
-        '/dashboard/client/prestataires'
-      );
+    if (!review) return;
+
+    try {
+      const response = await replyPrestataireReview(review, replyText);
+      setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, response } : r));
+      success('Réponse publiée', 'Votre réponse a été publiée avec succès.');
+      setReplyingTo(null);
+      setReplyText('');
+    } catch (replyError) {
+      console.error(replyError);
     }
   };
 
@@ -118,16 +75,13 @@ export default function PrestataireAvisPage() {
     const review = reviews.find(r => r.id === reviewId);
     if (!review) return;
     const newHelpful = review.helpful + 1;
-    const { error } = await backendClient
-      .from('provider_reviews')
-      .update({ helpful: newHelpful })
-      .eq('id', reviewId);
-    if (error) {
-      console.error(error);
-      return;
+    try {
+      await incrementPrestataireReviewHelpful(reviewId, newHelpful);
+      setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, helpful: newHelpful } : r));
+      success('Merci !', 'Vous avez trouvé cet avis utile.');
+    } catch (helpfulError) {
+      console.error(helpfulError);
     }
-    setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, helpful: newHelpful } : r));
-    success('Merci !', 'Vous avez trouvé cet avis utile.');
   };
 
   return (
@@ -178,21 +132,25 @@ export default function PrestataireAvisPage() {
         </div>
 
         {/* Filter */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2 mb-6 flex-wrap" role="group" aria-label="Filtrer les avis par note">
           <button
+            type="button"
             onClick={() => setRatingFilter('all')}
+            aria-pressed={ratingFilter === 'all'}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-              ratingFilter === 'all' ? 'bg-[#14B8A6] text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+              ratingFilter === 'all' ? 'bg-[#5fa6f3] text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
             }`}
           >
             Tous les avis
           </button>
           {[5, 4, 3, 2, 1].map(star => (
             <button
+              type="button"
               key={star}
               onClick={() => setRatingFilter(star)}
+              aria-pressed={ratingFilter === star}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-1 ${
-                ratingFilter === star ? 'bg-[#14B8A6] text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                ratingFilter === star ? 'bg-[#5fa6f3] text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
               }`}
             >
               <i className="ri-star-fill text-xs"></i> {star}
@@ -210,7 +168,7 @@ export default function PrestataireAvisPage() {
             {filteredReviews.map((review) => (
               <div key={review.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-start gap-4">
-                  <img src={review.client_avatar || 'https://readdy.ai/api/search-image?query=professional%20user%20avatar%20placeholder%20icon%20simple%20modern&width=60&height=60&seq=avatar-fallback&orientation=squarish'} alt={review.client_name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+                  <img src={review.client_avatar || '/images/brand/image2.jpeg'} alt={review.client_name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <div>
@@ -228,7 +186,9 @@ export default function PrestataireAvisPage() {
                     <p className="text-gray-700 mb-3">{review.comment}</p>
                     <div className="flex items-center gap-4">
                       <button
+                        type="button"
                         onClick={() => handleHelpful(review.id)}
+                        aria-label={`Marquer l avis de ${review.client_name} comme utile`}
                         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                       >
                         <i className="ri-thumb-up-line"></i>
@@ -236,8 +196,10 @@ export default function PrestataireAvisPage() {
                       </button>
                       {!review.response && replyingTo !== review.id && (
                         <button
+                          type="button"
                           onClick={() => setReplyingTo(review.id)}
-                          className="text-sm text-[#14B8A6] hover:text-[#0D9488] transition-colors font-medium"
+                          aria-label={`Répondre à l avis de ${review.client_name}`}
+                          className="text-sm text-[#5fa6f3] hover:text-[#27346b] transition-colors font-medium"
                         >
                           Répondre
                         </button>
@@ -251,17 +213,20 @@ export default function PrestataireAvisPage() {
                           type="text"
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
+                          aria-label={`Réponse à l avis de ${review.client_name}`}
                           placeholder="Écrivez votre réponse..."
                           maxLength={500}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
                         />
                         <button
+                          type="button"
                           onClick={() => handleReply(review.id)}
-                          className="px-4 py-2 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488] transition-colors whitespace-nowrap"
+                          className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors whitespace-nowrap"
                         >
                           Publier
                         </button>
                         <button
+                          type="button"
                           onClick={() => { setReplyingTo(null); setReplyText(''); }}
                           className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
                         >

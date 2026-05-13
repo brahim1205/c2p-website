@@ -1,11 +1,26 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonList } from '@/components/base/Skeleton';
-import { backendClient } from '@/lib/backendClient';
-import { createNotification } from '@/hooks/useCreateNotification';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  createFormateurExam,
+  createFormateurQuizChoice,
+  createFormateurQuizQuestion,
+  deleteFormateurExam,
+  deleteFormateurQuizChoice,
+  deleteFormateurQuizQuestion,
+  fetchFormateurEvaluations,
+  fetchFormateurQuizStructure,
+  gradeFormateurSubmission,
+  reorderFormateurQuizChoice,
+  reorderFormateurQuizQuestion,
+  updateFormateurQuizChoice,
+  updateFormateurQuizQuestion,
+} from '@/lib/formateurDashboardApi';
 
 type EntityId = number | string;
 type ExamType = 'quiz' | 'assignment' | 'project';
@@ -247,6 +262,7 @@ function buildChoiceDrafts(choices: QuizChoice[]) {
 export default function FormateurEvaluationsPage() {
   const { success, error } = useToast();
   const { user } = useAuth();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [exams, setExams] = useState<Exam[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -275,6 +291,15 @@ export default function FormateurEvaluationsPage() {
   const [gradeFormMessage, setGradeFormMessage] = useState<string | null>(null);
   const [isCreatingExam, setIsCreatingExam] = useState(false);
   const [isGrading, setIsGrading] = useState(false);
+  const isMountedRef = useRef(true);
+  const subscriptionGate = gateFor('trainer_assessments_manage');
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const availableCourseIds = new Set(instructorCourses.map((course) => String(course.id)));
 
@@ -284,56 +309,20 @@ export default function FormateurEvaluationsPage() {
     setCreateExamMessage(null);
   };
 
-  const fetchExams = useCallback(async () => {
-    try {
-      const { data, error: err } = await backendClient.from<Exam>('exams').select('*').order('exam_date', { ascending: false });
-      if (err) throw err;
-      setExams(data || []);
-    } catch (err: unknown) {
-      console.error(err);
-    }
-  }, []);
-
-  const fetchSubmissions = useCallback(async () => {
-    try {
-      const { data, error: err } = await backendClient.from<Submission>('submissions').select('*').order('submitted_at', { ascending: false });
-      if (err) throw err;
-      setSubmissions(data || []);
-    } catch (err: unknown) {
-      console.error(err);
-    }
-  }, []);
-
-  const fetchCourses = useCallback(async () => {
-    try {
-      const { data, error: err } = await backendClient
-        .from<CourseOption>('courses')
-        .select('id, title')
-        .order('title', { ascending: true });
-      if (err) throw err;
-      setInstructorCourses((data || []) as CourseOption[]);
-    } catch (err: unknown) {
-      console.error(err);
-    }
-  }, []);
-
   const fetchQuizStructure = useCallback(async (examId: EntityId) => {
-    const [questionsRes, choicesRes] = await Promise.all([
-      backendClient.from<QuizQuestion>('quiz_questions').select('*').eq('exam_id', examId).order('position', { ascending: true }),
-      backendClient.from<QuizChoice>('quiz_choices').select('*').eq('exam_id', examId).order('position', { ascending: true }),
-    ]);
-
-    if (questionsRes.error) throw questionsRes.error;
-    if (choicesRes.error) throw choicesRes.error;
-
+    if (!user?.id) {
+      return { questions: [] as QuizQuestion[], choices: [] as QuizChoice[] };
+    }
+    const structure = await fetchFormateurQuizStructure(user.id, examId);
     return {
-      questions: orderByPosition((questionsRes.data || []) as QuizQuestion[]),
-      choices: orderByPosition((choicesRes.data || []) as QuizChoice[]),
+      questions: orderByPosition(structure.questions as QuizQuestion[]),
+      choices: orderByPosition(structure.choices as QuizChoice[]),
     };
-  }, []);
+  }, [user?.id]);
 
   const refreshQuizStructure = useCallback(async (examId: EntityId) => {
     const { questions, choices } = await fetchQuizStructure(examId);
+    if (!isMountedRef.current) return;
     setQuizQuestions(questions);
     setQuizChoices(choices);
     setQuestionDrafts(buildQuestionDrafts(questions));
@@ -348,13 +337,37 @@ export default function FormateurEvaluationsPage() {
   }, [fetchQuizStructure]);
 
   const loadAll = useCallback(async () => {
-    setLoading(true);
-    await Promise.all([fetchExams(), fetchSubmissions(), fetchCourses()]);
-    setLoading(false);
-  }, [fetchCourses, fetchExams, fetchSubmissions]);
+    if (!user?.id) {
+      if (isMountedRef.current) {
+        setExams([]);
+        setSubmissions([]);
+        setInstructorCourses([]);
+        setLoading(false);
+      }
+      return;
+    }
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
+    try {
+      const snapshot = await fetchFormateurEvaluations(user.id);
+      if (!isMountedRef.current) return;
+      setExams(snapshot.exams as Exam[]);
+      setSubmissions(snapshot.submissions as Submission[]);
+      setInstructorCourses(snapshot.courses as CourseOption[]);
+    } catch (err: unknown) {
+      if (!isMountedRef.current) return;
+      console.error(err);
+      error('Erreur', 'Impossible de charger les évaluations formateur.');
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [error, user?.id]);
 
   useEffect(() => {
-    loadAll();
+    void loadAll();
   }, [loadAll]);
 
   const selectedExam = selectedSubmission ? exams.find((exam) => String(exam.id) === String(selectedSubmission.exam_id)) || null : null;
@@ -409,6 +422,10 @@ export default function FormateurEvaluationsPage() {
   };
 
   const openQuizBuilder = async (exam: Exam) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (exam.type !== 'quiz') return;
     setSelectedQuizExam(exam);
     setShowQuizBuilderModal(true);
@@ -416,16 +433,23 @@ export default function FormateurEvaluationsPage() {
     try {
       await refreshQuizStructure(exam.id);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       console.error(err);
       error('Erreur', 'Impossible de charger les questions du quiz.');
       resetQuizBuilder();
       return;
     } finally {
-      setLoadingQuizBuilder(false);
+      if (isMountedRef.current) {
+        setLoadingQuizBuilder(false);
+      }
     }
   };
 
   const handleGrade = async (submission: Submission) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setSelectedSubmission(submission);
     setGradeValue(submission.grade != null ? submission.grade.toString() : '');
     setFeedbackValue(submission.feedback || '');
@@ -438,17 +462,24 @@ export default function FormateurEvaluationsPage() {
     if (exam?.type === 'quiz') {
       try {
         const { questions, choices } = await fetchQuizStructure(exam.id);
+        if (!isMountedRef.current) return;
         setSelectedSubmissionQuestions(questions);
         setSelectedSubmissionChoices(choices);
       } catch (err: unknown) {
+        if (!isMountedRef.current) return;
         console.error(err);
       }
     }
 
+    if (!isMountedRef.current) return;
     setShowGradeModal(true);
   };
 
   const confirmGrade = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!selectedSubmission) return;
     const nextErrors = validateGradeForm(gradeValue, feedbackValue, selectedExamMaxGrade);
     setGradeErrors(nextErrors);
@@ -460,21 +491,18 @@ export default function FormateurEvaluationsPage() {
 
     setIsGrading(true);
     try {
-      const { error: err } = await backendClient
-        .from('submissions')
-        .update({ grade, feedback: feedbackValue, status: 'graded' })
-        .eq('id', selectedSubmission.id);
-
-      if (err) throw err;
+      if (!user?.id || !selectedExam) throw new Error('Évaluation introuvable.');
+      await gradeFormateurSubmission(user.id, {
+        submissionId: selectedSubmission.id,
+        examId: selectedSubmission.exam_id,
+        studentId: selectedSubmission.student_id,
+        examTitle: selectedExam.title || 'Examen',
+        grade,
+        maxGrade: selectedExamMaxGrade,
+        feedback: feedbackValue,
+      });
+      if (!isMountedRef.current) return;
       success('Note attribuée', `La note de ${grade}/${selectedExamMaxGrade} a été attribuée avec succès.`);
-
-      await createNotification(
-        selectedSubmission.student_id,
-        'Nouvelle note disponible',
-        `Votre soumission "${selectedExam?.title || 'Examen'}" a été notée ${grade}/${selectedExamMaxGrade}.`,
-        'evaluation',
-        '/dashboard/apprenant/examens',
-      );
 
       setShowGradeModal(false);
       setSelectedSubmission(null);
@@ -484,17 +512,24 @@ export default function FormateurEvaluationsPage() {
       setFeedbackValue('');
       setGradeErrors({});
       setGradeFormMessage(null);
-      await Promise.all([fetchSubmissions(), fetchExams()]);
+      await loadAll();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setGradeFormMessage('Impossible d attribuer la note.');
       error('Erreur', 'Impossible d attribuer la note.');
       console.error(err);
     } finally {
-      setIsGrading(false);
+      if (isMountedRef.current) {
+        setIsGrading(false);
+      }
     }
   };
 
   const handleCreateExam = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!user?.id) {
       error('Session invalide', 'Impossible d identifier le formateur.');
       return;
@@ -516,21 +551,18 @@ export default function FormateurEvaluationsPage() {
 
     setIsCreatingExam(true);
     try {
-      const { error: err } = await backendClient.from('exams').insert({
-        instructor_id: user.id,
-        course_id: newExam.course_id,
-        title: newExam.title,
+      await createFormateurExam(user.id, {
+        course_id: newExam.course_id!,
+        title: String(newExam.title || ''),
         course_name: selectedCourse.title,
-        type: newExam.type || 'quiz',
+        type: String(newExam.type || 'quiz'),
         exam_date: newExam.exam_date,
         participants: newExam.participants || 0,
         submitted: newExam.submitted || 0,
-        avg_grade: null,
         status: newExam.status || 'upcoming',
         max_grade: newExam.max_grade || 20,
       });
-
-      if (err) throw err;
+      if (!isMountedRef.current) return;
 
       success(
         'Examen créé',
@@ -542,31 +574,40 @@ export default function FormateurEvaluationsPage() {
       setNewExam(DEFAULT_NEW_EXAM);
       setCreateExamErrors({});
       setCreateExamMessage(null);
-      await fetchExams();
+      await loadAll();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setCreateExamMessage('Impossible de créer l examen.');
       error('Erreur', 'Impossible de créer l examen.');
       console.error(err);
     } finally {
-      setIsCreatingExam(false);
+      if (isMountedRef.current) {
+        setIsCreatingExam(false);
+      }
     }
   };
 
   const handleDeleteExam = async (exam: Exam) => {
+    if (!user?.id) return;
     if (!window.confirm(`Voulez-vous vraiment supprimer "${exam.title}" ?`)) return;
 
     try {
-      const { error: err } = await backendClient.from('exams').delete().eq('id', exam.id);
-      if (err) throw err;
+      await deleteFormateurExam(user.id, exam.id);
+      if (!isMountedRef.current) return;
       success('Supprimé', `"${exam.title}" a été supprimé.`);
-      await fetchExams();
+      await loadAll();
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de supprimer l examen.');
       console.error(err);
     }
   };
 
   const handleCreateQuestion = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!selectedQuizExam) return;
     if (!newQuestionDraft.prompt.trim()) {
       error('Question invalide', 'L intitule de la question est obligatoire.');
@@ -574,45 +615,31 @@ export default function FormateurEvaluationsPage() {
     }
 
     try {
-      const { data, error: err } = await backendClient.from<QuizQuestion>('quiz_questions').insert({
-        exam_id: selectedQuizExam.id,
-        prompt: newQuestionDraft.prompt.trim(),
+      if (!user?.id) throw new Error('Session invalide');
+      await createFormateurQuizQuestion(user.id, {
+        examId: selectedQuizExam.id,
+        prompt: newQuestionDraft.prompt,
         type: newQuestionDraft.type,
         points: newQuestionDraft.points,
-        explanation: newQuestionDraft.explanation.trim(),
+        explanation: newQuestionDraft.explanation,
         required: newQuestionDraft.required,
       });
 
-      if (err) throw err;
-
-      const createdQuestionId = data && typeof data === 'object' && 'id' in data ? (data.id as EntityId) : null;
-      if (createdQuestionId && newQuestionDraft.type === 'true_false') {
-        await backendClient.from('quiz_choices').insert([
-          {
-            question_id: createdQuestionId,
-            label: 'Vrai',
-            value: 'true',
-            is_correct: false,
-          },
-          {
-            question_id: createdQuestionId,
-            label: 'Faux',
-            value: 'false',
-            is_correct: false,
-          },
-        ]);
-      }
-
       success('Question ajoutée', 'La question a été ajoutée au quiz.');
       setNewQuestionDraft(makeQuestionDraft());
-      await Promise.all([refreshQuizStructure(selectedQuizExam.id), fetchExams()]);
+      await Promise.all([refreshQuizStructure(selectedQuizExam.id), loadAll()]);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible d ajouter la question.');
       console.error(err);
     }
   };
 
   const handleSaveQuestion = async (question: QuizQuestion) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!selectedQuizExam) return;
     const draft = questionDrafts[String(question.id)];
     if (!draft || !draft.prompt.trim()) {
@@ -622,63 +649,37 @@ export default function FormateurEvaluationsPage() {
 
     try {
       const existingChoices = quizChoicesByQuestion.get(String(question.id)) ?? [];
-      const { error: err } = await backendClient.from('quiz_questions').update({
-        prompt: draft.prompt.trim(),
-        type: draft.type,
-        points: draft.points,
-        explanation: draft.explanation.trim(),
-        required: draft.required,
-      }).eq('id', question.id);
-
-      if (err) throw err;
-
-      if (draft.type === 'open' && existingChoices.length > 0) {
-        const { error: deleteErr } = await backendClient.from('quiz_choices').delete().eq('question_id', question.id);
-        if (deleteErr) throw deleteErr;
-      }
-
-      if (draft.type === 'true_false' && existingChoices.length === 0) {
-        const { error: createChoicesErr } = await backendClient.from('quiz_choices').insert([
-          {
-            question_id: question.id,
-            label: 'Vrai',
-            value: 'true',
-            is_correct: false,
-          },
-          {
-            question_id: question.id,
-            label: 'Faux',
-            value: 'false',
-            is_correct: false,
-          },
-        ]);
-        if (createChoicesErr) throw createChoicesErr;
-      }
+      if (!user?.id) throw new Error('Session invalide');
+      await updateFormateurQuizQuestion(user.id, question, draft, existingChoices.length);
 
       success('Question mise à jour', 'Les modifications ont été enregistrées.');
-      await Promise.all([refreshQuizStructure(selectedQuizExam.id), fetchExams()]);
+      await Promise.all([refreshQuizStructure(selectedQuizExam.id), loadAll()]);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de mettre à jour la question.');
       console.error(err);
     }
   };
 
   const handleDeleteQuestion = async (question: QuizQuestion) => {
+    if (!user?.id) return;
     if (!selectedQuizExam) return;
     if (!window.confirm('Supprimer cette question du quiz ?')) return;
 
     try {
-      const { error: err } = await backendClient.from('quiz_questions').delete().eq('id', question.id);
-      if (err) throw err;
+      await deleteFormateurQuizQuestion(user.id, question);
+      if (!isMountedRef.current) return;
       success('Question supprimée', 'La question a été retirée du quiz.');
-      await Promise.all([refreshQuizStructure(selectedQuizExam.id), fetchExams()]);
+      await Promise.all([refreshQuizStructure(selectedQuizExam.id), loadAll()]);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de supprimer la question.');
       console.error(err);
     }
   };
 
   const handleMoveQuestion = async (question: QuizQuestion, direction: -1 | 1) => {
+    if (!user?.id) return;
     if (!selectedQuizExam) return;
     const orderedQuestions = orderByPosition(quizQuestions);
     const currentIndex = orderedQuestions.findIndex((entry) => String(entry.id) === String(question.id));
@@ -687,20 +688,20 @@ export default function FormateurEvaluationsPage() {
 
     const targetQuestion = orderedQuestions[targetIndex];
     try {
-      const [firstRes, secondRes] = await Promise.all([
-        backendClient.from('quiz_questions').update({ position: targetQuestion.position }).eq('id', question.id),
-        backendClient.from('quiz_questions').update({ position: question.position }).eq('id', targetQuestion.id),
-      ]);
-      if (firstRes.error) throw firstRes.error;
-      if (secondRes.error) throw secondRes.error;
+      await reorderFormateurQuizQuestion(user.id, selectedQuizExam.id, question, targetQuestion);
       await refreshQuizStructure(selectedQuizExam.id);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de reordonner les questions.');
       console.error(err);
     }
   };
 
   const handleCreateChoice = async (question: QuizQuestion) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!selectedQuizExam) return;
     const draft = newChoiceDrafts[String(question.id)] ?? makeChoiceDraft();
     if (!draft.label.trim()) {
@@ -715,35 +716,35 @@ export default function FormateurEvaluationsPage() {
     }
 
     try {
-      if (draft.is_correct && isSingleAnswerType(question.type)) {
-        await Promise.allSettled(
-          existingChoices
-            .filter((choice) => choice.is_correct)
-            .map((choice) => backendClient.from('quiz_choices').update({ is_correct: false }).eq('id', choice.id)),
-        );
-      }
-
-      const { error: err } = await backendClient.from('quiz_choices').insert({
-        question_id: question.id,
-        label: draft.label.trim(),
-        value: draft.value.trim() || draft.label.trim(),
+      if (!user?.id) throw new Error('Session invalide');
+      await createFormateurQuizChoice(user.id, {
+        examId: selectedQuizExam.id,
+        questionId: question.id,
+        label: draft.label,
+        value: draft.value,
         is_correct: draft.is_correct,
+        resetOtherCorrectChoices: draft.is_correct && isSingleAnswerType(question.type)
+          ? existingChoices.filter((choice) => choice.is_correct).map((choice) => choice.id)
+          : [],
       });
-
-      if (err) throw err;
       success('Choix ajouté', 'Le choix a été ajouté à la question.');
       setNewChoiceDrafts((previous) => ({
         ...previous,
         [String(question.id)]: makeChoiceDraft(),
       }));
-      await Promise.all([refreshQuizStructure(selectedQuizExam.id), fetchExams()]);
+      await Promise.all([refreshQuizStructure(selectedQuizExam.id), loadAll()]);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible d ajouter le choix.');
       console.error(err);
     }
   };
 
   const handleSaveChoice = async (question: QuizQuestion, choice: QuizChoice) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!selectedQuizExam) return;
     const draft = choiceDrafts[String(choice.id)];
     if (!draft || !draft.label.trim()) {
@@ -756,45 +757,46 @@ export default function FormateurEvaluationsPage() {
     );
 
     try {
-      if (draft.is_correct && isSingleAnswerType(question.type)) {
-        await Promise.allSettled(
-          siblingChoices
-            .filter((entry) => entry.is_correct)
-            .map((entry) => backendClient.from('quiz_choices').update({ is_correct: false }).eq('id', entry.id)),
-        );
-      }
-
-      const { error: err } = await backendClient.from('quiz_choices').update({
-        label: draft.label.trim(),
-        value: draft.value.trim() || draft.label.trim(),
+      if (!user?.id) throw new Error('Session invalide');
+      await updateFormateurQuizChoice(user.id, {
+        examId: selectedQuizExam.id,
+        choiceId: choice.id,
+        label: draft.label,
+        value: draft.value,
         is_correct: draft.is_correct,
-      }).eq('id', choice.id);
-
-      if (err) throw err;
+        resetOtherCorrectChoices: draft.is_correct && isSingleAnswerType(question.type)
+          ? siblingChoices.filter((entry) => entry.is_correct).map((entry) => entry.id)
+          : [],
+      });
+      if (!isMountedRef.current) return;
       success('Choix mis à jour', 'Le choix a été mis à jour.');
-      await Promise.all([refreshQuizStructure(selectedQuizExam.id), fetchExams()]);
+      await Promise.all([refreshQuizStructure(selectedQuizExam.id), loadAll()]);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de mettre à jour le choix.');
       console.error(err);
     }
   };
 
   const handleDeleteChoice = async (choice: QuizChoice) => {
+    if (!user?.id) return;
     if (!selectedQuizExam) return;
     if (!window.confirm('Supprimer ce choix ?')) return;
 
     try {
-      const { error: err } = await backendClient.from('quiz_choices').delete().eq('id', choice.id);
-      if (err) throw err;
+      await deleteFormateurQuizChoice(user.id, selectedQuizExam.id, choice.id);
+      if (!isMountedRef.current) return;
       success('Choix supprimé', 'Le choix a été retiré.');
-      await Promise.all([refreshQuizStructure(selectedQuizExam.id), fetchExams()]);
+      await Promise.all([refreshQuizStructure(selectedQuizExam.id), loadAll()]);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de supprimer le choix.');
       console.error(err);
     }
   };
 
   const handleMoveChoice = async (question: QuizQuestion, choice: QuizChoice, direction: -1 | 1) => {
+    if (!user?.id) return;
     if (!selectedQuizExam) return;
     const orderedChoices = orderByPosition(quizChoicesByQuestion.get(String(question.id)) ?? []);
     const currentIndex = orderedChoices.findIndex((entry) => String(entry.id) === String(choice.id));
@@ -803,14 +805,10 @@ export default function FormateurEvaluationsPage() {
 
     const targetChoice = orderedChoices[targetIndex];
     try {
-      const [firstRes, secondRes] = await Promise.all([
-        backendClient.from('quiz_choices').update({ position: targetChoice.position }).eq('id', choice.id),
-        backendClient.from('quiz_choices').update({ position: choice.position }).eq('id', targetChoice.id),
-      ]);
-      if (firstRes.error) throw firstRes.error;
-      if (secondRes.error) throw secondRes.error;
+      await reorderFormateurQuizChoice(user.id, selectedQuizExam.id, choice, targetChoice);
       await refreshQuizStructure(selectedQuizExam.id);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de reordonner les choix.');
       console.error(err);
     }
@@ -864,6 +862,7 @@ export default function FormateurEvaluationsPage() {
             { label: 'Évaluations' },
           ]}
         />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
@@ -871,8 +870,15 @@ export default function FormateurEvaluationsPage() {
             <p className="text-gray-600 text-sm md:text-base">Créez des examens, structurez vos quiz et corrigez les travaux des apprenants</p>
           </div>
           <button
-            onClick={() => setShowCreateExamModal(true)}
-            className="px-4 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap flex items-center gap-2"
+            onClick={() => {
+              if (!subscriptionGate.allowed) {
+                error(subscriptionGate.title, subscriptionGate.message);
+                return;
+              }
+              setShowCreateExamModal(true);
+            }}
+            disabled={!subscriptionGate.allowed}
+            className="px-4 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <div className="w-5 h-5 flex items-center justify-center">
               <i className="ri-add-line text-base"></i>
@@ -917,9 +923,11 @@ export default function FormateurEvaluationsPage() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-          <div className="flex border-b border-gray-200">
+          <div className="flex overflow-x-auto border-b border-gray-200">
             <button
+              type="button"
               onClick={() => setActiveTab('exams')}
+              aria-pressed={activeTab === 'exams'}
               className={`px-6 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'exams' ? 'text-teal-600 border-b-2 border-teal-600' : 'text-gray-600 hover:text-gray-900'
               }`}
@@ -927,7 +935,9 @@ export default function FormateurEvaluationsPage() {
               Mes examens
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('submissions')}
+              aria-pressed={activeTab === 'submissions'}
               className={`px-6 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'submissions' ? 'text-teal-600 border-b-2 border-teal-600' : 'text-gray-600 hover:text-gray-900'
               }`}
@@ -989,6 +999,7 @@ export default function FormateurEvaluationsPage() {
                             {exam.type === 'quiz' && (
                               <button
                                 title="Configurer le quiz"
+                                aria-label={`Configurer le quiz ${exam.title}`}
                                 onClick={() => openQuizBuilder(exam)}
                                 className="w-8 h-8 flex items-center justify-center hover:bg-teal-50 rounded-lg transition-colors"
                               >
@@ -997,6 +1008,8 @@ export default function FormateurEvaluationsPage() {
                             )}
                             <button
                               onClick={() => handleDeleteExam(exam)}
+                              title="Supprimer l'examen"
+                              aria-label={`Supprimer l'examen ${exam.title}`}
                               className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <i className="ri-delete-bin-line text-red-500 text-sm"></i>
@@ -1105,8 +1118,8 @@ export default function FormateurEvaluationsPage() {
 
         {showCreateExamModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">Nouvel examen</h3>
+            <div role="dialog" aria-modal="true" aria-labelledby="create-exam-title" className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+              <h3 id="create-exam-title" className="text-lg font-bold text-gray-900 mb-6">Nouvel examen</h3>
               {createExamMessage ? (
                 <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {createExamMessage}
@@ -1114,8 +1127,9 @@ export default function FormateurEvaluationsPage() {
               ) : null}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+                  <label htmlFor="new-exam-title" className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
                   <input
+                    id="new-exam-title"
                     type="text"
                     value={newExam.title || ''}
                     onChange={(event) => updateNewExam('title', event.target.value)}
@@ -1126,8 +1140,11 @@ export default function FormateurEvaluationsPage() {
                   {createExamErrors.title ? <p className="mt-1 text-xs text-red-600">{createExamErrors.title}</p> : null}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Formation associée</label>
+                  <label htmlFor="new-exam-course-id" className="block text-sm font-medium text-gray-700 mb-1">
+                    Formation associée
+                  </label>
                   <select
+                    id="new-exam-course-id"
                     value={String(newExam.course_id ?? '')}
                     onChange={(event) => {
                       const selectedCourse = instructorCourses.find((course) => String(course.id) === event.target.value);
@@ -1139,6 +1156,7 @@ export default function FormateurEvaluationsPage() {
                       setCreateExamErrors((current) => ({ ...current, course_id: undefined }));
                       setCreateExamMessage(null);
                     }}
+                    aria-label="Formation associée"
                     aria-invalid={Boolean(createExamErrors.course_id)}
                     className={getFieldClass(Boolean(createExamErrors.course_id))}
                   >
@@ -1153,8 +1171,9 @@ export default function FormateurEvaluationsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label htmlFor="new-exam-type" className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                     <select
+                      id="new-exam-type"
                       value={newExam.type || 'quiz'}
                       onChange={(event) => updateNewExam('type', event.target.value as ExamType)}
                       className={getFieldClass(false)}
@@ -1165,8 +1184,9 @@ export default function FormateurEvaluationsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                    <label htmlFor="new-exam-date" className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
                     <input
+                      id="new-exam-date"
                       type="date"
                       value={newExam.exam_date || ''}
                       onChange={(event) => updateNewExam('exam_date', event.target.value)}
@@ -1178,8 +1198,9 @@ export default function FormateurEvaluationsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Participants</label>
+                    <label htmlFor="new-exam-participants" className="block text-sm font-medium text-gray-700 mb-1">Participants</label>
                     <input
+                      id="new-exam-participants"
                       type="number"
                       min={0}
                       value={newExam.participants || 0}
@@ -1190,8 +1211,9 @@ export default function FormateurEvaluationsPage() {
                     {createExamErrors.participants ? <p className="mt-1 text-xs text-red-600">{createExamErrors.participants}</p> : null}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Note max</label>
+                    <label htmlFor="new-exam-max-grade" className="block text-sm font-medium text-gray-700 mb-1">Note max</label>
                     <input
+                      id="new-exam-max-grade"
                       type="number"
                       min={1}
                       max={100}
@@ -1204,8 +1226,9 @@ export default function FormateurEvaluationsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                  <label htmlFor="new-exam-status" className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
                   <select
+                    id="new-exam-status"
                     value={newExam.status || 'upcoming'}
                     onChange={(event) => updateNewExam('status', event.target.value)}
                     className={getFieldClass(false)}
@@ -1219,6 +1242,7 @@ export default function FormateurEvaluationsPage() {
               </div>
               <div className="flex gap-3 justify-end mt-6">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowCreateExamModal(false);
                     setNewExam(DEFAULT_NEW_EXAM);
@@ -1231,6 +1255,7 @@ export default function FormateurEvaluationsPage() {
                   Annuler
                 </button>
                 <button
+                  type="button"
                   onClick={handleCreateExam}
                   disabled={isCreatingExam}
                   className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1244,10 +1269,10 @@ export default function FormateurEvaluationsPage() {
 
         {showQuizBuilderModal && selectedQuizExam && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col">
+            <div role="dialog" aria-modal="true" aria-labelledby="quiz-builder-title" className="bg-white rounded-2xl shadow-xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col">
               <div className="px-6 py-5 border-b border-gray-200 flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">Configuration du quiz</h3>
+                  <h3 id="quiz-builder-title" className="text-xl font-bold text-gray-900">Configuration du quiz</h3>
                   <p className="text-sm text-gray-600 mt-1">{selectedQuizExam.title}</p>
                   <div className="flex flex-wrap gap-2 mt-3 text-xs">
                     <span className="px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 font-medium">
@@ -1262,6 +1287,8 @@ export default function FormateurEvaluationsPage() {
                   </div>
                 </div>
                 <button
+                  type="button"
+                  aria-label="Fermer la configuration du quiz"
                   onClick={resetQuizBuilder}
                   className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-xl transition-colors"
                 >
@@ -1379,6 +1406,7 @@ export default function FormateurEvaluationsPage() {
                               <div className="flex flex-wrap items-center gap-2">
                                 <button
                                   title="Monter la question"
+                                  aria-label={`Monter la question ${index + 1}`}
                                   onClick={() => handleMoveQuestion(question, -1)}
                                   className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                                 >
@@ -1386,6 +1414,7 @@ export default function FormateurEvaluationsPage() {
                                 </button>
                                 <button
                                   title="Descendre la question"
+                                  aria-label={`Descendre la question ${index + 1}`}
                                   onClick={() => handleMoveQuestion(question, 1)}
                                   className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                                 >
@@ -1530,6 +1559,7 @@ export default function FormateurEvaluationsPage() {
                                           <div className="flex items-center gap-2">
                                             <button
                                               title="Monter le choix"
+                                              aria-label="Monter le choix"
                                               onClick={() => handleMoveChoice(question, choice, -1)}
                                               className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                                             >
@@ -1537,6 +1567,7 @@ export default function FormateurEvaluationsPage() {
                                             </button>
                                             <button
                                               title="Descendre le choix"
+                                              aria-label="Descendre le choix"
                                               onClick={() => handleMoveChoice(question, choice, 1)}
                                               className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                                             >
@@ -1619,8 +1650,8 @@ export default function FormateurEvaluationsPage() {
 
         {showGradeModal && selectedSubmission && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Noter - {selectedSubmission.student_name}</h3>
+            <div role="dialog" aria-modal="true" aria-labelledby="grade-submission-title" className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+              <h3 id="grade-submission-title" className="text-lg font-bold text-gray-900 mb-4">Noter - {selectedSubmission.student_name}</h3>
               <p className="text-sm text-gray-600 mb-4">{selectedExam?.title || '-'}</p>
               {gradeFormMessage ? (
                 <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -1696,6 +1727,7 @@ export default function FormateurEvaluationsPage() {
               </div>
               <div className="flex gap-3 justify-end mt-6">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowGradeModal(false);
                     setSelectedSubmission(null);
@@ -1712,6 +1744,7 @@ export default function FormateurEvaluationsPage() {
                   Annuler
                 </button>
                 <button
+                  type="button"
                   onClick={confirmGrade}
                   disabled={isGrading}
                   className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

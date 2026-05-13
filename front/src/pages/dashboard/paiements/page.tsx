@@ -1,17 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
-import { backendClient } from '@/lib/backendClient';
 import { downloadCsvFile, downloadHtmlFile } from '@/lib/downloads';
+import { isMonetizedRole } from '@/lib/publicSubscriptions';
 import {
+  getEscrowStatusLabel,
+  getEscrowStatusTone,
+  getPaymentLifecycleLabel,
+  getPaymentLifecycleTone,
+  resolvePaymentUiCapabilitiesFromSnapshot,
+  resolvePaymentLifecycleStatus,
+} from '@/lib/paymentStatus';
+import {
+  activateSubscriptionPlan,
+  createPayoutRequest,
   createDexPayCheckout,
   fetchDexPayBanks,
   fetchDexPayStatus,
+  purchaseProviderVisibility,
   syncDexPayOrder,
+  topupWallet,
   type DexPayBank,
+  withdrawWallet,
 } from '@/lib/paymentsApi';
+import {
+  fetchFinanceSnapshot,
+  fetchFinanceTransactions,
+  fetchTransactionCapabilities,
+  type CommissionEntry,
+  type EscrowCase,
+  type FinanceCapabilitySnapshot,
+  type PayoutAccount,
+  type PayoutRequest,
+  type ProviderVisibilityOrder,
+  type ProviderVisibilityPassRecord,
+  type ProviderVisibilityProduct,
+  type SubscriptionPlan,
+  type UserSubscription,
+  type WalletAccount,
+} from '@/lib/saasApi';
 
 type PaymentMethodId = 'orange_money' | 'wave' | 'yas' | 'kaypay' | 'card' | 'wallet' | 'dexpay';
 type TransactionType = 'payment' | 'refund' | 'deposit' | 'withdrawal';
@@ -28,8 +58,12 @@ interface Transaction {
   description: string;
   date: string;
   reference: string;
+  financial_operation_id?: string | null;
+  payment_intent_id?: string | null;
   provider_order_id?: string;
+  provider_reference?: string | null;
   provider_status?: string;
+  lifecycle_status?: 'initiated' | 'pending_provider' | 'processing' | 'confirmed' | 'failed' | 'refunded' | 'reconciled';
   payment_account?: {
     accountName?: string;
     accountNumber?: string;
@@ -47,9 +81,14 @@ interface MethodItem {
   active: boolean;
 }
 
+const isProviderBackedTransaction = (transaction: Transaction) =>
+  transaction.method === 'dexpay' || Boolean(transaction.provider_status || transaction.provider_order_id || transaction.lifecycle_status);
+
 export default function PaiementsPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'transactions' | 'methods' | 'wallet'>('transactions');
   const [showAddMethod, setShowAddMethod] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodId | null>(null);
@@ -64,13 +103,25 @@ export default function PaiementsPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [walletId, setWalletId] = useState<number | string | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [walletDetails, setWalletDetails] = useState<WalletAccount | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
+  const [providerVisibilityProducts, setProviderVisibilityProducts] = useState<ProviderVisibilityProduct[]>([]);
+  const [providerVisibilityOrders, setProviderVisibilityOrders] = useState<ProviderVisibilityOrder[]>([]);
+  const [providerVisibilityPasses, setProviderVisibilityPasses] = useState<ProviderVisibilityPassRecord[]>([]);
+  const [escrowCases, setEscrowCases] = useState<EscrowCase[]>([]);
+  const [commissionEntries, setCommissionEntries] = useState<CommissionEntry[]>([]);
+  const [payoutAccounts, setPayoutAccounts] = useState<PayoutAccount[]>([]);
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [transactionCapabilities, setTransactionCapabilities] = useState<Record<string, FinanceCapabilitySnapshot>>({});
   const [dexPayStatus, setDexPayStatus] = useState<{ configured: boolean; reachable?: boolean; enabled?: boolean } | null>(null);
   const [dexPayBanks, setDexPayBanks] = useState<DexPayBank[]>([]);
   const [showDexPayModal, setShowDexPayModal] = useState(false);
   const [dexPaySubmitting, setDexPaySubmitting] = useState(false);
   const [syncingDexPay, setSyncingDexPay] = useState(false);
+  const [purchasingVisibilityProductId, setPurchasingVisibilityProductId] = useState<string | null>(null);
   const [dexPayForm, setDexPayForm] = useState({
     direction: 'onramp' as 'onramp' | 'offramp',
     fiatAmount: '',
@@ -83,34 +134,60 @@ export default function PaiementsPage() {
     recipientWallet: '',
   });
 
+  const contextFinancialOperationId = searchParams.get('financialOperationId')?.trim() || '';
+  const contextInvoiceNumber = searchParams.get('invoice')?.trim() || '';
+  const contextTransactionId = searchParams.get('transaction')?.trim() || '';
+  const contextProviderReference = searchParams.get('providerReference')?.trim() || '';
+  const contextView = searchParams.get('view')?.trim() || '';
+  const selectedPlanId = searchParams.get('plan')?.trim() || '';
+  const selectedPlanName = searchParams.get('planName')?.trim() || '';
+  const selectedPlanRole = searchParams.get('planRole')?.trim() || '';
+
+  const loadPayments = useCallback(async () => {
+    if (!user?.id) {
+      setTransactions([]);
+      setWalletId(null);
+      setWalletBalance(0);
+      setWalletDetails(null);
+      setSubscriptionPlans([]);
+      setSubscriptions([]);
+      setProviderVisibilityProducts([]);
+      setProviderVisibilityOrders([]);
+      setProviderVisibilityPasses([]);
+      setEscrowCases([]);
+      setCommissionEntries([]);
+      setPayoutAccounts([]);
+      setPayoutRequests([]);
+      return;
+    }
+
+    try {
+      const [snapshot, financeTransactions] = await Promise.all([
+        fetchFinanceSnapshot(user.id, user.role),
+        fetchFinanceTransactions(),
+      ]);
+
+      setWalletId(snapshot.wallet?.id ?? null);
+      setWalletBalance(Number(snapshot.wallet?.balance ?? 0));
+      setWalletDetails(snapshot.wallet);
+      setTransactions(financeTransactions as Transaction[]);
+      setSubscriptionPlans(snapshot.plans);
+      setSubscriptions(snapshot.subscriptions);
+      setProviderVisibilityProducts(snapshot.providerVisibilityProducts ?? []);
+      setProviderVisibilityOrders(snapshot.providerVisibilityOrders ?? []);
+      setProviderVisibilityPasses(snapshot.providerVisibilityPasses ?? []);
+      setEscrowCases(snapshot.escrowCases);
+      setCommissionEntries(snapshot.commissionEntries);
+      setPayoutAccounts(snapshot.payoutAccounts);
+      setPayoutRequests(snapshot.payoutRequests);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [user?.id, user?.role]);
+
   useEffect(() => {
-    const loadPayments = async () => {
-      if (!user?.id) {
-        setTransactions([]);
-        setWalletId(null);
-        setWalletBalance(0);
-        return;
-      }
-
-      try {
-        const [walletRes, transactionsRes] = await Promise.all([
-          backendClient.from<{ id: number | string; balance: number }>('wallet_accounts').select('*').eq('user_id', user.id).maybeSingle(),
-          backendClient.from<Transaction>('payment_transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-        ]);
-
-        if (walletRes.error) throw walletRes.error;
-        if (transactionsRes.error) throw transactionsRes.error;
-
-        setWalletId(walletRes.data?.id ?? null);
-        setWalletBalance(Number(walletRes.data?.balance ?? 0));
-        setTransactions((transactionsRes.data || []) as Transaction[]);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    loadPayments();
-  }, [user?.id]);
+    void loadPayments();
+  }, [loadPayments]);
 
   useEffect(() => {
     void (async () => {
@@ -127,6 +204,96 @@ export default function PaiementsPage() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (contextView === 'wallet' || contextView === 'methods' || contextView === 'transactions') {
+      setActiveTab(contextView);
+      return;
+    }
+
+    if (contextFinancialOperationId || contextInvoiceNumber || contextTransactionId || contextProviderReference) {
+      setActiveTab('transactions');
+    }
+  }, [
+    contextFinancialOperationId,
+    contextInvoiceNumber,
+    contextProviderReference,
+    contextTransactionId,
+    contextView,
+  ]);
+
+  useEffect(() => {
+    if (!selectedPlanId || !subscriptionPlans.length) return;
+    document.getElementById('c2p-subscription-plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [selectedPlanId, subscriptionPlans.length]);
+
+  const activeSubscription = subscriptions.find((subscription) => subscription.status === 'active') ?? null;
+  const monetizedRole = user ? isMonetizedRole(user.role) : false;
+  const activeProviderVisibilityPass = providerVisibilityPasses.find((entry) => entry.status === 'active') ?? null;
+  const latestProviderVisibilityOrder = providerVisibilityOrders[0] ?? null;
+  const selectedPlan = selectedPlanId
+    ? subscriptionPlans.find((plan) => String(plan.id) === selectedPlanId) ?? null
+    : null;
+  const selectedPlanUnavailable = Boolean(selectedPlanId) && !selectedPlan && subscriptionPlans.length > 0;
+  const availableWalletBalance = Number(walletDetails?.available_balance ?? walletBalance);
+  const heldWalletBalance = Number(walletDetails?.held_balance ?? 0);
+  const pendingReleaseBalance = Number(walletDetails?.pending_release_balance ?? 0);
+  const pendingPayoutAmount = Number(walletDetails?.pending_payout_amount ?? 0);
+  const defaultPayoutAccount = payoutAccounts.find((account) => account.is_default) ?? payoutAccounts[0] ?? null;
+  const activeEscrows = escrowCases.filter((entry) => ['funded', 'assigned', 'in_progress', 'delivery_review'].includes(entry.status));
+  const providerBackedTransactions = transactions.filter((transaction) => isProviderBackedTransaction(transaction));
+  const activeProviderTransactions = providerBackedTransactions.filter((transaction) => {
+    const status = resolvePaymentLifecycleStatus(transaction);
+    return ['initiated', 'pending_provider', 'processing'].includes(status);
+  });
+  const reconciledProviderTransactions = providerBackedTransactions.filter((transaction) => resolvePaymentLifecycleStatus(transaction) === 'reconciled');
+  const failedProviderTransactions = providerBackedTransactions.filter((transaction) => resolvePaymentLifecycleStatus(transaction) === 'failed');
+  const subscriptionRevenueView = commissionEntries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+
+  const relatedTransactions = useMemo(
+    () => transactions.filter((transaction) => {
+      if (contextTransactionId && String(transaction.id) === contextTransactionId) return true;
+      if (contextFinancialOperationId && String(transaction.financial_operation_id || '') === contextFinancialOperationId) return true;
+      if (contextProviderReference && [transaction.provider_reference, transaction.provider_order_id, transaction.reference].some((value) => String(value || '') === contextProviderReference)) return true;
+      return false;
+    }),
+    [contextFinancialOperationId, contextProviderReference, contextTransactionId, transactions],
+  );
+
+  const relatedEscrows = useMemo(
+    () => contextFinancialOperationId
+      ? escrowCases.filter((entry) => String(entry.financial_operation_id || '') === contextFinancialOperationId)
+      : [],
+    [contextFinancialOperationId, escrowCases],
+  );
+
+  const relatedPayoutRequests = useMemo(
+    () => contextFinancialOperationId
+      ? payoutRequests.filter((entry) => String(entry.financial_operation_id || '') === contextFinancialOperationId)
+      : [],
+    [contextFinancialOperationId, payoutRequests],
+  );
+
+  const relatedSubscriptions = useMemo(
+    () => contextFinancialOperationId
+      ? subscriptions.filter((entry) => String(entry.financial_operation_id || '') === contextFinancialOperationId)
+      : [],
+    [contextFinancialOperationId, subscriptions],
+  );
+
+  const relatedCommissionEntries = useMemo(
+    () => contextFinancialOperationId
+      ? commissionEntries.filter((entry) => String(entry.financial_operation_id || '') === contextFinancialOperationId)
+      : [],
+    [commissionEntries, contextFinancialOperationId],
+  );
+
+  const hasFinanceContext = Boolean(
+    contextFinancialOperationId
+    || contextInvoiceNumber
+    || contextTransactionId
+    || contextProviderReference,
+  );
 
   const [paymentMethods, setPaymentMethods] = useState<MethodItem[]>([
     { id: 'dexpay', name: 'DexPay', icon: 'ri-secure-payment-line', color: 'bg-[#0f766e]', active: true },
@@ -164,41 +331,21 @@ export default function PaiementsPage() {
       return;
     }
 
-    if (!walletId || !user?.id) {
-      error('Compte indisponible', 'Le portefeuille de cet utilisateur est introuvable.');
-      return;
-    }
-
-    const newBalance = walletBalance + amount;
-
     void (async () => {
-      const transaction: Transaction = {
-        id: `TRX-${Date.now()}`,
-        user_id: user.id,
-        type: 'deposit',
-        amount,
-        currency: 'XAF',
-        method: 'wallet',
-        status: 'completed',
-        description: 'Rechargement portefeuille C2P',
-        date: new Date().toISOString(),
-        reference: `WL-${Date.now()}`,
-      };
-      const [walletRes, transactionRes] = await Promise.all([
-        backendClient.from('wallet_accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', walletId),
-        backendClient.from('payment_transactions').insert(transaction),
-      ]);
-
-      if (walletRes.error || transactionRes.error) {
-        error('Erreur', 'Le rechargement n a pas pu etre enregistre.');
-        return;
+      try {
+        await topupWallet({
+          amount,
+          method: 'wallet',
+          description: 'Rechargement portefeuille C2P',
+        });
+        await loadPayments();
+        success('Rechargement effectué', `${amount.toLocaleString('fr-FR')} XAF ont été ajoutés à votre portefeuille.`);
+        setShowRechargeModal(false);
+        setRechargeAmount('');
+      } catch (requestError) {
+        const message = requestError instanceof Error ? requestError.message : 'Le rechargement n a pas pu etre enregistre.';
+        error('Erreur', message);
       }
-
-      setWalletBalance(newBalance);
-      setTransactions((prev) => [transaction, ...prev]);
-      success('Rechargement effectué', `${amount.toLocaleString('fr-FR')} XAF ont été ajoutés à votre portefeuille.`);
-      setShowRechargeModal(false);
-      setRechargeAmount('');
     })();
   };
 
@@ -208,46 +355,50 @@ export default function PaiementsPage() {
       error('Montant invalide', 'Veuillez entrer un montant valide.');
       return;
     }
-    if (amount > walletBalance) {
+    if (amount > availableWalletBalance) {
       error('Solde insuffisant', 'Le montant demandé dépasse votre solde disponible.');
       return;
     }
-
-    if (!walletId || !user?.id) {
-      error('Compte indisponible', 'Le portefeuille de cet utilisateur est introuvable.');
-      return;
-    }
-
-    const newBalance = walletBalance - amount;
-
-    void (async () => {
-      const transaction: Transaction = {
-        id: `TRX-${Date.now()}`,
-        user_id: user.id,
-        type: 'withdrawal',
-        amount,
-        currency: 'XAF',
-        method: 'wallet',
-        status: 'completed',
-        description: 'Retrait portefeuille C2P',
-        date: new Date().toISOString(),
-        reference: `WL-${Date.now()}`,
-      };
-      const [walletRes, transactionRes] = await Promise.all([
-        backendClient.from('wallet_accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', walletId),
-        backendClient.from('payment_transactions').insert(transaction),
-      ]);
-
-      if (walletRes.error || transactionRes.error) {
-        error('Erreur', 'Le retrait n a pas pu etre enregistre.');
+    if (monetizedRole) {
+      if (!defaultPayoutAccount) {
+        error('Compte de retrait manquant', 'Ajoutez d abord un compte de retrait pour recevoir vos virements C2P.');
         return;
       }
 
-      setWalletBalance(newBalance);
-      setTransactions((prev) => [transaction, ...prev]);
-      success('Retrait effectué', `${amount.toLocaleString('fr-FR')} XAF ont été retirés de votre portefeuille.`);
-      setShowWithdrawModal(false);
-      setWithdrawAmount('');
+      void (async () => {
+        try {
+          await createPayoutRequest({
+            amount,
+            account_id: defaultPayoutAccount.id,
+            note: 'Demande initiee depuis le dashboard',
+          });
+          await loadPayments();
+          success('Demande envoyée', 'C2P a bien reçu votre demande de retrait.');
+          setShowWithdrawModal(false);
+          setWithdrawAmount('');
+        } catch (requestError) {
+          const message = requestError instanceof Error ? requestError.message : 'La demande de retrait n a pas pu etre enregistree.';
+          error('Erreur', message);
+        }
+      })();
+      return;
+    }
+
+    void (async () => {
+      try {
+        await withdrawWallet({
+          amount,
+          method: 'wallet',
+          description: 'Retrait portefeuille C2P',
+        });
+        await loadPayments();
+        success('Retrait effectué', `${amount.toLocaleString('fr-FR')} XAF ont été retirés de votre portefeuille.`);
+        setShowWithdrawModal(false);
+        setWithdrawAmount('');
+      } catch (requestError) {
+        const message = requestError instanceof Error ? requestError.message : 'Le retrait n a pas pu etre enregistre.';
+        error('Erreur', message);
+      }
     })();
   };
 
@@ -266,7 +417,11 @@ export default function PaiementsPage() {
         recipientWallet: dexPayForm.recipientWallet || undefined,
       };
       const result = await createDexPayCheckout(payload);
-      const transaction = result.transaction as unknown as Transaction;
+      const rawTransaction = result.transaction as unknown as Transaction;
+      const transaction = {
+        ...rawTransaction,
+        lifecycle_status: rawTransaction.lifecycle_status ?? resolvePaymentLifecycleStatus(rawTransaction),
+      } satisfies Transaction;
       setTransactions((prev) => [transaction, ...prev]);
       setSelectedTransaction(transaction);
       setShowDexPayModal(false);
@@ -292,7 +447,11 @@ export default function PaiementsPage() {
     try {
       const orderId = selectedTransaction.provider_order_id || selectedTransaction.reference;
       const result = await syncDexPayOrder(orderId, selectedTransaction.id);
-      const transaction = result.transaction as unknown as Transaction;
+      const rawTransaction = result.transaction as unknown as Transaction;
+      const transaction = {
+        ...rawTransaction,
+        lifecycle_status: rawTransaction.lifecycle_status ?? resolvePaymentLifecycleStatus(rawTransaction),
+      } satisfies Transaction;
       const shouldCreditWallet = selectedTransaction.settled_to_wallet !== true
         && transaction.type === 'deposit'
         && transaction.status === 'completed'
@@ -302,7 +461,7 @@ export default function PaiementsPage() {
       if (shouldCreditWallet) {
         setWalletBalance((prev) => prev + Number(transaction.amount || 0));
       }
-      success('Statut synchronise', `Statut fournisseur: ${result.order.status || transaction.provider_status || 'inconnu'}.`);
+      success('Statut synchronise', `Cycle de paiement: ${getPaymentLifecycleLabel(resolvePaymentLifecycleStatus(transaction))}.`);
     } catch (requestError) {
       const message = requestError && typeof requestError === 'object' && 'message' in requestError
         ? String(requestError.message)
@@ -310,6 +469,71 @@ export default function PaiementsPage() {
       error('Synchronisation impossible', message);
     } finally {
       setSyncingDexPay(false);
+    }
+  };
+
+  const handleSyncDexPayTransaction = async (transactionRow: Transaction) => {
+    setSelectedTransaction(transactionRow);
+    setSyncingDexPay(true);
+    try {
+      const orderId = transactionRow.provider_order_id || transactionRow.reference;
+      const result = await syncDexPayOrder(orderId, transactionRow.id);
+      const rawTransaction = result.transaction as unknown as Transaction;
+      const transaction = {
+        ...rawTransaction,
+        lifecycle_status: rawTransaction.lifecycle_status ?? resolvePaymentLifecycleStatus(rawTransaction),
+      } satisfies Transaction;
+      const shouldCreditWallet = transactionRow.settled_to_wallet !== true
+        && transaction.type === 'deposit'
+        && transaction.status === 'completed'
+        && transaction.settled_to_wallet === true;
+      setTransactions((prev) => prev.map((item) => item.id === transaction.id ? transaction : item));
+      setSelectedTransaction(transaction);
+      if (shouldCreditWallet) {
+        setWalletBalance((prev) => prev + Number(transaction.amount || 0));
+      }
+      success('Statut synchronise', `Cycle de paiement: ${getPaymentLifecycleLabel(resolvePaymentLifecycleStatus(transaction))}.`);
+    } catch (requestError) {
+      const message = requestError && typeof requestError === 'object' && 'message' in requestError
+        ? String(requestError.message)
+        : 'Impossible de synchroniser la transaction DexPay.';
+      error('Synchronisation impossible', message);
+    } finally {
+      setSyncingDexPay(false);
+    }
+  };
+
+  const handleActivatePlan = async (plan: SubscriptionPlan) => {
+    if (!user?.id) return;
+    try {
+      await activateSubscriptionPlan({
+        plan_id: plan.id,
+        auto_renew: true,
+        renew_now: Boolean(activeSubscription),
+      });
+      await loadPayments();
+      success('Abonnement mis à jour', `Le plan ${plan.name} est désormais pris en compte par C2P.`);
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Impossible d activer ce plan.';
+      error('Abonnement impossible', message);
+    }
+  };
+
+  const handlePurchaseVisibilityProduct = async (product: ProviderVisibilityProduct) => {
+    if (user?.role !== 'prestataire') return;
+    setPurchasingVisibilityProductId(product.id);
+    try {
+      const result = await purchaseProviderVisibility({ product_id: product.id });
+      await loadPayments();
+      success(
+        'Billet activé',
+        `${product.name} est actif${result.pass?.code ? ` avec le code ${result.pass.code}` : ''}.`,
+      );
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Impossible d acheter ce billet SenPresta.';
+      error('Achat impossible', message);
+    } finally {
+      setPurchasingVisibilityProductId(null);
     }
   };
 
@@ -359,8 +583,71 @@ export default function PaiementsPage() {
   const filteredTransactions = transactions.filter(t => {
     if (filterType !== 'all' && t.type !== filterType) return false;
     if (filterStatus !== 'all' && t.status !== filterStatus) return false;
+    if (hasFinanceContext) {
+      const matchesTransaction = contextTransactionId ? String(t.id) === contextTransactionId : false;
+      const matchesFinancialOperation = contextFinancialOperationId ? String(t.financial_operation_id || '') === contextFinancialOperationId : false;
+      const matchesProviderReference = contextProviderReference
+        ? [t.provider_reference, t.provider_order_id, t.reference].some((value) => String(value || '') === contextProviderReference)
+        : false;
+      if (!matchesTransaction && !matchesFinancialOperation && !matchesProviderReference) {
+        return false;
+      }
+    }
     return true;
   });
+
+  useEffect(() => {
+    const candidateIds = Array.from(new Set(
+      [
+        ...filteredTransactions.map((transaction) => String(transaction.id)),
+        selectedTransaction ? String(selectedTransaction.id) : null,
+      ].filter((value): value is string => Boolean(value)),
+    ));
+    const missingIds = candidateIds.filter((id) => !transactionCapabilities[id]);
+    if (!missingIds.length) {
+      return;
+    }
+
+    let cancelled = false;
+    void Promise.allSettled(
+      missingIds.map(async (id) => [id, await fetchTransactionCapabilities(id)] as const),
+    ).then((results) => {
+      if (cancelled) {
+        return;
+      }
+
+      const nextEntries: Record<string, FinanceCapabilitySnapshot> = {};
+      for (const result of results) {
+        if (result.status !== 'fulfilled') {
+          continue;
+        }
+        const [id, snapshot] = result.value;
+        nextEntries[id] = snapshot;
+      }
+
+      if (Object.keys(nextEntries).length > 0) {
+        setTransactionCapabilities((current) => ({ ...current, ...nextEntries }));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filteredTransactions, selectedTransaction, transactionCapabilities]);
+
+  useEffect(() => {
+    if (!hasFinanceContext) {
+      return;
+    }
+
+    if (selectedTransaction) {
+      return;
+    }
+
+    if (relatedTransactions.length === 1) {
+      setSelectedTransaction(relatedTransactions[0]);
+    }
+  }, [hasFinanceContext, relatedTransactions, selectedTransaction]);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -431,6 +718,42 @@ export default function PaiementsPage() {
     success('Recu genere', `Le recu de la transaction ${transaction.id} a ete telecharge.`);
   };
 
+  const clearFinanceContext = () => {
+    setSearchParams({});
+  };
+
+  const getTransactionCapabilitySnapshot = (transaction: Transaction) => transactionCapabilities[String(transaction.id)] ?? null;
+
+  const getTransactionLifecycleState = (transaction: Transaction) => {
+    const backendState = getTransactionCapabilitySnapshot(transaction)?.currentState;
+    if (backendState && ['initiated', 'pending_provider', 'processing', 'confirmed', 'failed', 'refunded', 'reconciled'].includes(backendState)) {
+      return backendState as NonNullable<Transaction['lifecycle_status']>;
+    }
+    return resolvePaymentLifecycleStatus(transaction);
+  };
+
+  const getSelfServiceCapabilities = (
+    transaction: Transaction,
+    context: 'transaction_list' | 'transaction_modal' | 'provider_console' = 'transaction_list',
+  ) => resolvePaymentUiCapabilitiesFromSnapshot(getTransactionCapabilitySnapshot(transaction), {
+      status: resolvePaymentLifecycleStatus(transaction),
+      role: 'self_service',
+      context,
+      providerBacked: isProviderBackedTransaction(transaction),
+      transactionType: transaction.type,
+    });
+
+  const openRelatedInvoices = (transaction: Transaction) => {
+    const params = new URLSearchParams();
+    if (transaction.financial_operation_id) {
+      params.set('financialOperationId', transaction.financial_operation_id);
+    }
+    if (transaction.id) {
+      params.set('transaction', transaction.id);
+    }
+    navigate(`/dashboard/factures${params.toString() ? `?${params.toString()}` : ''}`);
+  };
+
   return (
     <DashboardLayout>
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Paiements' }]} />
@@ -439,12 +762,94 @@ export default function PaiementsPage() {
         <p className="text-gray-600">Gérez vos transactions et moyens de paiement</p>
       </div>
 
+      {hasFinanceContext && (
+        <div className="mb-6 rounded-2xl border border-teal-200 bg-teal-50 p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-teal-700">Contexte financier lié</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {contextInvoiceNumber ? (
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                    Facture {contextInvoiceNumber}
+                  </span>
+                ) : null}
+                {contextFinancialOperationId ? (
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                    Opération {contextFinancialOperationId}
+                  </span>
+                ) : null}
+                {contextProviderReference ? (
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                    Provider {contextProviderReference}
+                  </span>
+                ) : null}
+                {contextTransactionId ? (
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                    Transaction {contextTransactionId}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+                <div className="rounded-xl border border-white/80 bg-white/80 p-3">
+                  <p className="text-xs text-gray-500">Transactions</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{relatedTransactions.length}</p>
+                </div>
+                <div className="rounded-xl border border-white/80 bg-white/80 p-3">
+                  <p className="text-xs text-gray-500">Séquestres</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{relatedEscrows.length}</p>
+                </div>
+                <div className="rounded-xl border border-white/80 bg-white/80 p-3">
+                  <p className="text-xs text-gray-500">Retraits</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{relatedPayoutRequests.length}</p>
+                </div>
+                <div className="rounded-xl border border-white/80 bg-white/80 p-3">
+                  <p className="text-xs text-gray-500">Abonnements</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{relatedSubscriptions.length}</p>
+                </div>
+                <div className="rounded-xl border border-white/80 bg-white/80 p-3">
+                  <p className="text-xs text-gray-500">Ledger</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{relatedCommissionEntries.length}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {relatedTransactions.length > 0 ? (
+                <button
+                  onClick={() => {
+                    setActiveTab('transactions');
+                    setSelectedTransaction(relatedTransactions[0]);
+                  }}
+                  className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+                >
+                  Ouvrir la transaction
+                </button>
+              ) : null}
+              {relatedEscrows.length > 0 || relatedPayoutRequests.length > 0 || relatedSubscriptions.length > 0 ? (
+                <button
+                  onClick={() => setActiveTab('wallet')}
+                  className="rounded-lg border border-teal-300 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-white"
+                >
+                  Ouvrir le portefeuille
+                </button>
+              ) : null}
+              <button
+                onClick={clearFinanceContext}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-white"
+              >
+                Effacer le contexte
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Wallet Balance Card */}
       <div className="mb-8 rounded-xl border border-[#0f766e] bg-[#0f766e] p-8 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div>
             <p className="mb-2 text-sm text-white/72">Solde du portefeuille C2P</p>
-            <p className="text-4xl font-bold mb-4">{formatAmount(walletBalance, 'XAF')}</p>
+            <p className="text-4xl font-bold mb-4">{formatAmount(availableWalletBalance, walletDetails?.currency ?? 'XAF')}</p>
             <div className="flex space-x-3">
               <button
                 onClick={() => setShowRechargeModal(true)}
@@ -528,8 +933,20 @@ export default function PaiementsPage() {
                 </div>
               </div>
               <div className="space-y-4">
+                {hasFinanceContext && filteredTransactions.length === 0 ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    Aucun flux direct ne correspond au contexte demandé. Vérifiez le cycle provider ou les objets liés du portefeuille.
+                  </div>
+                ) : null}
                 {filteredTransactions.map((transaction) => (
-                  <div key={transaction.id} className="border border-gray-200 rounded-lg p-4 hover:border-teal-300 transition-colors">
+                  <div
+                    key={transaction.id}
+                    className={`rounded-lg border p-4 transition-colors ${
+                      hasFinanceContext && relatedTransactions.some((entry) => entry.id === transaction.id)
+                        ? 'border-teal-300 bg-teal-50/40'
+                        : 'border-gray-200 hover:border-teal-300'
+                    }`}
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-4 flex-1">
                         <div className={`w-12 h-12 ${transaction.type === 'payment' ? 'bg-red-100' : transaction.type === 'refund' ? 'bg-green-100' : transaction.type === 'deposit' ? 'bg-blue-100' : 'bg-purple-100'} rounded-lg flex items-center justify-center flex-shrink-0`}>
@@ -540,7 +957,13 @@ export default function PaiementsPage() {
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-1">
                             <h3 className="font-medium text-gray-900">{transaction.description}</h3>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(transaction.status)}`}>{getStatusLabel(transaction.status)}</span>
+                            {isProviderBackedTransaction(transaction) ? (
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPaymentLifecycleTone(getTransactionLifecycleState(transaction))}`}>
+                                {getPaymentLifecycleLabel(getTransactionLifecycleState(transaction))}
+                              </span>
+                            ) : (
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(transaction.status)}`}>{getStatusLabel(transaction.status)}</span>
+                            )}
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
                             <span>{getTypeLabel(transaction.type)}</span>
@@ -550,6 +973,9 @@ export default function PaiementsPage() {
                             <span>{formatDate(transaction.date)}</span>
                           </div>
                           <p className="text-xs text-gray-500 mt-1">Réf: {transaction.reference}</p>
+                          {isProviderBackedTransaction(transaction) && transaction.provider_status ? (
+                            <p className="mt-1 text-xs text-gray-500">Provider: {transaction.provider_status}</p>
+                          ) : null}
                         </div>
                       </div>
                       <div className="text-right ml-4">
@@ -635,15 +1061,29 @@ export default function PaiementsPage() {
 
           {activeTab === 'wallet' && (
             <div>
-          <div className="mb-6 rounded-lg border border-teal-100 bg-[#f5faf9] p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Solde disponible</p>
-                    <p className="text-3xl font-bold text-gray-900">{formatAmount(walletBalance, 'XAF')}</p>
+              <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-4">
+                <div className="rounded-2xl border border-teal-100 bg-[#f5faf9] p-6 xl:col-span-2">
+                  <p className="mb-1 text-sm text-gray-600">Solde disponible</p>
+                  <p className="text-3xl font-bold text-gray-900">{formatAmount(availableWalletBalance, walletDetails?.currency ?? 'XAF')}</p>
+                  <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-600">
+                    <span>Séquestres en cours : {formatAmount(heldWalletBalance, walletDetails?.currency ?? 'XAF')}</span>
+                    <span>Retraits en attente : {formatAmount(pendingPayoutAmount, walletDetails?.currency ?? 'XAF')}</span>
                   </div>
-                  <div className="w-16 h-16 bg-teal-600 rounded-full flex items-center justify-center">
-                    <div className="w-8 h-8 flex items-center justify-center"><i className="ri-wallet-3-line text-3xl text-white"></i></div>
-                  </div>
+                  {activeSubscription ? (
+                    <div className="mt-4 inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-teal-700">
+                      {activeSubscription.plan_name} • renouvellement {new Date(activeSubscription.renews_at).toLocaleDateString('fr-FR')}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                  <p className="text-sm text-gray-500">Paiements à libérer</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{formatAmount(pendingReleaseBalance, walletDetails?.currency ?? 'XAF')}</p>
+                  <p className="mt-2 text-sm text-gray-500">Montants sous supervision C2P avant libération.</p>
+                </div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                  <p className="text-sm text-gray-500">Revenus / frais reconnus</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{formatAmount(subscriptionRevenueView, walletDetails?.currency ?? 'XAF')}</p>
+                  <p className="mt-2 text-sm text-gray-500">Ledger C2P visible pour vos flux SaaS et missions.</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -683,8 +1123,293 @@ export default function PaiementsPage() {
                     onClick={() => setShowWithdrawModal(true)}
                     className="w-full px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
                   >
-                    Effectuer un retrait
+                    {monetizedRole ? 'Demander un retrait' : 'Effectuer un retrait'}
                   </button>
+                </div>
+              </div>
+
+              {providerBackedTransactions.length > 0 && (
+                <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Cycle provider</h3>
+                      <p className="text-sm text-gray-600">Suivi unifié des opérations externalisées avant confirmation et réconciliation C2P.</p>
+                    </div>
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                      {providerBackedTransactions.length} opération(s)
+                    </span>
+                  </div>
+                  <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-xs font-medium text-amber-700">En cours provider</p>
+                      <p className="mt-2 text-2xl font-bold text-amber-900">{activeProviderTransactions.length}</p>
+                    </div>
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 p-4">
+                      <p className="text-xs font-medium text-teal-700">Réconciliées</p>
+                      <p className="mt-2 text-2xl font-bold text-teal-900">{reconciledProviderTransactions.length}</p>
+                    </div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <p className="text-xs font-medium text-red-700">À revoir</p>
+                      <p className="mt-2 text-2xl font-bold text-red-900">{failedProviderTransactions.length}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {activeProviderTransactions.length === 0 ? (
+                      <p className="text-sm text-gray-500">Aucune opération provider en attente pour le moment.</p>
+                    ) : activeProviderTransactions.slice(0, 4).map((transaction) => (
+                      <div key={transaction.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">{transaction.description}</p>
+                          <p className="mt-1 text-sm text-gray-600">
+                            {formatAmount(transaction.amount, transaction.currency)} · {transaction.provider_status || 'provider pending'} · {formatDate(transaction.date)}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {getSelfServiceCapabilities(transaction, 'provider_console').summary}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getPaymentLifecycleTone(getTransactionLifecycleState(transaction))}`}>
+                            {getPaymentLifecycleLabel(getTransactionLifecycleState(transaction))}
+                          </span>
+                          {transaction.method === 'dexpay' && getSelfServiceCapabilities(transaction, 'provider_console').actions.sync_provider ? (
+                            <button
+                              onClick={() => void handleSyncDexPayTransaction(transaction)}
+                              className="rounded-lg border border-[#0f766e]/20 px-3 py-1.5 text-xs font-medium text-[#0f766e] hover:bg-[#f5faf9]"
+                            >
+                              Synchroniser
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {monetizedRole && (
+                <div id="c2p-subscription-plans" className="mb-6 rounded-2xl border border-gray-200 bg-white p-6">
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Abonnement C2P</h3>
+                      <p className="text-sm text-gray-600">Le plan pilote votre niveau de commission, la priorisation et l’accès aux services SaaS.</p>
+                    </div>
+                    {defaultPayoutAccount ? (
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                        Retrait par défaut : {defaultPayoutAccount.label}
+                      </span>
+                    ) : null}
+                  </div>
+                  {selectedPlan ? (
+                    <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+                      Plan cible : <strong>{selectedPlan.name}</strong>. Vous pouvez l’activer directement ci-dessous.
+                    </div>
+                  ) : selectedPlanUnavailable ? (
+                    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      {selectedPlanName ? `Le plan ${selectedPlanName}` : 'Ce plan'} n’est pas disponible pour votre compte actuel{selectedPlanRole ? ` (${selectedPlanRole})` : ''}.
+                    </div>
+                  ) : null}
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    {subscriptionPlans.map((plan) => {
+                      const isActive = activeSubscription?.plan_id === plan.id;
+                      const isSelected = selectedPlanId === String(plan.id);
+                      return (
+                        <div key={plan.id} className={`rounded-2xl border p-5 ${isActive ? 'border-teal-300 bg-teal-50' : isSelected ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'}`}>
+                          <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{plan.name}</h4>
+                              <p className="mt-1 text-sm text-gray-500">{formatAmount(plan.price_monthly, plan.currency)} / mois</p>
+                            </div>
+                            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-teal-700">
+                              commission {plan.commission_rate}%
+                            </span>
+                          </div>
+                          <ul className="space-y-2 text-sm text-gray-600">
+                            {(plan.features || []).slice(0, 3).map((feature) => (
+                              <li key={feature} className="flex items-start gap-2">
+                                <i className="ri-check-line mt-0.5 text-teal-600"></i>
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <button
+                            onClick={() => void handleActivatePlan(plan)}
+                            className={`mt-5 w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors ${isActive ? 'border border-teal-200 bg-white text-teal-700 hover:bg-teal-100' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
+                          >
+                            {isActive ? 'Renouveler ce plan' : 'Activer ce plan'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {user?.role === 'prestataire' && providerVisibilityProducts.length > 0 && (
+                <div id="senpresta-visibility" className="mb-6 rounded-2xl border border-[#27346b]/10 bg-white p-6">
+                  <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Billets SenPresta</h3>
+                      <p className="text-sm text-gray-600">Achetez un billet pour renforcer votre visibilité, vos alertes et votre niveau de priorisation dans les flux SenPresta.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {activeProviderVisibilityPass ? (
+                        <span className="rounded-full bg-[#27346b]/10 px-3 py-1 text-xs font-medium text-[#27346b]">
+                          Actif : {activeProviderVisibilityPass.pass_label} {activeProviderVisibilityPass.code ? `· ${activeProviderVisibilityPass.code}` : ''}
+                        </span>
+                      ) : null}
+                      {latestProviderVisibilityOrder ? (
+                        <span className="rounded-full bg-[#dbad29]/15 px-3 py-1 text-xs font-medium text-[#8a6a12]">
+                          Dernier achat : {formatDate(latestProviderVisibilityOrder.purchased_at)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="mb-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
+                    {providerVisibilityProducts.map((product) => {
+                      const isCurrentTier = activeProviderVisibilityPass?.pass_tier === product.tier;
+                      const isBusy = purchasingVisibilityProductId === product.id;
+                      return (
+                        <div key={product.id} className={`rounded-2xl border p-5 ${isCurrentTier ? 'border-[#dbad29]/40 bg-[#dbad29]/5' : 'border-gray-200 bg-white'}`}>
+                          <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                              <h4 className="font-semibold text-gray-900">{product.name}</h4>
+                              <p className="mt-1 text-sm text-gray-500">{formatAmount(product.price, product.currency)} / {product.duration_days} jours</p>
+                            </div>
+                            <span className="rounded-full bg-[#27346b]/10 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-[#27346b]">
+                              {product.tier}
+                            </span>
+                          </div>
+                          {product.description ? (
+                            <p className="mb-3 text-sm text-gray-600">{product.description}</p>
+                          ) : null}
+                          <ul className="space-y-2 text-sm text-gray-600">
+                            {product.features.slice(0, 3).map((feature) => (
+                              <li key={feature} className="flex items-start gap-2">
+                                <i className="ri-check-line mt-0.5 text-[#27346b]"></i>
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">
+                            <span className="rounded-full bg-gray-100 px-2.5 py-1">
+                              Priorité {product.matching_priority}
+                            </span>
+                            {product.alerts_enabled ? (
+                              <span className="rounded-full bg-gray-100 px-2.5 py-1">Alertes incluses</span>
+                            ) : null}
+                            {product.verification_eligible ? (
+                              <span className="rounded-full bg-gray-100 px-2.5 py-1">Éligible vérification</span>
+                            ) : null}
+                          </div>
+                          <button
+                            onClick={() => void handlePurchaseVisibilityProduct(product)}
+                            disabled={isBusy}
+                            className="mt-5 w-full rounded-lg bg-[#27346b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1d2854] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isBusy ? 'Achat en cours...' : 'Acheter ce billet'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                      <p className="text-sm font-medium text-gray-900">Billet actif</p>
+                      {activeProviderVisibilityPass ? (
+                        <div className="mt-3 space-y-2 text-sm text-gray-600">
+                          <p><span className="font-medium text-gray-900">{activeProviderVisibilityPass.pass_label}</span> · {activeProviderVisibilityPass.code}</p>
+                          <p>Échéance : {activeProviderVisibilityPass.expires_at ? formatDate(activeProviderVisibilityPass.expires_at) : 'non définie'}</p>
+                          <p>Source : {activeProviderVisibilityPass.product_name || activeProviderVisibilityPass.plan_name || 'SenPresta'}</p>
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-sm text-gray-500">Aucun billet actif pour le moment.</p>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-900">Historique des achats</p>
+                        <span className="text-xs text-gray-500">{providerVisibilityOrders.length} achat(s)</span>
+                      </div>
+                      <div className="space-y-3">
+                        {providerVisibilityOrders.length === 0 ? (
+                          <p className="text-sm text-gray-500">Aucun achat de billet enregistré.</p>
+                        ) : providerVisibilityOrders.slice(0, 3).map((order) => (
+                          <div key={order.id} className="rounded-xl border border-gray-200 bg-white p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-medium text-gray-900">{order.product_name || 'Billet SenPresta'}</p>
+                                <p className="mt-1 text-sm text-gray-600">{formatDate(order.purchased_at)} · {order.pass_code || order.pass_tier}</p>
+                              </div>
+                              <p className="font-semibold text-gray-900">{formatAmount(order.amount, order.currency)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Séquestres et paiements C2P</h3>
+                    <span className="text-sm text-gray-500">{activeEscrows.length} actif(s)</span>
+                  </div>
+                  <div className="space-y-3">
+                    {activeEscrows.length === 0 ? (
+                      <p className="text-sm text-gray-500">Aucun flux sous séquestre pour le moment.</p>
+                    ) : activeEscrows.slice(0, 4).map((escrow) => (
+                      <div key={escrow.id} className="rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-gray-900">{escrow.booking_title || escrow.service || 'Mission C2P'}</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <p className="text-sm text-gray-600">{escrow.provider_name || 'En assignation'}</p>
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getEscrowStatusTone(escrow.status)}`}>
+                                {getEscrowStatusLabel(escrow.status)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">{formatAmount(escrow.amount_total, escrow.currency)}</p>
+                            <p className="mt-1 text-xs text-gray-500">Net prestataire {formatAmount(escrow.provider_amount, escrow.currency)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Retraits et ledger</h3>
+                    <span className="text-sm text-gray-500">{payoutRequests.length} demande(s)</span>
+                  </div>
+                  <div className="space-y-3">
+                    {payoutRequests.slice(0, 4).map((request) => (
+                      <div key={request.id} className="rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-gray-900">{request.account_label || request.method}</p>
+                            <p className="mt-1 text-sm text-gray-600">{new Date(request.requested_at).toLocaleDateString('fr-FR')} · {request.status}</p>
+                          </div>
+                          <p className="font-semibold text-gray-900">{formatAmount(request.amount, request.currency)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {payoutRequests.length === 0 && <p className="text-sm text-gray-500">Aucune demande de retrait.</p>}
+                    {commissionEntries.length > 0 && (
+                      <div className="rounded-xl bg-gray-50 p-4">
+                        <p className="text-sm font-medium text-gray-900">Dernier mouvement ledger</p>
+                        <p className="mt-1 text-sm text-gray-600">{commissionEntries[0].description}</p>
+                        <p className="mt-2 text-sm font-semibold text-gray-900">{formatAmount(commissionEntries[0].amount, commissionEntries[0].currency)}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -856,7 +1581,7 @@ export default function PaiementsPage() {
                 <div className="w-5 h-5 flex items-center justify-center"><i className="ri-close-line text-xl"></i></div>
               </button>
             </div>
-            <p className="text-sm text-gray-600 mb-4">Solde disponible : {formatAmount(walletBalance, 'XAF')}</p>
+            <p className="text-sm text-gray-600 mb-4">Solde disponible : {formatAmount(availableWalletBalance, walletDetails?.currency ?? 'XAF')}</p>
             <div className="space-y-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Montant (XAF)</label>
@@ -993,6 +1718,23 @@ export default function PaiementsPage() {
                   <p className="text-xs text-gray-500 mb-1">Moyen de paiement</p>
                   <p className="text-sm font-medium text-gray-900">{getMethodName(selectedTransaction.method)}</p>
                 </div>
+                {isProviderBackedTransaction(selectedTransaction) && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">Cycle provider</p>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentLifecycleTone(getTransactionLifecycleState(selectedTransaction))}`}>
+                      {getPaymentLifecycleLabel(getTransactionLifecycleState(selectedTransaction))}
+                    </span>
+                    <p className="mt-2 text-xs text-gray-500">
+                      {getSelfServiceCapabilities(selectedTransaction, 'transaction_modal').summary}
+                    </p>
+                  </div>
+                )}
+                {isProviderBackedTransaction(selectedTransaction) && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">Statut brut provider</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedTransaction.provider_status || 'En attente de confirmation'}</p>
+                  </div>
+                )}
                 <div className="p-3 bg-gray-50 rounded-lg col-span-2">
                   <p className="text-xs text-gray-500 mb-1">Description</p>
                   <p className="text-sm font-medium text-gray-900">{selectedTransaction.description}</p>
@@ -1005,6 +1747,28 @@ export default function PaiementsPage() {
                   <p className="text-xs text-gray-500 mb-1">Référence</p>
                   <p className="text-sm font-medium text-gray-900">{selectedTransaction.reference}</p>
                 </div>
+                {(selectedTransaction.financial_operation_id || selectedTransaction.provider_reference || selectedTransaction.payment_intent_id) && (
+                  <div className="p-3 bg-gray-50 rounded-lg col-span-2">
+                    <p className="text-xs text-gray-500 mb-2">Objets liés</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTransaction.financial_operation_id ? (
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                          Opération {selectedTransaction.financial_operation_id}
+                        </span>
+                      ) : null}
+                      {selectedTransaction.payment_intent_id ? (
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                          Intent {selectedTransaction.payment_intent_id}
+                        </span>
+                      ) : null}
+                      {selectedTransaction.provider_reference ? (
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                          Provider {selectedTransaction.provider_reference}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
                 {selectedTransaction.payment_account && (
                   <div className="p-3 bg-gray-50 rounded-lg col-span-2">
                     <p className="text-xs text-gray-500 mb-1">Instructions de paiement DexPay</p>
@@ -1024,7 +1788,15 @@ export default function PaiementsPage() {
 
             <div className="flex space-x-3">
               <button onClick={() => setSelectedTransaction(null)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">Fermer</button>
-              {selectedTransaction.method === 'dexpay' && (
+              {(selectedTransaction.financial_operation_id || selectedTransaction.reference) && getSelfServiceCapabilities(selectedTransaction, 'transaction_modal').actions.open_linked_invoices && (
+                <button
+                  onClick={() => openRelatedInvoices(selectedTransaction)}
+                  className="flex-1 px-4 py-2 border border-teal-200 text-teal-700 text-sm font-medium rounded-lg hover:bg-teal-50 transition-colors whitespace-nowrap"
+                >
+                  Voir les factures liées
+                </button>
+              )}
+              {selectedTransaction.method === 'dexpay' && getSelfServiceCapabilities(selectedTransaction, 'transaction_modal').actions.sync_provider && (
                 <button
                   onClick={handleSyncDexPay}
                   disabled={syncingDexPay}

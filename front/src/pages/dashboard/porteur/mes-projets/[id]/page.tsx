@@ -3,8 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import {
-  fetchProjectDetail,
+  fetchOwnerProjectDetail,
   type FundingRound,
   type ProjectDocument,
   type ProjectHistoryItem,
@@ -17,6 +18,7 @@ import { openHtmlPreview } from '@/lib/downloads';
 
 export default function PorteurProjetDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<ProjectRecord | null>(null);
@@ -25,17 +27,17 @@ export default function PorteurProjetDetailPage() {
   const [history, setHistory] = useState<ProjectHistoryItem[]>([]);
   const [partnerships, setPartnerships] = useState<ProjectPartnership[]>([]);
   const [rounds, setRounds] = useState<FundingRound[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'documents' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'documents' | 'history' | 'funding'>('overview');
 
   const loadDetail = useCallback(async () => {
-    if (!id) {
+    if (!id || !user?.id) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const payload = await fetchProjectDetail(Number(id));
+      const payload = await fetchOwnerProjectDetail(user.id, Number(id));
       setProject(payload.project);
       setMilestones(payload.milestones);
       setDocuments(payload.documents);
@@ -44,11 +46,11 @@ export default function PorteurProjetDetailPage() {
       setRounds(payload.rounds);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de charger le detail du projet.');
+      error('Erreur', 'Impossible de charger le detail de ce projet.');
     } finally {
       setLoading(false);
     }
-  }, [error, id]);
+  }, [error, id, user?.id]);
 
   useEffect(() => {
     loadDetail();
@@ -91,7 +93,7 @@ export default function PorteurProjetDetailPage() {
         <div className="max-w-5xl mx-auto">
           <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Porteur', path: '/dashboard/porteur' }, { label: 'Mes projets', path: '/dashboard/porteur/mes-projets' }, { label: 'Detail' }]} />
           <div className="py-20 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Projet introuvable</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Projet indisponible</h2>
             <Link to="/dashboard/porteur/mes-projets" className="inline-flex px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
               Retour aux projets
             </Link>
@@ -121,7 +123,7 @@ export default function PorteurProjetDetailPage() {
                     <h1 className="text-3xl font-bold text-gray-900">{project.title}</h1>
                     <p className="text-gray-600 mt-2">{project.description}</p>
                   </div>
-                  <Link to="/dashboard/porteur/financements" className="px-4 py-2 rounded-lg bg-[#14B8A6] text-white text-sm font-medium hover:bg-[#0D9488]">
+                  <Link to="/dashboard/porteur/financements" className="px-4 py-2 rounded-lg bg-[#5fa6f3] text-white text-sm font-medium hover:bg-[#27346b]">
                     Voir les financements
                   </Link>
                 </div>
@@ -158,13 +160,14 @@ export default function PorteurProjetDetailPage() {
                 {[
                   ['overview', 'Vue generale'],
                   ['milestones', 'Jalons'],
+                  ['funding', 'Financement'],
                   ['documents', 'Documents'],
                   ['history', 'Historique'],
                 ].map(([key, label]) => (
                   <button
                     key={key}
                     onClick={() => setActiveTab(key as typeof activeTab)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === key ? 'bg-[#14B8A6] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === key ? 'bg-[#5fa6f3] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
                   >
                     {label}
                   </button>
@@ -243,6 +246,39 @@ export default function PorteurProjetDetailPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {activeTab === 'funding' && (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {rounds.length ? rounds.map((round) => (
+                      <div key={round.id} className="rounded-xl border border-gray-200 p-5">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-gray-900">{round.type}</p>
+                            <p className="text-sm text-gray-600">{round.description || 'Tour de financement en cours de structuration.'}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${round.status === 'termine' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {round.status}
+                          </span>
+                        </div>
+                        <div className="mb-3 grid grid-cols-2 gap-3">
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="text-xs text-gray-500">Objectif</p>
+                            <p className="font-semibold text-gray-900">{formatCurrency(round.target_amount)}</p>
+                          </div>
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="text-xs text-gray-500">Leve</p>
+                            <p className="font-semibold text-gray-900">{formatCurrency(round.raised_amount)}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500">Echeance : {formatDate(round.deadline)}</p>
+                      </div>
+                    )) : (
+                      <div className="rounded-xl border border-dashed border-gray-300 p-6 text-sm text-gray-500 lg:col-span-2">
+                        Aucun tour de financement n’est encore rattache a ce projet.
+                      </div>
+                    )}
                   </div>
                 )}
 

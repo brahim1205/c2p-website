@@ -18,7 +18,7 @@ export class UserService {
     return this.createUserUseCase.execute(data);
   }
 
-  async getById(id: number) {
+  async getById(id: string) {
     const user = await this.getUserUseCase.execute(id);
     if (!user) {
       throw new NotFoundException('User not found');

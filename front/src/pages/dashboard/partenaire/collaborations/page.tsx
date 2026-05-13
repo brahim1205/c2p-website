@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
-import { backendClient } from '@/lib/backendClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { fetchCollaborations, type Collaboration } from '@/lib/projectApi';
+import { fetchCollaborations, type Collaboration, updatePartnerCollaboration } from '@/lib/projectApi';
 import { formatCurrency } from '@/lib/formatters';
+
+function getPartnerTypeLabel(type: string | null | undefined) {
+  return type === 'technique' ? 'Technique' : 'Financier';
+}
 
 export default function PartenaireCollaborationsPage() {
   const { user } = useAuth();
@@ -44,9 +48,9 @@ export default function PartenaireCollaborationsPage() {
   }, [collaborations, search, statusFilter]);
 
   const updateCollaboration = async (collaboration: Collaboration, patch: Partial<Collaboration>) => {
+    if (!user?.id) return;
     try {
-      const { error: apiError } = await backendClient.from('project_collaborations').update(patch).eq('id', collaboration.id);
-      if (apiError) throw new Error(apiError.message);
+      await updatePartnerCollaboration(user.id, collaboration.id, patch);
       success('Collaboration mise a jour', 'La collaboration a ete actualisee.');
       loadCollaborations();
     } catch (err) {
@@ -56,6 +60,8 @@ export default function PartenaireCollaborationsPage() {
   };
 
   const engagedAmount = collaborations.reduce((sum, collaboration) => sum + Number(collaboration.value || 0), 0);
+  const canSchedulePoint = (collaboration: Collaboration) => collaboration.status !== 'termine';
+  const canCloseCollaboration = (collaboration: Collaboration) => collaboration.status !== 'termine';
 
   return (
     <DashboardLayout>
@@ -76,10 +82,10 @@ export default function PartenaireCollaborationsPage() {
 
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-3">
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher une collaboration..." className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#14B8A6] focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20" />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher une collaboration..." className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20" />
             <div className="flex gap-2">
               {['tous', 'actif', 'en_negociation', 'termine'].map((status) => (
-                <button key={status} onClick={() => setStatusFilter(status)} className={`px-3 py-2 rounded-lg text-sm font-medium ${statusFilter === status ? 'bg-[#14B8A6] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                <button key={status} onClick={() => setStatusFilter(status)} className={`px-3 py-2 rounded-lg text-sm font-medium ${statusFilter === status ? 'bg-[#5fa6f3] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                   {status === 'tous' ? 'Tous' : status}
                 </button>
               ))}
@@ -90,14 +96,17 @@ export default function PartenaireCollaborationsPage() {
         <div className="space-y-4">
           {loading && <p className="text-sm text-gray-500">Chargement des collaborations...</p>}
           {!loading && filteredCollaborations.map((collaboration) => (
-            <div key={collaboration.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:border-[#14B8A6] transition-colors">
+            <div key={collaboration.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:border-[#5fa6f3] transition-colors">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-4">
                 <div>
                   <h3 className="font-semibold text-gray-900">{collaboration.project_title}</h3>
                   <p className="text-sm text-gray-500">{collaboration.counterpart_name} · {collaboration.counterpart_role}</p>
+                  <span className="mt-2 inline-flex rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700">
+                    Partenaire {getPartnerTypeLabel(collaboration.partner_type)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${collaboration.type === 'financement' ? 'bg-green-100 text-green-700' : collaboration.type === 'mentorat' ? 'bg-blue-100 text-blue-700' : collaboration.type === 'technique' ? 'bg-[#14B8A6]/10 text-[#14B8A6]' : 'bg-yellow-100 text-yellow-700'}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${collaboration.type === 'financement' ? 'bg-green-100 text-green-700' : collaboration.type === 'mentorat' ? 'bg-blue-100 text-blue-700' : collaboration.type === 'technique' ? 'bg-[#5fa6f3]/10 text-[#5fa6f3]' : 'bg-yellow-100 text-yellow-700'}`}>
                     {collaboration.type}
                   </span>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${collaboration.status === 'actif' ? 'bg-blue-100 text-blue-700' : collaboration.status === 'en_negociation' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
@@ -120,11 +129,18 @@ export default function PartenaireCollaborationsPage() {
               </div>
 
               <div className="flex gap-2">
-                <button onClick={() => updateCollaboration(collaboration, { meetings: collaboration.meetings + 1 })} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <Link to={`/dashboard/partenaire/projets-suivis/${collaboration.project_id}`} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Voir le projet
+                </Link>
+                <button
+                  onClick={() => updateCollaboration(collaboration, { meetings: collaboration.meetings + 1 })}
+                  disabled={!canSchedulePoint(collaboration)}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
                   Programmer un point
                 </button>
-                {collaboration.status !== 'termine' && (
-                  <button onClick={() => updateCollaboration(collaboration, { status: 'termine', end_date: new Date().toISOString().slice(0, 10) })} className="px-4 py-2 rounded-lg bg-[#14B8A6] text-white text-sm font-medium hover:bg-[#0D9488]">
+                {canCloseCollaboration(collaboration) && (
+                  <button onClick={() => updateCollaboration(collaboration, { status: 'termine', end_date: new Date().toISOString().slice(0, 10) })} className="px-4 py-2 rounded-lg bg-[#5fa6f3] text-white text-sm font-medium hover:bg-[#27346b]">
                     Marquer terminee
                   </button>
                 )}

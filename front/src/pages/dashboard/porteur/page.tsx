@@ -2,19 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
-import GlobalSearch from '../components/GlobalSearch';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { fetchFundingRoundsForOwner, fetchOwnerProjects, fetchPartnershipsForOwner, type FundingRound, type ProjectPartnership, type ProjectRecord } from '@/lib/projectApi';
+import { fetchOwnerDashboardSnapshot, type FundingRound, type ProjectPartnership, type ProjectRecord } from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
+import { fetchFinanceSnapshot, type FinanceSnapshot } from '@/lib/saasApi';
 
 export default function PorteurDashboardPage() {
   const { user } = useAuth();
   const { error } = useToast();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [partnerships, setPartnerships] = useState<ProjectPartnership[]>([]);
   const [rounds, setRounds] = useState<FundingRound[]>([]);
+  const [finance, setFinance] = useState<FinanceSnapshot | null>(null);
+  const subscriptionGate = gateFor('project_manage');
 
   const loadDashboard = useCallback(async () => {
     if (!user?.id) {
@@ -24,21 +29,21 @@ export default function PorteurDashboardPage() {
 
     setLoading(true);
     try {
-      const [projectsData, partnershipsData, roundsData] = await Promise.all([
-        fetchOwnerProjects(user.id),
-        fetchPartnershipsForOwner(user.id),
-        fetchFundingRoundsForOwner(user.id),
+      const [snapshot, financeSnapshot] = await Promise.all([
+        fetchOwnerDashboardSnapshot(user.id),
+        fetchFinanceSnapshot(user.id, user.role),
       ]);
-      setProjects(projectsData);
-      setPartnerships(partnershipsData);
-      setRounds(roundsData);
+      setProjects(snapshot.projects);
+      setPartnerships(snapshot.partnerships);
+      setRounds(snapshot.rounds);
+      setFinance(financeSnapshot);
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de charger les donnees porteur.');
     } finally {
       setLoading(false);
     }
-  }, [error, user?.id]);
+  }, [error, user?.id, user?.role]);
 
   useEffect(() => {
     loadDashboard();
@@ -48,14 +53,47 @@ export default function PorteurDashboardPage() {
     const totalFunding = projects.reduce((sum, project) => sum + Number(project.funding || 0), 0);
     const totalGoal = projects.reduce((sum, project) => sum + Number(project.funding_goal || 0), 0);
     return [
-      { label: 'Projets soumis', value: projects.length, icon: 'ri-file-list-line', color: 'bg-green-500' },
-      { label: 'En incubation', value: projects.filter((project) => project.status === 'incubation').length, icon: 'ri-seedling-line', color: 'bg-teal-500' },
-      { label: 'Mentors assignes', value: partnerships.filter((partner) => partner.type === 'mentor').length, icon: 'ri-user-star-line', color: 'bg-purple-500' },
-      { label: 'Financement obtenu', value: totalGoal > 0 ? `${Math.round((totalFunding / totalGoal) * 100)}%` : '0%', icon: 'ri-funds-line', color: 'bg-[#14B8A6]', helper: formatShortCurrency(totalFunding) },
+      {
+        label: 'Projets suivis',
+        value: String(projects.length),
+        detail: `${projects.filter((project) => project.status === 'incubation').length} en incubation`,
+        icon: 'ri-file-list-line',
+        surface: 'bg-emerald-50 text-emerald-700',
+      },
+      {
+        label: 'Mentors assignés',
+        value: String(partnerships.filter((partner) => partner.type === 'mentor').length),
+        detail: `${partnerships.length} relation(s) actives`,
+        icon: 'ri-user-star-line',
+        surface: 'bg-violet-50 text-violet-700',
+      },
+      {
+        label: 'Financement obtenu',
+        value: formatShortCurrency(totalFunding),
+        detail: `${totalGoal > 0 ? Math.round((totalFunding / totalGoal) * 100) : 0}% de l'objectif`,
+        icon: 'ri-funds-line',
+        surface: 'bg-teal-50 text-teal-700',
+      },
+      {
+        label: 'Levées en cours',
+        value: String(rounds.filter((round) => round.status !== 'termine').length),
+        detail: `${rounds.length} cycle(s) au total`,
+        icon: 'ri-line-chart-line',
+        surface: 'bg-amber-50 text-amber-700',
+      },
     ];
-  }, [partnerships, projects]);
+  }, [partnerships, projects, rounds]);
 
   const mentors = partnerships.filter((partner) => partner.type === 'mentor').slice(0, 3);
+  const quickLinks = [
+    { label: 'Soumettre un projet', icon: 'ri-add-circle-line', link: '/project-center/soumettre', tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Mes projets', icon: 'ri-folder-line', link: '/dashboard/porteur/mes-projets', tone: 'bg-sky-50 text-sky-700' },
+    { label: 'Partenariats', icon: 'ri-team-line', link: '/dashboard/porteur/partenariats', tone: 'bg-violet-50 text-violet-700' },
+    { label: 'Financements', icon: 'ri-funds-line', link: '/dashboard/porteur/financements', tone: 'bg-teal-50 text-teal-700' },
+    { label: 'Messagerie', icon: 'ri-message-3-line', link: '/dashboard/messages', tone: 'bg-amber-50 text-amber-700' },
+  ];
+
+  const activeSubscription = finance?.subscriptions.find((entry) => entry.status === 'active') ?? null;
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -73,42 +111,97 @@ export default function PorteurDashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Porteur de projet' }]} />
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord Porteur de projet</h1>
-          <p className="text-gray-600">Pilotage des projets, partenariats et financements en cours.</p>
-        </div>
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-emerald-600">Espace porteur</p>
+            <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
+              Bonjour, {user?.firstName || 'Porteur'} <span className="align-middle">👋</span>
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-gray-600 md:text-base">
+              Concentrez-vous sur vos projets, vos mentors et vos tours de financement avec une vue claire.
+            </p>
+          </div>
+        </section>
 
-        <GlobalSearch context="porteur" />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center text-white`}>
+            <div key={stat.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">{stat.label}</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="mt-2 text-sm text-gray-500">{stat.detail}</p>
+                </div>
+                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${stat.surface}`}>
                   <i className={`${stat.icon} text-xl`}></i>
                 </div>
-                {'helper' in stat && stat.helper ? <span className="text-xs text-gray-500">{stat.helper}</span> : null}
               </div>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
-              <p className="text-sm text-gray-600">{stat.label}</p>
             </div>
           ))}
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <section className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+            <p className="text-sm text-gray-500">Abonnement incubation</p>
+            <p className="mt-2 text-xl font-bold text-gray-900">{activeSubscription?.plan_name || 'Aucun plan actif'}</p>
+            <p className="mt-2 text-sm text-gray-500">
+              {activeSubscription ? `Renouvellement ${new Date(activeSubscription.renews_at).toLocaleDateString('fr-FR')}` : 'Choisissez un plan pour accéder au coaching, au suivi et aux services premium C2P.'}
+            </p>
+          </div>
+          <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+            <p className="text-sm text-gray-500">Wallet disponible</p>
+            <p className="mt-2 text-xl font-bold text-gray-900">{formatCurrency(Number(finance?.wallet?.available_balance ?? finance?.wallet?.balance ?? 0))}</p>
+            <p className="mt-2 text-sm text-gray-500">Retraits en attente {formatCurrency(Number(finance?.wallet?.pending_payout_amount ?? 0))}</p>
+          </div>
+          <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+            <p className="text-sm text-gray-500">Frais et services C2P</p>
+            <p className="mt-2 text-xl font-bold text-gray-900">{formatCurrency((finance?.commissionEntries || []).reduce((sum, entry) => sum + Number(entry.amount || 0), 0))}</p>
+            <p className="mt-2 text-sm text-gray-500">Dossiers, abonnement et services premium déjà facturés.</p>
+          </div>
+        </section>
+
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">Accès rapide</h2>
+            <Link to="/dashboard/porteur/mes-projets" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
+              Ouvrir mes projets
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+            {quickLinks.map((action) => (
+              <Link
+                key={action.link}
+                to={action.link}
+                className={`rounded-2xl border border-transparent px-4 py-4 transition-all hover:border-gray-200 hover:bg-white ${action.tone}`}
+              >
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white">
+                  <i className={`${action.icon} text-lg`}></i>
+                </div>
+                <p className="text-sm font-medium">{action.label}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr,1fr]">
+          <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900">Mes projets</h2>
-              <Link to="/dashboard/porteur/mes-projets" className="text-sm font-medium text-green-600 hover:text-green-700">Voir tout</Link>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Mes projets</h2>
+                <p className="text-sm text-gray-500">Les dossiers à suivre en priorité et leur avancement.</p>
+              </div>
+              <Link to="/dashboard/porteur/mes-projets" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">Voir tout</Link>
             </div>
 
             <div className="space-y-4">
               {loading && <p className="text-sm text-gray-500">Chargement des projets...</p>}
               {!loading && projects.slice(0, 3).map((project) => (
-                <div key={project.id} className="p-4 border border-gray-200 rounded-lg hover:border-green-300 transition-colors">
+                <div key={project.id} className="rounded-2xl border border-gray-200 p-4 transition-colors hover:border-emerald-300">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-gray-900">{project.title}</h3>
@@ -133,75 +226,57 @@ export default function PorteurDashboardPage() {
             </div>
           </section>
 
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900">Mentors et partenaires</h2>
-              <span className="text-sm text-gray-500">{partnerships.length} relation(s)</span>
-            </div>
+          <div className="space-y-6">
+            <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-gray-900">Mentors et partenaires</h2>
+                <span className="text-sm text-gray-500">{partnerships.length} relation(s)</span>
+              </div>
 
-            <div className="space-y-4">
-              {loading && <p className="text-sm text-gray-500">Chargement des partenaires...</p>}
-              {!loading && mentors.map((mentor) => (
-                <div key={mentor.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <img src={mentor.avatar} alt={mentor.name} className="w-12 h-12 rounded-full object-cover" />
-                    <div>
-                      <h3 className="font-medium text-gray-900">{mentor.name}</h3>
-                      <p className="text-sm text-gray-600">{mentor.role}</p>
+              <div className="space-y-4">
+                {loading && <p className="text-sm text-gray-500">Chargement des partenaires...</p>}
+                {!loading && mentors.map((mentor) => (
+                  <div key={mentor.id} className="flex items-center justify-between rounded-2xl border border-gray-200 p-4">
+                    <div className="flex items-center gap-4">
+                      <img src={mentor.avatar} alt={mentor.name} className="h-12 w-12 rounded-full object-cover" />
+                      <div>
+                        <h3 className="font-medium text-gray-900">{mentor.name}</h3>
+                        <p className="text-sm text-gray-600">{mentor.role}</p>
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      mentor.status === 'actif' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {mentor.status === 'actif' ? 'Actif' : 'En attente'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-gray-900">Levées de fonds en cours</h2>
+                <Link to="/dashboard/porteur/financements" className="text-sm font-medium text-teal-600 hover:text-teal-700">Voir tout</Link>
+              </div>
+              <div className="space-y-4">
+                {rounds.slice(0, 3).map((round) => (
+                  <div key={round.id} className="rounded-2xl border border-gray-200 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="font-medium text-gray-900">{round.project_title}</p>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${round.status === 'termine' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {round.status === 'termine' ? 'Terminé' : 'En cours'}
+                      </span>
+                    </div>
+                    <p className="mb-3 text-sm text-gray-600">{round.type}</p>
+                    <p className="mb-2 text-sm font-medium text-gray-900">{formatCurrency(round.raised_amount)} / {formatShortCurrency(round.target_amount)}</p>
+                    <div className="h-2 w-full rounded-full bg-gray-200">
+                      <div className="h-2 rounded-full bg-teal-500" style={{ width: `${round.progress_percent || 0}%` }}></div>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    mentor.status === 'actif' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {mentor.status === 'actif' ? 'Actif' : 'En attente'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg lg:text-xl font-bold text-gray-900">Levees de fonds en cours</h2>
-            <Link to="/dashboard/porteur/financements" className="text-sm font-medium text-[#14B8A6] hover:text-[#0D9488]">Voir tout</Link>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-3">
-            {rounds.slice(0, 3).map((round) => (
-              <div key={round.id} className="rounded-xl border border-gray-200 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-medium text-gray-900">{round.project_title}</p>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${round.status === 'termine' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                    {round.status === 'termine' ? 'Termine' : 'En cours'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">{round.type}</p>
-                <p className="text-sm font-medium text-gray-900 mb-2">{formatCurrency(round.raised_amount)} / {formatShortCurrency(round.target_amount)}</p>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-[#14B8A6] h-2 rounded-full" style={{ width: `${round.progress_percent || 0}%` }}></div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {[
-              { label: 'Soumettre un projet', icon: 'ri-add-circle-line', link: '/project-center/soumettre', tone: 'text-green-600 bg-green-100' },
-              { label: 'Mes projets', icon: 'ri-folder-line', link: '/dashboard/porteur/mes-projets', tone: 'text-blue-600 bg-blue-100' },
-              { label: 'Partenariats', icon: 'ri-team-line', link: '/dashboard/porteur/partenariats', tone: 'text-purple-600 bg-purple-100' },
-              { label: 'Financements', icon: 'ri-funds-line', link: '/dashboard/porteur/financements', tone: 'text-[#14B8A6] bg-[#14B8A6]/10' },
-              { label: 'Messagerie', icon: 'ri-message-3-line', link: '/dashboard/messages', tone: 'text-yellow-600 bg-yellow-100' },
-            ].map((action) => (
-              <Link key={action.link} to={action.link} className="p-4 border-2 border-gray-200 rounded-lg hover:border-green-300 transition-all text-center">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 ${action.tone}`}>
-                  <i className={`${action.icon} text-xl`}></i>
-                </div>
-                <p className="font-medium text-gray-900 text-sm">{action.label}</p>
-              </Link>
-            ))}
+            </section>
           </div>
         </div>
       </div>

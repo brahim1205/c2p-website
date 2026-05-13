@@ -1,6 +1,17 @@
 import { apiRequest } from './api';
 import type { AuthUser } from './roles';
 
+export interface DirectoryUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  status: string;
+  avatar?: string;
+  publicTitle?: string;
+  expertVerified?: boolean;
+}
+
 export interface SecuritySession {
   id: string;
   userId: string;
@@ -33,7 +44,7 @@ export async function fetchUsers() {
 }
 
 export async function fetchDirectoryUsers() {
-  return apiRequest<(AuthUser & { status: string; bio?: string; location?: string })[]>('/auth/directory');
+  return apiRequest<DirectoryUser[]>('/auth/directory');
 }
 
 export async function updateManagedUser(

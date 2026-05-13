@@ -4,13 +4,17 @@ import {
   Get,
   Post,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
-import { AuthService } from '../auth/auth.service.js';
 import { CommunicationsService } from './communications.service.js';
 import { EmailService } from './email.service.js';
+import { buildOutboxEvent } from '../outbox/outbox-contract.js';
+import { OutboxService } from '../outbox/outbox.service.js';
 import { SmsService } from './sms.service.js';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
+import { PermissionGuard } from '../auth/permission.guard.js';
+import { RequirePermission } from '../auth/require-permission.decorator.js';
 import {
   dispatchCampaignSchema,
   emailTestSchema,
@@ -21,23 +25,23 @@ import {
 } from './dto/communications.dto.js';
 
 @Controller('communications')
+@UseGuards(PermissionGuard)
+@RequirePermission('communications.manage')
 export class CommunicationsController {
   constructor(
-    private readonly authService: AuthService,
     private readonly communicationsService: CommunicationsService,
     private readonly smsService: SmsService,
     private readonly emailService: EmailService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   @Get('sms/status')
-  async getSmsStatus(@Req() request: AuthenticatedRequest) {
-    this.authService.requireRole(request, ['admin']);
+  async getSmsStatus(@Req() _request: AuthenticatedRequest) {
     return this.smsService.getStatus();
   }
 
   @Get('email/status')
-  async getEmailStatus(@Req() request: AuthenticatedRequest) {
-    this.authService.requireRole(request, ['admin']);
+  async getEmailStatus(@Req() _request: AuthenticatedRequest) {
     return this.emailService.getStatus();
   }
 
@@ -46,18 +50,25 @@ export class CommunicationsController {
     @Req() request: AuthenticatedRequest,
     @Body(new ZodValidationPipe(smsTestSchema)) payload: SmsTestDto,
   ) {
-    const actor = this.authService.requireRole(request, ['admin']);
-    const result = await this.smsService.send({
-      phone: payload.phone,
-      message: payload.message,
-      purpose: 'admin-test',
-      userId: actor.id,
-    });
+    const actor = request.auth!.user;
+    const event = await this.outboxService.enqueue(buildOutboxEvent({
+      eventType: 'communications.sms.send',
+      aggregateId: actor.id,
+      actorId: actor.id,
+      payload: {
+        recipients: [{ userId: actor.id, phone: payload.phone }],
+        message: payload.message,
+        purpose: 'admin-test',
+      },
+      metadata: { channel: 'sms-test' },
+    }));
 
     return {
-      ok: result.accepted,
-      provider: result.provider,
-      providerMessageId: result.providerMessageId ?? null,
+      ok: true,
+      queued: true,
+      provider: this.smsService.getStatus().provider,
+      providerMessageId: null,
+      outboxEventId: event.id,
     };
   }
 
@@ -66,19 +77,26 @@ export class CommunicationsController {
     @Req() request: AuthenticatedRequest,
     @Body(new ZodValidationPipe(emailTestSchema)) payload: EmailTestDto,
   ) {
-    const actor = this.authService.requireRole(request, ['admin']);
-    const result = await this.emailService.send({
-      to: payload.email,
-      subject: payload.subject,
-      text: payload.message,
-      purpose: 'admin-test',
-      userId: actor.id,
-    });
+    const actor = request.auth!.user;
+    const event = await this.outboxService.enqueue(buildOutboxEvent({
+      eventType: 'communications.email.send',
+      aggregateId: actor.id,
+      actorId: actor.id,
+      payload: {
+        recipients: [{ userId: actor.id, email: payload.email }],
+        subject: payload.subject,
+        message: payload.message,
+        purpose: 'admin-test',
+      },
+      metadata: { channel: 'email-test' },
+    }));
 
     return {
-      ok: result.accepted,
-      provider: result.provider,
-      providerMessageId: result.providerMessageId ?? null,
+      ok: true,
+      queued: true,
+      provider: this.emailService.getStatus().provider,
+      providerMessageId: null,
+      outboxEventId: event.id,
     };
   }
 
@@ -87,7 +105,7 @@ export class CommunicationsController {
     @Req() request: AuthenticatedRequest,
     @Body(new ZodValidationPipe(dispatchCampaignSchema)) payload: DispatchCampaignDto,
   ) {
-    const actor = this.authService.requireRole(request, ['admin']);
+    const actor = request.auth!.user;
     return this.communicationsService.dispatchCampaign(actor, payload);
   }
 }

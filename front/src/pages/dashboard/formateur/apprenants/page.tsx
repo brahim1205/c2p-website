@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { SkeletonList } from '@/components/base/Skeleton';
-import { backendClient } from '@/lib/backendClient';
+import {
+  fetchFormateurLearnerDetail,
+  fetchFormateurLearners,
+} from '@/lib/formateurDashboardApi';
 
 interface CourseOption {
   id: number;
@@ -175,6 +179,7 @@ function getCertificateBadge(status: string | undefined) {
 }
 
 export default function FormateurApprenantsPage() {
+  const { user } = useAuth();
   const { success, error } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -188,82 +193,75 @@ export default function FormateurApprenantsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [studentDetail, setStudentDetail] = useState<StudentDetail | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchStudents = useCallback(async () => {
-    setLoading(true);
+    if (!user?.id) {
+      if (isMountedRef.current) {
+        setStudents([]);
+        setCourses([]);
+        setLoading(false);
+      }
+      return;
+    }
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
     try {
-      const [studentsRes, coursesRes] = await Promise.all([
-        backendClient
-          .from('course_enrollments')
-          .select('*, courses(id, title, category, modules, duration, status)')
-          .order('last_active', { ascending: false }),
-        backendClient.from('courses').select('*').order('title', { ascending: true }),
-      ]);
+      const snapshot = await fetchFormateurLearners(user.id);
 
-      if (studentsRes.error) throw studentsRes.error;
-      if (coursesRes.error) throw coursesRes.error;
-
-      setStudents((studentsRes.data || []) as Enrollment[]);
-      setCourses(((coursesRes.data || []) as CourseOption[]).filter((course) => course.status !== 'archived'));
+      if (!isMountedRef.current) return;
+      setStudents(snapshot.enrollments as Enrollment[]);
+      setCourses((snapshot.courses as CourseOption[]).filter((course) => course.status !== 'archived'));
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de charger les apprenants.');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [error]);
+  }, [error, user?.id]);
 
   useEffect(() => {
-    fetchStudents();
+    void fetchStudents();
   }, [fetchStudents]);
 
   const loadStudentDetail = useCallback(async (student: Enrollment) => {
+    if (!user?.id) return;
     setSelectedStudent(student);
     setShowDetailModal(true);
     setDetailLoading(true);
     setStudentDetail(null);
 
     try {
-      const [enrollmentsRes, submissionsRes, certificatesRes] = await Promise.all([
-        backendClient
-          .from('course_enrollments')
-          .select('*, courses(id, title, category, modules, duration, status)')
-          .eq('student_id', student.student_id)
-          .order('progress', { ascending: false }),
-        backendClient.from('submissions').select('*').eq('student_id', student.student_id).order('submitted_at', { ascending: false }),
-        backendClient.from('certificates').select('*').eq('student_id', student.student_id).order('issued_at', { ascending: false }),
-      ]);
+      const detail = await fetchFormateurLearnerDetail(user.id, student.student_id);
 
-      if (enrollmentsRes.error) throw enrollmentsRes.error;
-      if (submissionsRes.error) throw submissionsRes.error;
-      if (certificatesRes.error) throw certificatesRes.error;
-
-      const examIds = Array.from(new Set(((submissionsRes.data || []) as Submission[]).map((submission) => submission.exam_id)));
-      const examsRes = examIds.length
-        ? await backendClient.from('exams').select('*').in('id', examIds)
-        : { data: [], error: null };
-
-      if (examsRes.error) throw examsRes.error;
-
-      const examsById = new Map<number, Exam>(((examsRes.data || []) as Exam[]).map((exam) => [exam.id, exam]));
-      const submissions = ((submissionsRes.data || []) as Submission[]).map((submission) => ({
-        ...submission,
-        exam: examsById.get(submission.exam_id) || null,
-      }));
-
+      if (!isMountedRef.current) return;
       setStudentDetail({
-        enrollments: (enrollmentsRes.data || []) as Enrollment[],
-        submissions,
-        certificates: (certificatesRes.data || []) as Certificate[],
+        enrollments: detail.enrollments as Enrollment[],
+        submissions: detail.submissions as Submission[],
+        certificates: detail.certificates as Certificate[],
       });
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de charger le détail de cet apprenant.');
       console.error(err);
       setStudentDetail({ enrollments: [], submissions: [], certificates: [] });
     } finally {
-      setDetailLoading(false);
+      if (isMountedRef.current) {
+        setDetailLoading(false);
+      }
     }
-  }, [error]);
+  }, [error, user?.id]);
 
   const filteredStudents = useMemo(() => students.filter((student) => {
     const matchesSearch =

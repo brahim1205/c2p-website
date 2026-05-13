@@ -1,0 +1,5 @@
+Reponse de synthese - Quiz acquisition
+
+1. Le cout d acquisition doit toujours etre lu avec la valeur vie client et le delai de retour.
+2. Une campagne performante se pilote par cohortes, pas seulement par clics.
+3. Les signaux prioritaires restent la qualite du lead, la conversion et la retention.

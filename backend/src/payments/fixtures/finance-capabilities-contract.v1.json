@@ -1,0 +1,52 @@
+{
+  "contractVersion": 1,
+  "machineVersion": 1,
+  "genericEndpoint": "/payments/capabilities/:entity/:entityId",
+  "legacyEntityEndpointsSupported": true,
+  "entities": [
+    "transaction",
+    "escrow",
+    "payout",
+    "subscription",
+    "invoice",
+    "provider_transaction",
+    "payment_intent",
+    "provider-transaction",
+    "payment-intent"
+  ],
+  "kinds": [
+    "transaction",
+    "escrow",
+    "payout",
+    "subscription",
+    "invoice",
+    "provider_transaction",
+    "payment_intent"
+  ],
+  "actions": [
+    "view",
+    "sync_provider",
+    "force_sync_provider",
+    "retry_transaction",
+    "refund_transaction",
+    "open_financial_context",
+    "open_linked_invoices",
+    "open_linked_transactions",
+    "release_escrow",
+    "refund_escrow",
+    "approve_payout",
+    "reject_payout",
+    "cancel_payout",
+    "mark_payout_paid",
+    "renew_subscription",
+    "cancel_subscription",
+    "download_invoice",
+    "mark_invoice_paid",
+    "mark_invoice_cancelled"
+  ],
+  "actorScopes": [
+    "admin",
+    "self",
+    "external"
+  ]
+}

@@ -4,24 +4,13 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { backendClient } from '@/lib/backendClient';
 import { formatDate, formatDateTime } from '@/lib/formatters';
 import { downloadSimplePdf } from '@/lib/downloads';
 import CertificateViewer, { type CertificateData } from '../../profile/components/CertificateViewer';
-
-interface Certificate {
-  id: number;
-  student_id: string;
-  title: string;
-  course_name: string | null;
-  final_grade: number | null;
-  grade: number | null;
-  status: string;
-  certificate_id: string | null;
-  certificate_number: string | null;
-  issued_at: string | null;
-  completion_date: string | null;
-}
+import {
+  fetchApprenantCertificates,
+  type ApprenantCertificate as Certificate,
+} from '@/lib/apprenantDashboardApi';
 
 function formatCertificateGrade(value: number | null) {
   return value != null ? `${value}` : '-';
@@ -45,13 +34,8 @@ export default function ApprenantCertificatsPage() {
 
     setLoading(true);
     try {
-      const { data, error: apiError } = await backendClient
-        .from('certificates')
-        .select('*')
-        .eq('student_id', user.id)
-        .order('created_at', { ascending: false });
-      if (apiError) throw new Error(apiError.message);
-      setCertificates((data as Certificate[]) || []);
+      const data = await fetchApprenantCertificates(user.id);
+      setCertificates(data);
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de charger vos certificats.');
@@ -131,7 +115,7 @@ export default function ApprenantCertificatsPage() {
             { label: 'Emis', value: stats.issued, icon: 'ri-award-line', color: 'bg-green-500' },
             { label: 'Prets', value: stats.ready, icon: 'ri-time-line', color: 'bg-amber-500' },
             { label: 'En attente', value: stats.pending, icon: 'ri-loader-4-line', color: 'bg-blue-500' },
-            { label: 'Note moyenne', value: stats.avgGrade, icon: 'ri-bar-chart-line', color: 'bg-[#14B8A6]' },
+            { label: 'Note moyenne', value: stats.avgGrade, icon: 'ri-bar-chart-line', color: 'bg-[#5fa6f3]' },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center gap-3">
@@ -153,7 +137,7 @@ export default function ApprenantCertificatsPage() {
               key={status}
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === status ? 'bg-[#14B8A6] text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                statusFilter === status ? 'bg-[#5fa6f3] text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
               }`}
             >
               {status === 'all' ? 'Tous' : status === 'issued' ? 'Emis' : status === 'ready' ? 'Prets' : 'En attente'}
@@ -213,7 +197,7 @@ export default function ApprenantCertificatsPage() {
                         </button>
                         <button
                           onClick={() => handleDownload(certificate)}
-                          className="px-3 py-1.5 rounded-lg bg-[#14B8A6] text-white text-xs font-medium hover:bg-[#0D9488]"
+                          className="px-3 py-1.5 rounded-lg bg-[#5fa6f3] text-white text-xs font-medium hover:bg-[#27346b]"
                         >
                           Telecharger
                         </button>
@@ -225,7 +209,7 @@ export default function ApprenantCertificatsPage() {
                 {!loading && filteredCertificates.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500">
-                      Aucun certificat pour ce filtre. <Link to="/dashboard/apprenant/mes-cours" className="text-[#14B8A6] font-medium">Voir mes formations</Link>
+                      Aucun certificat pour ce filtre. <Link to="/dashboard/apprenant/mes-cours" className="text-[#5fa6f3] font-medium">Voir mes formations</Link>
                     </td>
                   </tr>
                 )}

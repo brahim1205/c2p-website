@@ -3,6 +3,7 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { ConfigService } from '../config/config.service.js';
 import type { DexPayCheckoutDto } from './dto/dexpay.dto.js';
 
@@ -47,9 +48,26 @@ export interface DexPayCheckoutResult {
   order: DexPayOrder;
 }
 
+export interface DexPayStatusSnapshot {
+  provider: 'dexpay';
+  mode: 'live' | 'disabled';
+  enabled: boolean;
+  configured: boolean;
+  apiConfigured: boolean;
+  reachable?: boolean;
+  webhookSecretConfigured: boolean;
+  webhookVerification: 'strict' | 'skipped_no_secret';
+  baseUrlHost?: string | null;
+  business?: DexPayBusinessInfo;
+  lastCheckedAt: string;
+  errorCode?: string | null;
+}
+
 @Injectable()
 export class DexPayService {
   constructor(private readonly config: ConfigService) {}
+
+  readonly provider = 'dexpay' as const;
 
   isConfigured() {
     return Boolean(
@@ -61,26 +79,41 @@ export class DexPayService {
   }
 
   async getStatus() {
+    const lastCheckedAt = new Date().toISOString();
+    const apiConfigured = Boolean(
+      this.config.dexPayBaseUrl
+      && this.config.dexPayApiKey
+      && this.config.dexPayApiSecret,
+    );
+    const snapshot: DexPayStatusSnapshot = {
+      provider: 'dexpay',
+      mode: this.isConfigured() ? 'live' : 'disabled',
+      enabled: this.config.dexPayEnabled,
+      configured: this.isConfigured(),
+      apiConfigured,
+      webhookSecretConfigured: Boolean(this.config.dexPayWebhookSecret),
+      webhookVerification: this.config.dexPayWebhookSecret ? 'strict' : 'skipped_no_secret',
+      baseUrlHost: this.resolveBaseUrlHost(),
+      lastCheckedAt,
+      errorCode: null,
+    };
+
     if (!this.isConfigured()) {
-      return {
-        enabled: false,
-        configured: false,
-      };
+      return snapshot;
     }
 
     try {
       const business = await this.getBusinessInfo();
       return {
-        enabled: true,
-        configured: true,
+        ...snapshot,
         reachable: true,
         business,
       };
     } catch {
       return {
-        enabled: true,
-        configured: true,
+        ...snapshot,
         reachable: false,
+        errorCode: 'provider_unreachable',
       };
     }
   }
@@ -160,9 +193,41 @@ export class DexPayService {
     };
   }
 
+  verifyWebhookSignature(rawBody: Buffer | undefined, signature: string | undefined) {
+    const secret = this.config.dexPayWebhookSecret;
+    if (!secret) {
+      return { valid: true, reason: 'skipped_no_secret' as const };
+    }
+    if (!rawBody?.length || !signature?.trim()) {
+      return { valid: false, reason: 'missing_signature' as const };
+    }
+
+    const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+    const provided = signature.trim().toLowerCase().replace(/^sha256=/, '');
+    const expectedBuffer = Buffer.from(expected, 'utf8');
+    const providedBuffer = Buffer.from(provided, 'utf8');
+    if (expectedBuffer.length !== providedBuffer.length) {
+      return { valid: false, reason: 'signature_mismatch' as const };
+    }
+
+    const valid = timingSafeEqual(expectedBuffer, providedBuffer);
+    return {
+      valid,
+      reason: valid ? 'verified' as const : 'signature_mismatch' as const,
+    };
+  }
+
   private assertConfigured() {
     if (!this.isConfigured()) {
       throw new ServiceUnavailableException('Integration DexPay indisponible ou incomplete.');
+    }
+  }
+
+  private resolveBaseUrlHost() {
+    try {
+      return this.config.dexPayBaseUrl ? new URL(this.config.dexPayBaseUrl).host : null;
+    } catch {
+      return null;
     }
   }
 

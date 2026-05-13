@@ -73,6 +73,13 @@ const roleNavOverrides: Record<string, { label: string; icon: string; path: stri
     { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
     { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
   ],
+  parent: [
+    { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/parent' },
+    { label: 'Messagerie C2P', icon: 'ri-message-3-line', path: '/dashboard/messages' },
+    { label: 'Mon profil', icon: 'ri-user-line', path: '/dashboard/profile' },
+    { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
+    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
+  ],
   porteur: [
     { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/porteur' },
     { label: 'Mes projets', icon: 'ri-folder-line', path: '/dashboard/porteur/mes-projets' },
@@ -235,13 +242,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       onClick={() => setSidebarOpen(false)}
                       className={`group flex min-h-11 w-full items-center rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300 cursor-pointer
                         ${isActive
-                          ? 'bg-[#14B8A6]/10 text-[#14B8A6] shadow-sm'
+                          ? 'bg-[#5fa6f3]/10 text-[#5fa6f3] shadow-sm'
                           : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
                         }`}
                     >
                       <div className="flex min-w-0 items-center space-x-3">
                         <div className={`w-5 h-5 flex items-center justify-center transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
-                          <i className={`${item.icon} text-base ${isActive ? 'text-[#14B8A6]' : 'text-gray-500 group-hover:text-gray-700'}`}></i>
+                          <i className={`${item.icon} text-base ${isActive ? 'text-[#5fa6f3]' : 'text-gray-500 group-hover:text-gray-700'}`}></i>
                         </div>
                         <span className="truncate">{item.label}</span>
                       </div>

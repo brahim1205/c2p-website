@@ -11,6 +11,7 @@ import { MonitoringModule } from './monitoring/monitoring.module.js';
 import { PublicModule } from './public/public.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { CommunicationsModule } from './communications/communications.module.js';
+import { OutboxModule } from './outbox/outbox.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 
 @Module({
@@ -25,6 +26,7 @@ import { UploadsModule } from './uploads/uploads.module.js';
     PublicModule,
     PaymentsModule,
     CommunicationsModule,
+    OutboxModule,
     UploadsModule,
   ],
   controllers: [AppController],

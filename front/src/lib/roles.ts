@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'porteur' | 'partenaire';
+export type UserRole = 'admin' | 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'parent' | 'porteur' | 'partenaire';
 
 export interface SocialLinks {
   linkedin?: string;
@@ -62,10 +62,11 @@ export interface AuthUser {
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrateur',
-  client: 'Client',
+  client: 'Client / Prestateur',
   prestataire: 'Prestataire',
   formateur: 'Formateur',
   apprenant: 'Apprenant',
+  parent: 'Parent',
   porteur: 'Porteur de projet',
   partenaire: 'Partenaire',
 };
@@ -76,6 +77,7 @@ export const ROLE_DASHBOARD_PATHS: Record<UserRole, string> = {
   prestataire: '/dashboard/prestataire',
   formateur: '/dashboard/formateur',
   apprenant: '/dashboard/apprenant',
+  parent: '/dashboard/parent',
   porteur: '/dashboard/porteur',
   partenaire: '/dashboard/partenaire',
 };

@@ -3,15 +3,15 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 
 const slides = [
   {
-    image: 'https://readdy.ai/api/search-image?query=modern%20coworking%20space%20with%20young%20diverse%20african%20professionals%20collaborating%20on%20laptops%20and%20projects%20in%20bright%20contemporary%20office%20environment%20with%20natural%20lighting%20and%20innovative%20workspace%20design%20showing%20teamwork%20and%20professional%20development%20with%20warm%20tones%20teal%20accents&width=1920&height=1080&seq=c2p-hero-1&orientation=landscape',
+    image: '/images/home/hero.jpg',
     tagline: 'Votre carrière, notre mission'
   },
   {
-    image: 'https://readdy.ai/api/search-image?query=african%20business%20team%20meeting%20in%20modern%20conference%20room%20with%20large%20windows%20natural%20light%20discussing%20strategy%20and%20growth%20on%20whiteboard%20with%20laptops%20and%20coffee%20showing%20professional%20collaboration%20and%20innovation%20with%20teal%20color%20accents&width=1920&height=1080&seq=c2p-hero-2&orientation=landscape',
+    image: '/images/home/global.jpg',
     tagline: 'Formations de qualité, résultats concrets'
   },
   {
-    image: 'https://readdy.ai/api/search-image?query=young%20african%20entrepreneur%20presenting%20startup%20project%20on%20laptop%20to%20investors%20in%20modern%20innovation%20hub%20with%20bright%20lighting%20showing%20ambition%20and%20professional%20growth%20with%20contemporary%20design%20and%20warm%20teal%20accents&width=1920&height=1080&seq=c2p-hero-3&orientation=landscape',
+    image: '/images/home/venture.jpg',
     tagline: "De l'idée à l'entreprise"
   }
 ];
@@ -166,13 +166,13 @@ export default function HeroSection() {
       ))}
 
       {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#1a2b4a]/70 via-[#1a2b4a]/50 to-black/60"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-[#06053a]/70 via-[#06053a]/50 to-black/60"></div>
 
       {/* Animated decorative accents */}
       <div
         className="absolute top-[15%] right-[10%] w-[500px] h-[500px] rounded-full pointer-events-none animate-pulse-glow"
         style={{
-          background: 'radial-gradient(circle, rgba(20,184,166,0.12) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(95,166,243,0.12) 0%, transparent 70%)',
           transform: `translate(${mousePos.x * -0.2}px, ${mousePos.y * -0.2}px)`,
           transition: 'transform 0.3s ease-out',
         }}
@@ -180,7 +180,7 @@ export default function HeroSection() {
       <div
         className="absolute bottom-[20%] left-[5%] w-[400px] h-[400px] rounded-full pointer-events-none animate-pulse-glow"
         style={{
-          background: 'radial-gradient(circle, rgba(20,184,166,0.08) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(95,166,243,0.08) 0%, transparent 70%)',
           animationDelay: '2s',
           transform: `translate(${mousePos.x * -0.15}px, ${mousePos.y * -0.15}px)`,
           transition: 'transform 0.3s ease-out',
@@ -189,11 +189,11 @@ export default function HeroSection() {
 
       {/* Floating particles - hidden on mobile */}
       <div className="hidden sm:block">
-        <FloatingElement delay={0} size={8} top="20%" left="15%" color="rgba(20,184,166,0.4)" />
+        <FloatingElement delay={0} size={8} top="20%" left="15%" color="rgba(95,166,243,0.4)" />
         <FloatingElement delay={1.5} size={6} top="40%" left="80%" color="rgba(255,255,255,0.3)" />
-        <FloatingElement delay={3} size={10} top="60%" left="25%" color="rgba(20,184,166,0.3)" />
+        <FloatingElement delay={3} size={10} top="60%" left="25%" color="rgba(95,166,243,0.3)" />
         <FloatingElement delay={2} size={5} top="30%" left="60%" color="rgba(255,255,255,0.25)" />
-        <FloatingElement delay={4} size={7} top="75%" left="70%" color="rgba(20,184,166,0.35)" />
+        <FloatingElement delay={4} size={7} top="75%" left="70%" color="rgba(95,166,243,0.35)" />
         <FloatingElement delay={1} size={4} top="15%" left="45%" color="rgba(255,255,255,0.2)" />
       </div>
 
@@ -206,8 +206,8 @@ export default function HeroSection() {
               isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
             }`}
           >
-            <span className="inline-flex items-center gap-2 bg-[#14B8A6]/20 backdrop-blur-sm border border-[#14B8A6]/30 text-[#14B8A6] px-4 py-2.5 rounded-full text-sm font-medium">
-              <span className="w-2 h-2 bg-[#14B8A6] rounded-full animate-pulse"></span>
+            <span className="inline-flex items-center gap-2 bg-[#5fa6f3]/20 backdrop-blur-sm border border-[#5fa6f3]/30 text-[#5fa6f3] px-4 py-2.5 rounded-full text-sm font-medium">
+              <span className="w-2 h-2 bg-[#5fa6f3] rounded-full animate-pulse"></span>
               {slides[currentSlide].tagline}
             </span>
           </div>
@@ -221,9 +221,9 @@ export default function HeroSection() {
             <h1 className="text-white font-bold text-4xl sm:text-5xl lg:text-7xl leading-tight">
               Développez Votre<br />
               <span className="inline-flex items-baseline gap-3 flex-wrap">
-                <span className="text-[#14B8A6] relative">
+                <span className="text-[#5fa6f3] relative">
                   {typedText}
-                  <span className="absolute -right-1 top-0 h-full w-[3px] bg-[#14B8A6] animate-pulse"></span>
+                  <span className="absolute -right-1 top-0 h-full w-[3px] bg-[#5fa6f3] animate-pulse"></span>
                 </span>
               </span>
             </h1>
@@ -245,7 +245,7 @@ export default function HeroSection() {
           >
             <Link
               to="/auth/register"
-              className="group inline-flex items-center justify-center gap-3 bg-[#14B8A6] text-white px-8 py-4 rounded-xl font-semibold text-base hover:bg-[#0D9488] hover:scale-105 active:scale-95 transition-all duration-300 whitespace-nowrap shadow-lg shadow-[#14B8A6]/30 hover:shadow-[#14B8A6]/50"
+              className="group inline-flex items-center justify-center gap-3 bg-[#5fa6f3] text-white px-8 py-4 rounded-xl font-semibold text-base hover:bg-[#27346b] hover:scale-105 active:scale-95 transition-all duration-300 whitespace-nowrap shadow-lg shadow-[#5fa6f3]/30 hover:shadow-[#5fa6f3]/50"
             >
               <span>Commencer maintenant</span>
               <div className="w-5 h-5 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-1">
@@ -284,7 +284,7 @@ export default function HeroSection() {
             key={index}
             onClick={() => setCurrentSlide(index)}
             className={`h-1.5 rounded-full transition-all duration-500 ${
-              currentSlide === index ? 'w-10 bg-[#14B8A6]' : 'w-4 bg-white/40 hover:bg-white/60'
+              currentSlide === index ? 'w-10 bg-[#5fa6f3]' : 'w-4 bg-white/40 hover:bg-white/60'
             }`}
           />
         ))}

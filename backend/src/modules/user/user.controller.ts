@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { UserService } from './user.service.js';
 import { CreateUserDto, createUserSchema } from './dto/create-user.dto.js';
 import { UserResponseDto } from './dto/user-response.dto.js';
@@ -15,7 +15,7 @@ export class UserController {
   }
 
   @Get(':id')
-  async getById(@Param('id', ParseIntPipe) id: number) {
+  async getById(@Param('id') id: string) {
     const user = await this.userService.getById(id);
     return UserResponseDto.fromEntity(user);
   }

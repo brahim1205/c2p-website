@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { backendClient } from '@/lib/backendClient';
+import { fetchFormateurAnalytics } from '@/lib/formateurDashboardApi';
 import {
   Bar,
   BarChart,
@@ -45,7 +47,7 @@ interface AnalyticsSubmission {
   submitted_at?: string | null;
 }
 
-const chartColors = ['#14B8A6', '#0F766E', '#F59E0B', '#6366F1', '#EF4444'];
+const chartColors = ['#5fa6f3', '#0F766E', '#F59E0B', '#6366F1', '#EF4444'];
 
 function formatMonthKey(value: string) {
   const date = new Date(value);
@@ -59,36 +61,56 @@ function formatCurrency(value: number) {
 export default function FormateurAnalyticsPage() {
   const { user } = useAuth();
   const { error } = useToast();
+  const { gateFor, loading: subscriptionLoading } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<AnalyticsCourse[]>([]);
   const [enrollments, setEnrollments] = useState<AnalyticsEnrollment[]>([]);
   const [submissions, setSubmissions] = useState<AnalyticsSubmission[]>([]);
+  const isMountedRef = useRef(true);
+  const subscriptionGate = gateFor('trainer_analytics_view');
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadAnalytics = useCallback(async () => {
     if (!user?.id) {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
       return;
     }
-    setLoading(true);
+    if (!subscriptionLoading && !subscriptionGate.allowed) {
+      if (isMountedRef.current) {
+        setCourses([]);
+        setEnrollments([]);
+        setSubmissions([]);
+        setLoading(false);
+      }
+      return;
+    }
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
     try {
-      const [coursesRes, enrollmentsRes, submissionsRes] = await Promise.all([
-        backendClient.from<AnalyticsCourse>('courses').select('*').eq('instructor_id', user.id).order('updated_at', { ascending: false }),
-        backendClient.from<AnalyticsEnrollment>('course_enrollments').select('*').order('enrolled_at', { ascending: true }),
-        backendClient.from<AnalyticsSubmission>('submissions').select('*').order('submitted_at', { ascending: false }),
-      ]);
-      if (coursesRes.error) throw coursesRes.error;
-      if (enrollmentsRes.error) throw enrollmentsRes.error;
-      if (submissionsRes.error) throw submissionsRes.error;
-      setCourses(coursesRes.data || []);
-      setEnrollments(enrollmentsRes.data || []);
-      setSubmissions(submissionsRes.data || []);
+      const snapshot = await fetchFormateurAnalytics(user.id);
+      if (!isMountedRef.current) return;
+      setCourses(snapshot.courses as AnalyticsCourse[]);
+      setEnrollments(snapshot.enrollments as AnalyticsEnrollment[]);
+      setSubmissions(snapshot.submissions as AnalyticsSubmission[]);
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.error(err);
       error('Erreur', 'Impossible de charger les analytics formateur.');
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [error, user?.id]);
+  }, [error, subscriptionGate.allowed, subscriptionLoading, user?.id]);
 
   useEffect(() => {
     void loadAnalytics();
@@ -160,11 +182,25 @@ export default function FormateurAnalyticsPage() {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Formateur', path: '/dashboard/formateur' }, { label: 'Analytics' }]} />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Analytics formateur</h1>
           <p className="mt-2 text-gray-600">Ventes, revenus, vues, conversion, complétion et signaux d’abandon sur vos formations.</p>
         </div>
+
+        {!subscriptionLoading && !subscriptionGate.allowed ? (
+          <section className="rounded-xl border border-dashed border-amber-300 bg-white p-10 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
+              <i className="ri-line-chart-line text-2xl text-amber-600"></i>
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">Analytics réservés aux plans formateur actifs</h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm text-gray-600">
+              Activez ou renouvelez votre abonnement pour débloquer les tableaux de conversion, de revenus et de complétion.
+            </p>
+          </section>
+        ) : (
+          <>
 
         <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           {[
@@ -195,7 +231,7 @@ export default function FormateurAnalyticsPage() {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                  <Bar dataKey="revenue" radius={[8, 8, 0, 0]} fill="#14B8A6" />
+                  <Bar dataKey="revenue" radius={[8, 8, 0, 0]} fill="#5fa6f3" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -213,7 +249,7 @@ export default function FormateurAnalyticsPage() {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="conversion" stroke="#14B8A6" strokeWidth={3} />
+                  <Line type="monotone" dataKey="conversion" stroke="#5fa6f3" strokeWidth={3} />
                   <Line type="monotone" dataKey="completion" stroke="#6366F1" strokeWidth={3} />
                 </LineChart>
               </ResponsiveContainer>
@@ -282,6 +318,8 @@ export default function FormateurAnalyticsPage() {
             </div>
           </section>
         </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

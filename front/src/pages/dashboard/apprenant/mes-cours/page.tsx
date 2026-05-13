@@ -1,35 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { backendClient } from '@/lib/backendClient';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonCard } from '@/components/base/Skeleton';
 import GlobalSearch from '../../components/GlobalSearch';
-
-
-interface Enrollment {
-  id: number;
-  course_id: number;
-  student_name: string;
-  student_email: string | null;
-  progress: number;
-  grade: number | null;
-  status: string;
-  last_active: string;
-  enrolled_at: string;
-  courses: {
-    id: number;
-    title: string;
-    category: string;
-    description: string | null;
-    modules: number | null;
-    duration: string | null;
-    thumbnail: string | null;
-    price: number | null;
-  } | null;
-}
+import {
+  fetchApprenantEnrollments,
+  type ApprenantEnrollment as Enrollment,
+} from '@/lib/apprenantDashboardApi';
 
 export default function ApprenantCoursPage() {
   const { user } = useAuth();
@@ -47,13 +27,8 @@ export default function ApprenantCoursPage() {
         return;
       }
 
-      const { data, error: err } = await backendClient
-        .from('course_enrollments')
-        .select('*, courses(id, title, category, description, modules, duration, thumbnail, price)')
-        .eq('student_id', user.id)
-        .order('last_active', { ascending: false });
-      if (err) throw err;
-      setEnrollments(data || []);
+      const data = await fetchApprenantEnrollments(user.id);
+      setEnrollments(data);
     } catch (err) {
       console.error(err);
       setEnrollments([]);
@@ -100,7 +75,7 @@ export default function ApprenantCoursPage() {
 
   const getCourseImage = (course: Enrollment['courses']) => {
     if (course?.thumbnail) return course.thumbnail;
-    return 'https://readdy.ai/api/search-image?query=professional%20online%20course%20education%20digital%20learning%20with%20laptop%20and%20books%20in%20modern%20workspace%20with%20simple%20background&width=400&height=220&seq=course-default&orientation=landscape';
+    return '/images/home/academy.jpg';
   };
 
   const formatLastAccessed = (dateStr: string) => {

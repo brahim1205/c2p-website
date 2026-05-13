@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
-import GlobalSearch from '../components/GlobalSearch';
-import { backendClient } from '@/lib/backendClient';
+import type { FinanceSnapshot } from '@/lib/saasApi';
+import { fetchFormateurDashboardSnapshot } from '@/lib/formateurDashboardApi';
 import {
   courseStatusClasses,
   courseStatusLabels,
@@ -140,47 +142,57 @@ function getExamTypeLabel(type: string) {
 export default function FormateurDashboardPage() {
   const { user } = useAuth();
   const { error } = useToast();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Enrollment[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [finance, setFinance] = useState<FinanceSnapshot | null>(null);
+  const isMountedRef = useRef(true);
+  const subscriptionGate = gateFor('trainer_courses_manage');
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!user?.id) {
-      setCourses([]);
-      setStudents([]);
-      setExams([]);
-      setSubmissions([]);
-      setLoading(false);
+      if (isMountedRef.current) {
+        setCourses([]);
+        setStudents([]);
+        setExams([]);
+        setSubmissions([]);
+        setLoading(false);
+      }
       return;
     }
 
-    setLoading(true);
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
     try {
-      const [coursesRes, studentsRes, examsRes, submissionsRes] = await Promise.all([
-        backendClient.from('courses').select('*').eq('instructor_id', user.id).order('updated_at', { ascending: false }),
-        backendClient.from('course_enrollments').select('*').order('last_active', { ascending: false }),
-        backendClient.from('exams').select('*').order('exam_date', { ascending: false }),
-        backendClient.from('submissions').select('*').order('submitted_at', { ascending: false }),
-      ]);
+      const snapshot = await fetchFormateurDashboardSnapshot({ id: user.id, role: user.role });
 
-      if (coursesRes.error) throw coursesRes.error;
-      if (studentsRes.error) throw studentsRes.error;
-      if (examsRes.error) throw examsRes.error;
-      if (submissionsRes.error) throw submissionsRes.error;
-
-      setCourses((coursesRes.data || []) as Course[]);
-      setStudents((studentsRes.data || []) as Enrollment[]);
-      setExams((examsRes.data || []) as Exam[]);
-      setSubmissions((submissionsRes.data || []) as Submission[]);
+      if (!isMountedRef.current) return;
+      setCourses(snapshot.courses as Course[]);
+      setStudents(snapshot.students as Enrollment[]);
+      setExams(snapshot.exams as Exam[]);
+      setSubmissions(snapshot.submissions as Submission[]);
+      setFinance(snapshot.finance as FinanceSnapshot | null);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       error('Erreur', 'Impossible de charger les données du tableau de bord formateur.');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [error, user?.id]);
+  }, [error, user?.id, user?.role]);
 
   useEffect(() => {
     loadData();
@@ -286,78 +298,140 @@ export default function FormateurDashboardPage() {
   );
 
   const stats = [
-    { label: 'Cours publiés', value: String(publishedCount), icon: 'ri-presentation-line', color: 'bg-green-500' },
-    { label: 'Brouillons prêts', value: String(readyDraftCount), icon: 'ri-send-plane-line', color: 'bg-teal-500' },
-    { label: 'En révision', value: String(reviewCount), icon: 'ri-shield-check-line', color: 'bg-blue-500' },
-    { label: 'Quiz à configurer', value: String(quizsToConfigureCount), icon: 'ri-questionnaire-line', color: 'bg-amber-500' },
-    { label: 'Apprenants à relancer', value: String(new Set(atRiskEnrollments.map((student) => student.student_id)).size), icon: 'ri-alarm-warning-line', color: 'bg-red-500' },
-    { label: 'Corrections en attente', value: String(pendingCorrectionsCount), icon: 'ri-file-list-3-line', color: 'bg-violet-500' },
+    {
+      label: 'Cours publiés',
+      value: String(publishedCount),
+      detail: `${readyDraftCount} brouillon(s) prêts`,
+      icon: 'ri-presentation-line',
+      surface: 'bg-emerald-50 text-emerald-700',
+    },
+    {
+      label: 'En révision',
+      value: String(reviewCount),
+      detail: `${courseInsights.filter((course) => course.status === 'draft').length} brouillon(s) actifs`,
+      icon: 'ri-shield-check-line',
+      surface: 'bg-sky-50 text-sky-700',
+    },
+    {
+      label: 'Apprenants à relancer',
+      value: String(new Set(atRiskEnrollments.map((student) => student.student_id)).size),
+      detail: `${watchEnrollments.length} à surveiller`,
+      icon: 'ri-alarm-warning-line',
+      surface: 'bg-amber-50 text-amber-700',
+    },
+    {
+      label: 'Corrections en attente',
+      value: String(pendingCorrectionsCount),
+      detail: `${quizsToConfigureCount} quiz à finaliser`,
+      icon: 'ri-file-list-3-line',
+      surface: 'bg-violet-50 text-violet-700',
+    },
   ];
+
+  const quickLinks = [
+    { label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/formateur/mes-cours', tone: 'bg-teal-50 text-teal-700' },
+    { label: 'Programme', icon: 'ri-node-tree', path: latestUpdatedCourse ? `/dashboard/formateur/mes-cours/${latestUpdatedCourse.id}/programme` : '/dashboard/formateur/mes-cours', tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Apprenants', icon: 'ri-group-line', path: '/dashboard/formateur/apprenants', tone: 'bg-sky-50 text-sky-700' },
+    { label: 'Évaluations', icon: 'ri-file-list-3-line', path: '/dashboard/formateur/evaluations', tone: 'bg-amber-50 text-amber-700' },
+    { label: 'Revenus', icon: 'ri-wallet-3-line', path: '/dashboard/formateur/revenus', tone: 'bg-violet-50 text-violet-700' },
+    { label: 'Analytics', icon: 'ri-line-chart-line', path: '/dashboard/formateur/analytics', tone: 'bg-rose-50 text-rose-700' },
+  ];
+
+  const activeSubscription = finance?.subscriptions.find((entry) => entry.status === 'active') ?? null;
+  const activeFinanceEscrows = finance?.escrowCases.filter((entry) => ['assigned', 'in_progress', 'delivery_review'].includes(entry.status)) ?? [];
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Formateur' }]} />
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord Formateur</h1>
-          <p className="text-gray-600">Pilotez vos cours, la qualité pédagogique et les apprenants qui demandent une action.</p>
-        </div>
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-teal-600">Espace formateur</p>
+            <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
+              Bonjour, {user?.firstName || 'Formateur'} <span className="align-middle">👋</span>
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-gray-600 md:text-base">
+              Suivez la publication de vos cours, la charge pédagogique et les apprenants qui demandent une relance.
+            </p>
+          </div>
+        </section>
 
-        <GlobalSearch context="formateur" />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-8">
-            <SkeletonCard count={6} />
+          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <SkeletonCard count={4} />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-8">
+          <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             {stats.map((stat) => (
-              <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <i className={`${stat.icon} text-white text-sm`}></i>
-                    </div>
-                  </div>
+              <div key={stat.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xl font-bold text-gray-900">{stat.value}</p>
-                    <p className="text-xs text-gray-600">{stat.label}</p>
+                    <p className="text-sm text-gray-500">{stat.label}</p>
+                    <p className="mt-2 text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="mt-2 text-sm text-gray-500">{stat.detail}</p>
+                  </div>
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${stat.surface}`}>
+                    <i className={`${stat.icon} text-xl`}></i>
                   </div>
                 </div>
               </div>
             ))}
-          </div>
+          </section>
         )}
 
-        <section className="mb-8 rounded-xl border border-gray-200 bg-white p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-gray-900">Pilotage formateur</h2>
-            <p className="text-sm text-gray-500">Accès direct aux blocs que nous avons ajoutés: profil public, revenus, analytics et communauté.</p>
+        {!loading && (
+          <section className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <p className="text-sm text-gray-500">Abonnement formateur</p>
+              <p className="mt-2 text-xl font-bold text-gray-900">{activeSubscription?.plan_name || 'Aucun plan actif'}</p>
+              <p className="mt-2 text-sm text-gray-500">
+                {activeSubscription ? `Commission ${activeSubscription.commission_rate}% · renouvellement ${new Date(activeSubscription.renews_at).toLocaleDateString('fr-FR')}` : 'Activez un plan pour publier et monétiser dans de bonnes conditions.'}
+              </p>
+            </div>
+            <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <p className="text-sm text-gray-500">Wallet disponible</p>
+              <p className="mt-2 text-xl font-bold text-gray-900">{formatCurrency(Number(finance?.wallet?.available_balance ?? finance?.wallet?.balance ?? 0))}</p>
+              <p className="mt-2 text-sm text-gray-500">Retraits en attente {formatCurrency(Number(finance?.wallet?.pending_payout_amount ?? 0))}</p>
+            </div>
+            <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <p className="text-sm text-gray-500">Flux à superviser</p>
+              <p className="mt-2 text-xl font-bold text-gray-900">{activeFinanceEscrows.length}</p>
+              <p className="mt-2 text-sm text-gray-500">Net à libérer {formatCurrency(activeFinanceEscrows.reduce((sum, entry) => sum + Number(entry.provider_amount || 0), 0))}</p>
+            </div>
+          </section>
+        )}
+
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">Accès rapide</h2>
+            <Link to="/dashboard/formateur/profil-public" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+              Voir le profil public
+            </Link>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              { to: '/dashboard/formateur/profil-public', icon: 'ri-user-star-line', title: 'Profil public', description: 'Photo, bio, compétences, portfolio, vidéo et paiement.' },
-              { to: '/dashboard/formateur/revenus', icon: 'ri-wallet-3-line', title: 'Revenus', description: 'Comptes de retrait, disponible et historique des versements.' },
-              { to: '/dashboard/formateur/analytics', icon: 'ri-line-chart-line', title: 'Analytics', description: 'Ventes, vues, conversion, complétion et abandon.' },
-              { to: '/dashboard/formateur/communaute', icon: 'ri-chat-3-line', title: 'Communauté', description: 'Commentaires de leçons, réponses et FAQ de cours.' },
-            ].map((item) => (
-              <Link key={item.to} to={item.to} className="rounded-xl border border-gray-200 p-4 transition-colors hover:border-teal-300 hover:bg-teal-50/40">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+            {quickLinks.map((item) => (
+              <Link
+                key={`${item.label}-${item.path}`}
+                to={item.path}
+                className={`rounded-2xl border border-transparent px-4 py-4 transition-all hover:border-gray-200 hover:bg-white ${item.tone}`}
+              >
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white">
                   <i className={`${item.icon} text-lg`}></i>
                 </div>
-                <div className="font-semibold text-gray-900">{item.title}</div>
-                <p className="mt-2 text-sm text-gray-600">{item.description}</p>
+                <p className="text-sm font-medium">{item.label}</p>
               </Link>
             ))}
           </div>
         </section>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_0.9fr] gap-6 lg:gap-8 mb-8">
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg lg:text-xl font-bold text-gray-900">Pipeline de publication</h2>
+                <h2 className="text-lg font-bold text-gray-900">Pipeline de publication</h2>
                 <p className="text-sm text-gray-500">Les cours les plus proches d&apos;une action concrète.</p>
               </div>
               <Link to="/dashboard/formateur/mes-cours" className="text-sm font-medium text-teal-600 hover:text-teal-700">
@@ -453,10 +527,10 @@ export default function FormateurDashboardPage() {
             )}
           </section>
 
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg lg:text-xl font-bold text-gray-900">Apprenants à relancer</h2>
+                <h2 className="text-lg font-bold text-gray-900">Apprenants à relancer</h2>
                 <p className="text-sm text-gray-500">Visibilité directe sur les signaux d’attention.</p>
               </div>
               <Link to="/dashboard/formateur/apprenants" className="text-sm font-medium text-teal-600 hover:text-teal-700">
@@ -513,10 +587,10 @@ export default function FormateurDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6 lg:gap-8 mb-8">
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg lg:text-xl font-bold text-gray-900">Quiz & évaluations</h2>
+                <h2 className="text-lg font-bold text-gray-900">Quiz & évaluations</h2>
                 <p className="text-sm text-gray-500">Configuration des quiz et charge de correction.</p>
               </div>
               <Link to="/dashboard/formateur/evaluations" className="text-sm font-medium text-teal-600 hover:text-teal-700">
@@ -600,10 +674,10 @@ export default function FormateurDashboardPage() {
             )}
           </section>
 
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg lg:text-xl font-bold text-gray-900">Programme & contenus</h2>
+                <h2 className="text-lg font-bold text-gray-900">Programme & contenus</h2>
                 <p className="text-sm text-gray-500">Les améliorations pédagogiques visibles directement depuis l’accueil.</p>
               </div>
             </div>
@@ -717,9 +791,9 @@ export default function FormateurDashboardPage() {
           </section>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <h2 className="mb-6 text-lg font-bold text-gray-900">Compléments</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
             <Link to="/dashboard/formateur/mes-cours" className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 transition-all text-center">
               <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                 <div className="w-6 h-6 flex items-center justify-center">

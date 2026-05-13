@@ -1,5 +1,5 @@
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
-const DEFAULT_TIMEOUT_MS = 12000;
+const DEFAULT_TIMEOUT_MS = 30000;
 const GET_CACHE_TTL_MS = 1500;
 let lastRequestId: string | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
@@ -161,6 +161,14 @@ export async function apiRequest<T>(
         throw {
           message: 'La requete a expire. Veuillez reessayer.',
           status: 408,
+          code: 'REQUEST_TIMEOUT',
+          requestId: lastRequestId,
+        } satisfies ApiError;
+      }
+      if (error instanceof TypeError) {
+        throw {
+          message: 'Erreur reseau.',
+          code: 'NETWORK_ERROR',
           requestId: lastRequestId,
         } satisfies ApiError;
       }

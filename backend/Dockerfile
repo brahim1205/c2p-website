@@ -11,6 +11,11 @@ RUN npm ci
 COPY src ./src
 RUN npm run build
 
+FROM builder AS migrator
+ENV NODE_ENV=production
+USER node
+CMD ["npx", "prisma", "migrate", "deploy"]
+
 FROM ${NODE_ALPINE_BASE} AS runner
 WORKDIR /usr/src/app
 RUN apk add --no-cache \

@@ -1,7 +1,7 @@
 import { User } from '../domain/user.entity.js';
 
 export class UserResponseDto {
-  id: number;
+  id: string;
   email: string;
   firstName: string;
   lastName: string;

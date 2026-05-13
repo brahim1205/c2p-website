@@ -344,16 +344,16 @@ export function loadLeaderboard(): LeaderboardEntry[] {
   } catch { /* noop */ }
   // Seed demo data
   const demo: LeaderboardEntry[] = [
-    { id: 'user-1', name: 'Ibrahim Touré', avatar: 'https://readdy.ai/api/search-image?query=young%20african%20man%20student%20casual%20portrait%20smiling%20confident%20university%20campus%20background&width=40&height=40&seq=app-lb-ibrahim&orientation=squarish', xp: 3240, streak: 12, coursesCompleted: 2, lessonsCompleted: 45 },
-    { id: 'user-2', name: 'Fatou Sow', avatar: 'https://readdy.ai/api/search-image?query=african%20woman%20student%20professional%20portrait%20confident%20smile%20modern%20classroom%20background&width=40&height=40&seq=app-lb-fatou&orientation=squarish', xp: 2890, streak: 8, coursesCompleted: 1, lessonsCompleted: 38 },
-    { id: 'user-3', name: 'Jean Mbarga', avatar: 'https://readdy.ai/api/search-image?query=african%20businessman%20professional%20portrait%20suit%20modern%20office%20confident%20smile&width=40&height=40&seq=app-lb-jean&orientation=squarish', xp: 2560, streak: 5, coursesCompleted: 1, lessonsCompleted: 34 },
-    { id: 'user-4', name: 'Mamadou Seck', avatar: 'https://readdy.ai/api/search-image?query=african%20male%20software%20developer%20programmer%20working%20on%20laptop%20professional%20tech%20portrait%20modern%20office&width=40&height=40&seq=app-lb-mamadou&orientation=squarish', xp: 1980, streak: 3, coursesCompleted: 0, lessonsCompleted: 28 },
-    { id: 'user-5', name: 'Khadija Mbaye', avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20female%20student%20portrait%20clean%20white%20background%20happy%20smile%20casual%20attire&width=40&height=40&seq=app-lb-khadija&orientation=squarish', xp: 1650, streak: 2, coursesCompleted: 0, lessonsCompleted: 22 },
-    { id: 'user-6', name: 'Sophie Nkomo', avatar: 'https://readdy.ai/api/search-image?query=african%20woman%20professional%20portrait%20modern%20office%20friendly%20confident&width=40&height=40&seq=app-lb-sophie&orientation=squarish', xp: 1340, streak: 4, coursesCompleted: 0, lessonsCompleted: 18 },
-    { id: 'user-7', name: 'David Kouassi', avatar: 'https://readdy.ai/api/search-image?query=african%20man%20young%20professional%20portrait%20modern%20office%20friendly%20confident&width=40&height=40&seq=app-lb-david&orientation=squarish', xp: 980, streak: 1, coursesCompleted: 0, lessonsCompleted: 14 },
-    { id: 'user-8', name: 'Aminata Diop', avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20woman%20entrepreneur%20elegant%20portrait%20modern%20office%20confident&width=40&height=40&seq=app-lb-aminata&orientation=squarish', xp: 720, streak: 0, coursesCompleted: 0, lessonsCompleted: 10 },
-    { id: 'user-9', name: 'Ousmane Ba', avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20male%20entrepreneur%20portrait%20clean%20white%20background%20happy%20smile%20business%20casual&width=40&height=40&seq=app-lb-ousmane&orientation=squarish', xp: 450, streak: 1, coursesCompleted: 0, lessonsCompleted: 6 },
-    { id: 'user-10', name: 'Aicha Fall', avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20female%20young%20student%20portrait%20happy%20smile%20bright%20classroom%20background&width=40&height=40&seq=app-lb-aicha&orientation=squarish', xp: 210, streak: 0, coursesCompleted: 0, lessonsCompleted: 3 },
+    { id: 'user-1', name: 'Ibrahim Touré', avatar: '/images/brand/image3.jpeg', xp: 3240, streak: 12, coursesCompleted: 2, lessonsCompleted: 45 },
+    { id: 'user-2', name: 'Fatou Sow', avatar: '/images/brand/image3.jpeg', xp: 2890, streak: 8, coursesCompleted: 1, lessonsCompleted: 38 },
+    { id: 'user-3', name: 'Jean Mbarga', avatar: '/images/brand/image3.jpeg', xp: 2560, streak: 5, coursesCompleted: 1, lessonsCompleted: 34 },
+    { id: 'user-4', name: 'Mamadou Seck', avatar: '/images/brand/image3.jpeg', xp: 1980, streak: 3, coursesCompleted: 0, lessonsCompleted: 28 },
+    { id: 'user-5', name: 'Khadija Mbaye', avatar: '/images/brand/image3.jpeg', xp: 1650, streak: 2, coursesCompleted: 0, lessonsCompleted: 22 },
+    { id: 'user-6', name: 'Sophie Nkomo', avatar: '/images/brand/image3.jpeg', xp: 1340, streak: 4, coursesCompleted: 0, lessonsCompleted: 18 },
+    { id: 'user-7', name: 'David Kouassi', avatar: '/images/brand/image3.jpeg', xp: 980, streak: 1, coursesCompleted: 0, lessonsCompleted: 14 },
+    { id: 'user-8', name: 'Aminata Diop', avatar: '/images/brand/image3.jpeg', xp: 720, streak: 0, coursesCompleted: 0, lessonsCompleted: 10 },
+    { id: 'user-9', name: 'Ousmane Ba', avatar: '/images/brand/image3.jpeg', xp: 450, streak: 1, coursesCompleted: 0, lessonsCompleted: 6 },
+    { id: 'user-10', name: 'Aicha Fall', avatar: '/images/brand/image3.jpeg', xp: 210, streak: 0, coursesCompleted: 0, lessonsCompleted: 3 },
   ];
   localStorage.setItem(STORAGE_KEYS.leaderboard(), JSON.stringify(demo));
   return demo;

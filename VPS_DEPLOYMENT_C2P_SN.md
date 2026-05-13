@@ -426,6 +426,11 @@ Ouvre `http://127.0.0.1:9090/targets` et controle que les targets suivantes sont
 - `node-exporter`
 - `cadvisor`
 
+Avant le `up -d`, remplace aussi la valeur placeholder dans :
+
+- `ops/env/backend.production.env` -> `METRICS_AUTH_TOKEN`
+- `ops/monitoring/prometheus/secrets/metrics-token`
+
 Tu peux aussi verifier en CLI :
 
 ```bash
@@ -685,6 +690,7 @@ Le deploiement est propre si :
 
 - `https://c2p.sn` repond
 - `https://c2p.sn/api/healthz` repond
+- `node ops/scripts/production-postdeploy-check.mjs` passe
 - les headers de securite sont presents
 - `docker compose ps` ne montre aucun service en boucle
 - une sauvegarde `.sql.gz` recente existe dans `/srv/c2p/backups/postgres`
@@ -701,3 +707,22 @@ Le deploiement est propre si :
 1. La CSP front reste forte sur `script-src`, mais `style-src 'unsafe-inline'` est encore necessaire tant que tout le front historique n'a pas ete purge de ses styles inline.
 2. `SENDTEXT_SEND_PATH` doit venir de la documentation ou du support SendText : ce point n'est pas public.
 3. La base URL DexPay doit venir de l'onboarding fournisseur : leur doc publique liste les endpoints relatifs, pas une base unique explicite.
+## Préflight avant lancement
+
+Avant tout `docker compose up -d`, lancer:
+
+```bash
+node ops/scripts/production-preflight.mjs
+node ops/scripts/production-compose-check.mjs
+```
+
+Ce contrôle casse le déploiement si:
+
+- le compose pointe encore vers `backend.production.env.example`
+- un mot de passe, token ou URL sensible garde une valeur `replace-*` / placeholder
+- `EMAIL_PROVIDER` ou `SMS_PROVIDER` sont encore en mode `mock`
+- `METRICS_AUTH_TOKEN` ne correspond pas au secret Prometheus
+- les certificats `fullchain.pem` / `privkey.pem` ne sont pas présents
+
+Le check Compose valide ensuite le rendu réel de `docker compose config`.
+La stack lance aussi maintenant `backend-migrate` avant le backend applicatif. Le schéma Prisma est donc déployé avant l’ouverture publique du service.

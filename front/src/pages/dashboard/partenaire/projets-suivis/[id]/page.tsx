@@ -4,10 +4,23 @@ import DashboardLayout from '../../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { fetchProjectDetail, fetchTrackedProjects, type ProjectDocument, type ProjectMilestone, type ProjectRecord, type TrackedProject } from '@/lib/projectApi';
+import {
+  fetchTrackedProjectDetail,
+  openPartnerOwnerConversation,
+  type FundingRound,
+  type ProjectDocument,
+  type ProjectHistoryItem,
+  type ProjectMilestone,
+  type ProjectPartnership,
+  type ProjectRecord,
+  type TrackedProject,
+} from '@/lib/projectApi';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { backendClient } from '@/lib/backendClient';
 import { openHtmlPreview } from '@/lib/downloads';
+
+function getPartnerTypeLabel(type: string | null | undefined) {
+  return type === 'technique' ? 'Technique' : 'Financier';
+}
 
 export default function PartenaireProjetSuiviDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +32,10 @@ export default function PartenaireProjetSuiviDetailPage() {
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'documents'>('overview');
+  const [history, setHistory] = useState<ProjectHistoryItem[]>([]);
+  const [partnerships, setPartnerships] = useState<ProjectPartnership[]>([]);
+  const [rounds, setRounds] = useState<FundingRound[]>([]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'documents' | 'funding' | 'history'>('overview');
 
   const loadDetail = useCallback(async () => {
     if (!id || !user?.id) {
@@ -29,14 +45,15 @@ export default function PartenaireProjetSuiviDetailPage() {
 
     setLoading(true);
     try {
-      const [portfolio, detail] = await Promise.all([
-        fetchTrackedProjects(user.id),
-        fetchProjectDetail(Number(id)),
-      ]);
-      setTracked(portfolio.find((item) => item.project_id === Number(id)) || null);
+      const payload = await fetchTrackedProjectDetail(user.id, Number(id));
+      setTracked(payload.tracked);
+      const detail = payload.detail;
       setProject(detail.project);
       setMilestones(detail.milestones);
       setDocuments(detail.documents);
+      setHistory(detail.history);
+      setPartnerships(detail.partnerships);
+      setRounds(detail.rounds);
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de charger ce projet suivi.');
@@ -81,61 +98,23 @@ export default function PartenaireProjetSuiviDetailPage() {
 
   const handleContactOwner = async () => {
     if (!user?.id || !project?.owner_id) {
-      error('Indisponible', 'Le porteur de projet est introuvable.');
+      error('Indisponible', 'Le projet ou le referent C2P est introuvable.');
       return;
     }
 
     try {
-      const { data: conversationRows, error: conversationError } = await backendClient
-        .from<any>('conversations')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (conversationError) throw new Error(conversationError.message);
-
-      const existingConversation = ((conversationRows as any[]) || []).find((conversation) =>
-        Array.isArray(conversation.participants)
-        && conversation.participants.map(String).includes(user.id)
-        && conversation.participants.map(String).includes(String(project.owner_id))
-      );
-
-      let conversationId = existingConversation?.id;
-
-      if (!conversationId) {
-        const { data: createdConversation, error: createError } = await backendClient
-          .from('conversations')
-          .insert({
-            name: project.porteur_name,
-            role: 'porteur',
-            participants: [user.id, String(project.owner_id)],
-            type: 'individual',
-            members: 2,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select('*')
-          .single();
-
-        if (createError) throw new Error(createError.message);
-        conversationId = (createdConversation as { id: string }).id;
-      }
-
-      await backendClient.from('messages').insert({
-        conversation_id: conversationId,
-        content: `Bonjour ${project.porteur_name}, je souhaite faire un point sur le projet "${project.title}".`,
-        sender_id: user.id,
-        sender_name: `${user.firstName} ${user.lastName}`,
-        sender_avatar: user.avatar,
-        read: false,
-        attachments: [],
-        created_at: new Date().toISOString(),
+      await openPartnerOwnerConversation({
+        partner: user,
+        ownerId: String(project.owner_id),
+        ownerName: project.porteur_name,
+        projectTitle: project.title,
       });
 
-      success('Message envoye', 'Votre demande de point projet a ete transmise au porteur.');
+      success('Message envoye', 'Votre demande de point projet a ete transmise a l equipe C2P.');
       navigate('/dashboard/messages');
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible d ouvrir la conversation avec le porteur.');
+      error('Erreur', 'Impossible d ouvrir la conversation avec C2P.');
     }
   };
 
@@ -146,7 +125,7 @@ export default function PartenaireProjetSuiviDetailPage() {
           <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Partenaire', path: '/dashboard/partenaire' }, { label: 'Projets suivis', path: '/dashboard/partenaire/projets-suivis' }, { label: 'Detail' }]} />
           <div className="py-20 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-3">Projet introuvable</h2>
-            <Link to="/dashboard/partenaire/projets-suivis" className="inline-flex px-4 py-2 rounded-lg bg-[#14B8A6] text-white text-sm font-medium hover:bg-[#0D9488]">
+            <Link to="/dashboard/partenaire/projets-suivis" className="inline-flex px-4 py-2 rounded-lg bg-[#5fa6f3] text-white text-sm font-medium hover:bg-[#27346b]">
               Retour au portefeuille
             </Link>
           </div>
@@ -169,11 +148,14 @@ export default function PartenaireProjetSuiviDetailPage() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-6">
                   <div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusTone}`}>{tracked.status}</span>
+                    <span className="ml-2 px-3 py-1 rounded-full text-xs font-medium bg-teal-50 text-teal-700">
+                      Partenaire {getPartnerTypeLabel(tracked.partner_type)}
+                    </span>
                     <h1 className="text-3xl font-bold text-gray-900 mt-3">{project.title}</h1>
                     <p className="text-gray-600 mt-2">{project.description}</p>
                   </div>
-                  <button onClick={() => void handleContactOwner()} className="px-4 py-2 rounded-lg bg-[#14B8A6] text-white text-sm font-medium hover:bg-[#0D9488]">
-                    Contacter le porteur
+                  <button onClick={() => void handleContactOwner()} className="px-4 py-2 rounded-lg bg-[#5fa6f3] text-white text-sm font-medium hover:bg-[#27346b]">
+                    Contacter C2P
                   </button>
                 </div>
 
@@ -192,7 +174,7 @@ export default function PartenaireProjetSuiviDetailPage() {
                   <p className="text-2xl font-bold text-gray-900">{tracked.progress || 0}%</p>
                 </div>
                 <div className="w-full h-3 rounded-full bg-gray-200 mb-4">
-                  <div className={`h-3 rounded-full ${tracked.status === 'en_risque' ? 'bg-red-500' : 'bg-[#14B8A6]'}`} style={{ width: `${tracked.progress || 0}%` }}></div>
+                  <div className={`h-3 rounded-full ${tracked.status === 'en_risque' ? 'bg-red-500' : 'bg-[#5fa6f3]'}`} style={{ width: `${tracked.progress || 0}%` }}></div>
                 </div>
                 <p className="text-sm text-gray-600">Prochain jalon: {tracked.next_milestone}</p>
                 <p className="text-sm text-gray-600 mt-1">Derniere activite: {formatDate(tracked.last_update)}</p>
@@ -208,9 +190,11 @@ export default function PartenaireProjetSuiviDetailPage() {
                 {[
                   ['overview', 'Vue generale'],
                   ['milestones', 'Jalons'],
+                  ['funding', 'Financement'],
                   ['documents', 'Documents'],
+                  ['history', 'Historique'],
                 ].map(([key, label]) => (
-                  <button key={key} onClick={() => setActiveTab(key as typeof activeTab)} className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === key ? 'bg-[#14B8A6] text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                  <button key={key} onClick={() => setActiveTab(key as typeof activeTab)} className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === key ? 'bg-[#5fa6f3] text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
                     {label}
                   </button>
                 ))}
@@ -228,8 +212,20 @@ export default function PartenaireProjetSuiviDetailPage() {
                       </div>
                     </div>
                     <div className="rounded-xl border border-gray-200 p-5">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Pourquoi ce suivi</h3>
-                      <p className="text-sm text-gray-700">{project.looking_for.join(', ') || 'Accompagnement general'}</p>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Ecosysteme implique</h3>
+                      <div className="space-y-3">
+                        {partnerships.length ? partnerships.slice(0, 3).map((partner) => (
+                          <div key={partner.id} className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-gray-900">{partner.name}</p>
+                              <p className="text-xs text-gray-500">{partner.role}</p>
+                            </div>
+                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{partner.type}</span>
+                          </div>
+                        )) : (
+                          <p className="text-sm text-gray-600">Aucun partenaire detaille pour le moment.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -246,11 +242,41 @@ export default function PartenaireProjetSuiviDetailPage() {
                         </div>
                         <p className="text-sm text-gray-600 mb-3">{milestone.description}</p>
                         <div className="w-full h-2 rounded-full bg-gray-200 mb-2">
-                          <div className="h-2 rounded-full bg-[#14B8A6]" style={{ width: `${milestone.progress}%` }}></div>
+                          <div className="h-2 rounded-full bg-[#5fa6f3]" style={{ width: `${milestone.progress}%` }}></div>
                         </div>
                         <p className="text-xs text-gray-500">{formatDate(milestone.due_date)}</p>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {activeTab === 'funding' && (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {rounds.length ? rounds.map((round) => (
+                      <div key={round.id} className="rounded-xl border border-gray-200 p-4">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="font-medium text-gray-900">{round.type}</p>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${round.status === 'termine' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {round.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-3">{round.description || 'Tour de financement actif sur ce projet.'}</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="text-xs text-gray-500">Objectif</p>
+                            <p className="font-semibold text-gray-900">{formatCurrency(round.target_amount)}</p>
+                          </div>
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="text-xs text-gray-500">Leve</p>
+                            <p className="font-semibold text-gray-900">{formatCurrency(round.raised_amount)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="rounded-xl border border-dashed border-gray-300 p-6 text-sm text-gray-500 lg:col-span-2">
+                        Aucun tour de financement visible sur ce projet suivi.
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -267,6 +293,22 @@ export default function PartenaireProjetSuiviDetailPage() {
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {activeTab === 'history' && (
+                  <div className="space-y-3">
+                    {history.length ? history.map((entry) => (
+                      <div key={entry.id} className="rounded-xl border border-gray-200 p-4">
+                        <p className="font-medium text-gray-900">{entry.action}</p>
+                        <p className="text-sm text-gray-600 mt-1">{entry.user}</p>
+                        <p className="text-xs text-gray-500 mt-1">{formatDate(entry.date)}</p>
+                      </div>
+                    )) : (
+                      <div className="rounded-xl border border-dashed border-gray-300 p-6 text-sm text-gray-500">
+                        Aucun evenement d’historique n’est disponible pour ce projet.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

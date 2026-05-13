@@ -2,13 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
-import GlobalSearch from '../components/GlobalSearch';
-import { backendClient } from '@/lib/backendClient';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { createNotification } from '@/hooks/useCreateNotification';
-import { fetchCollaborations, fetchOpenProjects, fetchTrackedProjects, type Collaboration, type ProjectRecord, type TrackedProject } from '@/lib/projectApi';
+import {
+  expressPartnerInterestAndNotify,
+  fetchPartnerDashboardSnapshot,
+  type PartnerType,
+  type Collaboration,
+  type ProjectRecord,
+  type TrackedProject,
+} from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
+
+function getPartnerTypeLabel(type: string | null | undefined) {
+  return type === 'technique' ? 'Technique' : 'Financier';
+}
 
 export default function PartenaireDashboardPage() {
   const { user } = useAuth();
@@ -25,14 +33,10 @@ export default function PartenaireDashboardPage() {
     }
     setLoading(true);
     try {
-      const [trackedData, collaborationsData, openData] = await Promise.all([
-        fetchTrackedProjects(user.id),
-        fetchCollaborations(user.id),
-        fetchOpenProjects(),
-      ]);
-      setTrackedProjects(trackedData);
-      setCollaborations(collaborationsData);
-      setOpenProjects(openData.filter((project) => !trackedData.some((tracked) => tracked.project_id === project.id)).slice(0, 4));
+      const snapshot = await fetchPartnerDashboardSnapshot(user.id);
+      setTrackedProjects(snapshot.trackedProjects);
+      setCollaborations(snapshot.collaborations);
+      setOpenProjects(snapshot.openProjects.slice(0, 4));
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de charger le tableau de bord partenaire.');
@@ -49,51 +53,62 @@ export default function PartenaireDashboardPage() {
     const invested = trackedProjects.reduce((sum, tracked) => sum + Number(tracked.invested_amount || 0), 0);
     const active = trackedProjects.filter((tracked) => tracked.status === 'actif').length;
     return [
-      { label: 'Projets finances', value: trackedProjects.length, icon: 'ri-hand-coin-line', color: 'bg-pink-500' },
-      { label: 'Montant investi', value: formatShortCurrency(invested), icon: 'ri-money-dollar-circle-line', color: 'bg-green-500' },
-      { label: 'Collaborations actives', value: collaborations.filter((collaboration) => collaboration.status === 'actif').length, icon: 'ri-team-line', color: 'bg-blue-500' },
-      { label: 'Projets suivis', value: active, icon: 'ri-eye-line', color: 'bg-[#14B8A6]' },
+      {
+        label: 'Projets suivis',
+        value: String(trackedProjects.length),
+        detail: `${active} actif(s)`,
+        icon: 'ri-eye-line',
+        surface: 'bg-teal-50 text-teal-700',
+      },
+      {
+        label: 'Montant engagé',
+        value: formatShortCurrency(invested),
+        detail: `${trackedProjects.length} dossier(s) suivis`,
+        icon: 'ri-money-dollar-circle-line',
+        surface: 'bg-emerald-50 text-emerald-700',
+      },
+      {
+        label: 'Collaborations actives',
+        value: String(collaborations.filter((collaboration) => collaboration.status === 'actif').length),
+        detail: `${collaborations.length} relation(s) ouvertes`,
+        icon: 'ri-team-line',
+        surface: 'bg-sky-50 text-sky-700',
+      },
+      {
+        label: 'Nouvelles opportunités',
+        value: String(openProjects.length),
+        detail: 'à explorer',
+        icon: 'ri-search-line',
+        surface: 'bg-amber-50 text-amber-700',
+      },
     ];
-  }, [collaborations, trackedProjects]);
+  }, [collaborations, openProjects.length, trackedProjects]);
 
-  const handleInterest = async (project: ProjectRecord) => {
+  const quickLinks = [
+    { label: 'Opportunités', icon: 'ri-search-line', link: '/dashboard/partenaire/opportunites', tone: 'bg-teal-50 text-teal-700' },
+    { label: 'Projets suivis', icon: 'ri-eye-line', link: '/dashboard/partenaire/projets-suivis', tone: 'bg-sky-50 text-sky-700' },
+    { label: 'Collaborations', icon: 'ri-team-line', link: '/dashboard/partenaire/collaborations', tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Paiements', icon: 'ri-wallet-line', link: '/dashboard/paiements', tone: 'bg-pink-50 text-pink-700' },
+    { label: 'Messagerie', icon: 'ri-message-3-line', link: '/dashboard/messages', tone: 'bg-amber-50 text-amber-700' },
+  ];
+
+  const handleInterest = async (project: ProjectRecord, partnerType: PartnerType) => {
     if (!user?.id) return;
 
     try {
-      const { error: trackingError } = await backendClient.from('project_tracking').insert({
-        partner_id: user.id,
-        project_id: project.id,
-        invested_amount: 0,
-        roi: 0,
-        status: 'en_risque',
-        last_update: new Date().toISOString(),
-        next_milestone: project.next_milestone,
+      const result = await expressPartnerInterestAndNotify({
+        partner: user,
+        project,
+        partnerType,
+        ownerMessage: `${user.firstName} ${user.lastName} souhaite ouvrir une discussion ${partnerType === 'technique' ? 'technique' : 'financiere'} sur ${project.title}.`,
       });
-      if (trackingError) throw new Error(trackingError.message);
 
-      const { error: collaborationError } = await backendClient.from('project_collaborations').insert({
-        partner_id: user.id,
-        project_id: project.id,
-        counterpart_name: project.porteur_name,
-        counterpart_role: 'Porteur de projet',
-        type: 'financement',
-        status: 'en_negociation',
-        start_date: new Date().toISOString().slice(0, 10),
-        value: 0,
-        deliverables: ['Premier entretien de cadrage'],
-        meetings: 0,
-      });
-      if (collaborationError) throw new Error(collaborationError.message);
-
-      await createNotification(
-        project.owner_id,
-        'Interet partenaire',
-        `${user.firstName} ${user.lastName} souhaite ouvrir une discussion sur ${project.title}.`,
-        'collaboration',
-        '/dashboard/porteur/partenariats',
+      success(
+        result.alreadyTracked ? 'Suivi deja actif' : 'Interet enregistre',
+        result.alreadyTracked
+          ? 'Ce projet fait deja partie de vos suivis ou de vos collaborations.'
+          : 'L equipe C2P a ete notifiee et le projet a ete ajoute a vos suivis.',
       );
-
-      success('Interet enregistre', 'Le porteur a ete notifie et le projet a ete ajoute a vos suivis.');
       loadDashboard();
     } catch (err) {
       console.error(err);
@@ -103,42 +118,81 @@ export default function PartenaireDashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Partenaire' }]} />
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Tableau de bord Partenaire</h1>
-          <p className="text-gray-600">Projets suivis, collaborations en cours et nouvelles opportunites d accompagnement.</p>
-        </div>
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-teal-600">Espace partenaire</p>
+            <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
+              Bonjour, {user?.firstName || 'Partenaire'} <span className="align-middle">👋</span>
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-gray-600 md:text-base">
+              Retrouvez vos projets suivis, vos collaborations et les nouvelles opportunités sans écran surchargé.
+            </p>
+          </div>
+        </section>
 
-        <GlobalSearch context="partenaire" />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center text-white mb-4`}>
-                <i className={`${stat.icon} text-xl`}></i>
+            <div key={stat.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">{stat.label}</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="mt-2 text-sm text-gray-500">{stat.detail}</p>
+                </div>
+                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${stat.surface}`}>
+                  <i className={`${stat.icon} text-xl`}></i>
+                </div>
               </div>
-              <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
-              <p className="text-sm text-gray-600">{stat.label}</p>
             </div>
           ))}
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">Accès rapide</h2>
+            <Link to="/dashboard/partenaire/opportunites" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+              Explorer le pipeline
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+            {quickLinks.map((action) => (
+              <Link
+                key={action.link}
+                to={action.link}
+                className={`rounded-2xl border border-transparent px-4 py-4 transition-all hover:border-gray-200 hover:bg-white ${action.tone}`}
+              >
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white">
+                  <i className={`${action.icon} text-lg`}></i>
+                </div>
+                <p className="text-sm font-medium">{action.label}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr,1fr]">
+          <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900">Mes suivis</h2>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Mes suivis</h2>
+                <p className="text-sm text-gray-500">Les projets qui demandent une lecture rapide de votre part.</p>
+              </div>
               <Link to="/dashboard/partenaire/projets-suivis" className="text-sm font-medium text-pink-600 hover:text-pink-700">Voir tout</Link>
             </div>
             <div className="space-y-4">
               {loading && <p className="text-sm text-gray-500">Chargement des suivis...</p>}
               {!loading && trackedProjects.slice(0, 3).map((tracked) => (
-                <div key={tracked.id} className="p-4 border border-gray-200 rounded-lg hover:border-pink-300 transition-colors">
+                <div key={tracked.id} className="rounded-2xl border border-gray-200 p-4 transition-colors hover:border-pink-300">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-gray-900">{tracked.title}</h3>
                       <p className="text-sm text-gray-600">{tracked.sector}</p>
+                      <span className="mt-2 inline-flex rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700">
+                        Partenaire {getPartnerTypeLabel(tracked.partner_type)}
+                      </span>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-gray-900">{formatCurrency(tracked.invested_amount)}</p>
@@ -154,49 +208,58 @@ export default function PartenaireDashboardPage() {
             </div>
           </section>
 
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900">Projets a explorer</h2>
-              <Link to="/dashboard/partenaire/opportunites" className="text-sm font-medium text-[#14B8A6] hover:text-[#0D9488]">Explorer</Link>
-            </div>
-            <div className="space-y-4">
-              {loading && <p className="text-sm text-gray-500">Chargement des opportunites...</p>}
-              {!loading && openProjects.map((project) => (
-                <div key={project.id} className="p-4 border border-gray-200 rounded-lg hover:border-[#14B8A6] transition-colors">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{project.title}</h3>
-                      <p className="text-sm text-gray-600">{project.sector || project.category} · {project.team_size} personnes</p>
+          <div className="space-y-6">
+            <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-gray-900">Projets à explorer</h2>
+                <Link to="/dashboard/partenaire/opportunites" className="text-sm font-medium text-teal-600 hover:text-teal-700">Explorer</Link>
+              </div>
+              <div className="space-y-4">
+                {loading && <p className="text-sm text-gray-500">Chargement des opportunités...</p>}
+                {!loading && openProjects.map((project) => (
+                  <div key={project.id} className="rounded-2xl border border-gray-200 p-4 transition-colors hover:border-teal-300">
+                    <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{project.title}</h3>
+                        <p className="text-sm text-gray-600">{project.sector || project.category} · {project.team_size} personnes</p>
+                      </div>
+                      <span className="text-sm font-bold text-teal-600">{formatShortCurrency(project.funding_goal)}</span>
                     </div>
-                    <span className="text-sm font-bold text-[#14B8A6]">{formatShortCurrency(project.funding_goal)}</span>
+                    <p className="mb-3 text-sm text-gray-600">{project.description}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Link to={`/project-center/projet/${project.id}`} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Voir le projet
+                      </Link>
+                      <button onClick={() => handleInterest(project, 'financier')} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                        Intérêt financier
+                      </button>
+                      <button onClick={() => handleInterest(project, 'technique')} className="rounded-lg border border-teal-200 bg-white px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
+                        Intérêt technique
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-3">{project.description}</p>
-                  <button onClick={() => handleInterest(project)} className="px-4 py-2 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488]">
-                    Manifester mon interet
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+                ))}
+              </div>
+            </section>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-8">
-          <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-6">Actions rapides</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {[
-              { label: 'Opportunites', icon: 'ri-search-line', link: '/dashboard/partenaire/opportunites', tone: 'text-[#14B8A6] bg-[#14B8A6]/10' },
-              { label: 'Projets suivis', icon: 'ri-eye-line', link: '/dashboard/partenaire/projets-suivis', tone: 'text-blue-600 bg-blue-100' },
-              { label: 'Collaborations', icon: 'ri-team-line', link: '/dashboard/partenaire/collaborations', tone: 'text-green-600 bg-green-100' },
-              { label: 'Mes investissements', icon: 'ri-wallet-line', link: '/dashboard/paiements', tone: 'text-pink-600 bg-pink-100' },
-              { label: 'Messagerie', icon: 'ri-message-3-line', link: '/dashboard/messages', tone: 'text-yellow-600 bg-yellow-100' },
-            ].map((action) => (
-              <Link key={action.link} to={action.link} className="p-4 border-2 border-gray-200 rounded-lg hover:border-[#14B8A6]/40 transition-all text-center">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 ${action.tone}`}>
-                  <i className={`${action.icon} text-xl`}></i>
+            <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">Vue collaboration</h2>
+                <Link to="/dashboard/partenaire/collaborations" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+                  Ouvrir
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Actives</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{collaborations.filter((entry) => entry.status === 'actif').length}</p>
                 </div>
-                <p className="font-medium text-gray-900 text-sm">{action.label}</p>
-              </Link>
-            ))}
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">En négociation</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{collaborations.filter((entry) => entry.status === 'en_negociation').length}</p>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>

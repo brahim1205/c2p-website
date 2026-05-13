@@ -3,12 +3,14 @@ import { Link, useParams } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
-import { fetchFundingRoundDetail, type FundingInvestor, type FundingRound, type ProjectDocument, type ProjectHistoryItem } from '@/lib/projectApi';
+import { useAuth } from '@/hooks/useAuth';
+import { fetchOwnerFundingRoundDetail, type FundingInvestor, type FundingRound, type ProjectDocument, type ProjectHistoryItem } from '@/lib/projectApi';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { openHtmlPreview } from '@/lib/downloads';
 
 export default function PorteurFinancementDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
   const [round, setRound] = useState<FundingRound | null>(null);
@@ -18,13 +20,13 @@ export default function PorteurFinancementDetailPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'investors' | 'documents' | 'history'>('overview');
 
   const loadRound = useCallback(async () => {
-    if (!id) {
+    if (!id || !user?.id) {
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const payload = await fetchFundingRoundDetail(Number(id));
+      const payload = await fetchOwnerFundingRoundDetail(user.id, Number(id));
       setRound(payload.round);
       setInvestors(payload.investors);
       setDocuments(payload.documents);
@@ -35,7 +37,7 @@ export default function PorteurFinancementDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [error, id]);
+  }, [error, id, user?.id]);
 
   useEffect(() => {
     loadRound();

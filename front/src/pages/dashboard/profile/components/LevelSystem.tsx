@@ -15,11 +15,11 @@ interface Level {
 const LEVELS: Level[] = [
   { name: 'Novice', min: 0, max: 499, icon: 'ri-seedling-line', color: '#9CA3AF', bgClass: 'bg-gray-100', textClass: 'text-gray-600', borderClass: 'border-gray-200' },
   { name: 'Apprenti', min: 500, max: 1499, icon: 'ri-plant-line', color: '#22C55E', bgClass: 'bg-green-100', textClass: 'text-green-700', borderClass: 'border-green-200' },
-  { name: 'Explorateur', min: 1500, max: 2999, icon: 'ri-compass-3-line', color: '#14B8A6', bgClass: 'bg-teal-100', textClass: 'text-teal-700', borderClass: 'border-teal-200' },
+  { name: 'Explorateur', min: 1500, max: 2999, icon: 'ri-compass-3-line', color: '#5fa6f3', bgClass: 'bg-teal-100', textClass: 'text-teal-700', borderClass: 'border-teal-200' },
   { name: 'Adepte', min: 3000, max: 5499, icon: 'ri-lightbulb-line', color: '#F59E0B', bgClass: 'bg-amber-100', textClass: 'text-amber-700', borderClass: 'border-amber-200' },
   { name: 'Expert', min: 5500, max: 8999, icon: 'ri-vip-crown-line', color: '#F97316', bgClass: 'bg-orange-100', textClass: 'text-orange-700', borderClass: 'border-orange-200' },
   { name: 'Maître', min: 9000, max: 13999, icon: 'ri-medal-line', color: '#EF4444', bgClass: 'bg-red-100', textClass: 'text-red-700', borderClass: 'border-red-200' },
-  { name: 'Guru', min: 14000, max: Infinity, icon: 'ri-star-smile-line', color: '#0D9488', bgClass: 'bg-teal-100', textClass: 'text-teal-700', borderClass: 'border-teal-200' },
+  { name: 'Guru', min: 14000, max: Infinity, icon: 'ri-star-smile-line', color: '#27346b', bgClass: 'bg-teal-100', textClass: 'text-teal-700', borderClass: 'border-teal-200' },
 ];
 
 function getLevelForXP(xp: number): Level {

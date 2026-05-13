@@ -1,67 +1,23 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { backendClient } from '@/lib/backendClient';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonList } from '@/components/base/Skeleton';
+import {
+  fetchApprenantExamensSnapshot,
+  fetchApprenantQuizStructure,
+  submitApprenantExamAnswer,
+  type ApprenantExam as Exam,
+  type ApprenantExamType as ExamType,
+  type ApprenantQuizAnswerPayload as QuizAnswerPayload,
+  type ApprenantQuizChoice as QuizChoice,
+  type ApprenantQuestionType as QuestionType,
+  type ApprenantQuizQuestion as QuizQuestion,
+  type ApprenantSubmission as Submission,
+} from '@/lib/apprenantDashboardApi';
 
 type EntityId = number | string;
-type ExamType = 'quiz' | 'assignment' | 'project';
-type QuestionType = 'single_choice' | 'multiple_choice' | 'true_false' | 'open';
-
-interface Exam {
-  id: EntityId;
-  course_id: EntityId;
-  title: string;
-  course_name: string | null;
-  instructor_id: string | null;
-  type: ExamType;
-  exam_date: string | null;
-  max_grade: number;
-  status: string;
-  questions_count?: number;
-  created_at: string;
-}
-
-interface QuizQuestion {
-  id: EntityId;
-  exam_id: EntityId;
-  prompt: string;
-  type: QuestionType;
-  points: number;
-  explanation: string;
-  required: boolean;
-  position: number;
-}
-
-interface QuizChoice {
-  id: EntityId;
-  question_id: EntityId;
-  exam_id: EntityId;
-  label: string;
-  value: string;
-  is_correct: boolean;
-  position: number;
-}
-
-interface QuizAnswerPayload {
-  question_id: EntityId;
-  answer_text: string | null;
-  selected_choice_ids: string[];
-}
-
-interface Submission {
-  id: EntityId;
-  exam_id: EntityId;
-  student_id: string;
-  grade: number | null;
-  feedback: string | null;
-  status: string;
-  submitted_at: string | null;
-  file_name: string | null;
-  file_url: string | null;
-}
 
 interface ExamWithStatus extends Exam {
   submitted: boolean;
@@ -117,39 +73,31 @@ export default function ApprenantExamensPage() {
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [quizChoices, setQuizChoices] = useState<QuizChoice[]>([]);
   const [quizAnswerDrafts, setQuizAnswerDrafts] = useState<Record<string, QuizAnswerDraft>>({});
-  const studentId = user?.id ?? 'usr-apprenant';
-  const studentName = user ? `${user.firstName} ${user.lastName}` : 'Ibrahim Toure';
+  const studentId = user?.id ?? null;
+  const studentName = user ? `${user.firstName} ${user.lastName}`.trim() : '';
 
   const fetchQuizStructure = useCallback(async (examId: EntityId) => {
-    const [questionsRes, choicesRes] = await Promise.all([
-      backendClient.from<QuizQuestion>('quiz_questions').select('*').eq('exam_id', examId).order('position', { ascending: true }),
-      backendClient.from<QuizChoice>('quiz_choices').select('*').eq('exam_id', examId).order('position', { ascending: true }),
-    ]);
-
-    if (questionsRes.error) throw questionsRes.error;
-    if (choicesRes.error) throw choicesRes.error;
-
+    const structure = await fetchApprenantQuizStructure(examId);
     return {
-      questions: orderByPosition((questionsRes.data || []) as QuizQuestion[]),
-      choices: orderByPosition((choicesRes.data || []) as QuizChoice[]),
+      questions: orderByPosition(structure.questions as QuizQuestion[]),
+      choices: orderByPosition(structure.choices as QuizChoice[]),
     };
   }, []);
 
   const fetchData = useCallback(async () => {
+    if (!studentId) {
+      setExams([]);
+      setSubmissions([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const [examsRes, submissionsRes] = await Promise.all([
-        backendClient.from<Exam>('exams').select('*').eq('status', 'ongoing').order('exam_date', { ascending: false }),
-        backendClient.from<Submission>('submissions').select('*').eq('student_id', studentId).order('submitted_at', { ascending: false }),
-      ]);
-
-      if (examsRes.error) throw examsRes.error;
-      if (submissionsRes.error) throw submissionsRes.error;
-
-      const nextSubmissions = submissionsRes.data || [];
+      const snapshot = await fetchApprenantExamensSnapshot(studentId);
+      const nextSubmissions = snapshot.submissions || [];
       setSubmissions(nextSubmissions);
 
-      const examsWithStatus: ExamWithStatus[] = (examsRes.data || []).map((exam) => {
+      const examsWithStatus: ExamWithStatus[] = (snapshot.exams || []).map((exam) => {
         const mySubmission = nextSubmissions.find((submission: Submission) => String(submission.exam_id) === String(exam.id));
         return {
           ...exam,
@@ -258,6 +206,10 @@ export default function ApprenantExamensPage() {
   const handleSubmitExam = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedExam) return;
+    if (!studentId || !studentName) {
+      toastError('Session invalide', 'Impossible d identifier votre compte apprenant.');
+      return;
+    }
 
     let submissionPayload: Record<string, unknown>;
 
@@ -314,8 +266,12 @@ export default function ApprenantExamensPage() {
 
     setSubmitting(true);
     try {
-      const { error: err } = await backendClient.from('submissions').insert(submissionPayload);
-      if (err) throw err;
+      await submitApprenantExamAnswer({
+        userId: studentId,
+        studentName,
+        exam: selectedExam,
+        submissionPayload,
+      });
 
       success(
         'Soumission envoyée',
@@ -323,15 +279,6 @@ export default function ApprenantExamensPage() {
           ? 'Vos réponses ont été enregistrées. Le formateur pourra les corriger.'
           : 'Votre réponse a été soumise avec succès. Le formateur la corrigera prochainement.',
       );
-
-      await backendClient.from('notifications').insert({
-        user_id: selectedExam.instructor_id ?? 'usr-formateur',
-        title: 'Nouvelle soumission à corriger',
-        message: `Un apprenant a soumis sa réponse pour "${selectedExam.title}"`,
-        type: 'evaluation',
-        is_read: false,
-        link: '/dashboard/formateur/evaluations',
-      });
 
       resetSubmitState();
       await fetchData();

@@ -1,6 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service.js';
+import { buildNotificationDispatchOutboxEvent } from '../notifications/notification-outbox.js';
+import { createAppNotificationRow } from '../notifications/notification-payloads.js';
+import { OutboxService } from '../outbox/outbox.service.js';
 
 type PublicTableName = 'public_contact_submissions' | 'public_newsletter_subscriptions';
 
@@ -25,7 +28,13 @@ interface NewsletterSubscription {
 
 @Injectable()
 export class PublicIntakeService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PublicIntakeService.name);
+  private static readonly EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outboxService: OutboxService,
+  ) {}
 
   private readonly fallback = {
     contact: [] as ContactSubmission[],
@@ -46,6 +55,21 @@ export class PublicIntakeService {
 
   private createId(prefix: string) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  private normalizeText(value?: string) {
+    return value?.trim().replace(/\s+/g, ' ');
+  }
+
+  private assertLength(value: string, label: string, minimum: number, maximum: number) {
+    if (value.length < minimum || value.length > maximum) {
+      throw new BadRequestException(`${label} doit contenir entre ${minimum} et ${maximum} caracteres.`);
+    }
+  }
+
+  private parseLimit(raw?: string, fallback = 100) {
+    const parsed = Number(raw ?? fallback);
+    return Math.min(Math.max(Number.isFinite(parsed) ? parsed : fallback, 1), 200);
   }
 
   private async saveRow(table: PublicTableName, row: ContactSubmission | NewsletterSubscription) {
@@ -95,21 +119,23 @@ export class PublicIntakeService {
     subject?: string;
     message?: string;
   }) {
-    const firstName = payload.firstName?.trim();
-    const lastName = payload.lastName?.trim();
+    const firstName = this.normalizeText(payload.firstName);
+    const lastName = this.normalizeText(payload.lastName);
     const email = payload.email?.trim().toLowerCase();
-    const subject = payload.subject?.trim();
-    const message = payload.message?.trim();
+    const subject = this.normalizeText(payload.subject);
+    const message = this.normalizeText(payload.message);
 
     if (!firstName || !lastName || !email || !subject || !message) {
       throw new BadRequestException('Formulaire incomplet.');
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!PublicIntakeService.EMAIL_PATTERN.test(email)) {
       throw new BadRequestException('Adresse email invalide.');
     }
-    if (message.length < 10 || message.length > 2000) {
-      throw new BadRequestException('Le message doit contenir entre 10 et 2000 caracteres.');
-    }
+    this.assertLength(email, "L'adresse email", 6, 254);
+    this.assertLength(firstName, 'Le prenom', 2, 80);
+    this.assertLength(lastName, 'Le nom', 2, 80);
+    this.assertLength(subject, 'Le sujet', 4, 160);
+    this.assertLength(message, 'Le message', 10, 2000);
 
     const row: ContactSubmission = {
       id: this.createId('contact'),
@@ -123,10 +149,38 @@ export class PublicIntakeService {
       handledAt: null,
     };
     await this.saveRow('public_contact_submissions', row);
+    try {
+      await this.outboxService.enqueue(buildNotificationDispatchOutboxEvent({
+        eventType: 'support.contact_submitted',
+        aggregateId: row.id,
+        actorId: null,
+        notifications: [createAppNotificationRow({
+          id: `notif-contact-${row.id}`,
+          userId: 'usr-admin',
+          title: 'Nouveau message public',
+          message: `${row.firstName} ${row.lastName} a envoye une demande de contact.`,
+          type: 'support',
+          link: '/admin/messages',
+          metadata: {
+            submission_id: row.id,
+            channel: 'public-contact',
+            email: row.email,
+            subject: row.subject,
+          },
+        })],
+        metadata: {
+          email: row.email,
+          subject: row.subject,
+        },
+      }));
+    } catch (err) {
+      this.logger.error(`Impossible d'enregistrer l'evenement outbox pour la demande publique ${row.id}.`, err instanceof Error ? err.stack : undefined);
+    }
     return { success: true };
   }
 
-  async listContactSubmissions() {
+  async listContactSubmissions(limit?: string) {
+    const take = this.parseLimit(limit);
     const rows = await this.loadRows<ContactSubmission>('public_contact_submissions');
     return rows
       .map((row) => ({
@@ -134,7 +188,8 @@ export class PublicIntakeService {
         status: row.status ?? 'new',
         handledAt: row.handledAt ?? null,
       }))
-      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+      .slice(0, take);
   }
 
   async markContactSubmissionHandled(id: string) {
@@ -144,6 +199,9 @@ export class PublicIntakeService {
       const row = this.fallback.contact.find((entry) => entry.id === id);
       if (!row) {
         throw new BadRequestException('Demande introuvable.');
+      }
+      if (row.status === 'handled') {
+        return this.clone(row);
       }
       row.status = 'handled';
       row.handledAt = handledAt;
@@ -158,8 +216,13 @@ export class PublicIntakeService {
       throw new BadRequestException('Demande introuvable.');
     }
 
+    const current = this.clone(existing.data as unknown) as ContactSubmission;
+    if (current.status === 'handled') {
+      return current;
+    }
+
     const updated = {
-      ...(this.clone(existing.data as unknown) as ContactSubmission),
+      ...current,
       status: 'handled' as const,
       handledAt,
     };
@@ -176,9 +239,17 @@ export class PublicIntakeService {
 
   async subscribeNewsletter(payload: { email?: string; source?: string }) {
     const email = payload.email?.trim().toLowerCase();
-    const source = payload.source?.trim() || 'public-site';
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const source = this.normalizeText(payload.source) || 'public-site';
+    if (!email || !PublicIntakeService.EMAIL_PATTERN.test(email)) {
       throw new BadRequestException('Adresse email invalide.');
+    }
+    this.assertLength(email, "L'adresse email", 6, 254);
+    this.assertLength(source, 'La source', 2, 80);
+
+    const existingSubscriptions = await this.loadRows<NewsletterSubscription>('public_newsletter_subscriptions');
+    const alreadySubscribed = existingSubscriptions.some((entry) => entry.email === email);
+    if (alreadySubscribed) {
+      return { success: true, alreadySubscribed: true };
     }
 
     const row: NewsletterSubscription = {
@@ -188,6 +259,6 @@ export class PublicIntakeService {
       createdAt: new Date().toISOString(),
     };
     await this.saveRow('public_newsletter_subscriptions', row);
-    return { success: true };
+    return { success: true, alreadySubscribed: false };
   }
 }

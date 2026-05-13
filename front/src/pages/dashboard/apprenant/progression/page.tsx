@@ -5,7 +5,12 @@ import Breadcrumb from '@/components/base/Breadcrumb';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
-import { backendClient } from '@/lib/backendClient';
+import {
+  fetchApprenantProgressionSnapshot,
+  type ApprenantCertificate as Certificate,
+  type ApprenantEnrollment as Enrollment,
+  type ApprenantSubmission as Submission,
+} from '@/lib/apprenantDashboardApi';
 import {
   getCurrentStreak,
   loadCourseHistory,
@@ -25,40 +30,6 @@ interface CourseRelation {
   duration: string | null;
   modules: number | null;
   thumbnail: string | null;
-}
-
-interface Enrollment {
-  id: number;
-  course_id: number;
-  progress: number;
-  grade: number | null;
-  status: string;
-  last_active: string;
-  course_name?: string | null;
-  course_category?: string | null;
-  course_lessons_count?: number;
-  completed_lessons_estimate?: number;
-  pending_grading_count?: number;
-  certificate_status?: string;
-  courses?: CourseRelation | null;
-}
-
-interface Certificate {
-  id: number;
-  course_id: number;
-  course_name: string | null;
-  status: string;
-  issued_at: string | null;
-  grade: number | null;
-  certificate_number: string | null;
-}
-
-interface Submission {
-  id: number;
-  exam_id: number;
-  submitted_at: string | null;
-  grade: number | null;
-  status: string;
 }
 
 interface ProgressionSettings {
@@ -368,31 +339,10 @@ export default function ApprenantProgressionPage() {
 
     setLoading(true);
     try {
-      const [enrollmentRes, certificateRes, submissionRes] = await Promise.all([
-        backendClient
-          .from('course_enrollments')
-          .select('*, courses(id, title, category, duration, modules, thumbnail)')
-          .eq('student_id', user.id)
-          .order('last_active', { ascending: false }),
-        backendClient
-          .from('certificates')
-          .select('*')
-          .eq('student_id', user.id)
-          .order('issued_at', { ascending: false }),
-        backendClient
-          .from('submissions')
-          .select('*')
-          .eq('student_id', user.id)
-          .order('submitted_at', { ascending: false }),
-      ]);
-
-      if (enrollmentRes.error) throw enrollmentRes.error;
-      if (certificateRes.error) throw certificateRes.error;
-      if (submissionRes.error) throw submissionRes.error;
-
-      setEnrollments((enrollmentRes.data || []) as Enrollment[]);
-      setCertificates((certificateRes.data || []) as Certificate[]);
-      setSubmissions((submissionRes.data || []) as Submission[]);
+      const snapshot = await fetchApprenantProgressionSnapshot(user.id);
+      setEnrollments(snapshot.enrollments as (Enrollment & { courses?: CourseRelation | null })[]);
+      setCertificates(snapshot.certificates);
+      setSubmissions(snapshot.submissions);
       const storedSettings = loadSettings();
       setSettings(storedSettings);
       setSettingsDraft(storedSettings);

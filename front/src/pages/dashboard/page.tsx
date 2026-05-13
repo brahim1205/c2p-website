@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import DashboardLayout from './components/DashboardLayout';
-import NotificationCenter from './components/NotificationCenter';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useBackendMessaging } from '@/hooks/useBackendMessaging';
@@ -12,11 +11,10 @@ import { ROLE_DASHBOARD_PATHS } from '@/lib/roles';
 export default function DashboardPage() {
   const { user } = useAuth();
   const { totalUnread } = useBackendMessaging();
-  const [showNotifications, setShowNotifications] = useState(false);
   const [loading, setLoading] = useState(true);
   const redirectPath = user?.role ? ROLE_DASHBOARD_PATHS[user.role] : null;
 
-  const userType = (user?.role ?? 'client') as 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'porteur' | 'partenaire';
+  const userType = (user?.role ?? 'client') as 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'parent' | 'porteur' | 'partenaire';
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 600);
@@ -34,7 +32,7 @@ export default function DashboardPage() {
     activities: { text: string; detail: string; time: string }[];
   }> = {
     client: {
-      title: 'Tableau de bord Client',
+      title: 'Tableau de bord Client / Prestateur',
       stats: [
         { label: 'Réservations actives', value: '3', icon: 'ri-calendar-check-line', color: 'bg-teal-600' },
         { label: 'Formations suivies', value: '5', icon: 'ri-book-open-line', color: 'bg-teal-600' },
@@ -121,6 +119,27 @@ export default function DashboardPage() {
         { text: 'Certificat obtenu', detail: 'Bases du Marketing Digital', time: 'Il y a 2j' },
       ]
     },
+    parent: {
+      title: 'Tableau de bord Parent',
+      stats: [
+        { label: 'Enfants suivis', value: '1', icon: 'ri-parent-line', color: 'bg-sky-600' },
+        { label: 'Parcours actifs', value: '3', icon: 'ri-book-open-line', color: 'bg-teal-600' },
+        { label: 'Certificats visibles', value: '1', icon: 'ri-award-line', color: 'bg-yellow-500' },
+        { label: 'Messages non lus', value: String(totalUnread), icon: 'ri-message-3-line', color: 'bg-indigo-500' },
+      ],
+      quickActions: [
+        { label: 'Suivi parent', icon: 'ri-dashboard-line', link: '/dashboard/parent', color: 'bg-sky-600' },
+        { label: 'Messagerie C2P', icon: 'ri-message-3-line', link: '/dashboard/messages', color: 'bg-teal-600' },
+        { label: 'Catalogue END', icon: 'ri-graduation-cap-line', link: '/espace-numerique', color: 'bg-indigo-600' },
+        { label: 'Sécurité', icon: 'ri-shield-check-line', link: '/dashboard/securite', color: 'bg-emerald-600' },
+        { label: 'Mon profil', icon: 'ri-user-line', link: '/dashboard/profile', color: 'bg-slate-600' },
+      ],
+      activities: [
+        { text: 'Progression mise a jour', detail: 'Ibrahim Toure - Marketing digital avance', time: 'Il y a 2h' },
+        { text: 'Certificat emis', detail: 'React et interfaces modernes', time: 'Il y a 1j' },
+        { text: 'Message support', detail: 'C2P a confirme le rattachement parent', time: 'Il y a 2j' },
+      ],
+    },
     porteur: {
       title: 'Tableau de bord Porteur de projet',
       stats: [
@@ -171,11 +190,6 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <NotificationCenter
-        isOpen={showNotifications}
-        onClose={() => setShowNotifications(false)}
-      />
-
       {/* Header */}
       <div className="mb-8">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }]} />

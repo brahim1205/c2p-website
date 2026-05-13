@@ -5,8 +5,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
 
-const inputClass =
-  'block w-full rounded-2xl border border-white/10 bg-black/30 py-3 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-white/35 focus:border-[#d5b46f] focus:ring-2 focus:ring-[#d5b46f]/20 disabled:opacity-60';
+const inputClass = 'c2p-input block py-3 pl-10 pr-3 text-sm';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -32,7 +31,7 @@ export default function LoginPage() {
     }
 
     if (password.length < 6) {
-      error('Mot de passe trop court', 'Le mot de passe doit contenir au moins 6 caracteres.');
+      error('Mot de passe trop court', 'Le mot de passe doit contenir au moins 6 caractères.');
       return;
     }
 
@@ -43,67 +42,78 @@ export default function LoginPage() {
       return;
     }
 
-    success('Connexion reussie', 'Vous etes connecte. Redirection en cours...');
+    success('Connexion réussie', 'Vous êtes connecté. Redirection en cours...');
     const target = location.state?.from || getDashboardPathForRole(result.user?.role || 'client');
     setTimeout(() => navigate(target), 800);
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0b0b0b] px-4 py-24 text-white sm:px-6 lg:px-8">
+    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-4 py-24 text-c2p-text sm:px-6 lg:px-8">
       <div className="absolute inset-0">
-        <img src="/images/home/hero.jpg" alt="" className="h-full w-full object-cover object-center opacity-25" />
+        <img src="/images/home/hero.jpg" alt="" className="h-full w-full object-cover object-center opacity-16" />
       </div>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,7,7,0.96)_0%,rgba(7,7,7,0.86)_48%,rgba(7,7,7,0.72)_100%)]"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.96)_0%,rgba(247,248,252,0.90)_48%,rgba(247,248,252,0.78)_100%)]"></div>
 
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-12rem)] max-w-7xl items-center gap-10 lg:grid-cols-[1fr_460px]">
         <section className="hidden max-w-2xl lg:block">
-          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.36em] text-[#d5b46f]">Acces securise</p>
-          <h1 className="text-5xl font-semibold leading-[0.98] text-white xl:text-7xl">
-            Retrouvez votre espace professionnel C2P
+          <p className="c2p-eyebrow mb-5">Accès sécurisé</p>
+          <h1 className="text-5xl font-semibold leading-[0.98] text-[#06053a] xl:text-7xl">
+            Retrouvez votre espace de gestion C2P
           </h1>
-          <p className="mt-6 text-lg leading-8 text-white/62">
-            Connectez-vous pour gerer vos formations, prestations, projets, demandes et tableaux de bord selon votre role.
+          <p className="mt-6 text-lg leading-8 text-[#27346b]">
+            Connectez-vous pour suivre vos abonnements, missions, formations, projets, paiements et validations dans l&apos;écosystème C2P.
           </p>
-          <div className="mt-10 grid max-w-xl grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/12 bg-white/12">
+          <div className="mt-6">
+            <Link
+              to="/tarifs"
+              className="c2p-link inline-flex items-center gap-2 text-sm font-medium"
+            >
+              <span>Voir les abonnements publics et leurs tarifs</span>
+              <i className="ri-arrow-right-line"></i>
+            </Link>
+          </div>
+          <div className="mt-10 grid max-w-xl grid-cols-3 gap-px overflow-hidden rounded-2xl border border-[#80bfdf] bg-[#80bfdf]">
             {[
               ['7', 'roles'],
-              ['Backend', 'C2P'],
+              ['Hub', 'C2P'],
               ['RBAC', 'actif'],
             ].map(([value, label]) => (
-              <div key={label} className="bg-black/30 p-5 text-center">
-                <div className="text-2xl font-semibold text-[#d5b46f]">{value}</div>
-                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-white/45">{label}</div>
+              <div key={label} className="bg-white p-5 text-center">
+                <div className="text-2xl font-semibold text-[#27346b]">{value}</div>
+                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">{label}</div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="rounded-[30px] border border-white/10 bg-white/[0.06] p-6 shadow-[0_35px_100px_rgba(0,0,0,0.45)] backdrop-blur sm:p-8">
+        <section className="c2p-panel p-6 sm:p-8">
           <div className="mb-8">
             <BrandLogo
               to="/"
               className="inline-flex items-center"
               imageClassName="h-12 w-auto object-contain"
             />
-            <h2 className="mt-5 text-3xl font-semibold text-white">Connexion</h2>
-            <p className="mt-2 text-sm leading-6 text-white/58">Accedez a votre espace personnel.</p>
+            <h2 className="mt-5 text-3xl font-semibold text-[#06053a]">Connexion</h2>
+            <p className="mt-2 text-sm leading-6 text-[#27346b]">
+              Accédez à votre espace C2P selon votre rôle et vos droits. Les tarifs des plans publics restent consultables avant connexion.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="mb-2 block text-sm font-medium text-white/72">Adresse email</label>
+              <label htmlFor="email" className="mb-2 block text-sm font-medium text-[#27346b]">Adresse email</label>
               <div className="relative">
-                <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-white/38"></i>
+                <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8]"></i>
                 <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="votre@email.com" disabled={isLoading} />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-2 block text-sm font-medium text-white/72">Mot de passe</label>
+              <label htmlFor="password" className="mb-2 block text-sm font-medium text-[#27346b]">Mot de passe</label>
               <div className="relative">
-                <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-white/38"></i>
+                <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8]"></i>
                 <input id="password" type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} className={`${inputClass} pr-10`} placeholder="••••••••" disabled={isLoading} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/38 transition-colors hover:text-[#d5b46f]">
+                <button type="button" aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] transition-colors hover:text-[#0c0e3a]">
                   <i className={showPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
                 </button>
               </div>
@@ -111,15 +121,15 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between gap-4">
               <label className="flex cursor-pointer items-center">
-                <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="h-4 w-4 cursor-pointer rounded border-white/20 bg-black text-[#d5b46f] focus:ring-[#d5b46f]" disabled={isLoading} />
-                <span className="ml-2 text-sm text-white/62">Se souvenir de moi</span>
+                <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="h-4 w-4 cursor-pointer rounded border-[#5fa6f3] bg-white text-[#27346b] focus:ring-[#27346b]" disabled={isLoading} />
+                <span className="ml-2 text-sm text-[#27346b]">Se souvenir de moi</span>
               </label>
-              <Link to="/forgot-password" className="text-sm font-medium text-[#d5b46f] hover:text-white">
-                Mot de passe oublie ?
+              <Link to="/forgot-password" className="c2p-link text-sm font-medium">
+                Mot de passe oublié ?
               </Link>
             </div>
 
-            <button type="submit" disabled={isLoading} className="w-full rounded-full bg-[#d5b46f] px-6 py-3.5 text-sm font-semibold text-[#111] transition-all hover:bg-white disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/45">
+            <button type="submit" disabled={isLoading} className="c2p-btn-accent w-full px-6 py-3.5">
               {isLoading ? (
                 <span className="flex items-center justify-center">
                   <i className="ri-loader-4-line mr-2 animate-spin"></i>
@@ -131,17 +141,24 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-white/58">
+          <p className="mt-6 text-center text-sm text-[#27346b]">
             Vous n&apos;avez pas de compte ?{' '}
-            <Link to="/auth/register" className="font-medium text-[#d5b46f] hover:text-white">
-              Creer un compte
+            <Link to="/auth/register" className="c2p-link font-medium">
+              Créer un compte
+            </Link>
+          </p>
+
+          <p className="mt-3 text-center text-sm text-[#5fa6f3]">
+            Besoin de comparer les plans avant d&apos;entrer ?{' '}
+            <Link to="/tarifs" className="c2p-link font-medium">
+              Voir les abonnements
             </Link>
           </p>
 
           <div className="mt-6 text-center">
-            <Link to="/" className="text-sm text-white/45 transition-colors hover:text-[#d5b46f]">
+            <Link to="/" className="text-sm text-[#5fa6f3] transition-colors hover:text-[#06053a]">
               <i className="ri-arrow-left-line mr-1"></i>
-              Retour a l&apos;accueil
+              Retour à l&apos;accueil
             </Link>
           </div>
         </section>

@@ -9,12 +9,603 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  firstName String
-  lastName  String
+  id                  String   @id
+  email               String   @unique
+  firstName           String
+  lastName            String
+  role                String   @default("client")
+  status              String   @default("active")
+  phone               String?
+  avatar              String?
+  bio                 String?
+  location            String?
+  publicTitle         String?
+  website             String?
+  preferredLanguage   String?
+  languages           Json?
+  skills              Json?
+  socialLinks         Json?
+  certifications      Json?
+  portfolioItems      Json?
+  introVideo          String?
+  publicProfileEnabled Boolean @default(false)
+  expertVerified      Boolean  @default(false)
+  paymentSettings     Json?
+  isTwoFactorEnabled  Boolean  @default(false)
+  passwordHash        String?
+  passwordHistory     Json?
+  backupCodes         Json?
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+  lastPasswordChangeAt DateTime?
+  lastLoginAt         DateTime?
+  source              String   @default("native")
+  metadata            Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([role, status])
+  @@index([source])
+}
+
+model UserSessionRecord {
+  id                String   @id
+  userId            String
+  device            String?
+  location          String?
+  ip                String?
+  lastActive        DateTime?
+  current           Boolean  @default(false)
+  tokenHash         String?
+  csrfToken         String?
+  expiresAt         DateTime?
+  absoluteExpiresAt DateTime?
+  revokedAt         DateTime?
+  userAgent         String?
+  source            String   @default("native")
+  metadata          Json?
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([source])
+}
+
+model RefreshTokenSessionRecord {
+  id           String   @id
+  userId       String
+  tokenHash    String
+  sessionId    String
+  expiresAt    DateTime
+  ip           String?
+  userAgent    String?
+  revokedAt    DateTime?
+  replacedById String?
+  source       String   @default("native")
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([source])
+}
+
+model PendingTwoFactorChallengeRecord {
+  id        String   @id
+  userId    String
+  codeHash  String
+  purpose   String?
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  source    String   @default("native")
+  metadata  Json?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([source])
+}
+
+model AuditLogEntry {
+  id         String   @id
+  scope      String
+  userId     String?
+  actorLabel String?
+  action     String
+  targetType String?
+  targetId   String?
+  status     String
+  ip         String?
+  device     String?
+  source     String   @default("native")
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([scope, createdAt])
+  @@index([userId, createdAt])
+  @@index([source])
+}
+
+model RbacRole {
+  id          String   @id
+  label       String?
+  description String?
+  system      Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([system])
+}
+
+model RbacPermission {
+  id          String   @id
+  label       String?
+  description String?
+  system      Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([system])
+}
+
+model RbacRolePermission {
+  id           String   @id
+  roleId       String
+  permissionId String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model RbacUserRole {
+  id         String   @id
+  userId     String
+  roleId     String
+  assignedBy String?
+  source     String   @default("native")
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([source])
+}
+
+model OutboxEvent {
+  id                   String   @id
+  eventType            String
+  eventVersion         Int      @default(1)
+  aggregateType        String?
+  aggregateId          String?
+  actorId              String?
+  idempotencyKey       String?  @unique
+  dedupeKey            String?  @unique
+  status               String   @default("pending")
+  attemptCount         Int      @default(0)
+  retries              Int      @default(0)
+  maxRetries           Int      @default(5)
+  availableAt          DateTime @default(now())
+  nextRetryAt          DateTime?
+  occurredAt           DateTime @default(now())
+  processedAt          DateTime?
+  lastError            String?
+  correlationId        String?
+  financialOperationId String?
+  payload              Json
+  source               String   @default("native")
+  metadata             Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([status, availableAt])
+  @@index([status, nextRetryAt])
+  @@index([eventType, eventVersion, status])
+  @@index([aggregateType, aggregateId])
+  @@index([actorId])
+  @@index([correlationId])
+  @@index([financialOperationId])
+  @@index([occurredAt])
+  @@index([source])
+}
+
+model FinancialOperation {
+  id             String   @id
+  kind           String
+  status         String
+  idempotencyKey String   @unique
+  actorId        String?
+  subjectUserId  String?
+  resourceType   String?
+  resourceId     String?
+  amount         Int?
+  currency       String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  completedAt    DateTime?
+
+  @@index([kind, status])
+  @@index([resourceType, resourceId])
+}
+
+model Wallet {
+  id                    String   @id
+  userId                String
+  currency              String   @default("FCFA")
+  balance               Int      @default(0)
+  availableBalance      Int      @default(0)
+  heldBalance           Int      @default(0)
+  pendingReleaseBalance Int      @default(0)
+  pendingPayoutAmount   Int      @default(0)
+  source                String   @default("native")
+  metadata              Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+  @@index([source])
+}
+
+model WalletTransaction {
+  id          String   @id
+  userId      String?
+  type        String
+  amount      Int
+  currency    String   @default("FCFA")
+  method      String?
+  status      String
+  description String?
+  reference   String?
+  occurredAt  DateTime @default(now())
+  source      String   @default("native")
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, occurredAt])
+  @@index([type, status])
+  @@index([source])
+}
+
+model SubscriptionPlan {
+  id               String   @id
+  role             String
+  name             String
+  slug             String
+  priceMonthly     Int
+  currency         String   @default("FCFA")
+  commissionRate   Float    @default(0)
+  priorityMatching Boolean  @default(false)
+  analyticsLevel   String?
+  supportLevel     String?
+  verifiedBadge    Boolean  @default(false)
+  features         Json?
+  active           Boolean  @default(true)
+  source           String   @default("native")
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([role, active])
+  @@index([source])
+}
+
+model UserSubscription {
+  id             String   @id
+  userId         String
+  role           String
+  planId         String
+  planName       String
+  status         String
+  amount         Int
+  currency       String   @default("FCFA")
+  commissionRate Float    @default(0)
+  autoRenew      Boolean  @default(false)
+  startedAt      DateTime?
+  renewsAt       DateTime?
+  lastBilledAt   DateTime?
+  endedAt        DateTime?
+  source         String   @default("native")
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([planId])
+  @@index([source])
+}
+
+model PayoutAccount {
+  id                String   @id
+  userId            String
+  method            String
+  accountName       String?
+  accountIdentifier String?
+  label             String?
+  isDefault         Boolean  @default(false)
+  source            String   @default("native")
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([source])
+}
+
+model PayoutRequest {
+  id          String   @id
+  userId      String
+  amount      Int
+  currency    String   @default("FCFA")
+  method      String
+  accountId   String?
+  status      String
+  note        String?
+  requestedAt DateTime?
+  processedAt DateTime?
+  source      String   @default("native")
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([source])
+}
+
+model EscrowCase {
+  id                   String   @id
+  bookingId            String?
+  clientId             String?
+  providerId           String?
+  providerUserId       String?
+  requestedProviderId  String?
+  service              String?
+  amountTotal          Int      @default(0)
+  currency             String   @default("FCFA")
+  platformFeeAmount    Int      @default(0)
+  providerAmount       Int      @default(0)
+  status               String
+  fundedAt             DateTime?
+  releasedAt           DateTime?
+  refundedAt           DateTime?
+  note                 String?
+  paymentTransactionId String?
+  source               String   @default("native")
+  metadata             Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([clientId, status])
+  @@index([providerUserId, status])
+  @@index([source])
+}
+
+model Mission {
+  id                String   @id
+  clientId          String?
+  providerId        String?
+  requestedProviderId String?
+  service           String?
+  category          String?
+  status            String
+  requestChannel    String?
+  assignmentStatus  String?
+  walletFlow        String?
+  scheduledAt       DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  budgetAmount      Int?
+  currency          String?
+  location          String?
+  description       String?
+  source            String   @default("native")
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([clientId, status])
+  @@index([providerId, status])
+  @@index([source])
+}
+
+model Invoice {
+  id          String   @id
+  userId      String?
+  number      String?
+  type        String?
+  description String?
+  amount      Int      @default(0)
+  currency    String   @default("FCFA")
+  status      String
+  issueDate   DateTime?
+  dueDate     DateTime?
+  paidDate    DateTime?
+  recipient   Json?
+  items       Json?
+  source      String   @default("native")
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([source])
+}
+
+model NotificationDelivery {
+  id                String   @id
+  deliveryKey       String   @unique
+  outboxEventId     String?
+  eventType         String
+  channel           String
+  recipientUserId   String?
+  recipientAddress  String?
+  provider          String?
+  providerMessageId String?
+  status            String
+  attemptedAt       DateTime?
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+  error             String?
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([outboxEventId])
+  @@index([channel, status])
+  @@index([recipientUserId, createdAt])
+}
+
+model WebhookDispatchRecord {
+  id             String   @id
+  dispatchKey    String   @unique
+  outboxEventId  String?
+  eventType      String
+  targetUrl      String
+  method         String
+  status         String
+  responseStatus Int?
+  responseBody   String?
+  error          String?
+  attemptCount   Int      @default(1)
+  dispatchedAt   DateTime?
+  deliveredAt    DateTime?
+  correlationId  String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([outboxEventId])
+  @@index([status, createdAt])
+  @@index([correlationId])
+}
+
+model PaymentIntent {
+  id                   String   @id
+  actorId              String?
+  userId               String?
+  provider             String
+  providerIntentRef    String?
+  contextType          String?
+  contextId            String?
+  amount               Int
+  currency             String   @default("FCFA")
+  status               String
+  expiresAt            DateTime?
+  confirmedAt          DateTime?
+  cancelledAt          DateTime?
+  financialOperationId String?
+  metadata             Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([provider, status])
+  @@index([contextType, contextId])
+  @@index([financialOperationId])
+}
+
+model ProviderTransaction {
+  id                String   @id
+  paymentIntentId   String?
+  provider          String
+  providerReference String
+  providerStatus    String
+  direction         String?
+  amount            Int?
+  currency          String?
+  confirmedAt       DateTime?
+  failedAt          DateTime?
+  rawPayload        Json?
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerReference])
+  @@index([paymentIntentId])
+  @@index([provider, providerStatus])
+}
+
+model WebhookReceipt {
+  id             String   @id
+  provider       String
+  providerEventId String?
+  eventType      String?
+  status         String
+  idempotencyKey String?
+  correlationId  String?
+  receivedAt     DateTime @default(now())
+  processedAt    DateTime?
+  error          String?
+  rawPayload     Json?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([provider, status])
+  @@unique([provider, providerEventId])
+  @@index([providerEventId])
+  @@index([idempotencyKey])
+  @@index([correlationId])
+}
+
+model SettlementRecord {
+  id                    String   @id
+  provider              String
+  providerSettlementRef String?
+  status                String
+  amount                Int
+  currency              String   @default("FCFA")
+  settledAt             DateTime?
+  metadata              Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([provider, status])
+  @@index([providerSettlementRef])
+}
+
+model ReconciliationJob {
+  id          String   @id
+  provider    String
+  scope       String?
+  status      String
+  startedAt   DateTime?
+  completedAt DateTime?
+  windowStart DateTime?
+  windowEnd   DateTime?
+  summary     Json?
+  error       String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([provider, status])
+  @@index([windowStart, windowEnd])
+}
+
+model CommissionLedgerEntry {
+  id                String   @id
+  sourceType        String?
+  sourceId          String?
+  userId            String?
+  beneficiaryUserId String?
+  amount            Int      @default(0)
+  currency          String   @default("FCFA")
+  status            String
+  description       String?
+  recognizedAt      DateTime?
+  source            String   @default("native")
+  metadata          Json?
+  createdAt         DateTime @default(now())
+
+  @@index([sourceType, sourceId])
+  @@index([beneficiaryUserId])
+  @@index([source])
 }
 
 model AppRow {

@@ -169,7 +169,7 @@ export default function AdminMessagesPage() {
               Les demandes support internes et les messages du formulaire public remontent ici pour l administration.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
               { label: 'Messages non lus', value: totalUnread, icon: 'ri-message-3-line', tone: 'bg-teal-50 text-teal-700' },
               { label: 'Demandes externes', value: openPublicRequests, icon: 'ri-customer-service-2-line', tone: 'bg-amber-50 text-amber-700' },
@@ -190,14 +190,24 @@ export default function AdminMessagesPage() {
           </div>
         </div>
 
-        <div className="mb-6 flex flex-wrap items-center gap-2">
+        <div className="mb-6 flex flex-wrap items-center gap-2" role="tablist" aria-label="Navigation messages support">
           <button
+            type="button"
+            role="tab"
+            id="admin-messages-tab-internal"
+            aria-selected={activeTab === 'internal'}
+            aria-controls="admin-messages-panel-internal"
             onClick={() => setActiveTab('internal')}
             className={`rounded-lg px-4 py-2 text-sm font-medium ${activeTab === 'internal' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
           >
             Inbox interne
           </button>
           <button
+            type="button"
+            role="tab"
+            id="admin-messages-tab-external"
+            aria-selected={activeTab === 'external'}
+            aria-controls="admin-messages-panel-external"
             onClick={() => setActiveTab('external')}
             className={`rounded-lg px-4 py-2 text-sm font-medium ${activeTab === 'external' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
           >
@@ -206,12 +216,13 @@ export default function AdminMessagesPage() {
         </div>
 
         {activeTab === 'internal' ? (
-          <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+          <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]" role="tabpanel" id="admin-messages-panel-internal" aria-labelledby="admin-messages-tab-internal">
             <aside className="rounded-2xl border border-gray-200 bg-white shadow-sm">
               <div className="border-b border-gray-200 p-4">
                 <div className="relative">
                   <i className="ri-search-line pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                   <input
+                    aria-label="Rechercher une conversation support"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Rechercher une conversation"
@@ -232,6 +243,9 @@ export default function AdminMessagesPage() {
                     return (
                       <button
                         key={conversation.id}
+                        type="button"
+                        aria-pressed={isActive}
+                        aria-label={`Ouvrir la conversation avec ${display.name}`}
                         onClick={() => setActiveConversationId(conversation.id)}
                         className={`mb-2 w-full rounded-xl border px-3 py-3 text-left transition-colors ${isActive ? 'border-teal-500 bg-teal-50' : 'border-transparent hover:bg-gray-50'}`}
                       >
@@ -308,8 +322,9 @@ export default function AdminMessagesPage() {
                   </div>
 
                   <div className="border-t border-gray-200 px-5 py-4">
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row">
                       <textarea
+                        aria-label={`Repondre a ${conversationDisplay(currentConversation).name}`}
                         value={replyText}
                         onChange={(event) => setReplyText(event.target.value)}
                         rows={3}
@@ -317,9 +332,10 @@ export default function AdminMessagesPage() {
                         className="min-h-[96px] flex-1 rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none focus:border-teal-500"
                       />
                       <button
+                        type="button"
                         onClick={() => void handleReply()}
                         disabled={!replyText.trim()}
-                        className="self-end rounded-xl bg-teal-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                        className="self-stretch rounded-xl bg-teal-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300 sm:self-end"
                       >
                         Repondre
                       </button>
@@ -334,7 +350,7 @@ export default function AdminMessagesPage() {
             </section>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4" role="tabpanel" id="admin-messages-panel-external" aria-labelledby="admin-messages-tab-external">
             {publicRequests.length === 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center text-sm text-gray-500 shadow-sm">
                 Aucune demande externe pour le moment.
@@ -369,6 +385,8 @@ export default function AdminMessagesPage() {
                       </a>
                       {submission.status === 'new' && (
                         <button
+                          type="button"
+                          aria-label={`Marquer comme traitee la demande de ${submission.firstName} ${submission.lastName}`}
                           onClick={() => void handleMarkHandled(submission)}
                           className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
                         >

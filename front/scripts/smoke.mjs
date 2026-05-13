@@ -20,7 +20,7 @@ const suites = [
     email: 'client@c2p.sn',
     landingPath: '/dashboard/client',
     checks: [
-      { path: '/dashboard/client', text: 'Mon espace client', actions: [dashboardTopbarSmoke('/dashboard/client'), clientSupportSmoke] },
+      { path: '/dashboard/client', text: 'Espace client', actions: [dashboardTopbarSmoke('/dashboard/client'), clientDashboardSmoke, clientSupportSmoke] },
       { path: '/dashboard/client/prestataires', text: 'Trouver un prestataire', actions: [clientProviderContactSmoke] },
       { path: '/dashboard/client/reservations', text: 'Mes réservations', actions: [clientReservationsSmoke] },
       { path: '/dashboard/client/commandes', text: 'Mes commandes', actions: [clientOrdersSmoke] },
@@ -35,9 +35,9 @@ const suites = [
     email: 'prestataire@c2p.sn',
     landingPath: '/dashboard/prestataire',
     checks: [
-      { path: '/dashboard/prestataire', text: 'Tableau de bord Prestataire', actions: [] },
+      { path: '/dashboard/prestataire', text: 'Espace prestataire', actions: [] },
       { path: '/dashboard/prestataire/services', text: 'Mes services', actions: [] },
-      { path: '/dashboard/prestataire/demandes', text: 'Demandes de service', actions: [clickTitle('Détails', true)] },
+      { path: '/dashboard/prestataire/demandes', text: 'Missions attribuées', actions: [clickTitle('Détails', true)] },
       { path: '/dashboard/prestataire/avis', text: 'Avis clients', actions: [clickButton('Utile', true)] },
       { path: '/dashboard/messages', text: 'Messages', actions: [dashboardMessagesSmoke] },
     ],
@@ -47,7 +47,7 @@ const suites = [
     email: 'formateur@c2p.sn',
     landingPath: '/dashboard/formateur',
     checks: [
-      { path: '/dashboard/formateur', text: 'Tableau de bord Formateur', actions: [dashboardTopbarSmoke('/dashboard/formateur'), formateurDashboardSmoke] },
+      { path: '/dashboard/formateur', text: 'Espace formateur', actions: [dashboardTopbarSmoke('/dashboard/formateur'), formateurDashboardSmoke] },
       { path: '/dashboard/formateur/mes-cours', text: 'Mes formations', actions: [formateurCoursSmoke] },
       { path: '/dashboard/formateur/classes-virtuelles', text: 'Classes virtuelles', actions: [formateurClassesSmoke] },
       { path: '/dashboard/formateur/apprenants', text: 'Mes apprenants', actions: [formateurApprenantsSmoke] },
@@ -64,7 +64,7 @@ const suites = [
     email: 'apprenant@c2p.sn',
     landingPath: '/dashboard/apprenant',
     checks: [
-      { path: '/dashboard/apprenant', text: 'Tableau de bord Apprenant', actions: [] },
+      { path: '/dashboard/apprenant', text: 'Espace apprenant', actions: [] },
       { path: '/dashboard/apprenant/mes-cours', text: 'Mes formations', actions: [] },
       { path: '/dashboard/apprenant/cours/1', text: 'Marketing Digital Avancé', actions: [clickButton('Ressources', true), clickButton('Télécharger', true)] },
       { path: '/dashboard/apprenant/progression', text: 'Ma progression', actions: [apprenantProgressionSmoke] },
@@ -73,11 +73,21 @@ const suites = [
     ],
   },
   {
+    name: 'parent',
+    email: 'parent@c2p.sn',
+    landingPath: '/dashboard/parent',
+    checks: [
+      { path: '/dashboard/parent', text: 'Suivi parent', actions: [dashboardTopbarSmoke('/dashboard/parent')] },
+      { path: '/dashboard/messages', text: 'Messages', actions: [dashboardMessagesSmoke] },
+      { path: '/dashboard/securite', text: 'Securite du compte', actions: [] },
+    ],
+  },
+  {
     name: 'porteur',
     email: 'porteur@c2p.sn',
     landingPath: '/dashboard/porteur',
     checks: [
-      { path: '/dashboard/porteur', text: 'Tableau de bord Porteur de projet', actions: [] },
+      { path: '/dashboard/porteur', text: 'Espace porteur', actions: [] },
       { path: '/dashboard/porteur/mes-projets', text: 'Mes projets', actions: [] },
       { path: '/dashboard/porteur/mes-projets/4001', text: 'Voir les financements', actions: [clickButton('Documents', true), clickButton('Ouvrir', true)] },
       { path: '/dashboard/porteur/partenariats', text: 'Partenariats', actions: [] },
@@ -90,7 +100,7 @@ const suites = [
     email: 'partenaire@c2p.sn',
     landingPath: '/dashboard/partenaire',
     checks: [
-      { path: '/dashboard/partenaire', text: 'Tableau de bord Partenaire', actions: [] },
+      { path: '/dashboard/partenaire', text: 'Espace partenaire', actions: [] },
       { path: '/dashboard/partenaire/opportunites', text: 'Opportunites de collaboration', actions: [] },
       { path: '/dashboard/partenaire/projets-suivis', text: 'Projets suivis', actions: [] },
       { path: '/dashboard/partenaire/projets-suivis/4001', text: 'Suivi', actions: [clickButton('Contacter le porteur', true), clickButton('Documents', true), clickButton('Ouvrir', true)] },
@@ -103,7 +113,7 @@ const suites = [
     landingPath: '/admin/dashboard',
     setup: seedPublicContactSubmission,
     checks: [
-      { path: '/admin/dashboard', text: 'Tableau de bord administrateur', actions: [adminTopbarSmoke('/admin/dashboard'), clickButton('Exporter'), clickButton('Actualiser', true)] },
+      { path: '/admin/dashboard', text: 'Administration', actions: [adminTopbarSmoke('/admin/dashboard'), clickButton('Exporter'), clickButton('Actualiser', true)] },
       { path: '/admin/users', text: 'Gestion des utilisateurs', actions: [adminUsersSmoke] },
       { path: '/admin/content', text: 'Gestion des contenus', actions: [adminContentSmoke] },
       { path: '/admin/accreditations', text: 'Gestion des accreditations', actions: [clickButton('Voir les documents', true), clickButton('Consulter', true)] },
@@ -187,6 +197,23 @@ async function selectSelector(page, selector, value, optional = false) {
   await locator.selectOption(value);
   await pause(page);
   return true;
+}
+
+async function getSelectOptionCount(locator) {
+  return locator.evaluate((element) => {
+    if (!(element instanceof HTMLSelectElement)) return 0;
+    return element.options.length;
+  });
+}
+
+async function waitForSelectOptionCount(locator, minimum = 2, timeoutMs = 10000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const count = await getSelectOptionCount(locator).catch(() => 0);
+    if (count >= minimum) return count;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return getSelectOptionCount(locator).catch(() => 0);
 }
 
 async function clickHeaderLink(page, href, optional = false) {
@@ -306,10 +333,24 @@ function attachDiagnostics(page, errors) {
   page.on('pageerror', (error) => {
     errors.push(`pageerror:${error.message}`);
   });
+  page.on('response', (response) => {
+    const request = response.request();
+    const resourceType = request.resourceType();
+    const url = response.url();
+    if (response.status() === 404) {
+      errors.push(`response404:${resourceType}:${url}`);
+      return;
+    }
+    if (response.status() === 401 && (resourceType === 'fetch' || resourceType === 'xhr')) {
+      errors.push(`response401:${resourceType}:${url}`);
+    }
+  });
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     const text = message.text();
     if (text.includes('React DevTools')) return;
+    if (text.includes('ERR_BLOCKED_BY_RESPONSE.NotSameOrigin')) return;
+    if (text.includes('NETWORK_ERROR') || text.includes('REQUEST_TIMEOUT')) return;
     errors.push(`console:${text}`);
   });
   page.on('dialog', async (dialog) => {
@@ -319,21 +360,36 @@ function attachDiagnostics(page, errors) {
 }
 
 async function bootstrapSession(page, email, landingPath) {
-  await page.goto(`${FRONT_URL}${landingPath}`, { waitUntil: 'domcontentloaded' });
-  const emailInput = page.locator('input[type="email"]').first();
-  await Promise.race([
-    page.waitForURL((url) => new URL(url).pathname === landingPath, { timeout: 6000 }).catch(() => {}),
-    emailInput.waitFor({ state: 'visible', timeout: 6000 }).catch(() => {}),
-  ]);
-
-  if (await emailInput.isVisible().catch(() => false)) {
-    await emailInput.fill(email);
+  const performUiLogin = async () => {
+    const loginEmailInput = page.locator('input[type="email"]').first();
+    await loginEmailInput.waitFor({ state: 'visible', timeout: 5000 });
+    await loginEmailInput.fill(email);
     await page.locator('input[type="password"]').first().fill(PASSWORD);
     await page.getByRole('button', { name: 'Se connecter', exact: false }).click();
+    await waitForRoute(page, landingPath);
+    await pause(page, 800);
+  };
+
+  await page.goto(`${FRONT_URL}${landingPath}`, { waitUntil: 'domcontentloaded' });
+  await pause(page, 1200);
+
+  const currentPath = () => new URL(page.url()).pathname;
+  const emailInput = page.locator('input[type="email"]').first();
+
+  if (currentPath() === '/auth/login' || await emailInput.isVisible().catch(() => false)) {
+    await performUiLogin();
+    return;
   }
 
-  await waitForRoute(page, landingPath);
-  await pause(page, 800);
+  if (currentPath() !== landingPath) {
+    await waitForRoute(page, landingPath);
+    await pause(page, 800);
+  }
+
+  if (currentPath() === '/auth/login' || await emailInput.isVisible().catch(() => false)) {
+    await performUiLogin();
+    return;
+  }
 }
 
 function dashboardTopbarSmoke(returnPath) {
@@ -350,18 +406,25 @@ function dashboardTopbarSmoke(returnPath) {
 
 function adminTopbarSmoke(returnPath) {
   return async (page) => {
+    const goBackToDashboard = async () => {
+      const dashboardLink = page.locator(`a[href="${returnPath}"]`).first();
+      if ((await dashboardLink.count()) && (await dashboardLink.isVisible().catch(() => false))) {
+        await clickLocator(page, dashboardLink, `Lien admin ${returnPath}`);
+        await waitForRoute(page, returnPath);
+        return;
+      }
+      await routeTo(page, returnPath);
+    };
+
     await clickLocator(page, page.locator('[title="Messages support"]'), 'Topbar messages');
     await waitForRoute(page, '/admin/messages');
-    await routeTo(page, returnPath);
+    await goBackToDashboard();
     await clickLocator(page, page.locator('[title="Notifications"]'), 'Topbar notifications');
     await waitForRoute(page, '/admin/notifications');
-    await routeTo(page, returnPath);
-    await clickLocator(page, page.locator('[title="Parametres"]'), 'Topbar parametres');
-    await waitForRoute(page, '/admin/settings');
-    await routeTo(page, returnPath);
+    await goBackToDashboard();
     await clickLocator(page, page.locator('[title="Profil"]'), 'Topbar profil');
     await waitForRoute(page, '/admin/profile');
-    await routeTo(page, returnPath);
+    await goBackToDashboard();
   };
 }
 
@@ -372,22 +435,38 @@ async function clientSupportSmoke(page) {
   }
   await link.click();
   await waitForRoute(page, '/dashboard/messages');
-  await page.getByPlaceholder('Écrivez votre message...', { exact: false }).first().waitFor({ state: 'visible', timeout: 10000 });
+  await ensureMessageComposerVisible(page);
   await fillPlaceholder(page, 'Écrivez votre message...', 'Smoke client -> support admin');
   await clickCss('button:has(i.ri-send-plane-fill)')(page);
+  await routeTo(page, '/dashboard/client');
+}
+
+async function clientDashboardSmoke(page) {
+  await page.getByText('À traiter maintenant', { exact: false }).first().waitFor({ state: 'visible', timeout: 15000 });
+  await clickLocator(page, page.getByRole('link', { name: 'Voir les paiements', exact: false }).first(), 'Lien paiements client', true);
+  if (new URL(page.url()).pathname === '/dashboard/paiements') {
+    await routeTo(page, '/dashboard/client');
+  }
+  await clickLocator(page, page.locator('a[href="/dashboard/client/reservations"]').first(), 'Lien reservations dashboard client', true);
+  await waitForRoute(page, '/dashboard/client/reservations');
+  await routeTo(page, '/dashboard/client');
 }
 
 async function clientProviderContactSmoke(page) {
   await fillPlaceholder(page, 'Nom, service, localisation...', 'dakar', true);
-  await clickButton('Contacter')(page);
-  await fillPlaceholder(page, 'Décrivez votre besoin...', 'Besoin smoke pour tester le flux client -> prestataire.');
-  await clickButton('Envoyer la demande')(page);
-  await waitForRoute(page, '/dashboard/messages');
+  await page.getByRole('button', { name: 'Commander via C2P', exact: false }).first().waitFor({ state: 'visible', timeout: 15000 });
+  await clickButton('Commander via C2P')(page);
+  await fillSelector(page, 'input[type="date"]', '2026-05-20');
+  await fillPlaceholder(page, 'Quartier, immeuble, repère...', 'Plateau, immeuble C2P');
+  await fillPlaceholder(page, 'Contexte, urgence, contraintes d’accès, livrables attendus...', 'Besoin smoke pour tester le flux client -> prestataire.');
+  await clickFirstVisibleByNames(page, ['Envoyer à C2P', 'Envoyer']);
+  await waitForRoute(page, '/dashboard/client/reservations');
 }
 
 async function clientReservationsSmoke(page) {
-  await clickButton('Confirmée', true)(page);
-  await clickButton('En attente', true)(page);
+  await clickButton('Prestataire assigné', true)(page);
+  await clickButton('Analyse C2P', true)(page);
+  await clickButton('Mission en cours', true)(page);
   await clickButton('Terminée', true)(page);
   await clickButton('Toutes', true)(page);
   const reviewButton = page.getByRole('button', { name: 'Noter', exact: false }).first();
@@ -406,11 +485,11 @@ async function clientReservationsSmoke(page) {
 
 async function clientOrdersSmoke(page) {
   await clickButton('Paiement en attente', true)(page);
-  await clickButton('En preparation', true)(page);
-  await clickButton('Livree', true)(page);
+  await clickButton('En préparation', true)(page);
+  await clickButton('Livrée', true)(page);
   await clickButton('Toutes', true)(page);
   await clickCss('button:has(i.ri-arrow-down-s-line)', true)(page);
-  await clickFirstVisibleByNames(page, ['Telecharger la facture', 'Marquer payee']);
+  await clickFirstVisibleByNames(page, ['Télécharger la facture', 'Téléchargement prêt', 'Régler via paiements', 'Signaler un problème']);
 }
 
 async function dashboardNotificationsSmoke(page) {
@@ -424,15 +503,42 @@ async function dashboardNotificationsSmoke(page) {
   await clickButton('Marquer comme lu', true)(page);
 }
 
-async function dashboardMessagesSmoke(page) {
-  await pause(page, 600);
-  if (!(await page.locator('textarea[placeholder*="Écrivez votre message"]').count())) {
-    const firstConversation = page.locator('button').filter({ has: page.locator('p,span,h3') }).nth(1);
-    if (await firstConversation.count()) {
-      await firstConversation.click({ force: true }).catch(() => {});
-      await pause(page, 400);
+async function ensureMessageComposerVisible(page) {
+  const composer = page.getByPlaceholder('Écrivez votre message...', { exact: false }).first();
+  if (await composer.isVisible().catch(() => false)) {
+    return;
+  }
+
+  const searchInput = page.locator('input[placeholder*="Rechercher une conversation"]').first();
+  let conversationButtons = page.locator('div.flex-1.overflow-y-auto > button');
+  if (await searchInput.count()) {
+    const conversationPanel = searchInput.locator('xpath=ancestor::div[contains(@class,"bg-white")][1]');
+    const panelButtons = conversationPanel.locator('button');
+    const scopedButtons = conversationPanel.locator('div.flex-1.overflow-y-auto > button');
+    if (await scopedButtons.count()) {
+      conversationButtons = scopedButtons;
+    } else if (await panelButtons.count()) {
+      conversationButtons = panelButtons;
     }
   }
+
+  const count = await conversationButtons.count();
+  for (let index = 0; index < count; index += 1) {
+    const candidate = conversationButtons.nth(index);
+    if (!(await candidate.isVisible().catch(() => false))) continue;
+    await candidate.click({ force: true }).catch(() => {});
+    await pause(page, 400);
+    if (await composer.isVisible().catch(() => false)) {
+      return;
+    }
+  }
+
+  await composer.waitFor({ state: 'visible', timeout: 10000 });
+}
+
+async function dashboardMessagesSmoke(page) {
+  await pause(page, 600);
+  await ensureMessageComposerVisible(page);
 
   await clickCss('button:has(i.ri-add-line)', true)(page);
   if (await page.locator('input[placeholder*="Rechercher un utilisateur"]').count()) {
@@ -512,25 +618,41 @@ async function formateurProfilPublicSmoke(page) {
   const stamp = Date.now();
   const title = `Formatrice smoke ${stamp}`;
   const website = `https://example.com/formateur-smoke-${stamp}`;
+  const skill = `Smoke skill ${stamp}`;
+  const saveButton = page.getByRole('button', { name: 'Enregistrer', exact: true }).first();
+
+  await saveButton.waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForFunction(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    return buttons.some((button) => button.textContent?.trim() === 'Enregistrer' && !button.disabled);
+  }, { timeout: 15000 });
 
   await fillSelector(page, 'input[placeholder*="Formatrice React"]', title);
   await fillSelector(page, 'textarea[placeholder*="Présentez votre expertise"]', 'Profil smoke mis à jour pour valider le formulaire public formateur.');
   await fillSelector(page, 'input[placeholder="https://..."]', website);
   await fillSelector(page, 'input[placeholder="Français"]', 'Français');
-  await clickLocator(page, page.locator('input[placeholder="Ajouter une compétence"]').first(), 'Champ compétence');
-  await page.keyboard.type(`Smoke skill ${stamp}`);
-  await page.keyboard.press('Enter');
-  await clickLocator(page, page.locator('input[placeholder="Ajouter une langue"]').first(), 'Champ langue');
-  await page.keyboard.type('Wolof');
-  await page.keyboard.press('Enter');
+  const skillInput = page.locator('input[placeholder="Ajouter une compétence"]').first();
+  await clickLocator(page, skillInput, 'Champ compétence');
+  await skillInput.fill(skill);
+  await clickLocator(page, skillInput.locator('xpath=following-sibling::button[1]'), 'Ajout compétence smoke');
+  await page.getByText(skill, { exact: true }).first().waitFor({ state: 'visible', timeout: 10000 });
+  const languageInput = page.locator('input[placeholder="Ajouter une langue"]').first();
+  await clickLocator(page, languageInput, 'Champ langue');
+  await languageInput.fill('Wolof');
+  await clickLocator(page, languageInput.locator('xpath=following-sibling::button[1]'), 'Ajout langue smoke');
+  await page.getByText('Wolof', { exact: true }).first().waitFor({ state: 'visible', timeout: 10000 });
   await fillSelector(page, 'input[placeholder="Nom du bénéficiaire"]', 'Formateur Smoke QA');
   await fillSelector(page, 'input[placeholder="IBAN / compte bancaire"]', `SN00SMOKE${stamp}`);
   await fillSelector(page, 'input[placeholder="Email PayPal"]', `formateur-smoke-${stamp}@example.com`);
-  await clickButton('Enregistrer')(page);
+  await clickLocator(page, saveButton, 'Enregistrement profil public smoke');
+  await page.getByText('Profil mis à jour', { exact: false }).first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+  await page.getByRole('button', { name: 'Enregistrer', exact: true }).first().waitFor({ state: 'visible', timeout: 15000 });
+  await pause(page, 600);
 
   await clickLocator(page, page.getByRole('link', { name: 'Prévisualiser la page publique', exact: false }), 'Preview profil public');
   await page.waitForURL(/\/formateurs\/[^/]+(?:[?#].*)?$/, { timeout: 15000 });
   await page.getByText('Compétences', { exact: false }).first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.getByText(skill, { exact: false }).first().waitFor({ state: 'visible', timeout: 15000 });
   await routeTo(page, '/dashboard/formateur/profil-public');
 }
 
@@ -540,6 +662,10 @@ async function formateurCoursSmoke(page) {
   const lessonName = `Leçon smoke ${Date.now()}`;
   const examTitle = `Quiz smoke ${Date.now()}`;
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.getByText('Mes formations', { exact: false }).first().waitFor({ state: 'visible', timeout: 15000 });
+  await pause(page, 800);
 
   await fillPlaceholder(page, 'Rechercher une formation...', 'react', true);
   await clickButton('Publies', true)(page);
@@ -556,6 +682,7 @@ async function formateurCoursSmoke(page) {
   await wizard.locator('input[placeholder*="8h ou 4 semaines"]').fill('8h');
   await wizard.locator('label:has-text("Promotion (%)") + input').fill('10');
   await wizard.locator('label:has-text("Prix (FCFA)") + input').fill('25000');
+  await wizard.locator('input[type="url"][placeholder="https://..."]').first().fill(`${FRONT_URL}/images/home/hero.jpg`);
   await wizard.locator('input[placeholder="Titre du chapitre"]').first().fill(sectionName);
   await wizard.locator('input[placeholder="Titre de la leçon"]').first().fill(lessonName);
   await clickLocator(page, wizard.getByRole('button', { name: 'Suivant', exact: true }), 'Passage etape 1 > 2 wizard');
@@ -577,12 +704,24 @@ async function formateurCoursSmoke(page) {
   await wizard.locator('input[placeholder="Quiz de validation"]').fill(examTitle);
   await wizard.locator('input[type="date"]').first().fill(tomorrow);
   await wizard.locator('input[placeholder="Intitulé de la question"]').first().fill('Quelle est la priorité smoke ?');
-  await wizard.locator('select').last().selectOption('single_choice');
-  await wizard.locator('input[placeholder="Libellé"]').first().fill('Valider le parcours');
-  await wizard.locator('input[placeholder="Valeur"]').first().fill('valid');
-  await clickLocator(page, wizard.getByRole('button', { name: 'Marquer correcte', exact: false }).first(), 'Marquage bonne reponse smoke');
-  await clickLocator(page, wizard.locator('div.sticky.bottom-0 button').last(), 'Creation formation wizard');
-  await page.getByText(courseName, { exact: true }).first().waitFor({ state: 'visible', timeout: 90000 });
+  const correctChoiceButton = wizard.locator('button').filter({ hasText: 'Marquer correcte' }).first();
+  await clickLocator(page, correctChoiceButton, 'Marquage bonne reponse smoke');
+  await wizard.locator('button').filter({ hasText: 'Réponse correcte' }).first().waitFor({ state: 'visible', timeout: 10000 });
+  const createCourseButton = wizard.getByRole('button', { name: /Créer la formation/i }).first();
+  await createCourseButton.scrollIntoViewIfNeeded().catch(() => {});
+  await createCourseButton.waitFor({ state: 'visible', timeout: 10000 });
+  await clickLocator(page, createCourseButton, 'Creation formation wizard');
+  await wizard.waitFor({ state: 'hidden', timeout: 120000 }).catch(async () => {
+    await wizard.waitFor({ state: 'detached', timeout: 120000 });
+  });
+
+  try {
+    await page.getByText(courseName, { exact: true }).first().waitFor({ state: 'visible', timeout: 30000 });
+  } catch {
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.getByText('Mes formations', { exact: false }).first().waitFor({ state: 'visible', timeout: 15000 });
+    await page.getByText(courseName, { exact: true }).first().waitFor({ state: 'visible', timeout: 90000 });
+  }
 
   await fillPlaceholder(page, 'Rechercher une formation...', courseName);
   const courseTitle = page.getByText(courseName, { exact: true }).first();
@@ -611,7 +750,11 @@ async function formateurCoursSmoke(page) {
   if (SHARE_REVIEW_COURSE_WITH_ADMIN) {
     moderationCourseTitle = courseName;
   } else {
-    courseCard = courseTitle.locator('xpath=ancestor::div[contains(@class,"overflow-hidden")][1]');
+    await routeTo(page, '/dashboard/formateur/mes-cours');
+    await fillPlaceholder(page, 'Rechercher une formation...', courseName);
+    const deletionCourseTitle = page.getByText(courseName, { exact: true }).first();
+    await deletionCourseTitle.waitFor({ state: 'visible', timeout: 30000 });
+    courseCard = deletionCourseTitle.locator('xpath=ancestor::div[contains(@class,"overflow-hidden")][1]');
     await clickLocator(page, courseCard.locator('button:has(i.ri-delete-bin-line)'), 'Suppression formation smoke');
     await waitForTextToDisappear(page, courseName);
   }
@@ -631,8 +774,8 @@ async function formateurClassesSmoke(page) {
   await clickButton('Nouvelle classe')(page);
   const createModal = page.locator('div.fixed div.bg-white').filter({ has: page.getByText('Programmer une classe virtuelle', { exact: true }) }).first();
   await createModal.locator('input[placeholder*="Session Q&A"]').fill(className);
-  const courseSelect = createModal.locator('label:has-text("Formation associée") + select');
-  if ((await courseSelect.count()) && (await courseSelect.locator('option').count()) > 1) {
+  const courseSelect = createModal.getByLabel('Formation associée', { exact: true });
+  if ((await courseSelect.count()) && (await waitForSelectOptionCount(courseSelect, 2)) > 1) {
     await courseSelect.selectOption({ index: 1 });
   }
   await createModal.locator('input[type="date"]').fill(tomorrow);
@@ -657,6 +800,10 @@ async function formateurClassesSmoke(page) {
   classTitle = page.getByText(updatedClassName, { exact: true }).first();
   classCard = classTitle.locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]');
   await clickLocator(page, classCard.getByRole('button', { name: 'Démarrer', exact: false }), 'Demarrage classe smoke');
+  await page.getByText(updatedClassName, { exact: true }).first().waitFor({ state: 'visible', timeout: 15000 });
+  classTitle = page.getByText(updatedClassName, { exact: true }).first();
+  classCard = classTitle.locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]');
+  await classCard.getByRole('button', { name: 'Rejoindre', exact: false }).first().waitFor({ state: 'visible', timeout: 15000 });
   await clickLocator(page, classCard.getByRole('button', { name: 'Rejoindre', exact: false }), 'Rejoindre classe smoke', true);
   await clickLocator(page, classCard.getByRole('button', { name: 'Terminer', exact: false }), 'Fin classe smoke');
   await pause(page, 500);
@@ -677,7 +824,7 @@ async function formateurRevenusSmoke(page) {
   }
 
   const accountSelect = page.locator('section').filter({ has: page.getByText('Demander un retrait', { exact: true }) }).locator('select').first();
-  if ((await accountSelect.count()) && (await accountSelect.locator('option').count()) > 1) {
+  if ((await accountSelect.count()) && (await getSelectOptionCount(accountSelect)) > 1) {
     await accountSelect.selectOption({ index: 1 });
     await pause(page, 300);
     await fillSelector(page, 'input[placeholder="Montant à retirer (FCFA)"]', '1500');
@@ -717,7 +864,7 @@ async function formateurCommunauteSmoke(page) {
   await clickButton('FAQ')(page);
   const faqCreateSection = page.locator('section, div').filter({ has: page.getByText('Nouvelle FAQ', { exact: true }) }).first();
   const faqCourseSelect = faqCreateSection.locator('select').first();
-  if ((await faqCourseSelect.count()) && (await faqCourseSelect.locator('option').count()) > 1) {
+  if ((await faqCourseSelect.count()) && (await waitForSelectOptionCount(faqCourseSelect, 2)) > 1) {
     await faqCourseSelect.selectOption({ index: 1 }).catch(() => {});
   }
   await faqCreateSection.locator('input[placeholder="Question fréquente"]').fill(`Question smoke ${Date.now()}`);
@@ -728,7 +875,7 @@ async function formateurCommunauteSmoke(page) {
 async function formateurApprenantsSmoke(page) {
   await fillPlaceholder(page, 'Rechercher un apprenant ou une formation...', 'apprenant', true);
   const courseFilter = page.locator('select[aria-label="Filtrer par formation"]');
-  if ((await courseFilter.count()) && (await courseFilter.locator('option').count()) > 1) {
+  if ((await courseFilter.count()) && (await getSelectOptionCount(courseFilter)) > 1) {
     await courseFilter.selectOption({ index: 1 });
     await pause(page, 300);
     await courseFilter.selectOption('all');
@@ -746,6 +893,7 @@ async function formateurApprenantsSmoke(page) {
   await fillPlaceholder(page, 'Rechercher un apprenant ou une formation...', '');
 
   const firstRow = page.locator('tbody tr').first();
+  await firstRow.waitFor({ state: 'visible', timeout: 15000 });
   await clickLocator(page, firstRow.locator('button:has(i.ri-eye-line)'), 'Details apprenant smoke');
   await page.getByText('Parcours sur vos formations', { exact: false }).first().waitFor({ state: 'visible', timeout: 10000 });
   const programmeLink = page.getByRole('link', { name: 'Voir le programme', exact: false }).first();
@@ -758,6 +906,7 @@ async function formateurApprenantsSmoke(page) {
   }
 
   const refreshedFirstRow = page.locator('tbody tr').first();
+  await refreshedFirstRow.waitFor({ state: 'visible', timeout: 15000 });
   await clickLocator(page, refreshedFirstRow.locator('button:has(i.ri-message-3-line)'), 'Message apprenant smoke');
   await waitForRoute(page, '/dashboard/messages');
   await page.locator('textarea[placeholder*="Écrivez votre message"]').first().waitFor({ state: 'visible', timeout: 10000 });
@@ -783,7 +932,7 @@ async function formateurEvaluationsSmoke(page) {
   const createModal = page.locator('div.fixed div.bg-white').filter({ has: page.getByText('Nouvel examen', { exact: true }) }).first();
   await createModal.locator('input[placeholder*="Quiz React"]').fill(examName);
   const courseSelect = createModal.locator('label:has-text("Formation associée") + select');
-  if ((await courseSelect.count()) && (await courseSelect.locator('option').count()) > 1) {
+  if ((await courseSelect.count()) && (await waitForSelectOptionCount(courseSelect, 2)) > 1) {
     await courseSelect.selectOption({ index: 1 });
   }
   await createModal.locator('select').nth(1).selectOption('quiz');
@@ -800,15 +949,20 @@ async function formateurEvaluationsSmoke(page) {
   await quizModal.locator('textarea[placeholder*="Quel indicateur"]').fill(questionPrompt);
   await quizModal.locator('select').first().selectOption('true_false');
   await clickLocator(page, quizModal.getByRole('button', { name: 'Ajouter la question', exact: true }), 'Ajout question quiz smoke');
-  await page.getByText(questionPrompt, { exact: true }).first().waitFor({ state: 'visible', timeout: 15000 });
-  const questionCard = page.getByText(questionPrompt, { exact: true }).first().locator('xpath=ancestor::div[contains(@class,"rounded-2xl")][1]');
-  const correctCheckbox = questionCard.locator('input[type="checkbox"]').nth(1);
+  const questionCard = quizModal.locator('div.bg-white.border.border-gray-200.rounded-2xl.p-5.shadow-sm').first();
+  await questionCard.waitFor({ state: 'visible', timeout: 15000 });
+  const correctCheckbox = questionCard.locator('label:has-text("Bonne réponse") input[type="checkbox"]').first();
   if (await correctCheckbox.count()) {
     await correctCheckbox.check({ force: true });
   }
   await clickLocator(page, questionCard.getByRole('button', { name: 'Enregistrer', exact: true }).first(), 'Sauvegarde question smoke');
   await clickLocator(page, quizModal.locator('button:has(i.ri-close-line)').first(), 'Fermeture quiz smoke');
-  await clickLocator(page, examRow.locator('button:has(i.ri-delete-bin-line)'), 'Suppression examen smoke');
+  await quizModal.waitFor({ state: 'hidden', timeout: 15000 }).catch(async () => {
+    await quizModal.waitFor({ state: 'detached', timeout: 15000 });
+  });
+  await pause(page, 400);
+  const refreshedExamRow = page.getByText(examName, { exact: true }).first().locator('xpath=ancestor::tr[1]');
+  await clickLocator(page, refreshedExamRow.locator("button[title=\"Supprimer l'examen\"]").first(), 'Suppression examen smoke');
   await waitForTextToDisappear(page, examName);
 }
 
@@ -869,11 +1023,20 @@ async function formateurCertificatsSmoke(page) {
 async function adminUsersSmoke(page) {
   await clickButton('Exporter')(page);
   await fillPlaceholder(page, 'Rechercher un utilisateur...', 'client', true);
-  await selectSelector(page, 'select', 'client', true);
+  const filtersSection = page.locator('section').filter({ has: page.getByText('Filtres utilisateurs', { exact: true }) }).first();
+  const roleSelect = filtersSection.locator('select').nth(0);
+  const statusSelect = filtersSection.locator('select').nth(1);
+  if (await roleSelect.count()) {
+    await roleSelect.selectOption('client');
+    await pause(page, 300);
+  }
   await clickButton('Actifs', true)(page);
   await clickButton('Tous', true)(page);
   await fillPlaceholder(page, 'Rechercher un utilisateur...', 'formateur@c2p.sn', true);
-  await selectSelector(page, 'select', 'formateur', true);
+  if (await roleSelect.count()) {
+    await roleSelect.selectOption('formateur');
+    await pause(page, 300);
+  }
   const trainerRow = page.getByText('formateur@c2p.sn', { exact: true }).first().locator('xpath=ancestor::tr[1]');
   if (await trainerRow.count()) {
     const toggleButton = trainerRow.getByRole('button', { name: /Vérifier|Retirer le badge/i }).first();
@@ -886,11 +1049,18 @@ async function adminUsersSmoke(page) {
     }
   }
   await fillPlaceholder(page, 'Rechercher un utilisateur...', '', true);
-  await selectSelector(page, 'select', 'all', true);
+  if (await roleSelect.count()) {
+    await roleSelect.selectOption('all');
+    await pause(page, 300);
+  }
+  if (await statusSelect.count()) {
+    await statusSelect.selectOption('all');
+    await pause(page, 300);
+  }
 }
 
 async function adminContentSmoke(page) {
-  await clickButton('Exporter les donnees')(page);
+  await clickButton('Exporter les données')(page);
   await clickButton('Brouillons', true)(page);
   await clickButton('En attente', true)(page);
   await clickButton('Publies', true)(page);

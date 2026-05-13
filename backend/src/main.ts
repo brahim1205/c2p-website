@@ -24,6 +24,9 @@ async function bootstrap() {
 
   app.use(helmet({
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: {
+      policy: 'cross-origin',
+    },
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'none'"],
@@ -34,7 +37,12 @@ async function bootstrap() {
     },
   }));
   app.use(cookieParser());
-  app.use(json({ limit: '256kb' }));
+  app.use(json({
+    limit: '256kb',
+    verify: (req, _res, buffer) => {
+      (req as AuthenticatedRequest).rawBody = Buffer.from(buffer);
+    },
+  }));
   app.use(urlencoded({ extended: true, limit: '256kb' }));
   expressApp.use('/uploads', serveStatic(resolve(process.cwd(), configService.uploadStorageRoot), {
     fallthrough: false,
@@ -46,24 +54,74 @@ async function bootstrap() {
     },
   }));
 
-  const globalRateLimit = new Map<string, { count: number; resetAt: number }>();
-  const loginRateLimit = new Map<string, { count: number; resetAt: number }>();
+  const rateLimits = {
+    global: new Map<string, { count: number; resetAt: number }>(),
+    login: new Map<string, { count: number; resetAt: number }>(),
+    auth: new Map<string, { count: number; resetAt: number }>(),
+    finance: new Map<string, { count: number; resetAt: number }>(),
+    providerWebhook: new Map<string, { count: number; resetAt: number }>(),
+  } as const;
+
+  const resolveRateLimitBucket = (path: string, method: string) => {
+    const normalizedPath = path.toLowerCase();
+    const normalizedMethod = method.toUpperCase();
+
+    if (normalizedPath === '/api/auth/login') {
+      return {
+        bucket: rateLimits.login,
+        limit: configService.loginRateLimitMax,
+        windowMs: 60_000,
+        keySuffix: () => normalizedPath,
+      };
+    }
+
+    if (/^\/api\/auth\/(verify-2fa|resend-2fa|forgot-password|reset-password|register|refresh)$/i.test(normalizedPath)) {
+      return {
+        bucket: rateLimits.auth,
+        limit: configService.authRateLimitMax,
+        windowMs: 60_000,
+        keySuffix: () => normalizedPath,
+      };
+    }
+
+    if (normalizedPath === '/api/payments/providers/dexpay/webhook') {
+      return {
+        bucket: rateLimits.providerWebhook,
+        limit: configService.providerWebhookRateLimitMax,
+        windowMs: 60_000,
+        keySuffix: () => normalizedPath,
+      };
+    }
+
+    if (normalizedPath.startsWith('/api/payments/') && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(normalizedMethod)) {
+      return {
+        bucket: rateLimits.finance,
+        limit: configService.financeRateLimitMax,
+        windowMs: 60_000,
+        keySuffix: () => normalizedPath,
+      };
+    }
+
+    return {
+      bucket: rateLimits.global,
+      limit: configService.globalRateLimitMax,
+      windowMs: 60_000,
+      keySuffix: () => normalizedPath,
+    };
+  };
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     const now = Date.now();
-    const key = `${req.ip}:${req.path}`;
-    const isLogin = req.path === '/api/auth/login';
-    const bucket = isLogin ? loginRateLimit : globalRateLimit;
-    const windowMs = isLogin ? 60_000 : 60_000;
-    const limit = isLogin ? configService.loginRateLimitMax : configService.globalRateLimitMax;
-    const entry = bucket.get(key);
+    const classification = resolveRateLimitBucket(req.path, req.method);
+    const key = `${req.ip}:${classification.keySuffix()}`;
+    const entry = classification.bucket.get(key);
 
     if (!entry || entry.resetAt <= now) {
-      bucket.set(key, { count: 1, resetAt: now + windowMs });
+      classification.bucket.set(key, { count: 1, resetAt: now + classification.windowMs });
       return next();
     }
 
-    if (entry.count >= limit) {
+    if (entry.count >= classification.limit) {
       res.setHeader('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)));
       res.status(429).json({ message: 'Trop de requetes. Reessayez plus tard.' });
       return;
@@ -127,6 +185,7 @@ async function bootstrap() {
       '/api/auth/reset-password',
       '/api/auth/verify-2fa',
       '/api/auth/refresh',
+      '/api/payments/providers/dexpay/webhook',
       '/api/monitoring/frontend-errors',
       '/api/monitoring/web-vitals',
     ];

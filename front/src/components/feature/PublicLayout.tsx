@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import BrandLogo from '@/components/base/BrandLogo';
 import { apiRequest } from '@/lib/api';
@@ -21,6 +21,10 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const scrollToPageTop = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -29,11 +33,36 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navBg = !isScrolled
-    ? 'bg-transparent'
-    : 'border-b border-white/10 bg-[#090909]/78 shadow-[0_18px_55px_rgba(0,0,0,0.35)] backdrop-blur-2xl';
-  const textColor = 'text-[#d5b46f]';
-  const linkColor = 'text-[#d5b46f] hover:text-white';
+  useEffect(() => {
+    scrollToPageTop();
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  const navBg = isScrolled
+    ? 'border-b border-[#80bfdf] bg-white/96 shadow-[0_18px_55px_rgba(39,52,107,0.08)] backdrop-blur-2xl'
+    : 'bg-white/78 backdrop-blur-xl';
+  const getLinkClass = (path: string) => {
+    const isActive = path === '/'
+      ? location.pathname === path
+      : location.pathname === path || location.pathname.startsWith(`${path}/`);
+
+    return [
+      'rounded-full px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap',
+      isActive
+        ? 'bg-[#ffffff] text-[#27346b] shadow-[0_8px_24px_rgba(39,52,107,0.12)]'
+        : 'text-[#27346b] hover:text-[#27346b]',
+    ].join(' ');
+  };
+  const handleInternalLinkClick = (path: string, closeMenu = false) => (event: MouseEvent<HTMLAnchorElement>) => {
+    if (closeMenu) {
+      setMobileMenuOpen(false);
+    }
+
+    if (location.pathname === path) {
+      event.preventDefault();
+      scrollToPageTop();
+    }
+  };
   const contactLinks: FooterContactLink[] = [
     { href: 'https://wa.me/221784444346', label: 'WhatsApp', icon: 'ri-whatsapp-line' },
     { href: 'mailto:c2psenegal@gmail.com', label: 'Email', icon: 'ri-mail-line' },
@@ -45,7 +74,7 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
     <div className="min-h-screen bg-white flex flex-col">
       {/* Navigation */}
       {!hideHeader && (
-        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}>
+        <nav aria-label="Navigation publique principale" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}>
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-20">
               <BrandLogo
@@ -58,37 +87,50 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
               <div className="hidden md:flex items-center space-x-8">
                 <Link
                   to="/allopresta"
-                  className={`text-sm font-medium transition-colors ${linkColor} whitespace-nowrap`}
+                  onClick={handleInternalLinkClick('/allopresta')}
+                  className={getLinkClass('/allopresta')}
                 >
                   AlloPresta
                 </Link>
                 <Link
                   to="/espace-numerique"
-                  className={`text-sm font-medium transition-colors ${linkColor} whitespace-nowrap`}
+                  onClick={handleInternalLinkClick('/espace-numerique')}
+                  className={getLinkClass('/espace-numerique')}
                 >
                   Espace Numérique
                 </Link>
                 <Link
                   to="/project-center"
-                  className={`text-sm font-medium transition-colors ${linkColor} whitespace-nowrap`}
+                  onClick={handleInternalLinkClick('/project-center')}
+                  className={getLinkClass('/project-center')}
                 >
                   ProjectCenter
                 </Link>
                 <Link
+                  to="/tarifs"
+                  onClick={handleInternalLinkClick('/tarifs')}
+                  className={getLinkClass('/tarifs')}
+                >
+                  Tarifs
+                </Link>
+                <Link
                   to="/a-propos"
-                  className={`text-sm font-medium transition-colors ${linkColor} whitespace-nowrap`}
+                  onClick={handleInternalLinkClick('/a-propos')}
+                  className={getLinkClass('/a-propos')}
                 >
                   À propos
                 </Link>
                 <Link
                   to="/contact"
-                  className={`text-sm font-medium transition-colors ${linkColor} whitespace-nowrap`}
+                  onClick={handleInternalLinkClick('/contact')}
+                  className={getLinkClass('/contact')}
                 >
                   Contact
                 </Link>
                 <Link
                   to="/auth/login"
-                  className={`text-sm font-medium transition-colors ${linkColor} whitespace-nowrap`}
+                  onClick={handleInternalLinkClick('/auth/login')}
+                  className={getLinkClass('/auth/login')}
                 >
                   Connexion
                 </Link>
@@ -96,11 +138,15 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
 
               {/* Mobile hamburger */}
               <button
-                className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+                type="button"
+                aria-expanded={mobileMenuOpen}
+                aria-controls="public-mobile-menu"
+                aria-label={mobileMenuOpen ? 'Fermer le menu de navigation' : 'Ouvrir le menu de navigation'}
+                className="md:hidden flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-[#ffffff]"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 <div className="w-5 h-5 flex items-center justify-center">
-                  <i className={`ri-${mobileMenuOpen ? 'close' : 'menu'}-line text-xl text-[#d5b46f]`}></i>
+                  <i className={`ri-${mobileMenuOpen ? 'close' : 'menu'}-line text-xl text-[#27346b]`}></i>
                 </div>
               </button>
             </div>
@@ -108,48 +154,55 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden border-t border-white/10 bg-[#090909]/95 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+            <div id="public-mobile-menu" className="md:hidden border-t border-[#80bfdf] bg-[#ffffff]/96 shadow-[0_24px_80px_rgba(39,52,107,0.12)] backdrop-blur-2xl">
               <div className="px-4 py-4 space-y-2">
                 <Link
                   to="/allopresta"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#d5b46f] hover:bg-white/10 hover:text-white"
+                  onClick={handleInternalLinkClick('/allopresta', true)}
+                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#27346b] hover:bg-[#ffffff] hover:text-[#27346b]"
                 >
                   AlloPresta
                 </Link>
                 <Link
                   to="/espace-numerique"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#d5b46f] hover:bg-white/10 hover:text-white"
+                  onClick={handleInternalLinkClick('/espace-numerique', true)}
+                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#27346b] hover:bg-[#ffffff] hover:text-[#27346b]"
                 >
                   Espace Numérique
                 </Link>
                 <Link
                   to="/project-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#d5b46f] hover:bg-white/10 hover:text-white"
+                  onClick={handleInternalLinkClick('/project-center', true)}
+                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#27346b] hover:bg-[#ffffff] hover:text-[#27346b]"
                 >
                   ProjectCenter
                 </Link>
                 <Link
+                  to="/tarifs"
+                  onClick={handleInternalLinkClick('/tarifs', true)}
+                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#27346b] hover:bg-[#ffffff] hover:text-[#27346b]"
+                >
+                  Tarifs
+                </Link>
+                <Link
                   to="/a-propos"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#d5b46f] hover:bg-white/10 hover:text-white"
+                  onClick={handleInternalLinkClick('/a-propos', true)}
+                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#27346b] hover:bg-[#ffffff] hover:text-[#27346b]"
                 >
                   À propos
                 </Link>
                 <Link
                   to="/contact"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#d5b46f] hover:bg-white/10 hover:text-white"
+                  onClick={handleInternalLinkClick('/contact', true)}
+                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#27346b] hover:bg-[#ffffff] hover:text-[#27346b]"
                 >
                   Contact
                 </Link>
-                <div className="border-t border-white/10 my-2"></div>
+                <div className="my-2 border-t border-[#80bfdf]"></div>
                 <Link
                   to="/auth/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#d5b46f] hover:bg-white/10 hover:text-white"
+                  onClick={handleInternalLinkClick('/auth/login', true)}
+                  className="block rounded-lg px-4 py-3 text-sm font-medium text-[#27346b] hover:bg-[#ffffff] hover:text-[#27346b]"
                 >
                   Connexion
                 </Link>
@@ -164,25 +217,26 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
 
       {/* Footer */}
       {!hideFooter && (
-        <footer className="border-t border-white/10 bg-[#090909] text-white">
+        <footer className="border-t border-[#80bfdf] bg-[#ffffff] text-[#06053a]">
           {/* Newsletter Section */}
-          <div className="border-b border-white/10 bg-[radial-gradient(circle_at_15%_0%,rgba(213,180,111,0.12),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)]">
+          <div className="border-b border-[#80bfdf] bg-[radial-gradient(circle_at_15%_0%,rgba(39,52,107,0.16),transparent_34%),radial-gradient(circle_at_85%_100%,rgba(219,173,41,0.10),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(251,247,255,0.96))]">
             <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-18">
-              <div className="grid items-center gap-10 rounded-[28px] border border-white/10 bg-white/[0.045] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.35)] backdrop-blur sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:p-10">
+              <div className="c2p-panel grid items-center gap-10 p-6 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:p-10">
                 <div>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-[0.34em] text-[#d5b46f]">
+                  <p className="c2p-eyebrow mb-3">
                     C2P updates
                   </p>
-                  <h3 className="max-w-xl text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
-                    Restez connecte a l&apos;ecosysteme C2P
+                  <h3 className="max-w-xl text-2xl font-semibold leading-tight text-[#06053a] sm:text-3xl lg:text-4xl">
+                    Restez connecte au hub C2P
                   </h3>
-                  <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-white/62">
-                    Opportunites, formations, prestataires verifies et projets a fort potentiel : recevez les signaux utiles pour avancer avec le bon accompagnement.
+                  <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-[#27346b]">
+                    Abonnements, missions attribuees, formations supervisees et projets suivis : recevez les signaux utiles pour avancer avec l&apos;equipe C2P.
                   </p>
                 </div>
                 <form
                   data-readdy-form
                   id="footer-newsletter-form"
+                  aria-label="Inscription a la newsletter C2P"
                   onSubmit={async (e) => {
                     e.preventDefault();
                     const form = e.currentTarget;
@@ -214,29 +268,33 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
                   }}
                   className="flex flex-col gap-3 sm:flex-row"
                 >
+                  <label htmlFor="footer-newsletter-email" className="sr-only">
+                    Votre adresse email
+                  </label>
                   <input
+                    id="footer-newsletter-email"
                     type="email"
                     name="email"
                     placeholder="Votre adresse email"
                     required
-                    className="min-h-12 flex-1 rounded-full border border-white/15 bg-black/30 px-5 py-3.5 text-sm text-white placeholder-white/42 transition-all focus:border-[#d5b46f] focus:outline-none focus:ring-2 focus:ring-[#d5b46f]/25"
+                    className="c2p-input min-h-12 flex-1 rounded-full px-5 py-3.5 text-sm"
                   />
                   <button
                     type="submit"
-                    className="flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#d5b46f] px-8 py-3.5 text-sm font-semibold text-[#111] transition-all duration-300 hover:bg-[#f1d58c] hover:shadow-[0_18px_40px_rgba(213,180,111,0.22)] active:scale-95"
+                    className="c2p-btn-accent flex min-h-12 items-center justify-center gap-2 whitespace-nowrap px-8 py-3.5 active:scale-95"
                   >
                     <span>S&apos;inscrire</span>
                     <div className="w-4 h-4 flex items-center justify-center">
                       <i className="ri-arrow-right-line"></i>
                     </div>
                   </button>
-                  <div className="newsletter-success hidden w-full sm:w-auto flex items-center gap-2 rounded-full bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300">
+                  <div role="status" aria-live="polite" className="newsletter-success hidden w-full sm:w-auto flex items-center gap-2 rounded-full bg-[#ffffff] px-4 py-3 text-sm text-[#27346b]">
                     <div className="w-5 h-5 flex items-center justify-center">
                       <i className="ri-check-line"></i>
                     </div>
                     <span>Inscription confirmée !</span>
                   </div>
-                  <div className="newsletter-error hidden w-full sm:w-auto flex items-center gap-2 rounded-full bg-red-400/10 px-4 py-3 text-sm text-red-300">
+                  <div role="alert" className="newsletter-error hidden w-full sm:w-auto flex items-center gap-2 rounded-full bg-[#fff4ec] px-4 py-3 text-sm text-[#d0b55e]">
                     <div className="w-5 h-5 flex items-center justify-center">
                       <i className="ri-error-warning-line"></i>
                     </div>
@@ -253,7 +311,7 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
               {/* Brand + Description */}
               <div className="sm:col-span-2 lg:col-span-1">
                 <div className="mb-5">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-[0.34em] text-[#d5b46f]">
+                  <p className="c2p-eyebrow mb-3">
                     Premium professional hub
                   </p>
                   <BrandLogo
@@ -262,19 +320,19 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
                     imageClassName="h-12 w-auto object-contain"
                   />
                 </div>
-                <p className="mb-7 max-w-sm text-[14px] leading-relaxed text-white/58">
-                  Groupe C2P Consulting L&amp;M : services, formation et incubation reunis dans une experience professionnelle claire, selective et orientee resultat.
+                  <p className="mb-7 max-w-sm text-[14px] leading-relaxed text-[#27346b]">
+                  C2P opere une plateforme SaaS qui centralise les demandes, attribue les missions, supervise les parcours de formation et structure l&apos;accompagnement projet.
                 </p>
                 <div className="flex gap-3">
                   {contactLinks.map((item) => (
                     item.internal ? (
-                      <Link key={item.label} to={item.href} aria-label={item.label} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] text-white/70 transition-all duration-300 hover:border-[#d5b46f] hover:text-[#d5b46f]">
+                      <Link key={item.label} to={item.href} onClick={handleInternalLinkClick(item.href)} aria-label={item.label} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#80bfdf] bg-white text-[#27346b] transition-all duration-300 hover:border-[#27346b] hover:text-[#27346b]">
                         <div className="w-5 h-5 flex items-center justify-center">
                           <i className={`${item.icon} text-lg`}></i>
                         </div>
                       </Link>
                     ) : (
-                      <a key={item.label} href={item.href} rel="noreferrer" target={item.href.startsWith('http') ? '_blank' : undefined} aria-label={item.label} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] text-white/70 transition-all duration-300 hover:border-[#d5b46f] hover:text-[#d5b46f]">
+                      <a key={item.label} href={item.href} rel="noreferrer" target={item.href.startsWith('http') ? '_blank' : undefined} aria-label={item.label} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#80bfdf] bg-white text-[#27346b] transition-all duration-300 hover:border-[#27346b] hover:text-[#27346b]">
                         <div className="w-5 h-5 flex items-center justify-center">
                           <i className={`${item.icon} text-lg`}></i>
                         </div>
@@ -286,78 +344,81 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
 
               {/* Sitemap - Services */}
               <div>
-                <h4 className="mb-6 text-xs font-semibold uppercase tracking-[0.28em] text-[#d5b46f]">Modules</h4>
+                <h4 className="c2p-eyebrow mb-6 tracking-[0.28em]">Modules</h4>
                 <ul className="space-y-3">
                   <li>
-                    <Link to="/allopresta" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">AlloPresta</Link>
+                    <Link to="/allopresta" onClick={handleInternalLinkClick('/allopresta')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">AlloPresta</Link>
                   </li>
                   <li>
-                    <Link to="/espace-numerique" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">Espace Numerique</Link>
+                    <Link to="/espace-numerique" onClick={handleInternalLinkClick('/espace-numerique')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Espace Numerique</Link>
                   </li>
                   <li>
-                    <Link to="/project-center" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">ProjectCenter</Link>
+                    <Link to="/project-center" onClick={handleInternalLinkClick('/project-center')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">ProjectCenter</Link>
                   </li>
                   <li>
-                    <Link to="/dashboard/apprenant/mes-cours" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">Mes Cours</Link>
+                    <Link to="/dashboard/apprenant/mes-cours" onClick={handleInternalLinkClick('/dashboard/apprenant/mes-cours')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Mes Cours</Link>
                   </li>
                   <li>
-                    <Link to="/dashboard" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">Mon Dashboard</Link>
+                    <Link to="/dashboard" onClick={handleInternalLinkClick('/dashboard')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Mon Dashboard</Link>
                   </li>
                 </ul>
               </div>
 
               {/* Sitemap - Informations */}
               <div>
-                <h4 className="mb-6 text-xs font-semibold uppercase tracking-[0.28em] text-[#d5b46f]">Acces</h4>
+                <h4 className="c2p-eyebrow mb-6 tracking-[0.28em]">Acces</h4>
                 <ul className="space-y-3">
                   <li>
-                    <Link to="/a-propos" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">A propos</Link>
+                    <Link to="/a-propos" onClick={handleInternalLinkClick('/a-propos')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">A propos</Link>
                   </li>
                   <li>
-                    <Link to="/contact" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">Contact</Link>
+                    <Link to="/contact" onClick={handleInternalLinkClick('/contact')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Contact</Link>
                   </li>
                   <li>
-                    <Link to="/auth/register" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">Creer un compte</Link>
+                    <Link to="/auth/register" onClick={handleInternalLinkClick('/auth/register')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Creer un compte</Link>
                   </li>
                   <li>
-                    <Link to="/auth/login" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">Connexion</Link>
+                    <Link to="/auth/login" onClick={handleInternalLinkClick('/auth/login')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Espace C2P</Link>
                   </li>
                   <li>
-                    <Link to="/mentions-legales" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">Mentions legales</Link>
+                    <Link to="/contact" onClick={handleInternalLinkClick('/contact')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Parler a C2P</Link>
                   </li>
                   <li>
-                    <Link to="/confidentialite" className="text-[14px] text-white/58 transition-colors duration-200 hover:text-[#d5b46f]">Confidentialite</Link>
+                    <Link to="/mentions-legales" onClick={handleInternalLinkClick('/mentions-legales')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Mentions legales</Link>
+                  </li>
+                  <li>
+                    <Link to="/confidentialite" onClick={handleInternalLinkClick('/confidentialite')} className="text-[14px] text-[#27346b] transition-colors duration-200 hover:text-[#27346b]">Confidentialite</Link>
                   </li>
                 </ul>
               </div>
 
               {/* Contact */}
               <div>
-                <h4 className="mb-6 text-xs font-semibold uppercase tracking-[0.28em] text-[#d5b46f]">Contact</h4>
+                <h4 className="c2p-eyebrow mb-6 tracking-[0.28em]">Contact</h4>
                 <ul className="space-y-4">
                   <li className="flex items-start gap-3">
                     <div className="w-5 h-5 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <i className="ri-map-pin-line text-[#d5b46f] text-sm"></i>
+                      <i className="ri-map-pin-line text-[#27346b] text-sm"></i>
                     </div>
-                    <span className="text-[14px] leading-relaxed text-white/58">
+                    <span className="text-[14px] leading-relaxed text-[#27346b]">
                       Almadies 2 - Villa n° 39<br />
                       Route des Emetteurs, Keur Massar
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-5 h-5 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <i className="ri-phone-line text-[#d5b46f] text-sm"></i>
+                      <i className="ri-phone-line text-[#27346b] text-sm"></i>
                     </div>
-                    <span className="text-[14px] leading-relaxed text-white/58">
+                    <span className="text-[14px] leading-relaxed text-[#27346b]">
                       +221 78 444 43 46<br />
                       +221 76 744 44 24
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-5 h-5 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <i className="ri-mail-line text-[#d5b46f] text-sm"></i>
+                      <i className="ri-mail-line text-[#27346b] text-sm"></i>
                     </div>
-                    <span className="text-[14px] leading-relaxed text-white/58">
+                    <span className="text-[14px] leading-relaxed text-[#27346b]">
                       c2psenegal@gmail.com<br />
                       senc2p@gmail.com
                     </span>
@@ -368,14 +429,14 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
           </div>
 
           {/* Bottom Bar */}
-          <div className="border-t border-white/10">
+          <div className="border-t border-[#80bfdf]">
             <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row sm:px-6 lg:px-8">
-              <div className="text-sm text-white/42">
+              <div className="text-sm text-[#5fa6f3]">
                 © 2026 Groupe C2P Consulting L&amp;M. Tous droits reserves.
               </div>
               <div className="flex gap-6">
-                <Link to="/cgu" className="text-sm text-white/42 transition-colors hover:text-[#d5b46f]">CGU</Link>
-                <Link to="/cookies" className="text-sm text-white/42 transition-colors hover:text-[#d5b46f]">Cookies</Link>
+                <Link to="/cgu" onClick={handleInternalLinkClick('/cgu')} className="text-sm text-[#5fa6f3] transition-colors hover:text-[#27346b]">CGU</Link>
+                <Link to="/cookies" onClick={handleInternalLinkClick('/cookies')} className="text-sm text-[#5fa6f3] transition-colors hover:text-[#27346b]">Cookies</Link>
               </div>
             </div>
           </div>

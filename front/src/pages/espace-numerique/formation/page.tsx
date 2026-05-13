@@ -1,10 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { backendClient } from '@/lib/backendClient';
-import PublicLayout from '@/components/feature/PublicLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { notifyInstructorEnrollment } from '@/hooks/useCreateNotification';
 import { useToast } from '@/hooks/useToast';
-
+import {
+  getCourseDeliveryBadgeClass,
+  getCourseDeliveryIcon,
+  getCourseDeliveryLabel,
+} from '@/lib/courseDelivery';
+import {
+  getCourseBranchBadgeClass,
+  getCourseBranchDescription,
+  getCourseBranchLabel,
+} from '@/lib/courseBranch';
 
 interface Course {
   id: number;
@@ -12,578 +21,880 @@ interface Course {
   category: string;
   description: string | null;
   instructor_id: string | null;
+  instructor_name?: string | null;
   modules: number | null;
   duration: string | null;
   students_count: number | null;
   price: number | null;
+  current_price?: number | null;
   thumbnail: string | null;
+  status: string;
+  level?: string | null;
+  rating?: number | null;
+  is_free?: boolean | null;
+  delivery_mode?: string | null;
+  program_branch?: string | null;
+  created_at: string;
+}
+
+interface CourseSection {
+  id: number;
+  title: string;
+  description: string | null;
+  position: number | null;
+}
+
+interface CourseLesson {
+  id: number;
+  section_id: number | null;
+  title: string;
+  description: string | null;
+  type: string | null;
+  duration: string | null;
+  is_preview: boolean | null;
+  position: number | null;
+}
+
+interface EnrollmentRecord {
+  id: number;
+  progress?: number;
+  status?: string;
+}
+
+interface CourseReview {
+  id: string | number;
+  course_id: number;
+  student_id: string;
+  student_name: string;
+  student_avatar?: string | null;
+  rating: number;
+  comment: string;
   status: string;
   created_at: string;
 }
 
-const instructorData: Record<string, { name: string; image: string; bio: string; rating: number; students: number }> = {
-  informatique: {
-    name: 'Dr. Amadou Diallo',
-    image: 'https://readdy.ai/api/search-image?query=professional%20african%20male%20software%20developer%20instructor%20portrait%20clean%20white%20background%20confident%20smile%20modern%20tech%20professional%20attire&width=100&height=100&seq=inst1&orientation=squarish',
-    bio: 'Développeur senior avec 12 ans d\'expérience. Formateur certifié et consultant en technologies web.',
-    rating: 4.9,
-    students: 342,
-  },
-  communication: {
-    name: 'Fatou Ndiaye',
-    image: 'https://readdy.ai/api/search-image?query=professional%20african%20female%20marketing%20expert%20instructor%20portrait%20clean%20white%20background%20confident%20smile%20business%20attire&width=100&height=100&seq=inst2&orientation=squarish',
-    bio: 'Experte en marketing digital avec 8 ans d\'expérience. Spécialiste des réseaux sociaux et stratégies de contenu.',
-    rating: 4.8,
-    students: 567,
-  },
-  entrepreneuriat: {
-    name: 'Moussa Koné',
-    image: 'https://readdy.ai/api/search-image?query=professional%20african%20male%20business%20coach%20instructor%20portrait%20clean%20white%20background%20confident%20smile%20business%20attire&width=100&height=100&seq=inst3&orientation=squarish',
-    bio: 'Entrepreneur en série et consultant en business development. A accompagné plus de 200 startups.',
-    rating: 4.7,
-    students: 189,
-  },
-  commerce: {
-    name: 'Aminata Diop',
-    image: 'https://readdy.ai/api/search-image?query=professional%20african%20female%20commerce%20instructor%20portrait%20clean%20white%20background%20warm%20smile%20elegant%20business%20attire&width=100&height=100&seq=inst4&orientation=squarish',
-    bio: 'Experte en e-commerce et stratégie digitale. Ancienne directrice commerciale d\'une grande marketplace.',
-    rating: 4.6,
-    students: 234,
-  },
-  langues: {
-    name: 'Dr. Sarah Mboup',
-    image: 'https://readdy.ai/api/search-image?query=professional%20african%20female%20language%20instructor%20portrait%20clean%20white%20background%20warm%20smile%20academic%20attire&width=100&height=100&seq=inst5&orientation=squarish',
-    bio: 'Professeure de langues et linguiste. Spécialisée en anglais des affaires et formation professionnelle.',
-    rating: 4.8,
-    students: 412,
-  },
-  gestion: {
-    name: 'Ibrahim Sarr',
-    image: 'https://readdy.ai/api/search-image?query=professional%20african%20male%20project%20manager%20instructor%20portrait%20clean%20white%20background%20confident%20smile%20formal%20attire&width=100&height=100&seq=inst6&orientation=squarish',
-    bio: 'PMP certifié et consultant en gestion de projet Agile. Plus de 10 ans d\'expérience internationale.',
-    rating: 4.9,
-    students: 156,
-  },
-};
+interface LessonProgressRecord {
+  id: string | number;
+  lesson_id: number;
+  progress: number;
+  completed: boolean;
+}
 
-const defaultCurriculum = [
-  {
-    module: 'Module 1: Fondamentaux',
-    lessons: [
-      { title: 'Introduction au cours', duration: '45 min', type: 'video' },
-      { title: 'Concepts fondamentaux', duration: '1h 20min', type: 'video' },
-      { title: 'Pratique guidée', duration: '1h 30min', type: 'video' },
-      { title: 'Quiz de validation', duration: '20 min', type: 'quiz' },
-    ],
-  },
-  {
-    module: 'Module 2: Approfondissement',
-    lessons: [
-      { title: 'Études de cas', duration: '50 min', type: 'video' },
-      { title: 'Techniques avancées', duration: '1h 10min', type: 'video' },
-      { title: 'Projet pratique', duration: '2h', type: 'exercise' },
-    ],
-  },
-  {
-    module: 'Module 3: Expertise',
-    lessons: [
-      { title: 'Applications professionnelles', duration: '55 min', type: 'video' },
-      { title: 'Bonnes pratiques', duration: '1h 20min', type: 'video' },
-      { title: 'Examen final', duration: '1h', type: 'quiz' },
-    ],
-  },
-];
+interface RelatedVirtualClass {
+  id: number;
+  title: string;
+  class_date: string;
+  class_time: string;
+  status: string;
+  recording_url?: string | null;
+}
 
-const reviewsData = [
-  {
-    id: 1, name: 'Khadija Mbaye',
-    avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20female%20student%20portrait%20clean%20white%20background%20happy%20smile%20casual%20attire&width=80&height=80&seq=rev1&orientation=squarish',
-    rating: 5,
-    date: '15 janvier 2026',
-    comment: 'Excellente formation ! Les explications sont claires et les projets pratiques très enrichissants.',
-  },
-  {
-    id: 2, name: 'Mamadou Seck',
-    avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20male%20student%20portrait%20clean%20white%20background%20confident%20smile%20casual%20attire&width=80&height=80&seq=rev2&orientation=squarish',
-    rating: 5,
-    date: '8 janvier 2026',
-    comment: 'Formateur excellent. Le contenu est à jour et correspond parfaitement aux besoins du marché.',
-  },
-  {
-    id: 3, name: 'Aminata Diop',
-    avatar: 'https://readdy.ai/api/search-image?query=professional%20african%20female%20student%20portrait%20clean%20white%20background%20warm%20smile%20casual%20attire&width=80&height=80&seq=rev3&orientation=squarish',
-    rating: 4,
-    date: '2 janvier 2026',
-    comment: 'Très bonne formation avec beaucoup de pratique. Je recommande vivement !',
-  },
-];
+function normalizeCourseLevel(value: string | null | undefined) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'debutant' || normalized === 'beginner') return 'Débutant';
+  if (normalized === 'avance' || normalized === 'advanced') return 'Avancé';
+  if (normalized === 'all_levels' || normalized === 'tous niveaux') return 'Tous niveaux';
+  return 'Intermédiaire';
+}
+
+function getTypeIcon(type: string | null | undefined) {
+  switch (type) {
+    case 'video':
+      return 'ri-play-circle-line';
+    case 'quiz':
+      return 'ri-question-line';
+    case 'assignment':
+      return 'ri-edit-box-line';
+    case 'live':
+      return 'ri-broadcast-line';
+    case 'pdf':
+      return 'ri-file-pdf-line';
+    case 'article':
+      return 'ri-article-line';
+    default:
+      return 'ri-file-line';
+  }
+}
+
+function getCourseImage(course: Course) {
+  if (course.thumbnail) return course.thumbnail;
+  const catImages: Record<string, string> = {
+    informatique: '/images/home/precision.jpg',
+    langues: '/images/home/global.jpg',
+    entrepreneuriat: '/images/home/venture.jpg',
+    commerce: '/images/home/service.jpg',
+    communication: '/images/home/academy.jpg',
+    gestion: '/images/home/trust.jpg',
+  };
+  return catImages[(course.category || '').toLowerCase()] || catImages.informatique;
+}
 
 export default function FormationDetailPage() {
-  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { success, error: toastError } = useToast();
+
   const [activeTab, setActiveTab] = useState<'overview' | 'curriculum' | 'reviews'>('overview');
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [course, setCourse] = useState<Course | null>(null);
+  const [sections, setSections] = useState<CourseSection[]>([]);
+  const [lessons, setLessons] = useState<CourseLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
+  const [existingEnrollment, setExistingEnrollment] = useState<EnrollmentRecord | null>(null);
+  const [reviews, setReviews] = useState<CourseReview[]>([]);
+  const [lessonProgress, setLessonProgress] = useState<LessonProgressRecord[]>([]);
+  const [relatedClasses, setRelatedClasses] = useState<RelatedVirtualClass[]>([]);
+  const [reviewDraft, setReviewDraft] = useState({ rating: 5, comment: '' });
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchCourse = async () => {
-      if (!id) return;
+    const courseId = Number(id);
+    if (!courseId) return;
+
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const { data, error: err } = await backendClient
-          .from('courses')
-          .select('*')
-          .eq('id', parseInt(id))
-          .eq('status', 'published')
-          .maybeSingle();
-        if (err) throw err;
-        setCourse(data);
+        const [courseRes, sectionsRes, lessonsRes, enrollmentRes, progressRes] = await Promise.all([
+          backendClient
+            .from('courses')
+            .select('*')
+            .eq('id', courseId)
+            .eq('status', 'published')
+            .maybeSingle(),
+          backendClient
+            .from('course_sections')
+            .select('*')
+            .eq('course_id', courseId)
+            .eq('status', 'published')
+            .order('position', { ascending: true }),
+          backendClient
+            .from('course_lessons')
+            .select('*')
+            .eq('course_id', courseId)
+            .eq('status', 'published')
+            .order('position', { ascending: true }),
+          user?.id
+            ? backendClient
+                .from('course_enrollments')
+                .select('id,progress,status')
+                .eq('course_id', courseId)
+                .eq('student_id', user.id)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+          user?.id
+            ? backendClient
+                .from('lesson_progress')
+                .select('*')
+                .eq('course_id', courseId)
+                .eq('student_id', user.id)
+                .order('last_viewed_at', { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+
+        if (courseRes.error) throw courseRes.error;
+        if (sectionsRes.error) throw sectionsRes.error;
+        if (lessonsRes.error) throw lessonsRes.error;
+        if (enrollmentRes.error) throw enrollmentRes.error;
+        if (progressRes.error) throw progressRes.error;
+
+        setCourse((courseRes.data as Course | null) || null);
+        setSections((sectionsRes.data as CourseSection[]) || []);
+        setLessons((lessonsRes.data as CourseLesson[]) || []);
+        setExistingEnrollment((enrollmentRes.data as EnrollmentRecord | null) || null);
+        setLessonProgress(((progressRes.data as LessonProgressRecord[]) || []));
+
+        const [reviewsResult, classesResult] = await Promise.allSettled([
+          backendClient
+            .from('course_reviews')
+            .select('*')
+            .eq('course_id', courseId)
+            .eq('status', 'published')
+            .order('created_at', { ascending: false }),
+          backendClient
+            .from('virtual_classes')
+            .select('id,title,class_date,class_time,status,recording_url')
+            .eq('course_id', courseId)
+            .order('class_date', { ascending: false }),
+        ]);
+
+        const nextReviews = reviewsResult.status === 'fulfilled' && !reviewsResult.value.error
+          ? ((reviewsResult.value.data as CourseReview[]) || [])
+          : [];
+        const nextClasses = classesResult.status === 'fulfilled' && !classesResult.value.error
+          ? ((classesResult.value.data as RelatedVirtualClass[]) || [])
+          : [];
+
+        setReviews(nextReviews);
+        setRelatedClasses(nextClasses);
+        const myPublishedReview = nextReviews.find((review) => user?.id && String(review.student_id) === String(user.id));
+        if (myPublishedReview) {
+          setReviewDraft({
+            rating: Number(myPublishedReview.rating || 5),
+            comment: myPublishedReview.comment || '',
+          });
+        } else {
+          setReviewDraft({ rating: 5, comment: '' });
+        }
       } catch (err) {
         console.error(err);
+        setCourse(null);
+        setSections([]);
+        setLessons([]);
+        setExistingEnrollment(null);
+        setReviews([]);
+        setLessonProgress([]);
+        setRelatedClasses([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchCourse();
-  }, [id]);
 
-  const handleEnroll = async (e: React.FormEvent) => {
-    e.preventDefault();
+    void fetchData();
+  }, [id, user?.id]);
+
+  const curriculum = useMemo(() => (
+    sections.map((section) => ({
+      ...section,
+      lessons: lessons
+        .filter((lesson) => String(lesson.section_id) === String(section.id))
+        .sort((left, right) => (left.position ?? 0) - (right.position ?? 0)),
+    }))
+  ), [lessons, sections]);
+
+  const totalLessons = lessons.length;
+  const previewLessons = lessons.filter((lesson) => Boolean(lesson.is_preview)).length;
+  const rating = reviews.length
+    ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
+    : Number(course?.rating ?? 0);
+  const progressByLesson = useMemo(() => {
+    const map = new Map<number, LessonProgressRecord>();
+    lessonProgress.forEach((entry) => {
+      map.set(Number(entry.lesson_id), entry);
+    });
+    return map;
+  }, [lessonProgress]);
+  const myReview = useMemo(
+    () => reviews.find((review) => user?.id && String(review.student_id) === String(user.id)) ?? null,
+    [reviews, user?.id],
+  );
+  const canWriteReview = Boolean(
+    user?.id &&
+    (user.role === 'apprenant' || user.role === 'admin') &&
+    existingEnrollment &&
+    ((Number(existingEnrollment.progress ?? 0) > 0) || existingEnrollment.status === 'completed'),
+  );
+  const reviewGateMessage = !user?.id
+    ? 'Connectez-vous avec un compte apprenant pour laisser un avis.'
+    : (!existingEnrollment
+      ? "Inscrivez-vous d’abord à cette formation pour publier un avis."
+      : ((Number(existingEnrollment.progress ?? 0) <= 0 && existingEnrollment.status !== 'completed')
+        ? 'Suivez au moins une leçon avant de publier un avis.'
+        : null));
+
+  const objectives = useMemo(() => {
+    const items = [
+      'Comprendre les fondamentaux utiles au terrain.',
+      'Appliquer le contenu sur des cas concrets.',
+      'Structurer une progression mesurable module par module.',
+      'Finaliser un parcours exploitable dans un contexte professionnel.',
+    ];
+    if (course?.delivery_mode === 'hybrid') {
+      items[1] = 'Alterner sessions en ligne et séquences en présentiel sur des cas concrets.';
+    }
+    if (course?.delivery_mode === 'onsite') {
+      items[1] = 'Travailler en présentiel avec démonstrations et ateliers appliqués.';
+    }
+    return items;
+  }, [course?.delivery_mode]);
+
+  const requirements = useMemo(() => {
+    const base = ['Motivation et disponibilité pour suivre le parcours.'];
+    if (course?.delivery_mode !== 'onsite') {
+      base.unshift('Connexion internet stable pour suivre les contenus à distance.');
+    }
+    if (course?.delivery_mode !== 'online') {
+      base.push('Disponibilité pour les sessions planifiées en présentiel.');
+    }
+    return base;
+  }, [course?.delivery_mode]);
+
+  const openEnrollFlow = () => {
     if (!course) return;
+    if (!user?.id) {
+      toastError('Connexion requise', 'Connectez-vous pour vous inscrire à cette formation.');
+      navigate('/auth/login', { state: { from: `/espace-numerique/formation/${course.id}` } });
+      return;
+    }
+    if (user.role !== 'apprenant' && user.role !== 'admin') {
+      toastError('Compte apprenant requis', 'Utilisez un compte apprenant pour suivre cette formation.');
+      return;
+    }
+    if (existingEnrollment) {
+      navigate('/espace-numerique/mon-apprentissage');
+      return;
+    }
+    setShowEnrollModal(true);
+  };
+
+  const handleEnroll = async () => {
+    if (!course || !user?.id) return;
+    if (user.role !== 'apprenant' && user.role !== 'admin') return;
+
     setEnrolling(true);
     try {
-      const { error: err } = await backendClient.from('course_enrollments').insert({
+      const { data, error } = await backendClient.from('course_enrollments').insert({
         course_id: course.id,
-        student_id: user?.id ?? 'usr-apprenant',
-        student_name: user ? `${user.firstName} ${user.lastName}` : 'Ibrahim Toure',
-        student_email: user?.email ?? 'apprenant@c2p.sn',
+        student_id: user.id,
+        student_name: `${user.firstName} ${user.lastName}`.trim(),
+        student_email: user.email,
         progress: 0,
         status: 'active',
+        enrolled_at: new Date().toISOString(),
+        last_active: new Date().toISOString(),
       });
-      if (err) {
-        if (err.message?.includes('duplicate')) {
+
+      if (error) {
+        if (error.message?.includes('duplicate')) {
           toastError('Déjà inscrit', 'Vous êtes déjà inscrit à cette formation.');
+          setExistingEnrollment({ id: Number((data as any)?.id ?? 0) || -1 });
+          setShowEnrollModal(false);
+          navigate('/espace-numerique/mon-apprentissage');
           return;
         }
-        throw err;
+        throw error;
       }
+
+      if (course.instructor_id) {
+        await notifyInstructorEnrollment(course.instructor_id, course.title);
+      }
+
       success('Inscription réussie', `Vous êtes maintenant inscrit à "${course.title}".`);
+      setExistingEnrollment({ id: Number((data as any)?.id ?? 0) || Date.now() });
       setShowEnrollModal(false);
-
-      // Notification
-      await backendClient.from('notifications').insert({
-        user_id: course.instructor_id ?? 'usr-formateur',
-        title: 'Nouvelle inscription',
-        message: `Un apprenant s'est inscrit à "${course.title}"`,
-        type: 'formation',
-        is_read: false,
-        link: '/dashboard/formateur/apprenants',
-      });
-
-      // Redirect to apprenant dashboard
-      navigate('/dashboard/apprenant/mes-cours');
+      navigate('/espace-numerique/mon-apprentissage');
     } catch (err) {
-      toastError('Erreur', 'Impossible de s\'inscrire à cette formation.');
       console.error(err);
+      toastError('Erreur', 'Impossible de confirmer votre inscription pour le moment.');
     } finally {
       setEnrolling(false);
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'video': return 'ri-play-circle-line';
-      case 'quiz': return 'ri-question-line';
-      case 'exercise': return 'ri-code-s-slash-line';
-      case 'pdf': return 'ri-file-pdf-line';
-      default: return 'ri-file-line';
+  const handleReviewSubmit = async () => {
+    if (!course || !user?.id || !canWriteReview) return;
+    const trimmedComment = reviewDraft.comment.trim();
+    if (!trimmedComment) {
+      toastError('Avis incomplet', 'Ajoutez un commentaire avant de publier votre avis.');
+      return;
     }
-  };
 
-  const getCourseImage = (c: Course) => {
-    if (c.thumbnail) return c.thumbnail;
-    const catImages: Record<string, string> = {
-      informatique: 'https://readdy.ai/api/search-image?query=modern%20web%20development%20coding%20on%20computer%20screen%20showing%20html%20css%20javascript%20code%20in%20professional%20development%20environment%20with%20clean%20minimal%20background&width=800&height=400&seq=form1det&orientation=landscape',
-      langues: 'https://readdy.ai/api/search-image?query=business%20english%20language%20learning%20classroom%20with%20professional%20teacher%20and%20students%20practicing%20conversation%20in%20modern%20educational%20setting%20with%20simple%20background&width=800&height=400&seq=form2det&orientation=landscape',
-      entrepreneuriat: 'https://readdy.ai/api/search-image?query=entrepreneurship%20business%20planning%20workshop%20with%20startup%20founders%20working%20on%20business%20model%20canvas%20and%20strategy%20in%20modern%20collaborative%20space%20with%20simple%20background&width=800&height=400&seq=form3det&orientation=landscape',
-      commerce: 'https://readdy.ai/api/search-image?query=ecommerce%20online%20store%20dashboard%20showing%20product%20listings%20sales%20analytics%20and%20customer%20orders%20on%20computer%20screen%20in%20professional%20workspace%20with%20simple%20background&width=800&height=400&seq=form4det&orientation=landscape',
-      communication: 'https://readdy.ai/api/search-image?query=digital%20marketing%20social%20media%20analytics%20dashboard%20on%20computer%20screen%20showing%20engagement%20metrics%20and%20campaign%20performance%20in%20professional%20workspace%20with%20simple%20background&width=800&height=400&seq=form5det&orientation=landscape',
-      gestion: 'https://readdy.ai/api/search-image?query=agile%20project%20management%20scrum%20board%20with%20sticky%20notes%20and%20team%20collaboration%20in%20modern%20office%20environment%20showing%20sprint%20planning%20with%20simple%20background&width=800&height=400&seq=form6det&orientation=landscape',
-    };
-    return catImages[c.category.toLowerCase()] || catImages['informatique'];
-  };
+    setReviewSubmitting(true);
+    try {
+      const payload = {
+        course_id: course.id,
+        student_id: user.id,
+        rating: reviewDraft.rating,
+        comment: trimmedComment,
+      };
 
-  const getInstructor = (c: Course) => {
-    const cat = c.category.toLowerCase();
-    return instructorData[cat] || instructorData['informatique'];
-  };
-
-  const getCurriculum = (c: Course) => {
-    // Generate curriculum based on module count
-    const totalModules = c.modules || 3;
-    const base = [...defaultCurriculum];
-    if (totalModules <= 3) return base.slice(0, totalModules);
-    return base;
+      if (myReview) {
+        const { data, error } = await backendClient.from('course_reviews').update(payload).eq('id', myReview.id);
+        if (error) throw error;
+        const updatedReview = (Array.isArray(data) ? data[0] : data) as CourseReview;
+        setReviews((current) => current.map((entry) => (String(entry.id) === String(updatedReview.id) ? updatedReview : entry)));
+        success('Avis mis à jour', 'Votre avis a été mis à jour.');
+      } else {
+        const { data, error } = await backendClient.from('course_reviews').insert(payload);
+        if (error) throw error;
+        const createdReview = (Array.isArray(data) ? data[0] : data) as CourseReview;
+        setReviews((current) => [createdReview, ...current]);
+        success('Avis publié', 'Votre avis est maintenant visible sur la formation.');
+      }
+    } catch (err) {
+      console.error(err);
+      toastError('Erreur', 'Impossible de publier cet avis pour le moment.');
+    } finally {
+      setReviewSubmitting(false);
+    }
   };
 
   if (loading) {
     return (
-      <PublicLayout hideFooter>
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="animate-pulse text-center">
-            <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-48 mx-auto"></div>
-          </div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-48 mx-auto"></div>
         </div>
-      </PublicLayout>
+      </div>
     );
   }
 
   if (!course) {
     return (
-      <PublicLayout hideFooter>
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Formation non trouvée</h2>
-            <Link to="/espace-numerique" className="text-teal-600 hover:text-teal-700">
-              Retour aux formations
-            </Link>
-          </div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Formation non trouvée</h2>
+          <Link to="/espace-numerique" className="text-teal-600 hover:text-teal-700">
+            Retour aux formations
+          </Link>
         </div>
-      </PublicLayout>
+      </div>
     );
   }
 
-  const instructor = getInstructor(course);
-  const curriculum = getCurriculum(course);
-  const rating = instructor.rating;
-  const totalLessons = curriculum.reduce((acc, mod) => acc + mod.lessons.length, 0);
-
-  const objectives = [
-    'Maîtriser les fondamentaux théoriques et pratiques',
-    'Appliquer les meilleures pratiques du secteur',
-    'Développer un projet concret de A à Z',
-    'Obtenir une certification reconnue',
-  ];
-
-  const requirements = [
-    'Ordinateur avec connexion internet',
-    'Motivation et engagement pour le programme',
-    'Aucun prérequis technique spécifique',
-  ];
-
   return (
-    <PublicLayout hideFooter>
-      <div className="min-h-screen bg-white">
-        {/* Hero Section */}
-        <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-          <div className="absolute inset-0 opacity-20">
-            <img src={getCourseImage(course)} alt="" className="w-full h-full object-cover object-top" />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/40"></div>
-
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <Link to="/espace-numerique" className="inline-flex items-center space-x-2 text-sm text-gray-300 hover:text-white mb-6">
-              <i className="ri-arrow-left-line"></i>
-              <span>Retour aux formations</span>
-            </Link>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <div className="flex items-center space-x-3 mb-4">
-                  <span className="px-3 py-1 bg-teal-500 text-white text-sm font-medium rounded-full">
-                    {course.category}
-                  </span>
-                </div>
-
-                <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
-                <p className="text-lg text-gray-200 mb-6">
-                  {course.description || 'Formation professionnelle de qualité pour développer vos compétences.'}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-6 mb-6">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <i className="ri-star-fill text-base text-yellow-400"></i>
-                    </div>
-                    <span className="text-base font-medium">{rating}</span>
-                    <span className="text-sm text-gray-300">({reviewsData.length} avis)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <i className="ri-user-line text-base text-gray-300"></i>
-                    </div>
-                    <span className="text-sm text-gray-300">{course.students_count || 0} apprenants</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <i className="ri-time-line text-base text-gray-300"></i>
-                    </div>
-                    <span className="text-sm text-gray-300">{course.duration || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <i className="ri-book-line text-base text-gray-300"></i>
-                    </div>
-                    <span className="text-sm text-gray-300">{course.modules || 3} modules</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-4">
-                  <img src={instructor.image} alt={instructor.name} className="w-12 h-12 rounded-full object-cover object-top" />
-                  <div>
-                    <div className="text-sm text-gray-300">Formateur</div>
-                    <div className="text-base font-medium">{instructor.name}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Enrollment Card */}
-              <div className="lg:col-span-1">
-                <div className="bg-white rounded-xl shadow-xl p-6 text-gray-900 sticky top-24">
-                  <div className="aspect-video rounded-lg overflow-hidden mb-4">
-                    <img src={getCourseImage(course)} alt={course.title} className="w-full h-full object-cover object-top" />
-                  </div>
-
-                  <div className="text-3xl font-bold text-teal-600 mb-4">
-                    {course.price ? `${course.price.toLocaleString()} FCFA` : 'Gratuit'}
-                  </div>
-
-                  <button
-                    onClick={() => setShowEnrollModal(true)}
-                    className="w-full px-6 py-3 bg-teal-600 text-white text-base font-medium rounded-lg hover:bg-teal-700 transition-colors mb-3 whitespace-nowrap"
-                  >
-                    S'inscrire maintenant
-                  </button>
-
-                  <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Durée</span>
-                      <span className="font-medium">{course.duration || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Modules</span>
-                      <span className="font-medium">{course.modules || 3}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Certificat</span>
-                      <span className="font-medium">Oui</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Accès</span>
-                      <span className="font-medium">À vie</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-white">
+      <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+        <div className="absolute inset-0 opacity-20">
+          <img src={getCourseImage(course)} alt="" className="w-full h-full object-cover object-top" />
         </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/45"></div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 bg-white sticky top-16 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex space-x-8">
-              <button onClick={() => setActiveTab('overview')} className={`py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'overview' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
-                Vue d'ensemble
-              </button>
-              <button onClick={() => setActiveTab('curriculum')} className={`py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'curriculum' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
-                Programme ({totalLessons} leçons)
-              </button>
-              <button onClick={() => setActiveTab('reviews')} className={`py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'reviews' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
-                Avis ({reviewsData.length})
-              </button>
-            </div>
-          </div>
-        </div>
+        <div className="relative max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+          <Link to="/espace-numerique" className="inline-flex items-center space-x-2 text-sm text-gray-300 hover:text-white mb-6">
+            <i className="ri-arrow-left-line"></i>
+            <span>Retour aux formations</span>
+          </Link>
 
-        {/* Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
             <div className="lg:col-span-2">
-              {activeTab === 'overview' && (
-                <div className="space-y-8">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Description</h2>
-                    <p className="text-base text-gray-700 leading-relaxed">
-                      {course.description || 'Cette formation vous donnera les compétences essentielles pour exceller dans votre domaine. Avec un programme structuré et des projets pratiques, vous acquerrez une expertise reconnue sur le marché du travail.'}
-                    </p>
-                  </div>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-teal-500 px-3 py-1 text-xs font-medium text-white sm:text-sm">
+                  {course.category}
+                </span>
+                <span className={`rounded-full border px-3 py-1 text-xs font-medium sm:text-sm ${getCourseBranchBadgeClass(course.program_branch)}`}>
+                  {getCourseBranchLabel(course.program_branch)}
+                </span>
+                <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium sm:text-sm ${getCourseDeliveryBadgeClass(course.delivery_mode)}`}>
+                  <i className={getCourseDeliveryIcon(course.delivery_mode)}></i>
+                  <span>{getCourseDeliveryLabel(course.delivery_mode)}</span>
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-white/90 sm:text-sm">
+                  {normalizeCourseLevel(course.level)}
+                </span>
+              </div>
 
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Ce que vous allez apprendre</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {objectives.map((obj, index) => (
-                        <div key={index} className="flex items-start space-x-3">
-                          <div className="w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <i className="ri-check-line text-base text-teal-600"></i>
-                          </div>
-                          <span className="text-sm text-gray-700">{obj}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+              <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl">{course.title}</h1>
+              <p className="mb-5 text-base text-gray-200 sm:mb-6 sm:text-lg">
+                {course.description || 'Formation professionnelle de qualité pour développer vos compétences.'}
+              </p>
 
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Prérequis</h2>
-                    <ul className="space-y-2">
-                      {requirements.map((req, index) => (
-                        <li key={index} className="flex items-start space-x-3">
-                          <div className="w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <i className="ri-checkbox-circle-line text-base text-gray-400"></i>
-                          </div>
-                          <span className="text-sm text-gray-700">{req}</span>
-                        </li>
-                      ))}
-                    </ul>
+              <div className="mb-5 flex flex-wrap items-center gap-4 sm:mb-6 sm:gap-6">
+                <div className="flex items-center space-x-2">
+                  <i className="ri-group-line text-base text-gray-300"></i>
+                  <span className="text-sm text-gray-300">{course.students_count || 0} apprenants</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <i className="ri-time-line text-base text-gray-300"></i>
+                  <span className="text-sm text-gray-300">{course.duration || 'N/A'}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <i className="ri-book-line text-base text-gray-300"></i>
+                  <span className="text-sm text-gray-300">{course.modules || 0} modules</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <i className="ri-play-list-line text-base text-gray-300"></i>
+                  <span className="text-sm text-gray-300">{totalLessons} leçons</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white sm:h-12 sm:w-12">
+                  <i className="ri-user-star-line text-xl"></i>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-300">Formateur</div>
+                  <div className="text-base font-medium">{course.instructor_name || 'Équipe pédagogique C2P'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-1">
+              <div className="sticky top-24 rounded-xl bg-white p-4 text-gray-900 shadow-xl sm:p-6">
+                <div className="mb-4 aspect-video overflow-hidden rounded-lg">
+                  <img src={getCourseImage(course)} alt={course.title} className="w-full h-full object-cover object-top" />
+                </div>
+
+                <div className="mb-4 text-2xl font-bold text-teal-600 sm:text-3xl">
+                  {(course.current_price ?? course.price)
+                    ? `${(course.current_price ?? course.price ?? 0).toLocaleString('fr-FR')} FCFA`
+                    : 'Gratuit'}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openEnrollFlow}
+                  className="mb-3 w-full rounded-lg bg-teal-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-teal-700 sm:px-6 sm:text-base"
+                >
+                  {existingEnrollment ? 'Accéder à mon apprentissage' : 'S’inscrire maintenant'}
+                </button>
+
+                <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Branche</span>
+                    <span className="font-medium">{getCourseBranchLabel(course.program_branch)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Format</span>
+                    <span className="font-medium">{getCourseDeliveryLabel(course.delivery_mode)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Durée</span>
+                    <span className="font-medium">{course.duration || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Modules</span>
+                    <span className="font-medium">{course.modules || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Leçons d’aperçu</span>
+                    <span className="font-medium">{previewLessons}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Certificat</span>
+                    <span className="font-medium">Oui</span>
                   </div>
                 </div>
-              )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              {activeTab === 'curriculum' && (
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Programme de la formation</h2>
-                  {curriculum.map((module, moduleIndex) => (
-                    <div key={moduleIndex} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                        <h3 className="text-lg font-bold text-gray-900">{module.module}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{module.lessons.length} leçons</p>
-                      </div>
-                      <div className="divide-y divide-gray-100">
-                        {module.lessons.map((lesson, lessonIndex) => (
-                          <div key={lessonIndex} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 flex items-center justify-center bg-teal-50 rounded-lg">
-                                <i className={`${getTypeIcon(lesson.type)} text-base text-teal-600`}></i>
-                              </div>
-                              <span className="text-sm font-medium text-gray-900">{lesson.title}</span>
-                            </div>
-                            <span className="text-sm text-gray-500">{lesson.duration}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+      <div className="sticky top-16 z-40 border-b border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-6 overflow-x-auto" role="tablist" aria-label="Navigation de la fiche formation">
+            <button type="button" role="tab" id="course-tab-overview" aria-selected={activeTab === 'overview'} aria-controls="course-panel-overview" onClick={() => setActiveTab('overview')} className={`py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'overview' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
+              Vue d’ensemble
+            </button>
+            <button type="button" role="tab" id="course-tab-curriculum" aria-selected={activeTab === 'curriculum'} aria-controls="course-panel-curriculum" onClick={() => setActiveTab('curriculum')} className={`py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'curriculum' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
+              Programme ({totalLessons} leçons)
+            </button>
+            <button type="button" role="tab" id="course-tab-reviews" aria-selected={activeTab === 'reviews'} aria-controls="course-panel-reviews" onClick={() => setActiveTab('reviews')} className={`py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'reviews' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}>
+              Avis
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+          <div className="lg:col-span-2">
+            {activeTab === 'overview' && (
+              <div className="space-y-8" role="tabpanel" id="course-panel-overview" aria-labelledby="course-tab-overview">
+                <div>
+                  <h2 className="mb-4 text-xl font-bold text-gray-900 sm:text-2xl">Description</h2>
+                  <p className="text-base text-gray-700 leading-relaxed">
+                    {course.description || 'Cette formation vous donnera les compétences essentielles pour progresser avec une structure claire et des cas pratiques.'}
+                  </p>
                 </div>
-              )}
 
-              {activeTab === 'reviews' && (
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Avis des apprenants</h2>
-                  <div className="bg-gray-50 rounded-xl p-6 mb-8">
-                    <div className="flex items-center space-x-6">
-                      <div className="text-center">
-                        <div className="text-5xl font-bold text-gray-900 mb-2">{rating}</div>
-                        <div className="flex items-center justify-center space-x-1 mb-2">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <div key={star} className="w-5 h-5 flex items-center justify-center">
-                              <i className={`ri-star-fill text-base ${star <= Math.floor(rating) ? 'text-yellow-500' : 'text-gray-300'}`}></i>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="text-sm text-gray-600">{reviewsData.length} avis</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-6">
-                    {reviewsData.map((review) => (
-                      <div key={review.id} className="bg-white border border-gray-200 rounded-xl p-6">
-                        <div className="flex items-start space-x-4">
-                          <img src={review.avatar} alt={review.name} className="w-12 h-12 rounded-full object-cover object-top" />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-base font-bold text-gray-900">{review.name}</h4>
-                              <span className="text-sm text-gray-500">{review.date}</span>
-                            </div>
-                            <div className="flex items-center space-x-1 mb-3">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <div key={star} className="w-4 h-4 flex items-center justify-center">
-                                  <i className={`ri-star-fill text-sm ${star <= review.rating ? 'text-yellow-500' : 'text-gray-300'}`}></i>
-                                </div>
-                              ))}
-                            </div>
-                            <p className="text-sm text-gray-700 leading-relaxed">{review.comment}</p>
-                          </div>
-                        </div>
+                <div className="rounded-2xl border border-[#d7e6fb] bg-[#f8fbff] px-4 py-4">
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getCourseBranchBadgeClass(course.program_branch)}`}>
+                    {getCourseBranchLabel(course.program_branch)}
+                  </span>
+                  <p className="mt-3 text-sm leading-7 text-[#31445f]">
+                    {getCourseBranchDescription(course.program_branch)}
+                  </p>
+                </div>
+
+                <div>
+                  <h2 className="mb-4 text-xl font-bold text-gray-900 sm:text-2xl">Ce que vous allez apprendre</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {objectives.map((objective) => (
+                      <div key={objective} className="flex items-start space-x-3">
+                        <i className="ri-check-line text-base text-teal-600 mt-0.5"></i>
+                        <span className="text-sm text-gray-700">{objective}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Instructor Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white border border-gray-200 rounded-xl p-6 sticky top-24">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Votre formateur</h3>
-                <div className="flex items-center space-x-4 mb-4">
-                  <img src={instructor.image} alt={instructor.name} className="w-16 h-16 rounded-full object-cover object-top" />
-                  <div>
-                    <h4 className="text-base font-bold text-gray-900">{instructor.name}</h4>
-                    <div className="flex items-center space-x-1 mt-1">
-                      <div className="w-4 h-4 flex items-center justify-center">
-                        <i className="ri-star-fill text-sm text-yellow-500"></i>
+                <div>
+                  <h2 className="mb-4 text-xl font-bold text-gray-900 sm:text-2xl">Prérequis</h2>
+                  <ul className="space-y-2">
+                    {requirements.map((requirement) => (
+                      <li key={requirement} className="flex items-start space-x-3">
+                        <i className="ri-checkbox-circle-line text-base text-gray-400 mt-0.5"></i>
+                        <span className="text-sm text-gray-700">{requirement}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'curriculum' && (
+              <div className="space-y-4" role="tabpanel" id="course-panel-curriculum" aria-labelledby="course-tab-curriculum">
+                <h2 className="mb-5 text-xl font-bold text-gray-900 sm:mb-6 sm:text-2xl">Programme de la formation</h2>
+                {curriculum.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-sm text-gray-600">
+                    Le programme détaillé sera publié ici dès que le formateur aura finalisé les sections et les leçons.
+                  </div>
+                ) : (
+                  curriculum.map((section) => (
+                    <div key={section.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                      <div className="border-b border-gray-200 bg-gray-50 px-4 py-3.5 sm:px-6 sm:py-4">
+                        <h3 className="text-base font-bold text-gray-900 sm:text-lg">{section.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {section.description || `${section.lessons.length} leçons dans ce module.`}
+                        </p>
                       </div>
-                      <span className="text-sm text-gray-600">{rating} • {instructor.students} apprenants</span>
+                      <div className="divide-y divide-gray-100">
+                        {section.lessons.map((lesson) => {
+                          const lessonState = progressByLesson.get(Number(lesson.id));
+                          const lessonCompleted = Boolean(lessonState?.completed) || Number(lessonState?.progress ?? 0) >= 100;
+                          return (
+                          <div key={lesson.id} className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-gray-50 sm:px-6 sm:py-4">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${lessonCompleted ? 'bg-green-50' : 'bg-teal-50'}`}>
+                                <i className={`${lessonCompleted ? 'ri-checkbox-circle-fill text-green-600' : `${getTypeIcon(lesson.type)} text-teal-600`} text-base`}></i>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{lesson.title}</p>
+                                {lesson.description ? <p className="text-xs text-gray-500 mt-0.5">{lesson.description}</p> : null}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-gray-500">{lesson.duration || 'N/A'}</div>
+                              {lessonState ? (
+                                <div className="mt-1 text-[11px] font-medium text-gray-500">
+                                  {lessonCompleted ? 'Terminée' : `${Math.round(Number(lessonState.progress || 0))}%`}
+                                </div>
+                              ) : null}
+                              {lesson.is_preview ? (
+                                <span className="inline-block mt-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700">
+                                  Aperçu
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        )})}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'reviews' && (
+              <div className="space-y-6" role="tabpanel" id="course-panel-reviews" aria-labelledby="course-tab-reviews">
+                <h2 className="mb-5 text-xl font-bold text-gray-900 sm:mb-6 sm:text-2xl">Avis des apprenants</h2>
+                <div className="rounded-xl bg-gray-50 p-4 sm:p-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+                    <div className="text-center">
+                      <div className="text-5xl font-bold text-gray-900 mb-2">{rating > 0 ? rating.toFixed(1) : '-'}</div>
+                      <div className="flex items-center justify-center space-x-1 mb-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <i key={star} className={`ri-star-fill text-base ${rating >= star ? 'text-yellow-500' : 'text-gray-300'}`}></i>
+                        ))}
+                      </div>
+                      <div className="text-sm text-gray-600">{reviews.length} avis publiés</div>
+                    </div>
+                    <div className="max-w-lg text-sm text-gray-600 leading-7">
+                      Les avis affichés ici proviennent des apprenants réellement inscrits au parcours.
                     </div>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed">{instructor.bio}</p>
+
+                <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{myReview ? 'Modifier votre avis' : 'Laisser un avis'}</h3>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {reviewGateMessage ?? 'Partagez un retour utile pour les prochains apprenants.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-4">
+                    <label htmlFor="course-review-rating" className="grid gap-2 text-sm font-medium text-gray-700">
+                      <span>Note</span>
+                      <select
+                        id="course-review-rating"
+                        value={reviewDraft.rating}
+                        disabled={!canWriteReview || reviewSubmitting}
+                        onChange={(event) => setReviewDraft((current) => ({ ...current, rating: Number(event.target.value) }))}
+                        className="c2p-input"
+                      >
+                        {[5, 4, 3, 2, 1].map((value) => (
+                          <option key={value} value={value}>{value}/5</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label htmlFor="course-review-comment" className="grid gap-2 text-sm font-medium text-gray-700">
+                      <span>Commentaire</span>
+                      <textarea
+                        id="course-review-comment"
+                        value={reviewDraft.comment}
+                        disabled={!canWriteReview || reviewSubmitting}
+                        onChange={(event) => setReviewDraft((current) => ({ ...current, comment: event.target.value }))}
+                        rows={4}
+                        className="c2p-input min-h-[120px] resize-y"
+                        placeholder="Ce que ce parcours vous a apporté, ce qui pourrait être renforcé, le format, le rythme..."
+                      />
+                    </label>
+                    <div>
+                      <button
+                        type="button"
+                        disabled={!canWriteReview || reviewSubmitting}
+                        onClick={handleReviewSubmit}
+                        className="c2p-btn-primary w-full px-5 py-3 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                      >
+                        {reviewSubmitting ? 'Publication...' : (myReview ? 'Mettre à jour mon avis' : 'Publier mon avis')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {reviews.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">
+                      Aucun avis publié pour cette formation pour le moment.
+                    </div>
+                  ) : (
+                    reviews.map((review) => (
+                      <div key={review.id} className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-gray-900">{review.student_name}</p>
+                              {user?.id && String(review.student_id) === String(user.id) ? (
+                                <span className="rounded-full bg-[#eef2f7] px-2 py-0.5 text-[11px] font-medium text-[#475569]">Vous</span>
+                              ) : null}
+                            </div>
+                            <div className="mt-1 flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <i key={star} className={`ri-star-fill text-sm ${Number(review.rating) >= star ? 'text-yellow-500' : 'text-gray-300'}`}></i>
+                              ))}
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                        <p className="mt-3 text-sm leading-7 text-gray-700">{review.comment}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Cadre de formation</h3>
+              <div className="space-y-4 text-sm text-gray-700">
+                <div className="flex items-start gap-3">
+                  <i className="ri-building-line mt-0.5 text-teal-600"></i>
+                  <div>
+                    <p className="font-medium text-gray-900">{getCourseBranchLabel(course.program_branch)}</p>
+                    <p className="text-gray-600">{getCourseBranchDescription(course.program_branch)}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <i className={`${getCourseDeliveryIcon(course.delivery_mode)} mt-0.5 text-teal-600`}></i>
+                  <div>
+                    <p className="font-medium text-gray-900">{getCourseDeliveryLabel(course.delivery_mode)}</p>
+                    <p className="text-gray-600">
+                      {course.delivery_mode === 'onsite'
+                        ? 'Sessions animées en présentiel avec suivi C2P.'
+                        : course.delivery_mode === 'hybrid'
+                          ? 'Parcours mixte avec temps synchrone et séquences en autonomie.'
+                          : 'Accès à distance avec contenus consultables et suivi progressif.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <i className="ri-user-star-line mt-0.5 text-teal-600"></i>
+                  <div>
+                    <p className="font-medium text-gray-900">{course.instructor_name || 'Équipe pédagogique C2P'}</p>
+                    <p className="text-gray-600">Animation du parcours et supervision des modules publiés.</p>
+                  </div>
+                </div>
+                {relatedClasses.length > 0 ? (
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="mb-3 text-sm font-semibold text-gray-900">Sessions liees</p>
+                    <div className="space-y-3">
+                      {relatedClasses.slice(0, 2).map((entry) => (
+                        <Link
+                          key={entry.id}
+                          to={`/espace-numerique/classe-virtuelle/${entry.id}`}
+                          className="block rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 hover:border-teal-200 hover:bg-teal-50/40"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-medium text-gray-900">{entry.title}</p>
+                            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-gray-600">{entry.status}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {new Date(entry.class_date).toLocaleDateString('fr-FR')} • {entry.class_time}
+                          </p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
         </div>
-
-        {/* Enrollment Modal */}
-        {showEnrollModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-md w-full p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Inscription à la formation</h3>
-                <button onClick={() => setShowEnrollModal(false)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
-                  <i className="ri-close-line text-xl"></i>
-                </button>
-              </div>
-
-              <div className="mb-6">
-                <h4 className="text-base font-bold text-gray-900 mb-2">{course.title}</h4>
-                <div className="text-2xl font-bold text-teal-600 mb-4">
-                  {course.price ? `${course.price.toLocaleString()} FCFA` : 'Gratuit'}
-                </div>
-              </div>
-
-              <form onSubmit={handleEnroll} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nom complet</label>
-                  <input type="text" required defaultValue="Utilisateur C2P" className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" placeholder="Votre nom complet" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input type="email" required defaultValue="user@example.com" className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" placeholder="votre@email.com" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-                  <input type="tel" defaultValue="+221 77 XXX XX XX" className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" placeholder="+221 XX XXX XX XX" />
-                </div>
-                <button type="submit" disabled={enrolling} className="w-full px-6 py-3 bg-teal-600 text-white text-base font-medium rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap disabled:opacity-50">
-                  {enrolling ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <i className="ri-loader-4-line animate-spin"></i>
-                      Inscription en cours...
-                    </span>
-                  ) : (
-                    'Confirmer l\'inscription'
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
-    </PublicLayout>
+
+      {showEnrollModal && user && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="course-enroll-title" className="w-full max-w-md rounded-xl bg-white p-5 sm:p-6">
+            <div className="mb-5 flex items-center justify-between sm:mb-6">
+              <h3 id="course-enroll-title" className="text-xl font-bold text-gray-900">Confirmer l’inscription</h3>
+              <button type="button" aria-label="Fermer la confirmation d’inscription" onClick={() => setShowEnrollModal(false)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+
+            <div className="mb-6 space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-gray-500">Formation</p>
+                <p className="mt-1 font-semibold text-gray-900">{course.title}</p>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Participant</span>
+                <span className="font-medium text-gray-900">{`${user.firstName} ${user.lastName}`.trim()}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Email</span>
+                <span className="font-medium text-gray-900">{user.email}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Format</span>
+                <span className="font-medium text-gray-900">{getCourseDeliveryLabel(course.delivery_mode)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Tarif</span>
+                <span className="font-semibold text-teal-700">
+                  {(course.current_price ?? course.price)
+                    ? `${(course.current_price ?? course.price ?? 0).toLocaleString('fr-FR')} FCFA`
+                    : 'Gratuit'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleEnroll}
+              disabled={enrolling}
+              className="w-full px-6 py-3 bg-teal-600 text-white text-base font-medium rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap disabled:opacity-50"
+            >
+              {enrolling ? (
+                <span className="flex items-center justify-center gap-2">
+                  <i className="ri-loader-4-line animate-spin"></i>
+                  Inscription en cours...
+                </span>
+              ) : (
+                'Confirmer l’inscription'
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

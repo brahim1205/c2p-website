@@ -2,9 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { SkeletonList } from '@/components/base/Skeleton';
-import { backendClient } from '@/lib/backendClient';
 import { downloadSimplePdf } from '@/lib/downloads';
+import {
+  deleteFormateurCertificate,
+  fetchFormateurCertificates,
+  issueFormateurCertificate,
+} from '@/lib/formateurDashboardApi';
 
 
 interface Certificate {
@@ -26,6 +31,7 @@ function formatCertificateGrade(value: number | null) {
 }
 
 export default function FormateurCertificatsPage() {
+  const { user } = useAuth();
   const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
   const [certs, setCerts] = useState<Certificate[]>([]);
@@ -34,22 +40,22 @@ export default function FormateurCertificatsPage() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const fetchCerts = useCallback(async () => {
+    if (!user?.id) {
+      setCerts([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const { data, error: err } = await backendClient
-        .from('certificates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (err) throw err;
-      setCerts(data || []);
+      const data = await fetchFormateurCertificates(user.id);
+      setCerts(data as Certificate[]);
     } catch (err: unknown) {
       error('Erreur', 'Impossible de charger les certificats.');
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [error, user?.id]);
 
   useEffect(() => {
     fetchCerts();
@@ -59,15 +65,9 @@ export default function FormateurCertificatsPage() {
 
   const handleIssue = async (cert: Certificate) => {
     try {
-      const newCertId = `C2P-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${String(cert.id).padStart(3, '0')}`;
-      const { error: err } = await backendClient
-        .from('certificates')
-        .update({ status: 'issued', certificate_id: newCertId, issued_at: new Date().toISOString() })
-        .eq('id', cert.id);
-
-      if (err) throw err;
+      await issueFormateurCertificate(cert);
       success('Certificat délivré', `Le certificat pour ${cert.student_name} a été généré avec succès.`);
-      fetchCerts();
+      await fetchCerts();
     } catch (err: unknown) {
       error('Erreur', 'Impossible de délivrer le certificat.');
       console.error(err);
@@ -106,10 +106,9 @@ export default function FormateurCertificatsPage() {
   const handleDelete = async (cert: Certificate) => {
     if (!window.confirm(`Voulez-vous vraiment supprimer le certificat de ${cert.student_name} ?`)) return;
     try {
-      const { error: err } = await backendClient.from('certificates').delete().eq('id', cert.id);
-      if (err) throw err;
+      await deleteFormateurCertificate(cert.id);
       success('Supprimé', `Le certificat de ${cert.student_name} a été supprimé.`);
-      fetchCerts();
+      await fetchCerts();
     } catch (err: unknown) {
       error('Erreur', 'Impossible de supprimer le certificat.');
       console.error(err);

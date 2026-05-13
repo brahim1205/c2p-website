@@ -13,6 +13,7 @@ interface RouteWrapperProps {
   redirectTo?: string;
   redirectAuthenticated?: boolean;
   hideFooter?: boolean;
+  hideHeader?: boolean;
 }
 
 export default function RouteWrapper({
@@ -23,6 +24,7 @@ export default function RouteWrapper({
   redirectTo,
   redirectAuthenticated,
   hideFooter = false,
+  hideHeader = false,
 }: RouteWrapperProps) {
   const location = useLocation();
 
@@ -50,11 +52,15 @@ export default function RouteWrapper({
     // Dashboard and admin pages handle their own layouts internally.
     // Keep route transitions on public pages only so dashboard navigation feels stable.
     if (layout === 'public') {
-      content = <PublicLayout hideFooter={hideFooter}>{content}</PublicLayout>;
+      content = (
+        <PublicLayout hideFooter={hideFooter} hideHeader={hideHeader}>
+          {content}
+        </PublicLayout>
+      );
     }
 
     return content;
-  }, [children, layout, requireAuth, allowedRoles, redirectTo, redirectAuthenticated, hideFooter, location.pathname]);
+  }, [children, layout, requireAuth, allowedRoles, redirectTo, redirectAuthenticated, hideFooter, hideHeader, location.pathname]);
 
   return wrappedContent;
 }

@@ -44,6 +44,27 @@ interface CreateConversationPayload {
   members?: number;
 }
 
+function moveConversationToTop(
+  conversations: Conversation[],
+  conversationId: string,
+  update: (conversation: Conversation) => Conversation,
+) {
+  const current = conversations.find((conversation) => conversation.id === conversationId);
+  if (!current) return conversations;
+
+  return [
+    update(current),
+    ...conversations.filter((conversation) => conversation.id !== conversationId),
+  ];
+}
+
+function isIgnorableTransportError(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const message = 'message' in error ? String(error.message) : '';
+  const code = 'code' in error ? String(error.code) : '';
+  return code === 'NETWORK_ERROR' || code === 'REQUEST_TIMEOUT' || message === 'Failed to fetch';
+}
+
 export function useBackendMessaging() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -51,16 +72,26 @@ export function useBackendMessaging() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const realtimeRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadData = useCallback(async (showLoader = true) => {
     if (!user) {
-      setConversations([]);
-      setMessages({});
-      setLoading(false);
+      if (isMountedRef.current) {
+        setConversations([]);
+        setMessages({});
+        setLoading(false);
+      }
       return;
     }
 
-    if (showLoader) {
+    if (showLoader && isMountedRef.current) {
       setLoading(true);
     }
 
@@ -70,6 +101,11 @@ export function useBackendMessaging() {
       .order('updated_at', { ascending: false });
 
     if (convError) {
+      if (!isMountedRef.current) return;
+      if (isIgnorableTransportError(convError)) {
+        setLoading(false);
+        return;
+      }
       console.error('Error fetching conversations:', convError);
       setLoading(false);
       return;
@@ -123,13 +159,14 @@ export function useBackendMessaging() {
         lastMessage: lastMsg?.content || 'Nouvelle conversation',
         lastMessageAt: lastMsg?.timestamp || c.updated_at || c.created_at,
         unreadCount,
-        online: Math.random() > 0.5,
+        online: Boolean(c.online ?? false),
         type: c.type || 'individual',
         members: c.members,
         participants: c.participants || []
       };
     });
 
+    if (!isMountedRef.current) return;
     setConversations(enrichedConvs);
     setMessages(messagesMap);
     setLoading(false);
@@ -179,18 +216,12 @@ export function useBackendMessaging() {
             return { ...prev, [convId]: [...existing, newMsg] };
           });
 
-          setConversations(prev =>
-            prev.map(c =>
-              c.id === newMsg.conversationId
-                ? {
-                    ...c,
-                    lastMessage: newMsg.content,
-                    lastMessageAt: newMsg.timestamp,
-                    unreadCount: newMsg.senderId !== user.id ? c.unreadCount + 1 : c.unreadCount
-                  }
-                : c
-            )
-          );
+          setConversations((prev) => moveConversationToTop(prev, newMsg.conversationId, (conversation) => ({
+            ...conversation,
+            lastMessage: newMsg.content,
+            lastMessageAt: newMsg.timestamp,
+            unreadCount: newMsg.senderId !== user.id ? conversation.unreadCount + 1 : conversation.unreadCount,
+          })));
         }
       )
       .subscribe();
@@ -233,13 +264,11 @@ export function useBackendMessaging() {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', conversationId);
 
-    setConversations(prev =>
-      prev.map(c =>
-        c.id === conversationId
-          ? { ...c, lastMessage: content.trim(), lastMessageAt: new Date().toISOString() }
-          : c
-      )
-    );
+    setConversations((prev) => moveConversationToTop(prev, conversationId, (conversation) => ({
+      ...conversation,
+      lastMessage: content.trim(),
+      lastMessageAt: new Date().toISOString(),
+    })));
   }, [user]);
 
   const createConversation = useCallback(async (payload: CreateConversationPayload) => {

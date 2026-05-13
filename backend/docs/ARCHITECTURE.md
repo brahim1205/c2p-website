@@ -2,6 +2,10 @@
 
 Le backend reste un **monolithe modulaire**.
 
+Reference produit:
+
+- voir aussi [docs/CDP_CLIENT_FUNCTIONAL_SPEC.md](/home/cherif/Bureau/kodify/CP2/docs/CDP_CLIENT_FUNCTIONAL_SPEC.md) pour l'alignement entre les modules techniques actuels et la fiche technique client CDP/C2P
+
 ## Principe
 
 - un seul processus backend

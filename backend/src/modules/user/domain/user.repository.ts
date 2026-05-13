@@ -10,6 +10,6 @@ export const USER_REPOSITORY = 'USER_REPOSITORY';
 
 export interface IUserRepository {
   create(data: CreateUserData): Promise<User>;
-  findById(id: number): Promise<User | null>;
+  findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
 }

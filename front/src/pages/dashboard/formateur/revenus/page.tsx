@@ -3,7 +3,14 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { backendClient } from '@/lib/backendClient';
+import { fetchFormateurRevenueSnapshot } from '@/lib/formateurDashboardApi';
+import { getPayoutStatusLabel, getPayoutStatusTone } from '@/lib/paymentStatus';
+import {
+  createPayoutAccount,
+  createPayoutRequest,
+  setDefaultPayoutAccount,
+} from '@/lib/paymentsApi';
+import { type PayoutAccount, type PayoutRequest } from '@/lib/saasApi';
 
 interface CourseRevenue {
   id: string | number;
@@ -13,32 +20,9 @@ interface CourseRevenue {
   current_price?: number;
 }
 
-interface PayoutAccount {
-  id: string;
-  user_id: string;
-  method: 'bank' | 'paypal' | 'orange_money' | 'wave' | 'free_money' | 'mtn_money';
-  account_name: string;
-  account_identifier: string;
-  label: string;
-  is_default: boolean;
-  status?: 'active' | 'archived';
-}
+type SupportedPayoutMethod = 'bank' | 'paypal' | 'orange_money' | 'wave' | 'free_money' | 'mtn_money';
 
-interface PayoutRequest {
-  id: string;
-  user_id: string;
-  amount: number;
-  currency: string;
-  method: PayoutAccount['method'];
-  account_id: string;
-  status: 'pending' | 'approved' | 'paid' | 'rejected' | 'cancelled';
-  requested_at: string;
-  processed_at?: string | null;
-  note?: string;
-  account_label?: string | null;
-}
-
-const methodLabels: Record<PayoutAccount['method'], string> = {
+const methodLabels: Record<SupportedPayoutMethod, string> = {
   bank: 'Virement bancaire',
   paypal: 'PayPal',
   orange_money: 'Orange Money',
@@ -47,8 +31,12 @@ const methodLabels: Record<PayoutAccount['method'], string> = {
   mtn_money: 'MTN Mobile Money',
 };
 
+function getMethodLabel(method: string) {
+  return methodLabels[method as SupportedPayoutMethod] ?? method;
+}
+
 const emptyAccountForm = {
-  method: 'bank' as PayoutAccount['method'],
+  method: 'bank' as SupportedPayoutMethod,
   account_name: '',
   account_identifier: '',
   label: '',
@@ -76,18 +64,11 @@ export default function FormateurRevenuePage() {
     }
     setLoading(true);
     try {
-      const [coursesRes, accountsRes, requestsRes] = await Promise.all([
-        backendClient.from<CourseRevenue>('courses').select('*').eq('instructor_id', user.id).order('updated_at', { ascending: false }),
-        backendClient.from<PayoutAccount>('payout_accounts').select('*').order('updated_at', { ascending: false }),
-        backendClient.from<PayoutRequest>('payout_requests').select('*').order('requested_at', { ascending: false }),
-      ]);
-      if (coursesRes.error) throw coursesRes.error;
-      if (accountsRes.error) throw accountsRes.error;
-      if (requestsRes.error) throw requestsRes.error;
-      const nextAccounts = accountsRes.data || [];
-      setCourses(coursesRes.data || []);
+      const snapshot = await fetchFormateurRevenueSnapshot(user.id);
+      const nextAccounts = snapshot.accounts || [];
+      setCourses(snapshot.courses as CourseRevenue[]);
       setAccounts(nextAccounts);
-      setRequests(requestsRes.data || []);
+      setRequests(snapshot.requests || []);
       setSelectedAccountId(nextAccounts.find((item) => item.is_default)?.id || nextAccounts[0]?.id || '');
     } catch (err) {
       console.error(err);
@@ -113,6 +94,13 @@ export default function FormateurRevenuePage() {
     };
   }, [courses, requests]);
 
+  const payoutBreakdown = useMemo(() => ({
+    pending: requests.filter((item) => item.status === 'pending').length,
+    approved: requests.filter((item) => item.status === 'approved').length,
+    paid: requests.filter((item) => item.status === 'paid').length,
+    rejected: requests.filter((item) => item.status === 'rejected').length,
+  }), [requests]);
+
   const createAccount = async () => {
     if (!user?.id) return;
     if (!accountForm.account_name.trim() || !accountForm.account_identifier.trim() || !accountForm.label.trim()) {
@@ -122,14 +110,9 @@ export default function FormateurRevenuePage() {
 
     setSavingAccount(true);
     try {
-      if (accountForm.is_default) {
-        await Promise.all(accounts.map((account) => backendClient.from('payout_accounts').update({ is_default: false }).eq('id', account.id)));
-      }
-      const response = await backendClient.from('payout_accounts').insert({
-        user_id: user.id,
+      await createPayoutAccount({
         ...accountForm,
       });
-      if (response.error) throw response.error;
       success('Compte ajouté', 'Le compte de retrait a été enregistré.');
       setAccountForm(emptyAccountForm);
       await loadPage();
@@ -143,10 +126,7 @@ export default function FormateurRevenuePage() {
 
   const markAsDefault = async (account: PayoutAccount) => {
     try {
-      await Promise.all([
-        ...accounts.filter((item) => item.is_default && item.id !== account.id).map((item) => backendClient.from('payout_accounts').update({ is_default: false }).eq('id', item.id)),
-        backendClient.from('payout_accounts').update({ is_default: true }).eq('id', account.id),
-      ]);
+      await setDefaultPayoutAccount(account.id);
       success('Compte principal mis à jour', `Le compte "${account.label}" devient le compte par défaut.`);
       await loadPage();
     } catch (err) {
@@ -173,15 +153,11 @@ export default function FormateurRevenuePage() {
 
     setRequestingPayout(true);
     try {
-      const account = accounts.find((item) => item.id === selectedAccountId);
-      const response = await backendClient.from('payout_requests').insert({
-        user_id: user.id,
+      await createPayoutRequest({
         amount,
         account_id: selectedAccountId,
-        method: account?.method,
         note: payoutNote,
       });
-      if (response.error) throw response.error;
       success('Demande envoyée', 'La demande de retrait a été enregistrée.');
       setPayoutAmount('');
       setPayoutNote('');
@@ -218,6 +194,25 @@ export default function FormateurRevenuePage() {
           ))}
         </div>
 
+        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+            <div className="text-sm text-amber-700">Demandes en attente</div>
+            <div className="mt-2 text-2xl font-bold text-amber-900">{payoutBreakdown.pending}</div>
+          </div>
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+            <div className="text-sm text-blue-700">Approuvées</div>
+            <div className="mt-2 text-2xl font-bold text-blue-900">{payoutBreakdown.approved}</div>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+            <div className="text-sm text-emerald-700">Payées</div>
+            <div className="mt-2 text-2xl font-bold text-emerald-900">{payoutBreakdown.paid}</div>
+          </div>
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+            <div className="text-sm text-red-700">Rejetées</div>
+            <div className="mt-2 text-2xl font-bold text-red-900">{payoutBreakdown.rejected}</div>
+          </div>
+        </div>
+
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
           <div className="space-y-6">
             <section className="rounded-xl border border-gray-200 bg-white p-6">
@@ -247,19 +242,11 @@ export default function FormateurRevenuePage() {
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
                         <div className="font-medium text-gray-900">{Number(request.amount).toLocaleString('fr-FR')} {request.currency}</div>
-                        <div className="text-sm text-gray-500">{request.account_label || methodLabels[request.method]}</div>
+                        <div className="text-sm text-gray-500">{request.account_label || getMethodLabel(request.method)}</div>
                         <div className="mt-1 text-xs text-gray-500">Demandé le {new Date(request.requested_at).toLocaleDateString('fr-FR')}</div>
                       </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        request.status === 'paid'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : request.status === 'rejected'
-                            ? 'bg-red-100 text-red-700'
-                            : request.status === 'cancelled'
-                              ? 'bg-gray-100 text-gray-700'
-                              : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {request.status === 'paid' ? 'Payé' : request.status === 'rejected' ? 'Rejeté' : request.status === 'cancelled' ? 'Annulé' : 'En traitement'}
+                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${getPayoutStatusTone(request.status)}`}>
+                        {getPayoutStatusLabel(request.status)}
                       </span>
                     </div>
                     {request.note ? <p className="mt-3 text-sm text-gray-600">{request.note}</p> : null}
@@ -279,7 +266,7 @@ export default function FormateurRevenuePage() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <div className="font-medium text-gray-900">{account.label}</div>
-                        <div className="text-sm text-gray-500">{methodLabels[account.method]}</div>
+                        <div className="text-sm text-gray-500">{getMethodLabel(account.method)}</div>
                         <div className="mt-1 text-xs text-gray-500">{account.account_name} • {account.account_identifier}</div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
@@ -301,7 +288,7 @@ export default function FormateurRevenuePage() {
             <section className="rounded-xl border border-gray-200 bg-white p-6">
               <h2 className="mb-4 text-lg font-semibold text-gray-900">Ajouter un compte</h2>
               <div className="space-y-4">
-                <select value={accountForm.method} onChange={(e) => setAccountForm((current) => ({ ...current, method: e.target.value as PayoutAccount['method'] }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none">
+                <select value={accountForm.method} onChange={(e) => setAccountForm((current) => ({ ...current, method: e.target.value as SupportedPayoutMethod }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none">
                   {Object.entries(methodLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
                 <input value={accountForm.account_name} onChange={(e) => setAccountForm((current) => ({ ...current, account_name: e.target.value }))} placeholder="Nom du bénéficiaire" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" />
@@ -322,7 +309,7 @@ export default function FormateurRevenuePage() {
               <div className="space-y-4">
                 <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none">
                   <option value="">Sélectionner un compte</option>
-                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.label} • {methodLabels[account.method]}</option>)}
+                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.label} • {getMethodLabel(account.method)}</option>)}
                 </select>
                 <input type="number" min={1000} value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} placeholder="Montant à retirer (FCFA)" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" />
                 <textarea value={payoutNote} onChange={(e) => setPayoutNote(e.target.value)} rows={3} placeholder="Note interne ou contexte du retrait" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" />

@@ -1,0 +1,6 @@
+Synthese de soumission - Hooks avances
+
+- Structuration des composants autour de points d entree stables
+- Nettoyage des effets secondaires et des subscriptions
+- Separation claire entre logique de recuperation et rendu
+- Recommandation: isoler les hooks metier par domaine

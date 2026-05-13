@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { backendClient } from '@/lib/backendClient';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
 
 export default function SubmitProjectPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { success, error } = useToast();
+  const { gateFor } = useSubscriptionAccess(user);
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const subscriptionGate = gateFor('project_submit');
+  const isAuthenticated = Boolean(user?.id);
+  const hasProjectRole = user?.role === 'porteur' || user?.role === 'admin';
 
   type SubmitProjectFormData = {
     projectName: string;
@@ -31,6 +37,7 @@ export default function SubmitProjectPage() {
     fundingType: string;
     currentFunding: string;
     useOfFunds: string;
+    partnerNeeds: string[];
     businessPlan: string | null;
     pitchDeck: string | null;
     financialProjections: string | null;
@@ -63,6 +70,7 @@ export default function SubmitProjectPage() {
     fundingType: '',
     currentFunding: '',
     useOfFunds: '',
+    partnerNeeds: [],
     
     // Étape 5: Documents
     businessPlan: null,
@@ -85,6 +93,15 @@ export default function SubmitProjectPage() {
     'Autre'
   ];
 
+  const togglePartnerNeed = (need: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      partnerNeeds: prev.partnerNeeds.includes(need)
+        ? prev.partnerNeeds.filter((item) => item !== need)
+        : [...prev.partnerNeeds, need],
+    }));
+  };
+
   const handleNext = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
@@ -101,20 +118,33 @@ export default function SubmitProjectPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id) {
+      error('Connexion requise', 'Connectez-vous avant de soumettre un projet.');
+      navigate('/auth/login', { state: { from: '/project-center/soumettre' } });
+      return;
+    }
+    if (!hasProjectRole) {
+      error('Compte inadapté', 'La soumission de projet est réservée aux comptes porteur et admin.');
+      return;
+    }
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     setIsSubmitting(true);
 
     try {
       const fundingGoal = Number(formData.fundingGoal || 0);
       const currentFunding = Number(formData.currentFunding || 0);
       const projectPayload = {
-        owner_id: user?.id || `guest-${Date.now()}`,
+        owner_id: user.id,
         title: formData.projectName,
         description: formData.shortDescription || formData.solution,
         category: formData.category.toLowerCase() || 'autre',
         sector: formData.category || 'Autre',
         status: 'pre-incubation',
         phase: formData.stage || 'idee',
-        porteur_name: formData.founderName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Porteur de projet',
+        porteur_name: formData.founderName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Porteur de projet',
         funding: currentFunding,
         funding_goal: fundingGoal,
         team_size: Number.parseInt(formData.teamSize, 10) || 1,
@@ -122,7 +152,10 @@ export default function SubmitProjectPage() {
         progress: 12,
         location: formData.location,
         impact: formData.problemStatement,
-        looking_for: [formData.fundingType || 'Accompagnement'],
+        looking_for: [
+          ...(formData.partnerNeeds.length ? formData.partnerNeeds : []),
+          ...(formData.fundingType ? [`Financement ${formData.fundingType}`] : []),
+        ],
         image: '/images/home/venture.jpg',
       };
 
@@ -256,6 +289,37 @@ export default function SubmitProjectPage() {
 
       {/* Form */}
       <div className="max-w-4xl mx-auto px-6 py-12">
+        {!isAuthenticated ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+            <h2 className="text-2xl font-bold text-gray-900">Connexion requise</h2>
+            <p className="mt-3 text-gray-600">
+              Connectez-vous avec un compte C2P avant de soumettre un projet dans ProjectCenter.
+            </p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link to="/auth/login" state={{ from: '/project-center/soumettre' }} className="c2p-btn-accent px-6 py-3">
+                Me connecter
+              </Link>
+              <Link to="/auth/register?role=porteur" className="c2p-btn-secondary px-6 py-3">
+                Créer un compte porteur
+              </Link>
+            </div>
+          </div>
+        ) : !hasProjectRole ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+            <h2 className="text-2xl font-bold text-gray-900">Compte non autorisé</h2>
+            <p className="mt-3 text-gray-600">
+              La soumission de projet est réservée aux comptes porteur ou admin.
+            </p>
+            <div className="mt-6">
+              <Link to="/project-center" className="c2p-btn-secondary px-6 py-3">
+                Retour à ProjectCenter
+              </Link>
+            </div>
+          </div>
+        ) : (
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
+        )}
+        {isAuthenticated && hasProjectRole ? (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           {/* Étape 1: Informations de base */}
           {currentStep === 1 && (
@@ -573,6 +637,37 @@ export default function SubmitProjectPage() {
                 <p className="text-xs text-gray-500 mt-1">Maximum 500 caractères</p>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Type de partenaire recherche</label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { id: 'Partenaire financier', icon: 'ri-bank-card-line', description: 'Pour le financement, l’investissement ou la structuration de la levée.' },
+                    { id: 'Partenaire technique', icon: 'ri-cpu-line', description: 'Pour le produit, la tech, l’intégration ou le support opérationnel.' },
+                  ].map((option) => {
+                    const active = formData.partnerNeeds.includes(option.id);
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => togglePartnerNeed(option.id)}
+                        className={`rounded-xl border px-4 py-4 text-left transition ${
+                          active ? 'border-teal-400 bg-teal-50' : 'border-gray-200 bg-white hover:border-teal-200'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <i className={`${option.icon} mt-0.5 text-lg ${active ? 'text-teal-600' : 'text-gray-400'}`}></i>
+                          <div>
+                            <p className="font-medium text-gray-900">{option.id}</p>
+                            <p className="mt-1 text-sm text-gray-600">{option.description}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-gray-500">Vous pouvez en choisir un seul ou les deux selon le dossier.</p>
+              </div>
+
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
                   <i className="ri-lightbulb-line text-green-600 text-xl flex-shrink-0 mt-0.5"></i>
@@ -705,7 +800,7 @@ export default function SubmitProjectPage() {
             ) : (
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !subscriptionGate.allowed}
                 className="px-8 py-3 bg-gradient-to-r from-teal-500 to-blue-600 text-white rounded-lg font-semibold hover:from-teal-600 hover:to-blue-700 transition-colors whitespace-nowrap disabled:opacity-60"
               >
                 <i className="ri-send-plane-line mr-2"></i>
@@ -714,6 +809,7 @@ export default function SubmitProjectPage() {
             )}
           </div>
         </form>
+        ) : null}
       </div>
     </div>
   );

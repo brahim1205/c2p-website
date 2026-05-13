@@ -1,32 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
-import { backendClient } from '@/lib/backendClient';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonCard } from '@/components/base/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import { fetchProviderByUserId } from '@/lib/providerApi';
 import ImageUploadField from '@/components/base/ImageUploadField';
-
-
-interface Service {
-  id: number;
-  title: string;
-  category: string;
-  description: string;
-  price: string;
-  price_type: string;
-  status: string;
-  bookings: number;
-  rating: number;
-  image: string;
-  location: string;
-  created_at: string;
-}
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
+import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
+import {
+  createPrestataireService,
+  deletePrestataireService,
+  fetchPrestataireServices,
+  updatePrestataireService,
+  updatePrestataireServiceStatus,
+  type PrestataireService as Service,
+} from '@/lib/prestataireDashboardApi';
 
 export default function PrestataireServicesPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
+  const { gateFor } = useSubscriptionAccess(user);
   const [loading, setLoading] = useState(true);
   const [providerId, setProviderId] = useState<number | null>(null);
   const [services, setServices] = useState<Service[]>([]);
@@ -47,37 +40,29 @@ export default function PrestataireServicesPage() {
     location: 'Dakar',
   });
   const [editService, setEditService] = useState<Partial<Service>>({});
+  const subscriptionGate = gateFor('provider_services_manage');
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
-    try {
-      if (!user?.id) {
-        setProviderId(null);
-        setServices([]);
-        return;
-      }
+      try {
+        if (!user?.id) {
+          setProviderId(null);
+          setServices([]);
+          return;
+        }
 
-      const provider = await fetchProviderByUserId(user.id);
-      if (!provider?.id) {
-        setProviderId(null);
-        setServices([]);
-        error('Prestataire introuvable', 'Votre compte prestataire n est pas encore relie a une fiche service.');
-        return;
-      }
+        const snapshot = await fetchPrestataireServices(user.id);
+        if (!snapshot.providerId) {
+          setProviderId(null);
+          setServices([]);
+          error('Prestataire introuvable', 'Votre compte prestataire n est pas encore relie a une fiche service.');
+          return;
+        }
 
-      setProviderId(provider.id);
-
-      const { data, error: err } = await backendClient
-        .from('provider_services')
-        .select('*')
-        .eq('provider_id', provider.id)
-        .order('created_at', { ascending: false });
-      if (err) {
-        throw err;
-      }
-      setServices((data || []) as Service[]);
-    } catch (err) {
-      error('Erreur', 'Impossible de charger les services.');
+        setProviderId(snapshot.providerId);
+        setServices(snapshot.services);
+      } catch (err) {
+        error('Erreur', 'Impossible de charger les services.');
       console.error(err);
       setServices([]);
       setProviderId(null);
@@ -99,12 +84,14 @@ export default function PrestataireServicesPage() {
   });
 
   const handleToggleStatus = async (service: Service) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     const newStatus = service.status === 'active' ? 'paused' : 'active';
-    const { error: err } = await backendClient
-      .from('provider_services')
-      .update({ status: newStatus })
-      .eq('id', service.id);
-    if (err) {
+    try {
+      await updatePrestataireServiceStatus(service.id, newStatus);
+    } catch {
       error('Erreur', 'Impossible de modifier le statut.');
       return;
     }
@@ -117,8 +104,9 @@ export default function PrestataireServicesPage() {
 
   const handleDelete = async () => {
     if (!selectedService) return;
-    const { error: err } = await backendClient.from('provider_services').delete().eq('id', selectedService.id);
-    if (err) {
+    try {
+      await deletePrestataireService(selectedService.id);
+    } catch {
       error('Erreur', 'Impossible de supprimer le service.');
       return;
     }
@@ -129,6 +117,10 @@ export default function PrestataireServicesPage() {
   };
 
   const handleCreate = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!providerId) {
       error('Prestataire introuvable', 'Aucune fiche prestataire associee a ce compte.');
       return;
@@ -138,10 +130,8 @@ export default function PrestataireServicesPage() {
       error('Champs requis', 'Le titre et le prix sont obligatoires.');
       return;
     }
-    const { data, error: err } = await backendClient
-      .from('provider_services')
-      .insert({
-        provider_id: providerId,
+    try {
+      await createPrestataireService(providerId, {
         title: newService.title,
         category: newService.category || 'Bâtiment',
         description: newService.description || '',
@@ -150,12 +140,8 @@ export default function PrestataireServicesPage() {
         status: newService.status || 'active',
         location: newService.location || 'Dakar',
         image: newService.image || '',
-        bookings: 0,
-        rating: 0,
-      })
-      .select('id')
-      .single();
-    if (err || !data) {
+      });
+    } catch {
       error('Erreur', 'Impossible de créer le service.');
       return;
     }
@@ -169,18 +155,20 @@ export default function PrestataireServicesPage() {
   };
 
   const handleEdit = async () => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
     if (!selectedService) return;
-    const { error: err } = await backendClient
-      .from('provider_services')
-      .update({
+    try {
+      await updatePrestataireService(selectedService.id, {
         title: editService.title || selectedService.title,
         description: editService.description || selectedService.description,
         price: editService.price || selectedService.price,
         location: editService.location || selectedService.location,
         image: editService.image || selectedService.image,
-      })
-      .eq('id', selectedService.id);
-    if (err) {
+      });
+    } catch {
       error('Erreur', 'Impossible de modifier le service.');
       return;
     }
@@ -238,6 +226,7 @@ export default function PrestataireServicesPage() {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Prestataire', path: '/dashboard/prestataire' }, { label: 'Mes services' }]} />
+        <SubscriptionRequiredBanner gate={subscriptionGate} />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
@@ -245,8 +234,16 @@ export default function PrestataireServicesPage() {
             <p className="text-gray-600 text-sm md:text-base">Gérez et organisez vos offres de service</p>
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2.5 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488] transition-colors whitespace-nowrap flex items-center gap-2"
+            type="button"
+            onClick={() => {
+              if (!subscriptionGate.allowed) {
+                error(subscriptionGate.title, subscriptionGate.message);
+                return;
+              }
+              setShowCreateModal(true);
+            }}
+            aria-label="Créer un nouveau service"
+            className="px-4 py-2.5 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors whitespace-nowrap flex items-center gap-2"
           >
             <div className="w-5 h-5 flex items-center justify-center">
               <i className="ri-add-line text-base"></i>
@@ -258,7 +255,7 @@ export default function PrestataireServicesPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Services actifs', value: String(stats.active), icon: 'ri-briefcase-line', color: 'bg-[#14B8A6]' },
+            { label: 'Services actifs', value: String(stats.active), icon: 'ri-briefcase-line', color: 'bg-[#5fa6f3]' },
             { label: 'Réservations', value: String(stats.bookings), icon: 'ri-calendar-check-line', color: 'bg-blue-500' },
             { label: 'Note moyenne', value: stats.avgRating, icon: 'ri-star-line', color: 'bg-yellow-500' },
             { label: 'Revenus estimés', value: `${(stats.revenue / 1000000).toFixed(1)}M FCFA`, icon: 'ri-coins-line', color: 'bg-green-500' },
@@ -290,18 +287,21 @@ export default function PrestataireServicesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Rechercher un service"
                 placeholder="Rechercher un service..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Filtrer les services par statut">
               {(['all', 'active', 'paused', 'pending'] as const).map(status => (
                 <button
+                  type="button"
                   key={status}
                   onClick={() => setStatusFilter(status)}
+                  aria-pressed={statusFilter === status}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                     statusFilter === status
-                      ? 'bg-[#14B8A6] text-white'
+                      ? 'bg-[#5fa6f3] text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -321,8 +321,8 @@ export default function PrestataireServicesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredServices.map((service) => (
               <div key={service.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="relative h-44 overflow-hidden">
-                  <img src={service.image || 'https://readdy.ai/api/search-image?query=professional%20service%20work%20modern%20background%20clean%20simple&width=400&height=250&seq=svc-fallback&orientation=landscape'} alt={service.title} className="w-full h-full object-cover" />
+                <div className="relative h-40 sm:h-44 overflow-hidden">
+                  <img src={service.image || '/images/home/service.jpg'} alt={service.title} className="w-full h-full object-cover" />
                   <div className="absolute top-3 right-3">
                     {getStatusBadge(service.status)}
                   </div>
@@ -357,9 +357,14 @@ export default function PrestataireServicesPage() {
                   <div className="flex gap-2">
                     {service.status !== 'pending' && (
                       <button
+                        type="button"
                         onClick={() => handleToggleStatus(service)}
+                        aria-label={`${service.status === 'active' ? 'Mettre en pause' : 'Réactiver'} le service ${service.title}`}
+                        disabled={!subscriptionGate.allowed}
                         className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                          service.status === 'active'
+                          !subscriptionGate.allowed
+                            ? 'cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400'
+                            : service.status === 'active'
                             ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
                             : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
                         }`}
@@ -368,7 +373,15 @@ export default function PrestataireServicesPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => { setSelectedService(service); setEditService({}); setShowEditModal(true); }}
+                      type="button"
+                      onClick={() => {
+                        if (!subscriptionGate.allowed) {
+                          error(subscriptionGate.title, subscriptionGate.message);
+                          return;
+                        }
+                        setSelectedService(service); setEditService({}); setShowEditModal(true);
+                      }}
+                      aria-label={`Modifier le service ${service.title}`}
                       className="px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                     >
                       <div className="w-4 h-4 flex items-center justify-center">
@@ -376,7 +389,9 @@ export default function PrestataireServicesPage() {
                       </div>
                     </button>
                     <button
+                      type="button"
                       onClick={() => { setSelectedService(service); setShowDeleteModal(true); }}
+                      aria-label={`Supprimer le service ${service.title}`}
                       className="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
                     >
                       <div className="w-4 h-4 flex items-center justify-center">
@@ -403,26 +418,28 @@ export default function PrestataireServicesPage() {
         {/* Create Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">Nouveau service</h3>
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="prestataire-service-create-title">
+              <h3 id="prestataire-service-create-title" className="text-lg font-bold text-gray-900 mb-6">Nouveau service</h3>
               <div className="dashboard-form-grid">
                 <div className="dashboard-form-wide">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+                  <label htmlFor="prestataire-service-create-title-input" className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
                   <input
+                    id="prestataire-service-create-title-input"
                     type="text"
                     value={newService.title || ''}
                     onChange={(e) => setNewService({ ...newService, title: e.target.value })}
                     placeholder="Ex: Plomberie résidentielle"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                    <label htmlFor="prestataire-service-create-category" className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
                     <select
+                      id="prestataire-service-create-category"
                       value={newService.category || 'Bâtiment'}
                       onChange={(e) => setNewService({ ...newService, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm bg-white"
                     >
                       <option>Bâtiment</option>
                       <option>Électricité</option>
@@ -432,24 +449,26 @@ export default function PrestataireServicesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
+                    <label htmlFor="prestataire-service-create-location" className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
                     <input
+                      id="prestataire-service-create-location"
                       type="text"
                       value={newService.location || 'Dakar'}
                       onChange={(e) => setNewService({ ...newService, location: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
                     />
                   </div>
                 </div>
                 <div className="dashboard-form-wide">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label htmlFor="prestataire-service-create-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
+                    id="prestataire-service-create-description"
                     value={newService.description || ''}
                     onChange={(e) => setNewService({ ...newService, description: e.target.value })}
                     placeholder="Décrivez votre service..."
                     rows={3}
                     maxLength={500}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm resize-none"
                   />
                   <p className="text-xs text-gray-500 mt-1">{(newService.description || '').length}/500 caractères</p>
                 </div>
@@ -462,21 +481,23 @@ export default function PrestataireServicesPage() {
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Prix *</label>
+                    <label htmlFor="prestataire-service-create-price" className="block text-sm font-medium text-gray-700 mb-1">Prix *</label>
                     <input
+                      id="prestataire-service-create-price"
                       type="text"
                       value={newService.price || ''}
                       onChange={(e) => setNewService({ ...newService, price: e.target.value })}
                       placeholder="Ex: 25,000 FCFA"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type de prix</label>
+                    <label htmlFor="prestataire-service-create-price-type" className="block text-sm font-medium text-gray-700 mb-1">Type de prix</label>
                     <select
+                      id="prestataire-service-create-price-type"
                       value={newService.price_type || 'fixe'}
                       onChange={(e) => setNewService({ ...newService, price_type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm bg-white"
                     >
                       <option value="fixe">Prix fixe</option>
                       <option value="devis">Sur devis</option>
@@ -486,14 +507,16 @@ export default function PrestataireServicesPage() {
               </div>
               <div className="flex gap-3 justify-end mt-6">
                 <button
+                  type="button"
                   onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Annuler
                 </button>
                 <button
+                  type="button"
                   onClick={handleCreate}
-                  className="px-4 py-2 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488] transition-colors"
+                  className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors"
                 >
                   Créer
                 </button>
@@ -505,26 +528,28 @@ export default function PrestataireServicesPage() {
         {/* Edit Modal */}
         {showEditModal && selectedService && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">Modifier le service</h3>
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="prestataire-service-edit-title">
+              <h3 id="prestataire-service-edit-title" className="text-lg font-bold text-gray-900 mb-6">Modifier le service</h3>
               <div className="dashboard-form-grid">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
+                  <label htmlFor="prestataire-service-edit-name" className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
                   <input
+                    id="prestataire-service-edit-name"
                     type="text"
                     defaultValue={selectedService.title}
                     onChange={(e) => setEditService(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
                   />
                 </div>
                 <div className="dashboard-form-wide">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label htmlFor="prestataire-service-edit-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
+                    id="prestataire-service-edit-description"
                     defaultValue={selectedService.description}
                     onChange={(e) => setEditService(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
                     maxLength={500}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm resize-none"
                   />
                 </div>
                 <ImageUploadField
@@ -536,35 +561,39 @@ export default function PrestataireServicesPage() {
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Prix</label>
+                    <label htmlFor="prestataire-service-edit-price" className="block text-sm font-medium text-gray-700 mb-1">Prix</label>
                     <input
+                      id="prestataire-service-edit-price"
                       type="text"
                       defaultValue={selectedService.price}
                       onChange={(e) => setEditService(prev => ({ ...prev, price: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
+                    <label htmlFor="prestataire-service-edit-location" className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
                     <input
+                      id="prestataire-service-edit-location"
                       type="text"
                       defaultValue={selectedService.location}
                       onChange={(e) => setEditService(prev => ({ ...prev, location: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#14B8A6] text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
                     />
                   </div>
                 </div>
               </div>
               <div className="flex gap-3 justify-end mt-6">
                 <button
+                  type="button"
                   onClick={() => { setShowEditModal(false); setSelectedService(null); }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Annuler
                 </button>
                 <button
+                  type="button"
                   onClick={handleEdit}
-                  className="px-4 py-2 bg-[#14B8A6] text-white rounded-lg text-sm font-medium hover:bg-[#0D9488] transition-colors"
+                  className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors"
                 >
                   Enregistrer
                 </button>
@@ -576,24 +605,26 @@ export default function PrestataireServicesPage() {
         {/* Delete Modal */}
         {showDeleteModal && selectedService && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" role="dialog" aria-modal="true" aria-labelledby="prestataire-service-delete-title">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
                   <i className="ri-alert-line text-red-600 text-xl"></i>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">Supprimer le service</h3>
+                <h3 id="prestataire-service-delete-title" className="text-lg font-bold text-gray-900">Supprimer le service</h3>
               </div>
               <p className="text-gray-600 mb-6">
                 Êtes-vous sûr de vouloir supprimer <strong>"{selectedService.title}"</strong> ? Cette action est irréversible.
               </p>
               <div className="flex gap-3 justify-end">
                 <button
+                  type="button"
                   onClick={() => { setShowDeleteModal(false); setSelectedService(null); }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Annuler
                 </button>
                 <button
+                  type="button"
                   onClick={handleDelete}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
                 >

@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { backendClient } from '@/lib/backendClient';
 
 export type NotificationType = 'message' | 'prestation' | 'formation' | 'projet' | 'paiement' | 'system' | 'rendezvous' | 'collaboration' | 'evaluation' | 'booking' | 'review';
 
 export interface Notification {
-  id: number;
+  id: string;
   type: NotificationType;
   title: string;
   message: string;
@@ -21,10 +21,20 @@ export function useNotifications() {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;
-    setIsLoading(true);
+    if (isMountedRef.current) {
+      setIsLoading(true);
+    }
     try {
       const { data, error } = await backendClient
         .from('notifications')
@@ -33,9 +43,10 @@ export function useNotifications() {
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw error;
+      if (!isMountedRef.current) return;
       if (data) {
         const mapped: Notification[] = data.map((n) => ({
-          id: Number(n.id),
+          id: String(n.id),
           type: (n.type as NotificationType) || 'system',
           title: String(n.title || ''),
           message: String(n.message || ''),
@@ -49,9 +60,12 @@ export function useNotifications() {
         setNotifications(mapped);
       }
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.warn('Failed to fetch notifications:', err);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [user?.id]);
 
@@ -76,7 +90,7 @@ export function useNotifications() {
         (payload) => {
           const newNotif = payload.new as Record<string, unknown>;
           const notification: Notification = {
-            id: Number(newNotif.id),
+            id: String(newNotif.id),
             type: (newNotif.type as NotificationType) || 'system',
             title: String(newNotif.title || ''),
             message: String(newNotif.message || ''),
@@ -102,7 +116,7 @@ export function useNotifications() {
           const updated = payload.new as Record<string, unknown>;
           setNotifications((prev) =>
             prev.map((n) =>
-              n.id === Number(updated.id)
+              n.id === String(updated.id)
                 ? { ...n, read: Boolean(updated.is_read) }
                 : n
             )
@@ -118,7 +132,7 @@ export function useNotifications() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = useCallback(async (id: number) => {
+  const markAsRead = useCallback(async (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
     if (user?.id) {
       try {
@@ -148,7 +162,7 @@ export function useNotifications() {
     }
   }, [user?.id]);
 
-  const deleteNotification = useCallback(async (id: number) => {
+  const deleteNotification = useCallback(async (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     if (user?.id) {
       try {
@@ -159,9 +173,18 @@ export function useNotifications() {
     }
   }, [user?.id]);
 
-  const clearAll = useCallback(() => {
+  const clearAll = useCallback(async () => {
+    const previous = notifications;
     setNotifications([]);
-  }, []);
+    if (user?.id) {
+      try {
+        await backendClient.from('notifications').delete().eq('user_id', user.id);
+      } catch (err) {
+        console.warn('Failed to clear notifications:', err);
+        setNotifications(previous);
+      }
+    }
+  }, [notifications, user?.id]);
 
   const addNotification = useCallback(
     async (notification: Omit<Notification, 'id'>) => {
@@ -183,7 +206,7 @@ export function useNotifications() {
         if (error) throw error;
         if (data) {
           setNotifications((prev) => [
-            { ...notification, id: Number(data.id), timestamp: 'À l\'instant' },
+            { ...notification, id: String(data.id), timestamp: 'À l\'instant' },
             ...prev,
           ]);
         }

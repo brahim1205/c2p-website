@@ -66,9 +66,15 @@ const searchIndex: Record<string, SearchItem[]> = {
 
 interface GlobalSearchProps {
   context: string;
+  variant?: 'block' | 'inline';
+  placeholder?: string;
 }
 
-export default function GlobalSearch({ context }: GlobalSearchProps) {
+export default function GlobalSearch({
+  context,
+  variant = 'block',
+  placeholder = 'Rechercher une page, une formation, un prestataire...',
+}: GlobalSearchProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -121,22 +127,39 @@ export default function GlobalSearch({ context }: GlobalSearchProps) {
   return (
     <>
       {/* Search trigger bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-6">
+      {variant === 'block' ? (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+          <button
+            onClick={() => { setIsOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+            className="w-full flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 text-left transition-colors hover:bg-gray-100 cursor-pointer"
+          >
+            <div className="flex h-5 w-5 items-center justify-center">
+              <i className="ri-search-line text-gray-400"></i>
+            </div>
+            <span className="flex-1 text-sm text-gray-400">{placeholder}</span>
+            <span className="hidden items-center gap-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 sm:flex">
+              <kbd className="font-sans">Ctrl</kbd>
+              <span>+</span>
+              <kbd className="font-sans">K</kbd>
+            </span>
+          </button>
+        </div>
+      ) : (
         <button
           onClick={() => { setIsOpen(true); setTimeout(() => inputRef.current?.focus(), 50); }}
-          className="w-full flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg text-left hover:bg-gray-100 transition-colors cursor-pointer"
+          className="flex w-full items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left transition-colors hover:border-teal-200 hover:bg-gray-50 cursor-pointer"
         >
-          <div className="w-5 h-5 flex items-center justify-center">
+          <div className="flex h-5 w-5 items-center justify-center">
             <i className="ri-search-line text-gray-400"></i>
           </div>
-          <span className="text-sm text-gray-400 flex-1">Rechercher une page, une formation, un prestataire...</span>
-          <span className="hidden sm:flex items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-500">
+          <span className="flex-1 truncate text-sm text-gray-400">{placeholder}</span>
+          <span className="hidden items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-500 lg:flex">
             <kbd className="font-sans">Ctrl</kbd>
             <span>+</span>
             <kbd className="font-sans">K</kbd>
           </span>
         </button>
-      </div>
+      )}
 
       {/* Modal */}
       {isOpen && (
