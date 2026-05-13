@@ -15,7 +15,8 @@ function normalizeEnvironmentConfig(rawConfig: Record<string, unknown>) {
   }
 
   const normalizedNodeEnv = String(config.NODE_ENV ?? 'development').trim().toLowerCase();
-  if (config.ENABLE_METRICS === 'true' && !config.METRICS_AUTH_TOKEN && normalizedNodeEnv !== 'production') {
+  const metricsEnabled = String(config.ENABLE_METRICS ?? 'true').trim().toLowerCase();
+  if (metricsEnabled === 'true' && !config.METRICS_AUTH_TOKEN && normalizedNodeEnv !== 'production') {
     config.METRICS_AUTH_TOKEN = 'local-metrics-token';
   }
 

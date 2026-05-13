@@ -25,6 +25,7 @@ jobs:
       COOKIE_SECURE: "false"
       TRUST_PROXY: "false"
       REDIS_DISABLED: "true"
+      METRICS_AUTH_TOKEN: local-metrics-token
       FRONT_URL: http://127.0.0.1:3000
       API_URL: http://127.0.0.1:3003/api
       VITE_API_URL: http://127.0.0.1:3003/api
