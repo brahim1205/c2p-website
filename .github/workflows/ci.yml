@@ -175,10 +175,14 @@ jobs:
 
       - name: Build frontend
         working-directory: front
+        env:
+          NODE_ENV: production
         run: npm run build
 
       - name: Frontend bundle budget
         working-directory: front
+        env:
+          NODE_ENV: production
         run: npm run bundle:budget
 
       - name: Build backend image
