@@ -47,6 +47,9 @@ jobs:
       API_URL: http://127.0.0.1:3003/api
       VITE_API_URL: http://127.0.0.1:3003/api
       VITE_DEV_BACKEND_URL: http://127.0.0.1:3003
+      LOGIN_RATE_LIMIT_MAX: "300"
+      AUTH_RATE_LIMIT_MAX: "300"
+      GLOBAL_RATE_LIMIT_MAX: "1200"
     steps:
       - uses: actions/checkout@v5
 
