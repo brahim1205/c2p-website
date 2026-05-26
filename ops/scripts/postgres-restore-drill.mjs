@@ -10,6 +10,7 @@ const bashBin = '/usr/bin/bash';
 const dockerBin = fs.existsSync('/usr/local/bin/docker') ? '/usr/local/bin/docker' : '/usr/bin/docker';
 const gzipBin = '/usr/bin/gzip';
 const sha256sumBin = '/usr/bin/sha256sum';
+const pgpassPath = '/var/lib/postgresql/.c2p-restore-pgpass';
 
 function toolEnv(extra = {}) {
   return {
@@ -193,7 +194,7 @@ function main() {
         containerName,
         'sh',
         '-c',
-        'cat > /tmp/c2p-restore-pgpass && chmod 600 /tmp/c2p-restore-pgpass',
+        `cat > ${pgpassPath} && chmod 600 ${pgpassPath}`,
       ],
       {
         cwd: repoRoot,
@@ -207,7 +208,7 @@ function main() {
       bashBin,
       [
         '-lc',
-        'set -euo pipefail; gzip -dc "$BACKUP_FILE" | "$DOCKER_BIN" exec -i -e PGPASSFILE=/tmp/c2p-restore-pgpass "$CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U restore -d restore',
+        'set -euo pipefail; gzip -dc "$BACKUP_FILE" | "$DOCKER_BIN" exec -i -e "PGPASSFILE=$PGPASS_FILE" "$CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U restore -d restore',
       ],
       {
         cwd: repoRoot,
@@ -216,6 +217,7 @@ function main() {
           BACKUP_FILE: backupFile,
           CONTAINER_NAME: containerName,
           DOCKER_BIN: dockerBin,
+          PGPASS_FILE: pgpassPath,
         }),
       },
     );
@@ -225,7 +227,7 @@ function main() {
       [
         'exec',
         '-e',
-        'PGPASSFILE=/tmp/c2p-restore-pgpass',
+        `PGPASSFILE=${pgpassPath}`,
         containerName,
         'psql',
         '-At',
@@ -250,7 +252,7 @@ function main() {
     fail(stderr || (error instanceof Error ? error.message : String(error)));
   } finally {
     try {
-      execFileSync(dockerBin, ['exec', containerName, 'rm', '-f', '/tmp/c2p-restore-pgpass'], {
+      execFileSync(dockerBin, ['exec', containerName, 'rm', '-f', pgpassPath], {
         cwd: repoRoot,
         stdio: 'ignore',
         env: toolEnv(),
