@@ -1,6 +1,7 @@
 const API_URL = process.env.API_URL || 'http://localhost:3003/api';
 const PASSWORD = process.env.C2P_PASSWORD || ['password', '123'].join('');
-const apiBaseUrl = new URL(API_URL);
+const apiBaseHref = API_URL.endsWith('/') ? API_URL : `${API_URL}/`;
+const apiBaseUrl = new URL(apiBaseHref);
 
 function assert(condition, message) {
   if (!condition) {
@@ -48,9 +49,12 @@ async function request(path, init = {}) {
   if (!path.startsWith('/') || path.startsWith('//')) {
     throw new Error(`invalid API path: ${path}`);
   }
-  const url = new URL(path, apiBaseUrl);
+  const url = new URL(path.slice(1), apiBaseUrl);
   if (url.origin !== apiBaseUrl.origin) {
     throw new Error(`invalid API origin: ${url.origin}`);
+  }
+  if (!url.pathname.startsWith(apiBaseUrl.pathname)) {
+    throw new Error(`invalid API prefix: ${url.pathname}`);
   }
   return fetch(url, init);
 }
