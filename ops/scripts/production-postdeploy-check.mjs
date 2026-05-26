@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+const dockerBin = fs.existsSync('/usr/local/bin/docker') ? '/usr/local/bin/docker' : '/usr/bin/docker';
+const nodeBin = process.execPath;
 
 function parseArgs(argv) {
   const entries = new Map();
@@ -130,14 +132,14 @@ async function main() {
 
   const failures = [];
   const backendConfig = fs.existsSync(backendEnv) ? parseEnvFile(backendEnv) : {};
-  const baseUrl = String(
+  const baseUrl = trimTrailingSlash(String(
     args.get('base-url')
       ?? String(backendConfig.APP_ORIGINS ?? '')
         .split(',')
         .map((value) => value.trim())
         .filter(Boolean)[0]
       ?? '',
-  ).trim().replace(/\/+$/, '');
+  ).trim());
 
   const monitoringUrls = {
     prometheus: String(args.get('prometheus-url') ?? 'http://127.0.0.1:9090/-/healthy').trim(),
@@ -150,7 +152,7 @@ async function main() {
       const backupDir = resolveRepoPath(args.get('backup-dir'), 'backups/postgres');
       const maxAgeHours = String(args.get('backup-max-age-hours') ?? 26);
       execFileSync(
-        'node',
+        nodeBin,
         [
           'ops/scripts/postgres-backup-check.mjs',
           '--backup-dir',
@@ -174,7 +176,7 @@ async function main() {
   if (!skipComposePs) {
     try {
       const raw = execFileSync(
-        'docker',
+        dockerBin,
         ['compose', '--env-file', composeEnv, '-f', composeFile, 'ps', '--format', 'json'],
         {
           cwd: repoRoot,
@@ -224,7 +226,7 @@ async function main() {
   if (!skipUploadStorageCheck && !skipComposePs) {
     try {
       const raw = execFileSync(
-        'docker',
+        dockerBin,
         [
           'compose',
           '--env-file',
@@ -264,7 +266,7 @@ async function main() {
   if (!skipUploadMetadataAudit && !skipComposePs) {
     try {
       const raw = execFileSync(
-        'docker',
+        dockerBin,
         [
           'compose',
           '--env-file',
@@ -300,7 +302,7 @@ async function main() {
   if (!skipUploadTempCleanup && !skipComposePs) {
     try {
       const raw = execFileSync(
-        'docker',
+        dockerBin,
         [
           'compose',
           '--env-file',
@@ -363,6 +365,12 @@ async function main() {
   }
 
   console.log('Production postdeploy check: OK');
+}
+
+function trimTrailingSlash(value) {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
 }
 
 await main();

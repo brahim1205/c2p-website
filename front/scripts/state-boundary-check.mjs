@@ -50,17 +50,33 @@ function toFrontPath(filePath) {
 
 function hasDirectDataUsage(content) {
   return (
-    /[`'"]\/data(?:\/|[`'"])/.test(content)
-    || /apiRequest\s*(?:<[^>]+>)?\s*\(\s*[`'"]\/data(?:\/|[`'"])/.test(content)
+    content.includes("'/data/")
+    || content.includes('"/data/')
+    || content.includes('`/data/')
+    || content.includes("'/data'")
+    || content.includes('"/data"')
+    || content.includes('`/data`')
   );
 }
 
 function hasBrowserStorageUsage(content) {
-  return /\b(?:window\.)?(?:localStorage|sessionStorage)\b/.test(content);
+  return content.includes('localStorage') || content.includes('sessionStorage');
 }
 
 function hasInlineQueryKey(content) {
-  return /queryKey\s*:\s*\[/.test(content);
+  let searchFrom = 0;
+  while (searchFrom < content.length) {
+    const keyIndex = content.indexOf('queryKey', searchFrom);
+    if (keyIndex === -1) return false;
+    const colonIndex = content.indexOf(':', keyIndex + 'queryKey'.length);
+    if (colonIndex === -1) return false;
+    const nextLineIndex = content.indexOf('\n', keyIndex);
+    const scanEnd = nextLineIndex === -1 ? content.length : nextLineIndex;
+    const between = content.slice(colonIndex + 1, scanEnd).trimStart();
+    if (between.startsWith('[')) return true;
+    searchFrom = keyIndex + 'queryKey'.length;
+  }
+  return false;
 }
 
 function main() {

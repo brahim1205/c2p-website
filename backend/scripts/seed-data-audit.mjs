@@ -7,21 +7,22 @@ const files = [
 ];
 
 const bannedPatterns = [
-  { label: 'placeholder-host', pattern: /example\.com|meet\.example\.com|videos\.example\.com|files\.example\.com/gi },
-  { label: 'placeholder-email', pattern: /[A-Za-z0-9._%+-]+@example\.com/gi },
-  { label: 'test-wording', pattern: /\b(parcours test|classe test|demo data|fake)\b/gi },
+  { label: 'placeholder-host', values: ['example.com', 'meet.example.com', 'videos.example.com', 'files.example.com'] },
+  { label: 'test-wording', values: ['parcours test', 'classe test', 'demo data', 'fake'] },
 ];
 
 const findings = [];
 
 for (const file of files) {
   const source = readFileSync(file, 'utf8');
-  for (const { label, pattern } of bannedPatterns) {
-    for (const match of source.matchAll(pattern)) {
+  const normalizedSource = source.toLowerCase();
+  for (const { label, values } of bannedPatterns) {
+    for (const value of values) {
+      if (!normalizedSource.includes(value)) continue;
       findings.push({
         file,
         label,
-        snippet: match[0],
+        snippet: value,
       });
     }
   }

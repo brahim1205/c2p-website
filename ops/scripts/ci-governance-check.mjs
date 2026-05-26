@@ -5,6 +5,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+const gitBin = '/usr/bin/git';
 
 const frontendApiModuleAggregates = new Map([
   ['front/src/lib/adminApi.ts', ['front/src/lib/admin-api', 'front/src/lib/adminFinanceApi.ts', 'front/src/lib/adminResourceApi.ts']],
@@ -116,7 +117,7 @@ function assertDataRowAccessCoverage(dataAccessPolicy, dataRowAccess, failures) 
 
 function isTrackedByGit(repoPath) {
   try {
-    execFileSync('git', ['ls-files', '--error-unmatch', repoPath], {
+    execFileSync(gitBin, ['ls-files', '--error-unmatch', repoPath], {
       cwd: repoRoot,
       stdio: 'ignore',
     });

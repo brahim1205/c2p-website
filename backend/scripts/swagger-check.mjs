@@ -50,10 +50,22 @@ function parseStringLiteral(raw) {
 
 function normalizeRoutePath(prefix, route, apiPrefix) {
   const parts = [apiPrefix, prefix, route]
-    .map((part) => part.trim().replace(/^\/+|\/+$/g, ''))
+    .map((part) => trimSlashes(part.trim()))
     .filter(Boolean);
-  const path = `/${parts.join('/')}`.replace(/\/+/g, '/');
-  return path.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
+  return normalizeRouteParams(`/${parts.join('/')}`);
+}
+
+function trimSlashes(value) {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === '/') start += 1;
+  while (end > start && value[end - 1] === '/') end -= 1;
+  return value.slice(start, end);
+}
+
+function normalizeRouteParams(path) {
+  const segments = path.split('/').filter(Boolean);
+  return `/${segments.map((segment) => (segment.startsWith(':') ? `{${segment.slice(1)}}` : segment)).join('/')}`;
 }
 
 async function parseControllerRoutes(file, apiPrefix) {

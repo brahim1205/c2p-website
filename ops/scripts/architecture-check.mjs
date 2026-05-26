@@ -81,15 +81,14 @@ function resolveCandidate(basePath, knownFiles) {
 
 function extractImports(content) {
   const imports = [];
-  const patterns = [
-    /import\s+(?!type\b)(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g,
-    /export\s+(?!type\b)(?:[\s\S]*?\s+from\s+)['"]([^'"]+)['"]/g,
-    /import\(\s*['"]([^'"]+)['"]\s*\)/g,
-  ];
+  const patterns = [/\bfrom\s+['"]([^'"]+)['"]/g, /\bimport\s*['"]([^'"]+)['"]/g, /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g];
 
   for (const pattern of patterns) {
     let match;
     while ((match = pattern.exec(content)) !== null) {
+      const lineStart = content.lastIndexOf('\n', match.index) + 1;
+      const linePrefix = content.slice(lineStart, match.index);
+      if (linePrefix.includes('import type') || linePrefix.includes('export type')) continue;
       imports.push(match[1]);
     }
   }

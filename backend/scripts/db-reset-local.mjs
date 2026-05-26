@@ -6,6 +6,9 @@ import pg from 'pg';
 const { Client } = pg;
 
 const CONFIRM_VALUE = 'reset';
+const npxBin = '/usr/bin/npx';
+const npmBin = '/usr/bin/npm';
+const toolEnv = { ...process.env, PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' };
 
 function parseDatabaseUrl() {
   const raw = process.env.DATABASE_URL;
@@ -60,14 +63,14 @@ async function main() {
   const databaseUrl = parseDatabaseUrl();
   const result = await truncatePublicTables(databaseUrl);
 
-  execFileSync('npx', ['prisma', 'db', 'push', '--skip-generate'], {
+  execFileSync(npxBin, ['prisma', 'db', 'push', '--skip-generate'], {
     stdio: 'inherit',
-    env: process.env,
+    env: toolEnv,
   });
 
-  execFileSync('npm', ['run', 'db:seed:local'], {
+  execFileSync(npmBin, ['run', 'db:seed:local'], {
     stdio: 'inherit',
-    env: process.env,
+    env: toolEnv,
   });
 
   console.log(JSON.stringify({ ok: true, truncatedTables: result.tables.length }, null, 2));

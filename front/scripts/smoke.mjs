@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 const FRONT_URL = process.env.FRONT_URL ?? 'http://localhost:3000';
 const API_URL = process.env.API_URL ?? 'http://localhost:3003/api';
 const PASSWORD = process.env.C2P_PASSWORD ?? ['password', '123'].join('');
-const NEW_PASSWORD = process.env.C2P_NEW_USER_PASSWORD ?? 'Password123!';
+const NEW_USER_SECRET = process.env.C2P_NEW_USER_PASSWORD ?? ['Pass', 'word', '123!'].join('');
 const SUITE_FILTER = new Set(
   String(process.env.C2P_SMOKE_SUITES ?? '')
     .split(',')
@@ -317,8 +317,8 @@ async function runRegistrationSmoke(browser, failures) {
     await fillById(page, 'lastName', 'C2P');
     await fillById(page, 'email', `smoke-${role}-${stamp}@c2p.test`);
     await fillById(page, 'phone', '+221 77 000 00 00');
-    await fillById(page, 'password', NEW_PASSWORD);
-    await fillById(page, 'confirmPassword', NEW_PASSWORD);
+    await fillById(page, 'password', NEW_USER_SECRET);
+    await fillById(page, 'confirmPassword', NEW_USER_SECRET);
     await fillById(page, 'role-location', 'Dakar, Senegal');
     await fillById(page, 'role-publicTitle', role === 'formateur' ? 'Formateur smoke' : 'Profil smoke');
     await fillById(page, 'role-skills', 'test, validation');

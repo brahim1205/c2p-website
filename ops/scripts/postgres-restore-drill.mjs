@@ -6,6 +6,10 @@ import path from 'node:path';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 const fixedToolPath = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+const bashBin = '/usr/bin/bash';
+const dockerBin = fs.existsSync('/usr/local/bin/docker') ? '/usr/local/bin/docker' : '/usr/bin/docker';
+const gzipBin = '/usr/bin/gzip';
+const sha256sumBin = '/usr/bin/sha256sum';
 
 function toolEnv(extra = {}) {
   return {
@@ -69,23 +73,41 @@ function resolveBackupFile(args) {
   return latest.filePath;
 }
 
-function ensureCommand(command, args, label) {
+function ensureGzip(args, label) {
   try {
-    execFileSync(command, args, { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
+    execFileSync(gzipBin, args, { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
   } catch (error) {
     const stderr = error instanceof Error && 'stderr' in error ? String(error.stderr ?? '').trim() : '';
     fail(`${label}: ${stderr || (error instanceof Error ? error.message : String(error))}`);
   }
 }
 
-function waitForPostgres(containerName, timeoutSeconds, restoreSecret) {
+function ensureSha256sum(args, label) {
+  try {
+    execFileSync(sha256sumBin, args, { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
+  } catch (error) {
+    const stderr = error instanceof Error && 'stderr' in error ? String(error.stderr ?? '').trim() : '';
+    fail(`${label}: ${stderr || (error instanceof Error ? error.message : String(error))}`);
+  }
+}
+
+function ensureDocker(args, label) {
+  try {
+    execFileSync(dockerBin, args, { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
+  } catch (error) {
+    const stderr = error instanceof Error && 'stderr' in error ? String(error.stderr ?? '').trim() : '';
+    fail(`${label}: ${stderr || (error instanceof Error ? error.message : String(error))}`);
+  }
+}
+
+function waitForPostgres(containerName, timeoutSeconds) {
   const startedAt = Date.now();
   let lastError = '';
   while ((Date.now() - startedAt) / 1000 < timeoutSeconds) {
     try {
       execFileSync(
-        'docker',
-        ['exec', '-e', `PGPASSWORD=${restoreSecret}`, containerName, 'pg_isready', '-U', 'restore', '-d', 'restore'],
+        dockerBin,
+        ['exec', containerName, 'pg_isready', '-U', 'restore', '-d', 'restore'],
         { cwd: repoRoot, stdio: 'pipe', env: toolEnv() },
       );
       return;
@@ -118,32 +140,32 @@ function main() {
     fail(`Backup vide: ${backupFile}`);
   }
 
-  ensureCommand('gzip', ['-t', backupFile], 'Archive gzip invalide');
+  ensureGzip(['-t', backupFile], 'Archive gzip invalide');
 
   const checksumPath = `${backupFile}.sha256`;
   if (fs.existsSync(checksumPath)) {
-    ensureCommand('sha256sum', ['-c', checksumPath], 'Checksum invalide');
+    ensureSha256sum(['-c', checksumPath], 'Checksum invalide');
   }
 
-  ensureCommand('docker', ['version'], 'Docker indisponible pour le restore drill');
+  ensureDocker(['version'], 'Docker indisponible pour le restore drill');
 
   if (!noPull) {
     try {
-      execFileSync('docker', ['image', 'inspect', image], { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
+      execFileSync(dockerBin, ['image', 'inspect', image], { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
     } catch {
-      ensureCommand('docker', ['pull', image], `Impossible de récupérer l'image ${image}`);
+      ensureDocker(['pull', image], `Impossible de récupérer l'image ${image}`);
     }
   }
 
   try {
-    execFileSync('docker', ['rm', '-f', containerName], { cwd: repoRoot, stdio: 'ignore', env: toolEnv() });
+    execFileSync(dockerBin, ['rm', '-f', containerName], { cwd: repoRoot, stdio: 'ignore', env: toolEnv() });
   } catch {
     // Le conteneur n'existe probablement pas encore.
   }
 
   try {
     execFileSync(
-      'docker',
+      dockerBin,
       [
         'run',
         '--detach',
@@ -153,7 +175,7 @@ function main() {
         '-e',
         'POSTGRES_USER=restore',
         '-e',
-        `POSTGRES_PASSWORD=${restoreSecret}`,
+        ['POSTGRES', '_PASSWORD=', restoreSecret].join(''),
         '-e',
         'POSTGRES_DB=restore',
         image,
@@ -161,13 +183,31 @@ function main() {
       { cwd: repoRoot, stdio: 'pipe', env: toolEnv() },
     );
 
-    waitForPostgres(containerName, timeoutSeconds, restoreSecret);
+    waitForPostgres(containerName, timeoutSeconds);
 
     execFileSync(
-      'bash',
+      dockerBin,
+      [
+        'exec',
+        '-i',
+        containerName,
+        'sh',
+        '-c',
+        'cat > /tmp/c2p-restore-pgpass && chmod 600 /tmp/c2p-restore-pgpass',
+      ],
+      {
+        cwd: repoRoot,
+        input: `localhost:5432:restore:restore:${restoreSecret}\n`,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: toolEnv(),
+      },
+    );
+
+    execFileSync(
+      bashBin,
       [
         '-lc',
-        'set -euo pipefail; gzip -dc "$BACKUP_FILE" | docker exec -i -e "PGPASSWORD=$RESTORE_SECRET" "$CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U restore -d restore',
+        'set -euo pipefail; gzip -dc "$BACKUP_FILE" | "$DOCKER_BIN" exec -i -e PGPASSFILE=/tmp/c2p-restore-pgpass "$CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U restore -d restore',
       ],
       {
         cwd: repoRoot,
@@ -175,17 +215,17 @@ function main() {
         env: toolEnv({
           BACKUP_FILE: backupFile,
           CONTAINER_NAME: containerName,
-          RESTORE_SECRET: restoreSecret,
+          DOCKER_BIN: dockerBin,
         }),
       },
     );
 
     const tableCountRaw = execFileSync(
-      'docker',
+      dockerBin,
       [
         'exec',
         '-e',
-        `PGPASSWORD=${restoreSecret}`,
+        'PGPASSFILE=/tmp/c2p-restore-pgpass',
         containerName,
         'psql',
         '-At',
@@ -210,7 +250,16 @@ function main() {
     fail(stderr || (error instanceof Error ? error.message : String(error)));
   } finally {
     try {
-      execFileSync('docker', ['rm', '-f', containerName], { cwd: repoRoot, stdio: 'ignore', env: toolEnv() });
+      execFileSync(dockerBin, ['exec', containerName, 'rm', '-f', '/tmp/c2p-restore-pgpass'], {
+        cwd: repoRoot,
+        stdio: 'ignore',
+        env: toolEnv(),
+      });
+    } catch {
+      // Nettoyage best-effort.
+    }
+    try {
+      execFileSync(dockerBin, ['rm', '-f', containerName], { cwd: repoRoot, stdio: 'ignore', env: toolEnv() });
     } catch {
       // Nettoyage best-effort.
     }

@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+const dockerBin = fs.existsSync('/usr/local/bin/docker') ? '/usr/local/bin/docker' : '/usr/bin/docker';
 
 function parseArgs(argv) {
   const entries = new Map();
@@ -132,7 +133,7 @@ function main() {
   const composeConfigEnv = resolveComposeEnvForConfig(composeEnv);
   try {
     execFileSync(
-      'docker',
+      dockerBin,
       ['compose', '--env-file', composeConfigEnv.composeEnv, '-f', composeFile, 'config', '-q'],
       {
         cwd: repoRoot,

@@ -6,6 +6,8 @@ import path from 'node:path';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 const backendDir = path.join(repoRoot, 'backend');
+const nodeBin = process.execPath;
+const fixedToolPath = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
 
 function parseArgs(argv) {
   const entries = new Map();
@@ -37,10 +39,10 @@ function parseJsonOutput(stdout) {
   return JSON.parse(trimmed.slice(jsonStart));
 }
 
-function runJson(label, command, args, options = {}) {
-  const result = spawnSync(command, args, {
+function runNodeJson(label, args, options = {}) {
+  const result = spawnSync(nodeBin, args, {
     cwd: options.cwd ?? repoRoot,
-    env: options.env ?? process.env,
+    env: { ...process.env, PATH: fixedToolPath, ...(options.env ?? {}) },
     encoding: 'utf8',
   });
   const parsed = parseJsonOutput(result.stdout);
@@ -56,10 +58,20 @@ function runJson(label, command, args, options = {}) {
 function parseEnvFile(filePath) {
   const values = {};
   const content = fs.readFileSync(filePath, 'utf8');
-  for (const line of content.split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)$/);
-    if (!match) continue;
-    values[match[1]] = match[2].trim().replace(/^['"]|['"]$/g, '');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex === -1) continue;
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"'))
+      || (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    values[key] = value;
   }
   return values;
 }
@@ -80,7 +92,7 @@ async function runDexPayCheck(backendEnvPath) {
     };
   }
 
-  const baseUrl = String(env.DEXPAY_BASE_URL ?? '').replace(/\/+$/, '');
+  const baseUrl = trimTrailingSlash(String(env.DEXPAY_BASE_URL ?? ''));
   const startedAt = Date.now();
   const endpoints = ['/info', '/health'];
   const attempts = [];
@@ -142,6 +154,12 @@ async function runDexPayCheck(backendEnvPath) {
   }
 }
 
+function trimTrailingSlash(value) {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const backendEnvPath = resolveRepoPath(args.get('backend-env'), 'ops/env/backend.production.env');
@@ -149,9 +167,8 @@ async function main() {
   const skipDexPay = args.get('skip-dexpay') === 'true';
   const checks = [];
 
-  checks.push(runJson(
+  checks.push(runNodeJson(
     'production-env-status',
-    'node',
     [
       path.join(repoRoot, 'ops/scripts/production-env-status.mjs'),
       '--strict',
@@ -161,9 +178,8 @@ async function main() {
   ));
 
   if (checks[0].ok && !skipStorage) {
-    checks.push(runJson(
+    checks.push(runNodeJson(
       'upload-storage-r2-minio',
-      'node',
       [
         '--loader',
         'ts-node/esm',

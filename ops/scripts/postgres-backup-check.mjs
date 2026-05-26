@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+const sha256sumBin = '/usr/bin/sha256sum';
 
 function parseArgs(argv) {
   const entries = new Map();
@@ -75,7 +76,7 @@ function main() {
   }
 
   try {
-    execFileSync('sha256sum', ['-c', checksumPath], {
+    execFileSync(sha256sumBin, ['-c', checksumPath], {
       cwd: path.dirname(latest.filePath),
       stdio: 'pipe',
     });

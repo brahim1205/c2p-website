@@ -37,16 +37,19 @@ function isMockSeedFile(repoPath) {
 }
 
 function isRuntimeImport(statement) {
-  return !/^import\s+type\s+/.test(statement.trim());
+  return !statement.trim().startsWith('import type ');
 }
 
 function findImportStatements(content) {
-  return content.match(/import\s+[\s\S]*?\s+from\s+['"][^'"]+['"];?/g) ?? [];
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('import ') && line.includes(' from '));
 }
 
 function hasMockRuntimeImport(statement) {
   if (!isRuntimeImport(statement)) return false;
-  return /from\s+['"][^'"]*(?:mock-store|mock-store\.seed|mock-store-seed\/)[^'"]*['"]/.test(statement);
+  return statement.includes('mock-store') || statement.includes('mock-store.seed') || statement.includes('mock-store-seed/');
 }
 
 function checkRuntimeMockImports(failures) {
