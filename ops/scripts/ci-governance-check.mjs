@@ -30,7 +30,7 @@ function collectTextFiles(filePath) {
   }
 
   return walkFiles(absolutePath, (candidatePath) => /\.(ts|tsx)$/.test(candidatePath))
-    .sort()
+    .sort((left, right) => left.localeCompare(right))
     .map((candidatePath) => fs.readFileSync(candidatePath, 'utf8'));
 }
 

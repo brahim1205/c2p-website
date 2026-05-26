@@ -116,17 +116,13 @@ export class UploadsService {
   }
 
   private normalizeFolder(folder?: string) {
-    const normalized = String(folder ?? 'general')
-      .trim()
-      .replace(/\\/g, '/')
-      .replace(/^\/+|\/+$/g, '')
-      .replace(/\/{2,}/g, '/');
+    const normalized = normalizeStorageFolder(String(folder ?? 'general').trim());
 
     if (!normalized) {
       throw new BadRequestException('Dossier de stockage invalide.');
     }
 
-    if (!/^[a-zA-Z0-9/_-]+$/.test(normalized) || normalized.includes('..')) {
+    if (!isStorageFolderSafe(normalized) || normalized.includes('..')) {
       throw new BadRequestException('Dossier de stockage invalide.');
     }
 
@@ -185,11 +181,7 @@ export class UploadsService {
     const resourceType = payload.resourceType ?? 'raw';
     const folder = this.normalizeFolder(payload.folder);
     const extension = this.normalizeExtension(file);
-    const safeFilenameBase = String(payload.filename ?? file.originalname ?? randomUUID())
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || randomUUID();
+    const safeFilenameBase = normalizeFilenameBase(String(payload.filename ?? file.originalname ?? randomUUID())) || randomUUID();
     const finalFilename = `${Date.now()}-${safeFilenameBase}${extension}`;
     let moved = false;
 
@@ -281,6 +273,41 @@ export class UploadsService {
       return null;
     }
   }
+}
+
+function normalizeStorageFolder(value: string) {
+  return value
+    .replaceAll('\\', '/')
+    .split('/')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join('/');
+}
+
+function isStorageFolderSafe(value: string) {
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    const isAlphaNumeric = (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || (code >= 48 && code <= 57);
+    if (!isAlphaNumeric && char !== '/' && char !== '_' && char !== '-') {
+      return false;
+    }
+  }
+  return true;
+}
+
+function normalizeFilenameBase(value: string) {
+  let normalized = '';
+  for (const char of value.toLowerCase()) {
+    const code = char.charCodeAt(0);
+    const isAlphaNumeric = (code >= 97 && code <= 122) || (code >= 48 && code <= 57);
+    if (isAlphaNumeric || char === '_' || char === '-') {
+      normalized += char;
+    } else if (normalized && !normalized.endsWith('-')) {
+      normalized += '-';
+    }
+    if (normalized.length >= 80) break;
+  }
+  return normalized.endsWith('-') ? normalized.slice(0, -1) : normalized;
 }
 
 function requiredUploadConfig(value: string | undefined, key: string) {

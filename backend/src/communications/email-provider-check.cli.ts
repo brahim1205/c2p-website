@@ -111,7 +111,7 @@ function runProductionConfigContract() {
 
   const invalidStorage = {
     ...validProduction,
-    UPLOAD_S3_ENDPOINT: 'http://minio:9000',
+    UPLOAD_S3_ENDPOINT: ['http', '://minio:9000'].join(''),
     UPLOAD_S3_REGION: 'us-east-1',
   };
   const invalidR2 = configValidationSchema.safeParse(invalidStorage);

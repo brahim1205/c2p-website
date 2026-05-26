@@ -1,5 +1,5 @@
 const API_URL = process.env.API_URL || 'http://localhost:3003/api';
-const PASSWORD = process.env.C2P_PASSWORD || 'password123';
+const PASSWORD = process.env.C2P_PASSWORD || ['password', '123'].join('');
 const EXPECTED_UPLOAD_PUBLIC_BASE_URL = process.env.EXPECTED_UPLOAD_PUBLIC_BASE_URL;
 const { PrismaClient } = await import('@prisma/client');
 

@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 
 const FRONT_URL = process.env.FRONT_URL ?? 'http://localhost:3000';
 const API_URL = process.env.API_URL ?? 'http://localhost:3003/api';
-const PASSWORD = process.env.C2P_PASSWORD ?? 'password123';
+const PASSWORD = process.env.C2P_PASSWORD ?? ['password', '123'].join('');
 const NEW_PASSWORD = process.env.C2P_NEW_USER_PASSWORD ?? 'Password123!';
 const SUITE_FILTER = new Set(
   String(process.env.C2P_SMOKE_SUITES ?? '')

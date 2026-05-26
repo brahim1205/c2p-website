@@ -110,7 +110,7 @@ function findCycles(graph) {
       if (start === -1) return;
       const cycle = [...stack.slice(start), node];
       const names = cycle.map(toRepoPath);
-      const key = [...new Set(names)].sort().join('|');
+      const key = [...new Set(names)].sort((left, right) => left.localeCompare(right)).join('|');
       if (!cycleKeys.has(key)) {
         cycleKeys.add(key);
         cycles.push(names);

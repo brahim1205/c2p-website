@@ -57,14 +57,18 @@ export function isValidAbsoluteUrl(value: string) {
 }
 
 export function slugifyLiveSegment(value: unknown) {
-  return String(value ?? '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
+  let slug = '';
+  for (const char of String(value ?? '').trim().toLowerCase().normalize('NFD')) {
+    const code = char.charCodeAt(0);
+    if (code >= 0x0300 && code <= 0x036f) continue;
+    const isAlphaNumeric = (code >= 97 && code <= 122) || (code >= 48 && code <= 57);
+    if (isAlphaNumeric) {
+      slug += char;
+    } else if (slug && !slug.endsWith('-')) {
+      slug += '-';
+    }
+  }
+  return slug.endsWith('-') ? slug.slice(0, -1).slice(0, 80) : slug.slice(0, 80);
 }
 
 export function getDefaultLiveProvider() {
@@ -72,7 +76,8 @@ export function getDefaultLiveProvider() {
 }
 
 export function getJitsiBaseUrl() {
-  return String(process.env.LIVE_JITSI_BASE_URL || 'https://meet.jit.si').replace(/\/$/, '');
+  const value = String(process.env.LIVE_JITSI_BASE_URL || 'https://meet.jit.si');
+  return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
 export function buildJitsiRoomUrl(slug: string) {
@@ -133,7 +138,12 @@ export function normalizeCourseLevel(value: unknown) {
   const normalized = (trimText(value) ?? 'intermediate')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code < 0x0300 || code > 0x036f;
+    })
+    .join('');
 
   const mapping: Record<string, 'beginner' | 'intermediate' | 'advanced' | 'all_levels'> = {
     beginner: 'beginner',
@@ -158,7 +168,12 @@ export function normalizeCourseBranch(value: unknown) {
   const normalized = (trimText(value) ?? 'form_actions')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code < 0x0300 || code > 0x036f;
+    })
+    .join('');
 
   const mapping: Record<string, 'form_actions' | 'end'> = {
     form_actions: 'form_actions',

@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 
 const API_URL = process.env.API_URL || 'http://localhost:3003/api';
 
@@ -49,7 +50,7 @@ async function postWebhook(payload) {
 
 async function main() {
   const prisma = new PrismaClient();
-  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
   const providerEventId = `evt-replay-${suffix}`;
   const providerReference = `order-replay-${suffix}`;
   const providerStatus = 'COMPLETED';

@@ -26,3 +26,5 @@ ops/grafana/data/
 ops/prometheus/data/
 ops/monitoring/prometheus/secrets/*
 !ops/monitoring/prometheus/secrets/.gitkeep
+ops/nginx/certs/*
+!ops/nginx/certs/.gitkeep

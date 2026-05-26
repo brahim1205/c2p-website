@@ -82,27 +82,49 @@ async function runDexPayCheck(backendEnvPath) {
 
   const baseUrl = String(env.DEXPAY_BASE_URL ?? '').replace(/\/+$/, '');
   const startedAt = Date.now();
+  const endpoints = ['/info', '/health'];
+  const attempts = [];
   try {
-    const response = await fetch(`${baseUrl}/info`, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'X-API-KEY': String(env.DEXPAY_API_KEY ?? ''),
-        'X-API-SECRET': String(env.DEXPAY_API_SECRET ?? ''),
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
+    for (const endpoint of endpoints) {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'X-API-KEY': String(env.DEXPAY_API_KEY ?? ''),
+          'X-API-SECRET': String(env.DEXPAY_API_SECRET ?? ''),
+        },
+        signal: AbortSignal.timeout(10_000),
+      });
+      attempts.push({ endpoint, status: response.status, ok: response.ok });
+      if (response.ok) {
+        return {
+          label: 'dexpay-provider',
+          ok: true,
+          exitCode: 0,
+          data: {
+            ok: true,
+            status: response.status,
+            endpoint,
+            attempts,
+            baseUrlHost: new URL(baseUrl).host,
+            latencyMs: Date.now() - startedAt,
+          },
+          stderr: '',
+        };
+      }
+    }
+
     return {
       label: 'dexpay-provider',
-      ok: response.ok,
-      exitCode: response.ok ? 0 : 1,
+      ok: false,
+      exitCode: 1,
       data: {
-        ok: response.ok,
-        status: response.status,
+        ok: false,
+        attempts,
         baseUrlHost: new URL(baseUrl).host,
         latencyMs: Date.now() - startedAt,
       },
-      stderr: response.ok ? '' : `DexPay health endpoint returned HTTP ${response.status}`,
+      stderr: `DexPay health endpoints returned HTTP ${attempts.map((attempt) => `${attempt.endpoint}:${attempt.status}`).join(', ')}`,
     };
   } catch (error) {
     return {
@@ -111,6 +133,7 @@ async function runDexPayCheck(backendEnvPath) {
       exitCode: 1,
       data: {
         ok: false,
+        attempts,
         baseUrlHost: baseUrl ? new URL(baseUrl).host : null,
         latencyMs: Date.now() - startedAt,
       },

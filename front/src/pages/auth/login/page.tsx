@@ -4,6 +4,7 @@ import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
+import { isBasicEmail } from '@/lib/emailValidation';
 
 const inputClass = 'c2p-input block py-3 pl-10 pr-3 text-sm';
 
@@ -25,7 +26,7 @@ export default function LoginPage() {
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!isBasicEmail(email)) {
       error('Email invalide', 'Veuillez entrer une adresse email valide.');
       return;
     }

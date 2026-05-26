@@ -5,6 +5,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+const fixedToolPath = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+
+function toolEnv(extra = {}) {
+  return {
+    ...process.env,
+    PATH: fixedToolPath,
+    ...extra,
+  };
+}
 
 function parseArgs(argv) {
   const entries = new Map();
@@ -62,22 +71,22 @@ function resolveBackupFile(args) {
 
 function ensureCommand(command, args, label) {
   try {
-    execFileSync(command, args, { cwd: repoRoot, stdio: 'pipe' });
+    execFileSync(command, args, { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
   } catch (error) {
     const stderr = error instanceof Error && 'stderr' in error ? String(error.stderr ?? '').trim() : '';
     fail(`${label}: ${stderr || (error instanceof Error ? error.message : String(error))}`);
   }
 }
 
-function waitForPostgres(containerName, timeoutSeconds) {
+function waitForPostgres(containerName, timeoutSeconds, restoreSecret) {
   const startedAt = Date.now();
   let lastError = '';
   while ((Date.now() - startedAt) / 1000 < timeoutSeconds) {
     try {
       execFileSync(
         'docker',
-        ['exec', '-e', 'PGPASSWORD=restore', containerName, 'pg_isready', '-U', 'restore', '-d', 'restore'],
-        { cwd: repoRoot, stdio: 'pipe' },
+        ['exec', '-e', `PGPASSWORD=${restoreSecret}`, containerName, 'pg_isready', '-U', 'restore', '-d', 'restore'],
+        { cwd: repoRoot, stdio: 'pipe', env: toolEnv() },
       );
       return;
     } catch (error) {
@@ -94,6 +103,7 @@ function main() {
   const image = String(args.get('image') ?? 'postgres:16-alpine');
   const timeoutSeconds = Number(args.get('timeout-seconds') ?? 60);
   const noPull = args.get('no-pull') === 'true';
+  const restoreSecret = String(args.get('restore-secret') ?? `restore-${process.pid}`);
   const containerName = String(
     args.get('container-name') ?? `c2p-postgres-restore-drill-${process.pid}`,
   ).replace(/[^a-zA-Z0-9_.-]/g, '-');
@@ -119,14 +129,14 @@ function main() {
 
   if (!noPull) {
     try {
-      execFileSync('docker', ['image', 'inspect', image], { cwd: repoRoot, stdio: 'pipe' });
+      execFileSync('docker', ['image', 'inspect', image], { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
     } catch {
       ensureCommand('docker', ['pull', image], `Impossible de récupérer l'image ${image}`);
     }
   }
 
   try {
-    execFileSync('docker', ['rm', '-f', containerName], { cwd: repoRoot, stdio: 'ignore' });
+    execFileSync('docker', ['rm', '-f', containerName], { cwd: repoRoot, stdio: 'ignore', env: toolEnv() });
   } catch {
     // Le conteneur n'existe probablement pas encore.
   }
@@ -143,30 +153,30 @@ function main() {
         '-e',
         'POSTGRES_USER=restore',
         '-e',
-        'POSTGRES_PASSWORD=restore',
+        `POSTGRES_PASSWORD=${restoreSecret}`,
         '-e',
         'POSTGRES_DB=restore',
         image,
       ],
-      { cwd: repoRoot, stdio: 'pipe' },
+      { cwd: repoRoot, stdio: 'pipe', env: toolEnv() },
     );
 
-    waitForPostgres(containerName, timeoutSeconds);
+    waitForPostgres(containerName, timeoutSeconds, restoreSecret);
 
     execFileSync(
       'bash',
       [
         '-lc',
-        'set -euo pipefail; gzip -dc "$BACKUP_FILE" | docker exec -i -e PGPASSWORD=restore "$CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U restore -d restore',
+        'set -euo pipefail; gzip -dc "$BACKUP_FILE" | docker exec -i -e "PGPASSWORD=$RESTORE_SECRET" "$CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U restore -d restore',
       ],
       {
         cwd: repoRoot,
         stdio: 'pipe',
-        env: {
-          ...process.env,
+        env: toolEnv({
           BACKUP_FILE: backupFile,
           CONTAINER_NAME: containerName,
-        },
+          RESTORE_SECRET: restoreSecret,
+        }),
       },
     );
 
@@ -175,7 +185,7 @@ function main() {
       [
         'exec',
         '-e',
-        'PGPASSWORD=restore',
+        `PGPASSWORD=${restoreSecret}`,
         containerName,
         'psql',
         '-At',
@@ -186,7 +196,7 @@ function main() {
         '-c',
         "select count(*) from information_schema.tables where table_schema = 'public';",
       ],
-      { cwd: repoRoot, stdio: 'pipe' },
+      { cwd: repoRoot, stdio: 'pipe', env: toolEnv() },
     );
 
     console.log(JSON.stringify({
@@ -200,7 +210,7 @@ function main() {
     fail(stderr || (error instanceof Error ? error.message : String(error)));
   } finally {
     try {
-      execFileSync('docker', ['rm', '-f', containerName], { cwd: repoRoot, stdio: 'ignore' });
+      execFileSync('docker', ['rm', '-f', containerName], { cwd: repoRoot, stdio: 'ignore', env: toolEnv() });
     } catch {
       // Nettoyage best-effort.
     }

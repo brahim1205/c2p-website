@@ -101,13 +101,10 @@ export class S3UploadStorageProvider implements UploadStorageProvider {
   private readonly forcePathStyle: boolean;
 
   constructor(private readonly config: S3UploadStorageProviderConfig) {
-    this.endpoint = new URL(config.endpoint.replace(/\/$/, ''));
+    this.endpoint = new URL(config.endpoint.endsWith('/') ? config.endpoint.slice(0, -1) : config.endpoint);
     this.publicRoot = `${this.endpoint.origin}/${config.bucket}`;
     this.tempRoot = resolve(process.cwd(), config.tempRoot);
-    this.keyPrefix = String(config.keyPrefix ?? 'uploads')
-      .trim()
-      .replace(/^\/+|\/+$/g, '')
-      .replace(/\/{2,}/g, '/');
+    this.keyPrefix = normalizeStoragePath(String(config.keyPrefix ?? 'uploads').trim());
     this.forcePathStyle = config.forcePathStyle ?? true;
   }
 
@@ -231,6 +228,14 @@ export class S3UploadStorageProvider implements UploadStorageProvider {
       Authorization: `AWS4-HMAC-SHA256 Credential=${this.config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
     };
   }
+}
+
+function normalizeStoragePath(value: string) {
+  const parts = value
+    .split('/')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.join('/');
 }
 
 function sha256Hex(input: Buffer | string) {

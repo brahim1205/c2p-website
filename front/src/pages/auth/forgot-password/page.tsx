@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { apiRequest, toApiError } from '@/lib/api';
+import { isBasicEmail } from '@/lib/emailValidation';
 
 const inputClass = 'c2p-input block py-3 pl-10 pr-3 text-sm';
 
@@ -22,7 +23,7 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    if (!isBasicEmail(normalizedEmail)) {
       error('Email invalide', 'Veuillez entrer une adresse email valide.');
       return;
     }

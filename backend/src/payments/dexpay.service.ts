@@ -110,6 +110,13 @@ export class DexPayService {
         business,
       };
     } catch {
+      if (await this.pingHealth()) {
+        return {
+          ...snapshot,
+          reachable: true,
+          errorCode: 'provider_business_info_unavailable',
+        };
+      }
       return {
         ...snapshot,
         reachable: false,
@@ -258,6 +265,27 @@ export class DexPayService {
         throw error;
       }
       throw new BadGatewayException('Passerelle DexPay indisponible.');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private async pingHealth() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.dexPayTimeoutMs);
+    try {
+      const response = await fetch(`${this.config.dexPayBaseUrl!}/health`, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          'X-API-KEY': this.config.dexPayApiKey!,
+          'X-API-SECRET': this.config.dexPayApiSecret!,
+        },
+      });
+      return response.ok;
+    } catch {
+      return false;
     } finally {
       clearTimeout(timeout);
     }

@@ -179,13 +179,17 @@ export class PlatformPersistenceService {
   }
 
   private slugify(value: string) {
-    return value
-      .normalize('NFKD')
-      .replace(/[^\w\s-]/g, '')
-      .trim()
-      .toLowerCase()
-      .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+    let slug = '';
+    for (const char of value.normalize('NFKD').trim().toLowerCase()) {
+      const code = char.charCodeAt(0);
+      const isLetterOrDigit = (code >= 97 && code <= 122) || (code >= 48 && code <= 57);
+      if (isLetterOrDigit) {
+        slug += char;
+      } else if ((char === ' ' || char === '_' || char === '-') && slug && !slug.endsWith('-')) {
+        slug += '-';
+      }
+    }
+    return slug.endsWith('-') ? slug.slice(0, -1) : slug;
   }
 
   private rowKey(table: string, rowId: string) {

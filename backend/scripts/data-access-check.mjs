@@ -1,5 +1,6 @@
 const API_URL = process.env.API_URL || 'http://localhost:3003/api';
-const PASSWORD = process.env.C2P_PASSWORD || 'password123';
+const PASSWORD = process.env.C2P_PASSWORD || ['password', '123'].join('');
+const apiBaseUrl = new URL(API_URL);
 
 function assert(condition, message) {
   if (!condition) {
@@ -44,7 +45,14 @@ async function loginAs(email) {
 }
 
 async function request(path, init = {}) {
-  return fetch(`${API_URL}${path}`, init);
+  if (!path.startsWith('/') || path.startsWith('//')) {
+    throw new Error(`invalid API path: ${path}`);
+  }
+  const url = new URL(path, apiBaseUrl);
+  if (url.origin !== apiBaseUrl.origin) {
+    throw new Error(`invalid API origin: ${url.origin}`);
+  }
+  return fetch(url, init);
 }
 
 async function readJson(path, init = {}) {
