@@ -1,45 +1,37 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/useToast';
 import { SkeletonCard } from '@/components/base/Skeleton';
 import GlobalSearch from '../../components/GlobalSearch';
 import {
   fetchApprenantEnrollments,
   type ApprenantEnrollment as Enrollment,
 } from '@/lib/apprenantDashboardApi';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function ApprenantCoursPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { success } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchEnrollments = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (!user?.id) {
-        setEnrollments([]);
-        return;
-      }
+  const { data: enrollments = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.apprenant.enrollments(user?.id),
+    queryFn: () => fetchApprenantEnrollments(user?.id ?? ''),
+    enabled: Boolean(user?.id),
+  });
 
-      const data = await fetchApprenantEnrollments(user.id);
-      setEnrollments(data);
-    } catch (err) {
-      console.error(err);
-      setEnrollments([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    fetchEnrollments();
-  }, [fetchEnrollments]);
+  const getEffectiveProgress = (enrollment: Enrollment) => {
+    const backendProgress = Number(enrollment.progress || 0);
+    return {
+      progress: backendProgress,
+      completedLessons: enrollment.completed_lessons_estimate ?? 0,
+      lastActive: enrollment.last_active,
+    };
+  };
 
   const filteredEnrollments = enrollments.filter((e) => {
     const course = e.courses;
@@ -47,13 +39,24 @@ export default function ApprenantCoursPage() {
     const matchesSearch =
       course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (course.category || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
+    const progress = getEffectiveProgress(e).progress;
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && progress > 0 && progress < 100) ||
+      (statusFilter === 'completed' && progress >= 100);
     return matchesSearch && matchesStatus;
   });
 
-  const handleContinue = (enrollment: Enrollment) => {
-    const courseTitle = enrollment.courses?.title || 'Votre cours';
-    success('Cours ouvert', `Vous reprenez "${courseTitle}" où vous vous êtes arrêté.`);
+  const openCourse = (enrollment: Enrollment) => {
+    const courseId = enrollment.courses?.id;
+    if (!courseId) return;
+    navigate(`/dashboard/apprenant/cours/${courseId}?resume=1`);
+  };
+
+  const handleCourseCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, enrollment: Enrollment) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    openCourse(enrollment);
   };
 
   const getStatusBadge = (status: string, progress: number) => {
@@ -92,9 +95,13 @@ export default function ApprenantCoursPage() {
   };
 
   const totalEnrolled = enrollments.length;
-  const inProgressCount = enrollments.filter((e) => e.progress > 0 && e.progress < 100).length;
-  const completedCount = enrollments.filter((e) => e.progress >= 100).length;
-  const notStartedCount = enrollments.filter((e) => e.progress === 0).length;
+  const effectiveEnrollments = enrollments.map((enrollment) => ({
+    enrollment,
+    progress: getEffectiveProgress(enrollment).progress,
+  }));
+  const inProgressCount = effectiveEnrollments.filter((e) => e.progress > 0 && e.progress < 100).length;
+  const completedCount = effectiveEnrollments.filter((e) => e.progress >= 100).length;
+  const notStartedCount = effectiveEnrollments.filter((e) => e.progress === 0).length;
 
   return (
     <DashboardLayout>
@@ -136,7 +143,7 @@ export default function ApprenantCoursPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <div className="w-5 h-5 flex items-center justify-center absolute left-3 top-1/2 -translate-y-1/2">
+              <div className="pointer-events-none absolute left-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center">
                 <i className="ri-search-line text-gray-400"></i>
               </div>
               <input
@@ -144,7 +151,7 @@ export default function ApprenantCoursPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher une formation..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
+                className="w-full rounded-lg border border-gray-300 py-2.5 pl-12 pr-4 text-sm focus:border-teal-500 focus:outline-none"
               />
             </div>
             <div className="flex gap-2">
@@ -175,13 +182,22 @@ export default function ApprenantCoursPage() {
             {filteredEnrollments.map((enrollment) => {
               const course = enrollment.courses;
               if (!course) return null;
-              const progress = enrollment.progress || 0;
+              const effectiveProgress = getEffectiveProgress(enrollment);
+              const progress = effectiveProgress.progress;
               const totalModules = course.modules || 1;
-              const completedModules = Math.round((progress / 100) * totalModules);
+              const completedModules = Math.min(totalModules, Math.round((progress / 100) * totalModules));
 
               return (
-                <div key={enrollment.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="relative h-44 overflow-hidden">
+                <div
+                  key={enrollment.id}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`Ouvrir la formation ${course.title}`}
+                  onClick={() => openCourse(enrollment)}
+                  onKeyDown={(event) => handleCourseCardKeyDown(event, enrollment)}
+                  className="flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                >
+                  <div className="relative h-40 overflow-hidden">
                     <img src={getCourseImage(course)} alt={course.title} className="w-full h-full object-cover object-top" />
                     <div className="absolute top-3 right-3">
                       {getStatusBadge(enrollment.status, progress)}
@@ -190,7 +206,7 @@ export default function ApprenantCoursPage() {
                       <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md">{course.category}</span>
                     </div>
                   </div>
-                  <div className="p-5">
+                  <div className="flex flex-1 flex-col p-5">
                     <h3 className="font-semibold text-gray-900 text-base mb-2">{course.title}</h3>
 
                     <div className="mb-3">
@@ -210,33 +226,41 @@ export default function ApprenantCoursPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-                      <span>Dernier accès : {formatLastAccessed(enrollment.last_active)}</span>
+                    {progress >= 100 && (
+                      <div className="mb-3 rounded-lg bg-emerald-50 p-3">
+                        <p className="text-xs font-medium text-emerald-600">Formation terminée</p>
+                        <p className="mt-0.5 text-sm text-emerald-900">Votre progression est complète. Cliquez sur la carte pour revoir le cours.</p>
+                      </div>
+                    )}
+
+                    <div className="mt-auto mb-4 flex items-center justify-between text-xs text-gray-500">
+                      <span>Dernier accès : {formatLastAccessed(effectiveProgress.lastActive)}</span>
                     </div>
 
                     <div className="flex gap-2">
                       {progress > 0 && progress < 100 && (
-                        <Link
-                          to={`/dashboard/apprenant/cours/${course.id}`}
-                          onClick={() => handleContinue(enrollment)}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openCourse(enrollment);
+                          }}
                           className="flex-1 px-3 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap text-center"
                         >
                           Continuer
-                        </Link>
-                      )}
-                      {progress >= 100 && (
-                        <button className="flex-1 px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors whitespace-nowrap flex items-center justify-center gap-1">
-                          <i className="ri-download-line text-xs"></i>
-                          Certificat
                         </button>
                       )}
                       {progress === 0 && (
-                        <Link
-                          to={`/dashboard/apprenant/cours/${course.id}`}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openCourse(enrollment);
+                          }}
                           className="flex-1 px-3 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition-colors whitespace-nowrap text-center"
                         >
                           Commencer
-                        </Link>
+                        </button>
                       )}
                     </div>
                   </div>

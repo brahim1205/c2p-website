@@ -1,26 +1,26 @@
 const pillars = [
   {
     title: 'Services qualifiés',
-    text: 'SenPresta organise les offres et demandes de prestations, avec recherche, alertes, vérification et prise en charge opérationnelle par C2P.',
+    text: 'AlloPresta organise les offres et demandes de services, avec recherche, alertes, vérification et mise en relation cadrée par C2P.',
     icon: 'ri-shield-check-line',
   },
   {
     title: 'Formation continue',
-    text: 'L’Espace Numérique regroupe Form’Actions et l’END pour couvrir post-formation, apprentissage programmé, présentiel et distanciel.',
+    text: 'L’Espace Numérique propose des cours, classes virtuelles, parcours hybrides et certifications pour progresser durablement.',
     icon: 'ri-graduation-cap-line',
   },
   {
     title: 'Incubation de projets',
-    text: 'Projects Center relie porteurs, experts associés et financiers associés dans une logique de co-portage et d’autonomisation.',
+    text: 'ProjectCenter aide les porteurs à structurer leur idée, préparer leur dossier et accéder à un réseau d’experts et de partenaires.',
     icon: 'ri-rocket-line',
   },
 ];
 
 const values = [
-  'Exigence operationnelle',
-  'Confiance et verification',
+  'Exigence opérationnelle',
+  'Confiance et vérification',
   'Transmission utile',
-  'Impact economique',
+  'Impact économique',
   'Vision panafricaine',
   'Accompagnement durable',
 ];
@@ -59,23 +59,23 @@ const milestones = [
   {
     year: '2026',
     title: 'Vision 2030',
-    desc: 'Consolidation de la plateforme autour d’un backend C2P propre, avec l’objectif de former, connecter et accompagner toujours plus d’acteurs africains.',
+    desc: 'Consolidation de la plateforme avec l’objectif de former, connecter et accompagner toujours plus d’acteurs africains.',
     icon: 'ri-eye-line',
   },
 ];
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-c2p-bg text-c2p-text">
+    <main className="public-premium-page min-h-screen bg-c2p-bg text-c2p-text">
       <section className="relative min-h-[680px] overflow-hidden bg-[#ffffff]">
         <div className="absolute inset-0">
           <img
-            src="/images/brand/images12.jpeg"
+            src="/images/home/global.jpg"
             alt="C2P ecosysteme professionnel"
-            className="h-full w-full object-cover object-center opacity-24"
+            className="h-full w-full object-cover object-center opacity-[0.36]"
           />
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.90)_0%,rgba(247,248,252,0.68)_46%,rgba(247,248,252,0.24)_100%)]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]"></div>
         <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
         <div className="relative z-10 flex min-h-[680px] items-center px-4 pt-24 sm:px-6 lg:px-20">
@@ -88,7 +88,7 @@ export default function AboutPage() {
                 Un écosystème professionnel conçu pour faire avancer les talents
               </h1>
               <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
-                C2P rassemble SenPresta, Form’Actions, l’END et Projects Center dans une plateforme unique pour transformer les ambitions en actions mesurables.
+                C2P rassemble AlloPresta, l’Espace Numérique et ProjectCenter dans une plateforme unique pour transformer les ambitions en actions mesurables.
               </p>
             </div>
 
@@ -111,7 +111,7 @@ export default function AboutPage() {
       <section className="px-4 py-20 sm:px-6 lg:px-20 lg:py-28">
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative overflow-hidden rounded-[30px] border border-[#d6dbe1]">
-            <img src="/images/brand/_.jpeg" alt="Mission C2P" className="h-[520px] w-full object-cover object-center" />
+            <img src="/images/home/trust.jpg" alt="Mission C2P" className="h-[520px] w-full object-cover object-center" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f1c35]/42 to-transparent"></div>
             <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-[#d6dbe1] bg-white/86 p-5 backdrop-blur-sm">
               <div className="text-3xl font-semibold text-[#0f1c35]">98%</div>

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import PublicLayout from '@/components/feature/PublicLayout';
 import PageTransition from './PageTransition';
 import RequireAuth from './RequireAuth';
+import MaintenanceGate from './MaintenanceGate';
 import type { UserRole } from '@/lib/roles';
 
 interface RouteWrapperProps {
@@ -59,7 +60,7 @@ export default function RouteWrapper({
       );
     }
 
-    return content;
+    return <MaintenanceGate>{content}</MaintenanceGate>;
   }, [children, layout, requireAuth, allowedRoles, redirectTo, redirectAuthenticated, hideFooter, hideHeader, location.pathname]);
 
   return wrappedContent;

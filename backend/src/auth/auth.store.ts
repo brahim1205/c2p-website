@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'apprenant' | 'formateur' | 'prestataire' | 'parent' | 'porteur' | 'partenaire' | 'client';
+export type Role = 'superadmin' | 'admin' | 'apprenant' | 'formateur' | 'prestataire' | 'parent' | 'porteur' | 'partenaire' | 'client';
 export type UserStatus = 'active' | 'pending' | 'suspended';
 export type AuditStatus = 'success' | 'failed';
 
@@ -36,6 +36,13 @@ export interface PaymentSettings {
   mtnMoney?: string;
 }
 
+export interface UserPreferences {
+  language?: string;
+  emailNotifications?: boolean;
+  productUpdates?: boolean;
+  compactMode?: boolean;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -58,7 +65,10 @@ export interface AuthUser {
   introVideo?: string;
   publicProfileEnabled?: boolean;
   expertVerified?: boolean;
+  onboardingClausesAcceptedAt?: string | null;
+  onboardingClausesVersion?: string | null;
   paymentSettings?: PaymentSettings;
+  userPreferences?: UserPreferences;
   is2FAEnabled?: boolean;
   createdAt: string;
 }
@@ -97,6 +107,9 @@ function buildSafeUserPayload(user: StoredUser, includePaymentSettings: boolean)
     introVideo: user.introVideo,
     publicProfileEnabled: Boolean(user.publicProfileEnabled),
     expertVerified: Boolean(user.expertVerified),
+    onboardingClausesAcceptedAt: user.onboardingClausesAcceptedAt ?? null,
+    onboardingClausesVersion: user.onboardingClausesVersion ?? null,
+    userPreferences: user.userPreferences ?? {},
     is2FAEnabled: Boolean(user.is2FAEnabled),
     createdAt: user.createdAt,
     ...(includePaymentSettings ? { paymentSettings: user.paymentSettings ?? {} } : {}),
@@ -157,6 +170,10 @@ export interface AuditLog {
   status: AuditStatus;
 }
 
+export function isAdminRole(actor: Pick<AuthUser, 'role'> | { role?: string } | null | undefined) {
+  return actor?.role === 'admin' || actor?.role === 'superadmin';
+}
+
 const LOCAL_AVATAR_POOL = [
   '/images/brand/image1.jpeg',
   '/images/brand/image2.jpeg',
@@ -179,6 +196,26 @@ const DEFAULT_TEST_PASSWORD_HASH =
   '$argon2id$v=19$m=65536,t=3,p=4$Ib10W7lbOfDuhU5wr72pzw$/dnOjZh0+kI0S2UG5hFu3ygmxjKLo6DDmBQqq0ri84o';
 
 const users: StoredUser[] = [
+  {
+    id: 'usr-superadmin',
+    email: 'superadmin@c2p.sn',
+    firstName: 'Super',
+    lastName: 'Admin',
+    role: 'superadmin',
+    status: 'active',
+    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
+    phone: '+221 77 100 00 01',
+    avatar: avatar('superadmin-c2p'),
+    bio: 'Super administrateur C2P avec accès aux fonctions sensibles.',
+    location: 'Dakar, Senegal',
+    is2FAEnabled: false,
+    backupCodes: [],
+    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
+    failedLoginAttempts: 0,
+    lockedUntil: null,
+    lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',
+    createdAt: '2026-01-01',
+  },
   {
     id: 'usr-admin',
     email: 'admin@c2p.sn',

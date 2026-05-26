@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { json, static as serveStatic, urlencoded, type NextFunction, type Request, type Response } from 'express';
@@ -9,13 +10,16 @@ import { AppModule } from './app.module.js';
 import { ConfigService } from './config/config.service.js';
 import { AuthService } from './auth/auth.service.js';
 import type { AuthenticatedRequest } from './common/http/request-context.js';
+import { createRateLimitMiddleware } from './common/http/rate-limit.js';
 import { MonitoringService } from './monitoring/monitoring.service.js';
+import { PrismaService } from './database/prisma.service.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const authService = app.get(AuthService);
   const monitoringService = app.get(MonitoringService);
+  const prismaService = app.get(PrismaService);
   const expressApp = app.getHttpAdapter().getInstance();
 
   if (configService.trustProxy) {
@@ -31,8 +35,13 @@ async function bootstrap() {
       directives: {
         defaultSrc: ["'none'"],
         baseUri: ["'none'"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
         frameAncestors: ["'none'"],
         formAction: ["'self'"],
+        imgSrc: ["'self'", 'data:'],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
       },
     },
   }));
@@ -44,92 +53,19 @@ async function bootstrap() {
     },
   }));
   app.use(urlencoded({ extended: true, limit: '256kb' }));
-  expressApp.use('/uploads', serveStatic(resolve(process.cwd(), configService.uploadStorageRoot), {
-    fallthrough: false,
-    index: false,
-    maxAge: '7d',
-    setHeaders: (res) => {
-      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-    },
-  }));
+  if (configService.uploadStorageDriver === 'local-disk') {
+    expressApp.use('/uploads', serveStatic(resolve(process.cwd(), configService.uploadStorageRoot), {
+      fallthrough: false,
+      index: false,
+      maxAge: '7d',
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+      },
+    }));
+  }
 
-  const rateLimits = {
-    global: new Map<string, { count: number; resetAt: number }>(),
-    login: new Map<string, { count: number; resetAt: number }>(),
-    auth: new Map<string, { count: number; resetAt: number }>(),
-    finance: new Map<string, { count: number; resetAt: number }>(),
-    providerWebhook: new Map<string, { count: number; resetAt: number }>(),
-  } as const;
-
-  const resolveRateLimitBucket = (path: string, method: string) => {
-    const normalizedPath = path.toLowerCase();
-    const normalizedMethod = method.toUpperCase();
-
-    if (normalizedPath === '/api/auth/login') {
-      return {
-        bucket: rateLimits.login,
-        limit: configService.loginRateLimitMax,
-        windowMs: 60_000,
-        keySuffix: () => normalizedPath,
-      };
-    }
-
-    if (/^\/api\/auth\/(verify-2fa|resend-2fa|forgot-password|reset-password|register|refresh)$/i.test(normalizedPath)) {
-      return {
-        bucket: rateLimits.auth,
-        limit: configService.authRateLimitMax,
-        windowMs: 60_000,
-        keySuffix: () => normalizedPath,
-      };
-    }
-
-    if (normalizedPath === '/api/payments/providers/dexpay/webhook') {
-      return {
-        bucket: rateLimits.providerWebhook,
-        limit: configService.providerWebhookRateLimitMax,
-        windowMs: 60_000,
-        keySuffix: () => normalizedPath,
-      };
-    }
-
-    if (normalizedPath.startsWith('/api/payments/') && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(normalizedMethod)) {
-      return {
-        bucket: rateLimits.finance,
-        limit: configService.financeRateLimitMax,
-        windowMs: 60_000,
-        keySuffix: () => normalizedPath,
-      };
-    }
-
-    return {
-      bucket: rateLimits.global,
-      limit: configService.globalRateLimitMax,
-      windowMs: 60_000,
-      keySuffix: () => normalizedPath,
-    };
-  };
-
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    const now = Date.now();
-    const classification = resolveRateLimitBucket(req.path, req.method);
-    const key = `${req.ip}:${classification.keySuffix()}`;
-    const entry = classification.bucket.get(key);
-
-    if (!entry || entry.resetAt <= now) {
-      classification.bucket.set(key, { count: 1, resetAt: now + classification.windowMs });
-      return next();
-    }
-
-    if (entry.count >= classification.limit) {
-      res.setHeader('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)));
-      res.status(429).json({ message: 'Trop de requetes. Reessayez plus tard.' });
-      return;
-    }
-
-    entry.count += 1;
-    next();
-  });
+  app.use(createRateLimitMiddleware(configService, monitoringService));
 
   app.use(async (req: Request, res: Response, next: NextFunction) => {
     const requestId = String(req.headers['x-request-id'] ?? randomUUID());
@@ -162,6 +98,71 @@ async function bootstrap() {
         role: actor?.role ?? null,
       }));
     });
+
+    next();
+  });
+
+  let maintenanceCache: { enabled: boolean; expiresAt: number } | null = null;
+  const isMaintenanceModeEnabled = async () => {
+    if (maintenanceCache && maintenanceCache.expiresAt > Date.now()) {
+      return maintenanceCache.enabled;
+    }
+
+    if (!prismaService.isConnected) {
+      maintenanceCache = { enabled: false, expiresAt: Date.now() + 5_000 };
+      return false;
+    }
+
+    try {
+      const row = await prismaService.appRow.findUnique({
+        where: { key: 'admin_feature_flags::maintenance_mode' },
+        select: { data: true },
+      });
+      const data = row?.data;
+      const enabled = Boolean(data && typeof data === 'object' && 'enabled' in data && (data as { enabled?: unknown }).enabled);
+      maintenanceCache = { enabled, expiresAt: Date.now() + 5_000 };
+      return enabled;
+    } catch {
+      maintenanceCache = { enabled: false, expiresAt: Date.now() + 5_000 };
+      return false;
+    }
+  };
+
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
+    if (req.method.toUpperCase() === 'OPTIONS') {
+      return next();
+    }
+
+    const path = req.path;
+    const actor = (req as AuthenticatedRequest).auth?.user;
+    const isSwaggerRoute = path === '/api/docs'
+      || path === '/api/docs-json'
+      || path === '/api/docs-yaml'
+      || path.startsWith('/api/docs/');
+    const exempt = [
+      '/api/healthz',
+      '/api/public/platform-status',
+      '/api/auth/login',
+      '/api/auth/logout',
+      '/api/auth/me',
+      '/api/auth/refresh',
+      '/api/auth/verify-2fa',
+      '/api/auth/resend-2fa',
+      '/api/monitoring/frontend-errors',
+      '/api/monitoring/web-vitals',
+    ];
+
+    if (isSwaggerRoute || exempt.includes(path) || actor?.role === 'superadmin') {
+      return next();
+    }
+
+    if (await isMaintenanceModeEnabled()) {
+      res.status(503).json({
+        message: 'La plateforme est temporairement en maintenance.',
+        code: 'MAINTENANCE_MODE',
+      });
+      return;
+    }
 
     next();
   });
@@ -221,6 +222,48 @@ async function bootstrap() {
     credentials: true,
   });
   app.setGlobalPrefix('api');
+
+  const swaggerDocument = SwaggerModule.createDocument(
+    app,
+    new DocumentBuilder()
+      .setTitle('C2P API')
+      .setDescription('Documentation OpenAPI des endpoints publics, metier, financiers, monitoring et administration C2P.')
+      .setVersion('1.0.10')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Jeton Bearer pour les clients API.',
+        },
+        'bearer',
+      )
+      .addCookieAuth(configService.sessionCookieName, {
+        type: 'apiKey',
+        in: 'cookie',
+        name: configService.sessionCookieName,
+        description: 'Cookie de session utilise par le frontend C2P.',
+      }, 'session')
+      .addApiKey({
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-csrf-token',
+        description: 'Jeton CSRF requis pour les mutations authentifiees.',
+      }, 'csrf')
+      .build(),
+    { deepScanRoutes: true },
+  );
+  SwaggerModule.setup('api/docs', app, swaggerDocument, {
+    customSiteTitle: 'C2P API Docs',
+    jsonDocumentUrl: '/api/docs-json',
+    yamlDocumentUrl: '/api/docs-yaml',
+    swaggerOptions: {
+      persistAuthorization: true,
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+    },
+  });
+
   const port = configService.port || 3000;
   await app.listen(port);
   console.log(JSON.stringify({

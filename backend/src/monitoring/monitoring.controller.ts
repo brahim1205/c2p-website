@@ -1,9 +1,11 @@
 import { Body, Controller, Get, Header, NotFoundException, Post, Req, UnauthorizedException } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { timingSafeEqual } from 'node:crypto';
 import { MonitoringService } from './monitoring.service.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { ConfigService } from '../config/config.service.js';
 
+@ApiTags('monitoring')
 @Controller()
 export class MonitoringController {
   constructor(

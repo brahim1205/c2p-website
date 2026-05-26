@@ -45,7 +45,7 @@ const searchIndex: Record<string, SearchItem[]> = {
     { id: 'proj', label: 'Mes projets', category: 'Page', path: '/dashboard/porteur/mes-projets', icon: 'ri-folder-line' },
     { id: 'part', label: 'Partenariats', category: 'Page', path: '/dashboard/porteur/partenariats', icon: 'ri-team-line' },
     { id: 'fin', label: 'Financements', category: 'Page', path: '/dashboard/porteur/financements', icon: 'ri-funds-line' },
-    { id: 'soum', label: 'Soumettre un projet', category: 'Page', path: '/project-center/soumettre', icon: 'ri-add-circle-line' },
+    { id: 'soum', label: 'Soumettre un projet', category: 'Page', path: '/dashboard/porteur/mes-projets/soumettre', icon: 'ri-add-circle-line' },
   ],
   partenaire: [
     { id: 'opp', label: 'Opportunités', category: 'Page', path: '/dashboard/partenaire/opportunites', icon: 'ri-search-line' },

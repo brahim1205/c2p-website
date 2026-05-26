@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,42 +13,41 @@ import {
   type SecuritySession,
 } from '@/lib/accountApi';
 import { formatDateTime } from '@/lib/formatters';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function SecurityPage() {
+  const queryClient = useQueryClient();
   const { user, updateUser } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [sessions, setSessions] = useState<SecuritySession[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
 
-  const loadSecurity = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const payload = await fetchSecurity(user.id);
-      setSessions(payload.sessions);
-      setAuditLogs(payload.auditLogs);
-      updateUser({ is2FAEnabled: false });
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les informations de sécurité.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, updateUser, user?.id]);
+  const securityQueryKey = queryKeys.account.security(user?.id);
+  const securityQuery = useQuery({
+    queryKey: securityQueryKey,
+    queryFn: () => fetchSecurity(user!.id),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    loadSecurity();
-  }, [loadSecurity]);
+    if (securityQuery.data) {
+      updateUser({ is2FAEnabled: false });
+    }
+  }, [securityQuery.data, updateUser]);
+
+  useEffect(() => {
+    if (securityQuery.isError) {
+      console.error(securityQuery.error);
+      error('Erreur', 'Impossible de charger les informations de sécurité.');
+    }
+  }, [error, securityQuery.error, securityQuery.isError]);
+
+  const loading = securityQuery.isLoading;
+  const sessions: SecuritySession[] = useMemo(() => securityQuery.data?.sessions ?? [], [securityQuery.data?.sessions]);
+  const auditLogs: AuditLogEntry[] = useMemo(() => securityQuery.data?.auditLogs ?? [], [securityQuery.data?.auditLogs]);
 
   const currentSession = useMemo(() => sessions.find((session) => session.current), [sessions]);
   const otherSessions = useMemo(() => sessions.filter((session) => !session.current), [sessions]);
@@ -67,7 +67,7 @@ export default function SecurityPage() {
       await changeAccountPassword(user.id, passwordForm.currentPassword, passwordForm.newPassword);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       success('Mot de passe mis à jour', 'Le mot de passe du compte a été modifié.');
-      loadSecurity();
+      await queryClient.invalidateQueries({ queryKey: securityQueryKey });
     } catch (err) {
       console.error(err);
       error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n a pas pu etre modifie.');
@@ -79,7 +79,7 @@ export default function SecurityPage() {
     try {
       await revokeAccountSession(user.id, sessionId);
       success('Session revoquee', 'La session a ete deconnectee.');
-      loadSecurity();
+      await queryClient.invalidateQueries({ queryKey: securityQueryKey });
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de revoquer la session.');
@@ -91,7 +91,7 @@ export default function SecurityPage() {
     try {
       const payload = await revokeOtherAccountSessions(user.id);
       success('Sessions nettoyees', `${payload.removed} session(s) secondaire(s) ont ete revoquee(s).`);
-      loadSecurity();
+      await queryClient.invalidateQueries({ queryKey: securityQueryKey });
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de revoquer les autres sessions.');

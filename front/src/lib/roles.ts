@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'parent' | 'porteur' | 'partenaire';
+export type UserRole = 'superadmin' | 'admin' | 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'parent' | 'porteur' | 'partenaire';
 
 export interface SocialLinks {
   linkedin?: string;
@@ -34,6 +34,13 @@ export interface PaymentSettings {
   mtnMoney?: string;
 }
 
+export interface UserPreferences {
+  language?: string;
+  emailNotifications?: boolean;
+  productUpdates?: boolean;
+  compactMode?: boolean;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -55,14 +62,18 @@ export interface AuthUser {
   introVideo?: string;
   publicProfileEnabled?: boolean;
   expertVerified?: boolean;
+  onboardingClausesAcceptedAt?: string | null;
+  onboardingClausesVersion?: string | null;
   paymentSettings?: PaymentSettings;
+  userPreferences?: UserPreferences;
   is2FAEnabled?: boolean;
   createdAt: string;
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
+  superadmin: 'Super administrateur',
   admin: 'Administrateur',
-  client: 'Client / Prestateur',
+  client: 'Client',
   prestataire: 'Prestataire',
   formateur: 'Formateur',
   apprenant: 'Apprenant',
@@ -72,6 +83,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export const ROLE_DASHBOARD_PATHS: Record<UserRole, string> = {
+  superadmin: '/superadmin/dashboard',
   admin: '/admin/dashboard',
   client: '/dashboard/client',
   prestataire: '/dashboard/prestataire',

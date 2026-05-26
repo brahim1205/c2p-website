@@ -1,0 +1,113 @@
+name: production-deploy
+
+on:
+  workflow_run:
+    workflows:
+      - monorepo-ci
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'SHA, tag ou branche à déployer'
+        required: false
+        default: main
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy production
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: https://c2p.sn
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'master')
+      )
+    env:
+      DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.workflow_run.head_sha }}
+      DEPLOY_PATH: ${{ secrets.PRODUCTION_DEPLOY_PATH || '/srv/c2p' }}
+      SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
+      SSH_PORT: ${{ secrets.PRODUCTION_SSH_PORT || '22' }}
+      SSH_USER: ${{ secrets.PRODUCTION_SSH_USER || 'deploy' }}
+      SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+      ALLOW_SSH_KEYSCAN: ${{ secrets.PRODUCTION_ALLOW_SSH_KEYSCAN || 'false' }}
+      POSTDEPLOY_BASE_URL: ${{ secrets.PRODUCTION_BASE_URL }}
+      POSTDEPLOY_RESTORE_DRILL: ${{ secrets.PRODUCTION_POSTDEPLOY_RESTORE_DRILL || 'false' }}
+    steps:
+      - name: Skip deployment when production secrets are absent
+        if: ${{ env.SSH_HOST == '' || env.SSH_PRIVATE_KEY == '' || env.POSTDEPLOY_BASE_URL == '' }}
+        run: |
+          echo "Production deployment secrets are not fully configured; skipping deployment."
+
+      - name: Validate deployment secrets
+        if: ${{ env.SSH_HOST != '' && env.SSH_PRIVATE_KEY != '' && env.POSTDEPLOY_BASE_URL != '' }}
+        run: |
+          test -n "$DEPLOY_REF" || { echo "DEPLOY_REF manquant"; exit 1; }
+          test -n "$SSH_HOST" || { echo "PRODUCTION_SSH_HOST manquant"; exit 1; }
+          test -n "$SSH_PRIVATE_KEY" || { echo "PRODUCTION_SSH_PRIVATE_KEY manquant"; exit 1; }
+          case "$DEPLOY_PATH" in
+            /*) ;;
+            *) echo "PRODUCTION_DEPLOY_PATH doit être un chemin absolu"; exit 1 ;;
+          esac
+          if [ -z "$SSH_KNOWN_HOSTS" ] && [ "$ALLOW_SSH_KEYSCAN" != "true" ]; then
+            echo "PRODUCTION_SSH_KNOWN_HOSTS manquant. Configurez le secret ou définissez PRODUCTION_ALLOW_SSH_KEYSCAN=true temporairement."
+            exit 1
+          fi
+          test -n "$POSTDEPLOY_BASE_URL" || { echo "PRODUCTION_BASE_URL manquant"; exit 1; }
+          case "$POSTDEPLOY_RESTORE_DRILL" in
+            true|false) ;;
+            *) echo "PRODUCTION_POSTDEPLOY_RESTORE_DRILL doit valoir true ou false"; exit 1 ;;
+          esac
+
+      - name: Configure SSH
+        if: ${{ env.SSH_HOST != '' && env.SSH_PRIVATE_KEY != '' && env.POSTDEPLOY_BASE_URL != '' }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_c2p_deploy
+          chmod 600 ~/.ssh/id_c2p_deploy
+
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          elif [ "$ALLOW_SSH_KEYSCAN" = "true" ]; then
+            ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          else
+            echo "Known hosts non configuré."
+            exit 1
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy on VPS
+        if: ${{ env.SSH_HOST != '' && env.SSH_PRIVATE_KEY != '' && env.POSTDEPLOY_BASE_URL != '' }}
+        run: |
+          remote_env="$(printf 'DEPLOY_REF=%q DEPLOY_PATH=%q POSTDEPLOY_BASE_URL=%q POSTDEPLOY_RESTORE_DRILL=%q' "$DEPLOY_REF" "$DEPLOY_PATH" "$POSTDEPLOY_BASE_URL" "$POSTDEPLOY_RESTORE_DRILL")"
+          ssh -i ~/.ssh/id_c2p_deploy \
+            -p "$SSH_PORT" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$SSH_USER@$SSH_HOST" \
+            "$remote_env bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+          cd "$DEPLOY_PATH"
+
+          previous_ref="$(git rev-parse --verify HEAD 2>/dev/null || true)"
+          git fetch --all --tags --prune
+          git checkout --detach "$DEPLOY_REF"
+          chmod +x ops/scripts/deploy-production.sh ops/scripts/rollback-production.sh
+
+          C2P_PREVIOUS_REF="$previous_ref" \
+          SKIP_GIT_CHECKOUT=true \
+          POSTDEPLOY_BASE_URL="$POSTDEPLOY_BASE_URL" \
+          ./ops/scripts/deploy-production.sh
+          REMOTE

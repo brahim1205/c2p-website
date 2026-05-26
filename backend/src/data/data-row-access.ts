@@ -1,4 +1,4 @@
-import type { AuthUser } from '../auth/auth.store.js';
+import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import type { Row } from './mock-store.js';
 import { ADMIN_ONLY_TABLES, canReadWithoutAuth } from './data-access-policy.js';
 import { isConversationAllowedForActor } from './data-messaging-policy.js';
@@ -57,7 +57,7 @@ export function filterRowsForActor(
     return rows;
   }
 
-  if (user.role === 'admin') {
+  if (isAdminRole(user)) {
     return rows;
   }
 
@@ -105,6 +105,7 @@ export function filterRowsForActor(
       }
       return [];
     case 'lesson_progress':
+    case 'course_quiz_attempts':
       if (user.role === 'apprenant') {
         return rows.filter((row) => String(row.student_id) === user.id);
       }
@@ -113,6 +114,11 @@ export function filterRowsForActor(
       }
       if (user.role === 'parent') {
         return rows.filter((row) => linkedStudentIds.includes(String(row.student_id)));
+      }
+      return [];
+    case 'course_wizard_drafts':
+      if (user.role === 'formateur') {
+        return rows.filter((row) => String(row.user_id) === user.id);
       }
       return [];
     case 'course_reviews':
@@ -318,7 +324,6 @@ export function filterRowsForActor(
       }
       return [];
     default:
-      if (ADMIN_ONLY_TABLES.has(table)) return [];
-      return rows;
+      return [];
   }
 }

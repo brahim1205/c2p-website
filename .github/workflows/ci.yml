@@ -13,10 +13,27 @@ on:
       - published
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-test-security:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     env:
       NODE_ENV: test
       PORT: 3003
@@ -71,6 +88,67 @@ jobs:
         working-directory: front
         run: npm audit --omit=dev --audit-level=high
 
+      - name: Architecture guard
+        run: node ops/scripts/architecture-check.mjs
+
+      - name: CI governance guard
+        run: node ops/scripts/ci-governance-check.mjs
+
+      - name: Production runtime guard
+        working-directory: backend
+        run: npm run production:runtime:check
+
+      - name: Production compose guard
+        working-directory: backend
+        run: npm run production:compose:check -- --compose-env ops/env/compose.production.env.example
+
+      - name: Production ops script syntax
+        run: |
+          bash -n ops/scripts/deploy-production.sh
+          bash -n ops/scripts/rollback-production.sh
+          bash -n ops/scripts/postgres-backup.sh
+          bash -n ops/scripts/postgres-restore.sh
+          node --check ops/scripts/postgres-backup-check.mjs
+          node --check ops/scripts/postgres-restore-drill.mjs
+          node --check ops/scripts/prepare-production-env.mjs
+          node --check ops/scripts/production-env-set.mjs
+          node --check ops/scripts/production-env-status.mjs
+          node --check ops/scripts/production-external-providers-check.mjs
+          node --check ops/scripts/production-readiness-report.mjs
+          node --check ops/scripts/production-postdeploy-check.mjs
+          node --check front/scripts/state-boundary-check.mjs
+
+      - name: Production postdeploy static guard
+        working-directory: backend
+        run: >
+          npm run production:postdeploy --
+          --skip-compose-ps
+          --skip-http
+          --skip-monitoring
+          --skip-upload-metadata-audit
+          --skip-upload-temp-cleanup
+          --skip-backup-check
+
+      - name: Validate Prisma schema
+        working-directory: backend
+        run: npm run prisma:validate
+
+      - name: Prepare PostgreSQL schema
+        working-directory: backend
+        run: npx prisma db push --skip-generate
+
+      - name: Apply database hardening checks
+        working-directory: backend
+        run: npm run db:ledger-immutability:local
+
+      - name: Seed PostgreSQL with platform data
+        working-directory: backend
+        run: npm run db:seed:local
+
+      - name: Check PostgreSQL connection
+        working-directory: backend
+        run: npm run db:check
+
       - name: Lint backend
         working-directory: backend
         run: npm run lint
@@ -79,9 +157,17 @@ jobs:
         working-directory: front
         run: npm run lint
 
+      - name: Frontend state boundary guard
+        working-directory: front
+        run: npm run state:check
+
       - name: Build backend
         working-directory: backend
         run: npm run build
+
+      - name: Backend legacy data mode checks
+        working-directory: backend
+        run: npm run data:legacy-mode:test
 
       - name: Type-check frontend
         working-directory: front
@@ -90,6 +176,10 @@ jobs:
       - name: Build frontend
         working-directory: front
         run: npm run build
+
+      - name: Frontend bundle budget
+        working-directory: front
+        run: npm run bundle:budget
 
       - name: Build backend image
         run: docker build --pull -t c2p-backend:ci ./backend
@@ -157,6 +247,26 @@ jobs:
       - name: Backend security checks
         working-directory: backend
         run: npm run security:test
+
+      - name: Backend finance domain checks
+        working-directory: backend
+        run: npm run finance:validate
+
+      - name: Backend upload policy checks
+        working-directory: backend
+        run: npm run uploads:validate
+
+      - name: Backend email provider checks
+        working-directory: backend
+        run: npm run email:provider:check
+
+      - name: Swagger contract check
+        working-directory: backend
+        run: npm run swagger:check
+
+      - name: Backend API flow checks
+        working-directory: backend
+        run: npm run http:checks
 
       - name: Frontend smoke test
         working-directory: front

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -8,46 +9,37 @@ import {
   expressPartnerInterestAndNotify,
   fetchPartnerDashboardSnapshot,
   type PartnerType,
-  type Collaboration,
   type ProjectRecord,
-  type TrackedProject,
 } from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
+import { queryKeys } from '@/lib/queryKeys';
 
 function getPartnerTypeLabel(type: string | null | undefined) {
   return type === 'technique' ? 'Technique' : 'Financier';
 }
 
 export default function PartenaireDashboardPage() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [trackedProjects, setTrackedProjects] = useState<TrackedProject[]>([]);
-  const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
-  const [openProjects, setOpenProjects] = useState<ProjectRecord[]>([]);
 
-  const loadDashboard = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const snapshot = await fetchPartnerDashboardSnapshot(user.id);
-      setTrackedProjects(snapshot.trackedProjects);
-      setCollaborations(snapshot.collaborations);
-      setOpenProjects(snapshot.openProjects.slice(0, 4));
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger le tableau de bord partenaire.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.partenaire.dashboard(user?.id),
+    queryFn: () => fetchPartnerDashboardSnapshot(user!.id),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+    if (dashboardQuery.isError) {
+      console.error(dashboardQuery.error);
+      error('Erreur', 'Impossible de charger le tableau de bord partenaire.');
+    }
+  }, [dashboardQuery.error, dashboardQuery.isError, error]);
+
+  const loading = dashboardQuery.isLoading;
+  const trackedProjects = useMemo(() => dashboardQuery.data?.trackedProjects ?? [], [dashboardQuery.data?.trackedProjects]);
+  const collaborations = useMemo(() => dashboardQuery.data?.collaborations ?? [], [dashboardQuery.data?.collaborations]);
+  const openProjects = useMemo(() => dashboardQuery.data?.openProjects.slice(0, 4) ?? [], [dashboardQuery.data?.openProjects]);
 
   const stats = useMemo(() => {
     const invested = trackedProjects.reduce((sum, tracked) => sum + Number(tracked.invested_amount || 0), 0);
@@ -109,7 +101,7 @@ export default function PartenaireDashboardPage() {
           ? 'Ce projet fait deja partie de vos suivis ou de vos collaborations.'
           : 'L equipe C2P a ete notifiee et le projet a ete ajoute a vos suivis.',
       );
-      loadDashboard();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.partenaire.root(user.id) });
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de manifester votre interet.');

@@ -42,7 +42,7 @@ export default function LoginPage() {
       return;
     }
 
-    success('Connexion réussie', 'Vous êtes connecté. Redirection en cours...');
+    success('Connexion réussie', 'Vous êtes connecté.');
     const target = location.state?.from || getDashboardPathForRole(result.user?.role || 'client');
     setTimeout(() => navigate(target), 800);
   };

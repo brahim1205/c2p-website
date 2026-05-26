@@ -4,6 +4,8 @@ npm-debug.log
 dist
 .env
 .env.local
+storage/uploads
+storage/uploads/**
 **/*.test.ts
 **/*.spec.ts
 .vscode

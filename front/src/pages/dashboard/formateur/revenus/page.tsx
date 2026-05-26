@@ -1,105 +1,90 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { fetchFormateurRevenueSnapshot } from '@/lib/formateurDashboardApi';
-import { getPayoutStatusLabel, getPayoutStatusTone } from '@/lib/paymentStatus';
+import { queryKeys } from '@/lib/queryKeys';
 import {
   createPayoutAccount,
   createPayoutRequest,
   setDefaultPayoutAccount,
 } from '@/lib/paymentsApi';
 import { type PayoutAccount, type PayoutRequest } from '@/lib/saasApi';
-
-interface CourseRevenue {
-  id: string | number;
-  title: string;
-  revenue: number;
-  students_count: number;
-  current_price?: number;
-}
-
-type SupportedPayoutMethod = 'bank' | 'paypal' | 'orange_money' | 'wave' | 'free_money' | 'mtn_money';
-
-const methodLabels: Record<SupportedPayoutMethod, string> = {
-  bank: 'Virement bancaire',
-  paypal: 'PayPal',
-  orange_money: 'Orange Money',
-  wave: 'Wave',
-  free_money: 'Free Money',
-  mtn_money: 'MTN Mobile Money',
-};
-
-function getMethodLabel(method: string) {
-  return methodLabels[method as SupportedPayoutMethod] ?? method;
-}
-
-const emptyAccountForm = {
-  method: 'bank' as SupportedPayoutMethod,
-  account_name: '',
-  account_identifier: '',
-  label: '',
-  is_default: false,
-};
+import {
+  AccountFormPanel,
+  CourseRevenuePanel,
+  PayoutAccountsPanel,
+  PayoutBreakdownGrid,
+  PayoutRequestFormPanel,
+  PayoutRequestsPanel,
+  RevenueTotalsGrid,
+} from './RevenuePanels';
+import {
+  buildPayoutBreakdown,
+  buildRevenueTotals,
+  emptyAccountForm,
+  type RevenueSnapshot,
+} from './revenueModel';
 
 export default function FormateurRevenuePage() {
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [savingAccount, setSavingAccount] = useState(false);
   const [requestingPayout, setRequestingPayout] = useState(false);
-  const [courses, setCourses] = useState<CourseRevenue[]>([]);
-  const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
-  const [requests, setRequests] = useState<PayoutRequest[]>([]);
   const [accountForm, setAccountForm] = useState(emptyAccountForm);
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [payoutAmount, setPayoutAmount] = useState('');
   const [payoutNote, setPayoutNote] = useState('');
 
-  const loadPage = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const snapshot = await fetchFormateurRevenueSnapshot(user.id);
-      const nextAccounts = snapshot.accounts || [];
-      setCourses(snapshot.courses as CourseRevenue[]);
-      setAccounts(nextAccounts);
-      setRequests(snapshot.requests || []);
-      setSelectedAccountId(nextAccounts.find((item) => item.is_default)?.id || nextAccounts[0]?.id || '');
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les revenus formateur.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+  const revenueQueryKey = useMemo(() => queryKeys.formateur.revenue(user?.id), [user?.id]);
+  const {
+    data: revenueSnapshot,
+    isLoading: loading,
+    isError,
+    error: revenueError,
+  } = useQuery({
+    queryKey: revenueQueryKey,
+    queryFn: async () => fetchFormateurRevenueSnapshot(user?.id ?? '') as Promise<RevenueSnapshot>,
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    void loadPage();
-  }, [loadPage]);
+    if (isError) {
+      error('Erreur', 'Impossible de charger les revenus formateur.');
+      console.error(revenueError);
+    }
+  }, [error, isError, revenueError]);
 
-  const totals = useMemo(() => {
-    const grossRevenue = courses.reduce((sum, course) => sum + Number(course.revenue || 0), 0);
-    const paidOut = requests.filter((item) => item.status === 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const pending = requests.filter((item) => item.status === 'pending' || item.status === 'approved').reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    return {
-      grossRevenue,
-      paidOut,
-      pending,
-      available: Math.max(grossRevenue - paidOut - pending, 0),
-    };
-  }, [courses, requests]);
+  useEffect(() => {
+    const nextAccounts = revenueSnapshot?.accounts || [];
+    if (nextAccounts.length === 0) {
+      setSelectedAccountId('');
+      return;
+    }
+    if (selectedAccountId && nextAccounts.some((item) => item.id === selectedAccountId)) {
+      return;
+    }
+    setSelectedAccountId(nextAccounts.find((item) => item.is_default)?.id || nextAccounts[0]?.id || '');
+  }, [revenueSnapshot?.accounts, selectedAccountId]);
 
-  const payoutBreakdown = useMemo(() => ({
-    pending: requests.filter((item) => item.status === 'pending').length,
-    approved: requests.filter((item) => item.status === 'approved').length,
-    paid: requests.filter((item) => item.status === 'paid').length,
-    rejected: requests.filter((item) => item.status === 'rejected').length,
-  }), [requests]);
+  const courses = useMemo(() => revenueSnapshot?.courses || [], [revenueSnapshot?.courses]);
+  const accounts = useMemo(() => revenueSnapshot?.accounts || [], [revenueSnapshot?.accounts]);
+  const requests = useMemo(() => revenueSnapshot?.requests || [], [revenueSnapshot?.requests]);
+
+  const refreshRevenue = async () => {
+    await queryClient.invalidateQueries({ queryKey: revenueQueryKey });
+  };
+
+  const totals = useMemo(() => buildRevenueTotals(courses, requests), [courses, requests]);
+
+  const payoutBreakdown = useMemo(() => buildPayoutBreakdown(requests), [requests]);
+
+  const updateAccountForm = (patch: Partial<typeof accountForm>) => {
+    setAccountForm((current) => ({ ...current, ...patch }));
+  };
 
   const createAccount = async () => {
     if (!user?.id) return;
@@ -115,7 +100,7 @@ export default function FormateurRevenuePage() {
       });
       success('Compte ajouté', 'Le compte de retrait a été enregistré.');
       setAccountForm(emptyAccountForm);
-      await loadPage();
+      await refreshRevenue();
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible d’enregistrer le compte de retrait.');
@@ -128,7 +113,7 @@ export default function FormateurRevenuePage() {
     try {
       await setDefaultPayoutAccount(account.id);
       success('Compte principal mis à jour', `Le compte "${account.label}" devient le compte par défaut.`);
-      await loadPage();
+      await refreshRevenue();
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible de définir ce compte comme principal.');
@@ -161,7 +146,7 @@ export default function FormateurRevenuePage() {
       success('Demande envoyée', 'La demande de retrait a été enregistrée.');
       setPayoutAmount('');
       setPayoutNote('');
-      await loadPage();
+      await refreshRevenue();
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible d’enregistrer la demande de retrait.');
@@ -180,144 +165,34 @@ export default function FormateurRevenuePage() {
           <p className="mt-2 text-gray-600">Suivez vos ventes, vos comptes de retrait et les versements en attente.</p>
         </div>
 
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {[
-            { label: 'Revenus bruts', value: `${totals.grossRevenue.toLocaleString('fr-FR')} FCFA`, color: 'text-gray-900' },
-            { label: 'Disponible', value: `${totals.available.toLocaleString('fr-FR')} FCFA`, color: 'text-emerald-700' },
-            { label: 'En attente', value: `${totals.pending.toLocaleString('fr-FR')} FCFA`, color: 'text-amber-700' },
-            { label: 'Déjà versé', value: `${totals.paidOut.toLocaleString('fr-FR')} FCFA`, color: 'text-blue-700' },
-          ].map((item) => (
-            <div key={item.label} className="rounded-xl border border-gray-200 bg-white p-5">
-              <div className="text-sm text-gray-500">{item.label}</div>
-              <div className={`mt-2 text-2xl font-bold ${item.color}`}>{item.value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-            <div className="text-sm text-amber-700">Demandes en attente</div>
-            <div className="mt-2 text-2xl font-bold text-amber-900">{payoutBreakdown.pending}</div>
-          </div>
-          <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-            <div className="text-sm text-blue-700">Approuvées</div>
-            <div className="mt-2 text-2xl font-bold text-blue-900">{payoutBreakdown.approved}</div>
-          </div>
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-            <div className="text-sm text-emerald-700">Payées</div>
-            <div className="mt-2 text-2xl font-bold text-emerald-900">{payoutBreakdown.paid}</div>
-          </div>
-          <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-            <div className="text-sm text-red-700">Rejetées</div>
-            <div className="mt-2 text-2xl font-bold text-red-900">{payoutBreakdown.rejected}</div>
-          </div>
-        </div>
+        <RevenueTotalsGrid totals={totals} />
+        <PayoutBreakdownGrid breakdown={payoutBreakdown} />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
           <div className="space-y-6">
-            <section className="rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Formations les plus contributrices</h2>
-              <div className="space-y-3">
-                {(loading ? [] : courses).map((course) => (
-                  <div key={course.id} className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3">
-                    <div>
-                      <div className="font-medium text-gray-900">{course.title}</div>
-                      <div className="text-sm text-gray-500">{course.students_count} apprenants</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-gray-900">{Number(course.revenue || 0).toLocaleString('fr-FR')} FCFA</div>
-                      <div className="text-xs text-gray-500">{Number(course.current_price || 0).toLocaleString('fr-FR')} FCFA / inscription</div>
-                    </div>
-                  </div>
-                ))}
-                {!loading && courses.length === 0 ? <p className="text-sm text-gray-500">Aucune donnée de revenu disponible pour le moment.</p> : null}
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Historique des retraits</h2>
-              <div className="space-y-3">
-                {requests.map((request) => (
-                  <div key={request.id} className="rounded-xl border border-gray-200 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <div className="font-medium text-gray-900">{Number(request.amount).toLocaleString('fr-FR')} {request.currency}</div>
-                        <div className="text-sm text-gray-500">{request.account_label || getMethodLabel(request.method)}</div>
-                        <div className="mt-1 text-xs text-gray-500">Demandé le {new Date(request.requested_at).toLocaleDateString('fr-FR')}</div>
-                      </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${getPayoutStatusTone(request.status)}`}>
-                        {getPayoutStatusLabel(request.status)}
-                      </span>
-                    </div>
-                    {request.note ? <p className="mt-3 text-sm text-gray-600">{request.note}</p> : null}
-                  </div>
-                ))}
-                {!requests.length ? <p className="text-sm text-gray-500">Aucune demande de retrait pour le moment.</p> : null}
-              </div>
-            </section>
+            <CourseRevenuePanel courses={courses} loading={loading} />
+            <PayoutRequestsPanel requests={requests} />
           </div>
 
           <div className="space-y-6">
-            <section className="rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Comptes de retrait</h2>
-              <div className="space-y-3">
-                {accounts.map((account) => (
-                  <div key={account.id} className="rounded-xl border border-gray-200 p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="font-medium text-gray-900">{account.label}</div>
-                        <div className="text-sm text-gray-500">{getMethodLabel(account.method)}</div>
-                        <div className="mt-1 text-xs text-gray-500">{account.account_name} • {account.account_identifier}</div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        {account.is_default ? (
-                          <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-medium text-teal-700">Par défaut</span>
-                        ) : (
-                          <button onClick={() => void markAsDefault(account)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                            Définir par défaut
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {!accounts.length ? <p className="text-sm text-gray-500">Ajoutez au moins un compte de retrait.</p> : null}
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Ajouter un compte</h2>
-              <div className="space-y-4">
-                <select value={accountForm.method} onChange={(e) => setAccountForm((current) => ({ ...current, method: e.target.value as SupportedPayoutMethod }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none">
-                  {Object.entries(methodLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-                <input value={accountForm.account_name} onChange={(e) => setAccountForm((current) => ({ ...current, account_name: e.target.value }))} placeholder="Nom du bénéficiaire" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" />
-                <input value={accountForm.account_identifier} onChange={(e) => setAccountForm((current) => ({ ...current, account_identifier: e.target.value }))} placeholder="IBAN, numéro ou identifiant" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" />
-                <input value={accountForm.label} onChange={(e) => setAccountForm((current) => ({ ...current, label: e.target.value }))} placeholder="Libellé interne" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" />
-                <label className="flex items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-700">
-                  <input type="checkbox" checked={accountForm.is_default} onChange={(e) => setAccountForm((current) => ({ ...current, is_default: e.target.checked }))} className="rounded border-gray-300 text-teal-600 focus:ring-teal-500" />
-                  Compte principal
-                </label>
-                <button onClick={() => void createAccount()} disabled={savingAccount} className="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50">
-                  {savingAccount ? 'Enregistrement...' : 'Ajouter le compte'}
-                </button>
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Demander un retrait</h2>
-              <div className="space-y-4">
-                <select value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none">
-                  <option value="">Sélectionner un compte</option>
-                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.label} • {getMethodLabel(account.method)}</option>)}
-                </select>
-                <input type="number" min={1000} value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} placeholder="Montant à retirer (FCFA)" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" />
-                <textarea value={payoutNote} onChange={(e) => setPayoutNote(e.target.value)} rows={3} placeholder="Note interne ou contexte du retrait" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" />
-                <button onClick={() => void requestPayout()} disabled={requestingPayout || !accounts.length} className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50">
-                  {requestingPayout ? 'Envoi...' : 'Envoyer la demande'}
-                </button>
-              </div>
-            </section>
+            <PayoutAccountsPanel accounts={accounts} onDefault={(account) => void markAsDefault(account)} />
+            <AccountFormPanel
+              accountForm={accountForm}
+              savingAccount={savingAccount}
+              onCreateAccount={() => void createAccount()}
+              onFormChange={updateAccountForm}
+            />
+            <PayoutRequestFormPanel
+              accounts={accounts}
+              payoutAmount={payoutAmount}
+              payoutNote={payoutNote}
+              requestingPayout={requestingPayout}
+              selectedAccountId={selectedAccountId}
+              onAmountChange={setPayoutAmount}
+              onNoteChange={setPayoutNote}
+              onRequestPayout={() => void requestPayout()}
+              onSelectedAccountChange={setSelectedAccountId}
+            />
           </div>
         </div>
       </div>

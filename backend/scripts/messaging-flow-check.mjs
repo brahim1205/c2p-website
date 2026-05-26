@@ -51,16 +51,16 @@ async function readJson(path, init = {}) {
 }
 
 async function main() {
-  const anonymousConversations = await request('/data/conversations');
+  const anonymousConversations = await request('/messaging/conversations');
   assert(anonymousConversations.status === 401, `expected 401 on anonymous conversations, got ${anonymousConversations.status}`);
 
-  const anonymousMessages = await request('/data/messages');
+  const anonymousMessages = await request('/messaging/conversations/conv-apprenant-formateur/messages');
   assert(anonymousMessages.status === 401, `expected 401 on anonymous messages, got ${anonymousMessages.status}`);
 
   const { cookieJar: apprenantCookies, csrfToken: apprenantCsrf } = await loginAs('apprenant@c2p.sn');
   assert(apprenantCsrf, 'missing csrf cookie for apprenant');
 
-  const apprenantConversations = await readJson('/data/conversations', {
+  const apprenantConversations = await readJson('/messaging/conversations', {
     headers: { Cookie: apprenantCookies },
   });
   assert(apprenantConversations.response.ok, `expected 200 on apprenant conversations, got ${apprenantConversations.response.status}`);
@@ -75,7 +75,24 @@ async function main() {
   ) ?? apprenantConversations.payload[0];
   assert(targetConversation, 'expected seeded apprenant conversation');
 
-  const spoofConversation = await request('/data/conversations', {
+  const legacyDataConversationWrite = await request('/data/conversations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: apprenantCookies,
+      'X-CSRF-Token': apprenantCsrf,
+    },
+    body: JSON.stringify({
+      name: 'Conversation legacy',
+      role: 'Support',
+      participants: ['usr-apprenant', 'usr-formateur'],
+      type: 'individual',
+      members: 2,
+    }),
+  });
+  assert(legacyDataConversationWrite.status === 400, `expected 400 on legacy /data conversation write, got ${legacyDataConversationWrite.status}`);
+
+  const spoofConversation = await request('/messaging/conversations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -94,7 +111,7 @@ async function main() {
 
   const { cookieJar: clientCookies, csrfToken: clientCsrf } = await loginAs('client@c2p.sn');
   assert(clientCsrf, 'missing csrf cookie for client');
-  const clientSupportConversation = await readJson('/data/conversations', {
+  const clientSupportConversation = await readJson('/messaging/conversations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -111,7 +128,7 @@ async function main() {
   });
   assert(clientSupportConversation.response.ok, `expected 200 on client support conversation, got ${clientSupportConversation.response.status}`);
 
-  const forbiddenClientConversation = await request('/data/conversations', {
+  const forbiddenClientConversation = await request('/messaging/conversations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -130,7 +147,7 @@ async function main() {
 
   const { cookieJar: prestataireCookies, csrfToken: prestataireCsrf } = await loginAs('prestataire@c2p.sn');
   assert(prestataireCsrf, 'missing csrf cookie for prestataire');
-  const prestataireSupportConversation = await readJson('/data/conversations', {
+  const prestataireSupportConversation = await readJson('/messaging/conversations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -147,7 +164,7 @@ async function main() {
   });
   assert(prestataireSupportConversation.response.ok, `expected 200 on prestataire support conversation, got ${prestataireSupportConversation.response.status}`);
 
-  const forbiddenPrestataireConversation = await request('/data/conversations', {
+  const forbiddenPrestataireConversation = await request('/messaging/conversations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -164,16 +181,27 @@ async function main() {
   });
   assert(forbiddenPrestataireConversation.status === 401, `expected 401 on prestataire direct conversation, got ${forbiddenPrestataireConversation.status}`);
 
-  const apprenantMessages = await readJson(`/data/messages?eq_conversation_id=${encodeURIComponent(String(targetConversation.id))}`, {
+  const apprenantMessages = await readJson(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
     headers: { Cookie: apprenantCookies },
   });
   assert(apprenantMessages.response.ok, `expected 200 on apprenant messages, got ${apprenantMessages.response.status}`);
   assert(
-    apprenantMessages.payload.every((row) => String(row.conversation_id) === String(targetConversation.id)),
+    apprenantMessages.payload.every((row) => String(row.conversationId) === String(targetConversation.id)),
     'apprenant messages must stay within the selected conversation',
   );
 
-  const spoofMessage = await request('/data/messages', {
+  const clientConversationIntrusion = await request(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: clientCookies,
+      'X-CSRF-Token': clientCsrf,
+    },
+    body: JSON.stringify({ content: 'message invalide' }),
+  });
+  assert(clientConversationIntrusion.status === 401, `expected 401 on non participant message, got ${clientConversationIntrusion.status}`);
+
+  const spoofMessage = await readJson(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -181,18 +209,18 @@ async function main() {
       'X-CSRF-Token': apprenantCsrf,
     },
     body: JSON.stringify({
-      conversation_id: targetConversation.id,
       sender_id: 'usr-formateur',
       sender_name: 'Intrus',
       content: 'message invalide',
     }),
   });
-  assert(spoofMessage.status === 401, `expected 401 on sender spoof, got ${spoofMessage.status}`);
+  assert(spoofMessage.response.ok, `expected 200 on sanitized sender spoof payload, got ${spoofMessage.response.status}`);
+  assert(String(spoofMessage.payload.senderId) === 'usr-apprenant', 'message sender identity must be enforced from the session');
 
   const { cookieJar: formateurCookies, csrfToken: formateurCsrf } = await loginAs('formateur@c2p.sn');
   assert(formateurCsrf, 'missing csrf cookie for formateur');
   const providerMessageContent = `smoke-support-${Date.now()}`;
-  const providerMessage = await readJson('/data/messages', {
+  const providerMessage = await readJson(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -200,17 +228,14 @@ async function main() {
       'X-CSRF-Token': formateurCsrf,
     },
     body: JSON.stringify({
-      conversation_id: targetConversation.id,
-      sender_id: 'usr-formateur',
-      sender_name: 'Aminata Diop',
       content: providerMessageContent,
     }),
   });
   assert(providerMessage.response.ok, `expected 200 on formateur send, got ${providerMessage.response.status}`);
-  assert(String(providerMessage.payload.sender_id) === 'usr-formateur', 'formateur message must keep the sender identity');
+  assert(String(providerMessage.payload.senderId) === 'usr-formateur', 'formateur message must keep the sender identity');
 
   const markedRead = await readJson(
-    `/data/messages?eq_conversation_id=${encodeURIComponent(String(targetConversation.id))}&eq_read=false&neq_sender_id=usr-apprenant`,
+    `/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/read`,
     {
       method: 'PATCH',
       headers: {
@@ -218,11 +243,10 @@ async function main() {
         Cookie: apprenantCookies,
         'X-CSRF-Token': apprenantCsrf,
       },
-      body: JSON.stringify({ read: true }),
     },
   );
   assert(markedRead.response.ok, `expected 200 on mark-as-read, got ${markedRead.response.status}`);
-  const apprenantMessagesAfterRead = await readJson(`/data/messages?eq_conversation_id=${encodeURIComponent(String(targetConversation.id))}`, {
+  const apprenantMessagesAfterRead = await readJson(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
     headers: { Cookie: apprenantCookies },
   });
   assert(apprenantMessagesAfterRead.response.ok, `expected 200 on post-read fetch, got ${apprenantMessagesAfterRead.response.status}`);
@@ -230,7 +254,7 @@ async function main() {
   assert(updatedProviderMessage && updatedProviderMessage.read === true, 'apprenant mark-as-read must update unread counterpart messages');
 
   const learnerMessageContent = `smoke-reply-${Date.now()}`;
-  const learnerMessage = await readJson('/data/messages', {
+  const learnerMessage = await readJson(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -238,15 +262,12 @@ async function main() {
       'X-CSRF-Token': apprenantCsrf,
     },
     body: JSON.stringify({
-      conversation_id: targetConversation.id,
-      sender_id: 'usr-apprenant',
-      sender_name: 'Ibrahim Toure',
       content: learnerMessageContent,
     }),
   });
   assert(learnerMessage.response.ok, `expected 200 on apprenant send, got ${learnerMessage.response.status}`);
 
-  const formateurMessages = await readJson(`/data/messages?eq_conversation_id=${encodeURIComponent(String(targetConversation.id))}`, {
+  const formateurMessages = await readJson(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
     headers: { Cookie: formateurCookies },
   });
   assert(formateurMessages.response.ok, `expected 200 on formateur messages, got ${formateurMessages.response.status}`);

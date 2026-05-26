@@ -13,6 +13,12 @@ import { PaymentsModule } from './payments/payments.module.js';
 import { CommunicationsModule } from './communications/communications.module.js';
 import { OutboxModule } from './outbox/outbox.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
+import { ProjectCenterModule } from './project-center/project-center.module.js';
+import { LearningModule } from './learning/learning.module.js';
+import { MarketplaceModule } from './marketplace/marketplace.module.js';
+import { AdminModule } from './admin/admin.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
+import { MessagingModule } from './messaging/messaging.module.js';
 
 @Module({
   imports: [
@@ -28,6 +34,12 @@ import { UploadsModule } from './uploads/uploads.module.js';
     CommunicationsModule,
     OutboxModule,
     UploadsModule,
+    ProjectCenterModule,
+    LearningModule,
+    MarketplaceModule,
+    AdminModule,
+    NotificationsModule,
+    MessagingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

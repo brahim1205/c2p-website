@@ -1,19 +1,26 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { changeAccountPassword, fetchProfile, fetchSecurity, updateProfile } from '@/lib/accountApi';
-import { ROLE_LABELS } from '@/lib/roles';
-import { formatDateTime } from '@/lib/formatters';
-import AvatarUpload from '@/components/base/AvatarUpload';
+import { queryKeys } from '@/lib/queryKeys';
+import { AdminProfileHeader } from './AdminProfileHeader';
+import {
+  AdminIdentitySection,
+  AdminSecuritySection,
+  AdminSessionsSection,
+  type AdminPasswordFormData,
+  type AdminProfileFormData,
+} from './AdminProfileSections';
 
 export default function AdminProfilePage() {
   const { user, updateUser } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AdminProfileFormData>({
     firstName: '',
     lastName: '',
     email: '',
@@ -22,26 +29,30 @@ export default function AdminProfilePage() {
     bio: '',
     avatar: '',
   });
-  const [passwordForm, setPasswordForm] = useState({
+  const [passwordForm, setPasswordForm] = useState<AdminPasswordFormData>({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
-  const [sessions, setSessions] = useState<{ id: string; device: string; location: string; lastActive: string; current: boolean }[]>([]);
 
-  const loadProfile = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
+  const profileQuery = useQuery({
+    queryKey: queryKeys.account.profile(user?.id),
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      if (!user?.id) {
+        throw new Error('Utilisateur non connecté');
+      }
       const [profile, security] = await Promise.all([
         fetchProfile(user.id),
         fetchSecurity(user.id),
       ]);
+      return { profile, security };
+    },
+  });
 
+  useEffect(() => {
+    if (profileQuery.data?.profile) {
+      const { profile } = profileQuery.data;
       setFormData({
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -51,18 +62,18 @@ export default function AdminProfilePage() {
         bio: profile.bio || '',
         avatar: profile.avatar || '',
       });
-      setSessions(security.sessions);
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger le profil administrateur.');
-    } finally {
-      setLoading(false);
     }
-  }, [error, user?.id]);
+  }, [profileQuery.data]);
 
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    if (profileQuery.isError) {
+      console.error(profileQuery.error);
+      error('Erreur', 'Impossible de charger le profil administrateur.');
+    }
+  }, [error, profileQuery.error, profileQuery.isError]);
+
+  const loading = profileQuery.isLoading;
+  const sessions = useMemo(() => profileQuery.data?.security.sessions ?? [], [profileQuery.data?.security.sessions]);
 
   const handleAvatarChange = async (url: string) => {
     if (!user?.id) return;
@@ -72,6 +83,7 @@ export default function AdminProfilePage() {
 
     try {
       await updateProfile(user.id, { avatar: url });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.account.profile(user.id) });
     } catch (err) {
       console.error(err);
       error('Erreur', 'La photo de profil administrateur n a pas pu etre enregistree.');
@@ -85,6 +97,7 @@ export default function AdminProfilePage() {
     try {
       const updated = await updateProfile(user.id, formData);
       updateUser(updated);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.account.profile(user.id) });
       setIsEditing(false);
       success('Profil mis a jour', 'Les informations administrateur ont ete enregistrees.');
     } catch (err) {
@@ -108,7 +121,7 @@ export default function AdminProfilePage() {
       await changeAccountPassword(user.id, passwordForm.currentPassword, passwordForm.newPassword);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       success('Mot de passe mis a jour', 'Le mot de passe administrateur a ete change.');
-      loadProfile();
+      void profileQuery.refetch();
     } catch (err) {
       console.error(err);
       error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n a pas pu etre modifie.');
@@ -120,182 +133,22 @@ export default function AdminProfilePage() {
       <div className="max-w-5xl mx-auto">
         <Breadcrumb items={[{ label: 'Admin', path: '/admin/dashboard' }, { label: 'Profil' }]} />
 
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Profil administrateur</h1>
-            <p className="text-gray-600 mt-1">Coordonnees, presentation et securite du compte admin.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsEditing((prev) => !prev)}
-            aria-pressed={isEditing}
-            className="px-5 py-2.5 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b]"
-          >
-            {isEditing ? 'Annuler' : 'Modifier'}
-          </button>
-        </div>
+        <AdminProfileHeader isEditing={isEditing} onToggleEditing={() => setIsEditing((prev) => !prev)} />
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <section className="bg-white rounded-2xl border border-gray-200 p-6">
-            <div className="flex items-center gap-4 pb-6 border-b border-gray-100">
-              <AvatarUpload
-                src={formData.avatar || null}
-                initials={userInitials}
-                size="lg"
-                editable={isEditing}
-                onChange={handleAvatarChange}
-              />
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">{formData.firstName} {formData.lastName}</h2>
-                <p className="text-gray-600">{formData.email}</p>
-                <span className="inline-flex mt-2 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700 border border-red-100">
-                  {user?.role ? ROLE_LABELS[user.role] : 'Administrateur'}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-4 mt-6 md:grid-cols-2">
-              <div>
-                <label htmlFor="admin-profile-first-name" className="block text-sm font-medium text-gray-700 mb-1">Prenom</label>
-                <input
-                  id="admin-profile-first-name"
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
-                  disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                />
-              </div>
-              <div>
-                <label htmlFor="admin-profile-last-name" className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
-                <input
-                  id="admin-profile-last-name"
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
-                  disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                />
-              </div>
-              <div>
-                <label htmlFor="admin-profile-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  id="admin-profile-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                  disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                />
-              </div>
-              <div>
-                <label htmlFor="admin-profile-phone" className="block text-sm font-medium text-gray-700 mb-1">Telephone</label>
-                <input
-                  id="admin-profile-phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                  disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label htmlFor="admin-profile-location" className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
-                <input
-                  id="admin-profile-location"
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
-                  disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label htmlFor="admin-profile-bio" className="block text-sm font-medium text-gray-700 mb-1">Biographie</label>
-                <textarea
-                  id="admin-profile-bio"
-                  rows={4}
-                  value={formData.bio}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, bio: e.target.value }))}
-                  disabled={!isEditing}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm disabled:bg-gray-50 focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                />
-              </div>
-            </div>
-
-            {isEditing && (
-              <div className="mt-6 flex justify-end">
-                <button type="button" onClick={handleSave} className="px-5 py-2.5 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b]">
-                  Enregistrer
-                </button>
-              </div>
-            )}
-          </section>
+          <AdminIdentitySection
+            formData={formData}
+            isEditing={isEditing}
+            user={user}
+            userInitials={userInitials}
+            onAvatarChange={handleAvatarChange}
+            onFormChange={setFormData}
+            onSave={handleSave}
+          />
 
           <div className="space-y-6">
-            <section className="bg-white rounded-2xl border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900">Securite</h2>
-              <div className="grid gap-4 mt-5">
-                <div>
-                  <label htmlFor="admin-profile-current-password" className="block text-sm font-medium text-gray-700 mb-1">Mot de passe actuel</label>
-                  <input
-                    id="admin-profile-current-password"
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="admin-profile-new-password" className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
-                  <input
-                    id="admin-profile-new-password"
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="admin-profile-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">Confirmation</label>
-                  <input
-                    id="admin-profile-confirm-password"
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
-                  />
-                </div>
-              </div>
-              <div className="mt-5 flex justify-end">
-                <button type="button" onClick={handlePasswordChange} className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  Changer le mot de passe
-                </button>
-              </div>
-            </section>
-
-            <section className="bg-white rounded-2xl border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900">Sessions recentes</h2>
-              <div className="mt-5 space-y-3">
-                {loading && <p className="text-sm text-gray-500">Chargement des sessions...</p>}
-                {!loading && sessions.map((session) => (
-                  <div key={session.id} className="rounded-xl border border-gray-200 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-gray-900">{session.device}</p>
-                        <p className="text-sm text-gray-600">{session.location}</p>
-                        <p className="text-xs text-gray-500 mt-1">{formatDateTime(session.lastActive)}</p>
-                      </div>
-                      {session.current && (
-                        <span className="rounded-full bg-[#5fa6f3]/10 px-3 py-1 text-xs font-medium text-[#27346b]">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <AdminSecuritySection passwordForm={passwordForm} onPasswordChange={setPasswordForm} onSubmit={handlePasswordChange} />
+            <AdminSessionsSection loading={loading} sessions={sessions} />
           </div>
         </div>
       </div>

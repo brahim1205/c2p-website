@@ -10,6 +10,7 @@
 backend/dist/
 front/out/
 front/.vite/
+*.tsbuildinfo
 
 # logs and runtime
 *.log
@@ -18,7 +19,10 @@ coverage/
 .DS_Store
 backups/
 backend/storage/uploads/
+ops/env/*.env
 
 # monitoring state
 ops/grafana/data/
 ops/prometheus/data/
+ops/monitoring/prometheus/secrets/*
+!ops/monitoring/prometheus/secrets/.gitkeep

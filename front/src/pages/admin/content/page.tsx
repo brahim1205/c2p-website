@@ -1,31 +1,34 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { deleteAdminContentItem, fetchAdminContentItems, updateAdminContentItem, type AdminContentItem } from '@/lib/adminApi';
 import { downloadCsvFile } from '@/lib/downloads';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function AdminContentPage() {
+  const queryClient = useQueryClient();
   const { success, error } = useToast();
   const [activeTab, setActiveTab] = useState<'all' | 'draft' | 'pending' | 'published' | 'rejected' | 'archived'>('all');
   const [selectedContent, setSelectedContent] = useState<Array<number | string>>([]);
-  const [contents, setContents] = useState<AdminContentItem[]>([]);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<AdminContentItem | null>(null);
 
-  const loadContents = useCallback(async () => {
-    try {
-      setContents(await fetchAdminContentItems());
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les contenus admin.');
-    }
-  }, [error]);
+  const contentQuery = useQuery({
+    queryKey: queryKeys.admin.content(),
+    queryFn: fetchAdminContentItems,
+  });
 
   useEffect(() => {
-    loadContents();
-  }, [loadContents]);
+    if (contentQuery.isError) {
+      console.error(contentQuery.error);
+      error('Erreur', 'Impossible de charger les contenus admin.');
+    }
+  }, [contentQuery.error, contentQuery.isError, error]);
+
+  const contents: AdminContentItem[] = useMemo(() => contentQuery.data ?? [], [contentQuery.data]);
 
   const filteredContents = useMemo(
     () => (activeTab === 'all' ? contents : contents.filter((content) => content.status === activeTab)),
@@ -47,7 +50,8 @@ export default function AdminContentPage() {
   const mutateStatus = async (id: number | string, status: AdminContentItem['status']) => {
     try {
       const updated = await updateAdminContentItem(id, { status });
-      setContents((prev) => prev.map((content) => (content.id === id ? updated : content)));
+      queryClient.setQueryData<AdminContentItem[]>(queryKeys.admin.content(), (current = []) => current.map((content) => (content.id === id ? updated : content)));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.content() });
       const labels: Record<AdminContentItem['status'], string> = {
         draft: 'Contenu repasse en brouillon',
         pending: 'Contenu renvoye en revision',
@@ -66,7 +70,8 @@ export default function AdminContentPage() {
     try {
       const updates = await Promise.all(selectedContent.map((id) => updateAdminContentItem(id, { status })));
       const byId = new Map(updates.map((item) => [item.id, item]));
-      setContents((prev) => prev.map((content) => byId.get(content.id) ?? content));
+      queryClient.setQueryData<AdminContentItem[]>(queryKeys.admin.content(), (current = []) => current.map((content) => byId.get(content.id) ?? content));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.content() });
       setSelectedContent([]);
       success('Traitement termine', `${updates.length} contenu(x) mis a jour.`);
     } catch (err) {
@@ -79,7 +84,8 @@ export default function AdminContentPage() {
     if (!selectedItem) return;
     try {
       await deleteAdminContentItem(selectedItem.id);
-      setContents((prev) => prev.filter((content) => content.id !== selectedItem.id));
+      queryClient.setQueryData<AdminContentItem[]>(queryKeys.admin.content(), (current = []) => current.filter((content) => content.id !== selectedItem.id));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.content() });
       setShowDeleteModal(false);
       setSelectedItem(null);
       success('Contenu supprime', 'Le contenu a ete retire.');

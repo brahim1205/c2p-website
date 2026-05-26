@@ -1,68 +1,123 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { formatDate, formatDateTime } from '@/lib/formatters';
-import { downloadSimplePdf } from '@/lib/downloads';
+import { downloadCertificatePdf } from '@/lib/downloads';
 import CertificateViewer, { type CertificateData } from '../../profile/components/CertificateViewer';
 import {
   fetchApprenantCertificates,
   type ApprenantCertificate as Certificate,
 } from '@/lib/apprenantDashboardApi';
+import { queryKeys } from '@/lib/queryKeys';
 
 function formatCertificateGrade(value: number | null) {
-  return value != null ? `${value}` : '-';
+  return value != null ? `${value}/20` : '-';
+}
+
+type CertificateStatus = 'issued' | 'ready' | 'pending';
+
+type CertificateView = {
+  id: string;
+  courseName: string;
+  instructor: string;
+  grade: number | null;
+  status: CertificateStatus;
+  certificateNumber: string | null;
+  issuedAt: string | null;
+  completionDate: string | null;
+};
+
+function normalizeStatus(status: string | undefined): CertificateStatus {
+  if (status === 'issued' || status === 'active') return 'issued';
+  if (status === 'ready') return 'ready';
+  return 'pending';
+}
+
+function fromDatabaseCertificate(certificate: Certificate): CertificateView {
+  return {
+    id: `db-${certificate.id}`,
+    courseName: certificate.course_name || certificate.title || 'Formation C2P',
+    instructor: 'C2P Academy',
+    grade: certificate.final_grade ?? certificate.grade ?? null,
+    status: normalizeStatus(certificate.status),
+    certificateNumber: certificate.certificate_number || certificate.certificate_id || null,
+    issuedAt: certificate.issued_at,
+    completionDate: certificate.completion_date || null,
+  };
+}
+
+function getCertificateDate(certificate: CertificateView) {
+  return certificate.issuedAt || certificate.completionDate || '';
+}
+
+function getCertificateCompletionDate(certificate: CertificateView) {
+  return certificate.completionDate || certificate.issuedAt || '';
 }
 
 export default function ApprenantCertificatsPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'issued' | 'ready' | 'pending'>('all');
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | CertificateStatus>('all');
   const [viewerData, setViewerData] = useState<CertificateData | null>(null);
   const [showViewer, setShowViewer] = useState(false);
 
-  const loadCertificates = useCallback(async () => {
-    if (!user?.id) {
-      setCertificates([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const data = await fetchApprenantCertificates(user.id);
-      setCertificates(data);
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger vos certificats.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+  const {
+    data: databaseCertificates = [],
+    isError,
+    isLoading: loading,
+  } = useQuery<Certificate[]>({
+    queryKey: queryKeys.apprenant.certificates(user?.id),
+    queryFn: () => fetchApprenantCertificates(user?.id ?? ''),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    loadCertificates();
-  }, [loadCertificates]);
+    if (isError) {
+      error('Erreur', 'Impossible de charger vos certificats.');
+    }
+  }, [error, isError]);
+
+  const certificates = useMemo(() => {
+    const normalized = databaseCertificates.map(fromDatabaseCertificate);
+    const seen = new Set<string>();
+    return normalized
+      .filter((certificate) => {
+        const key = certificate.certificateNumber || certificate.courseName.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => new Date(getCertificateDate(b) || 0).getTime() - new Date(getCertificateDate(a) || 0).getTime());
+  }, [databaseCertificates]);
 
   const filteredCertificates = useMemo(() => {
     if (statusFilter === 'all') return certificates;
     return certificates.filter((certificate) => certificate.status === statusFilter);
   }, [certificates, statusFilter]);
 
-  const stats = useMemo(() => ({
-    issued: certificates.filter((certificate) => certificate.status === 'issued').length,
-    ready: certificates.filter((certificate) => certificate.status === 'ready').length,
-    pending: certificates.filter((certificate) => certificate.status === 'pending').length,
-    avgGrade: certificates.length
-      ? (certificates.reduce((sum, certificate) => sum + Number(certificate.final_grade ?? certificate.grade ?? 0), 0) / certificates.length).toFixed(1)
-      : '0.0',
-  }), [certificates]);
+  const stats = useMemo(() => {
+    const issuedWithGrades = certificates.filter((certificate) => certificate.status === 'issued' && certificate.grade != null);
 
-  const openViewer = (certificate: Certificate) => {
+    return {
+      issued: certificates.filter((certificate) => certificate.status === 'issued').length,
+      ready: certificates.filter((certificate) => certificate.status === 'ready').length,
+      pending: certificates.filter((certificate) => certificate.status === 'pending').length,
+      avgGrade: issuedWithGrades.length
+        ? (issuedWithGrades.reduce((sum, certificate) => sum + Number(certificate.grade), 0) / issuedWithGrades.length).toFixed(1)
+        : '0.0',
+    };
+  }, [certificates]);
+
+  const latestIssuedCertificate = useMemo(
+    () => certificates.find((certificate) => certificate.status === 'issued'),
+    [certificates],
+  );
+
+  const openViewer = (certificate: CertificateView) => {
     if (certificate.status !== 'issued') {
       error('Certificat indisponible', 'Ce certificat n est pas encore emissible.');
       return;
@@ -70,34 +125,27 @@ export default function ApprenantCertificatsPage() {
 
     setViewerData({
       studentName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Apprenant C2P',
-      courseTitle: certificate.course_name || certificate.title,
-      instructor: 'C2P Academy',
-      date: certificate.issued_at || certificate.completion_date || '',
-      certificateId: certificate.certificate_number || certificate.certificate_id || `CERT-${certificate.id}`,
+      courseTitle: certificate.courseName,
+      instructor: certificate.instructor,
+      date: getCertificateCompletionDate(certificate) ? formatDate(getCertificateCompletionDate(certificate)) : '',
+      certificateId: certificate.certificateNumber || certificate.id,
     });
     setShowViewer(true);
   };
 
-  const handleDownload = (certificate: Certificate) => {
+  const handleDownload = (certificate: CertificateView) => {
     if (certificate.status !== 'issued') {
       error('Indisponible', 'Le telechargement sera disponible apres emission.');
       return;
     }
-    downloadSimplePdf(`${certificate.certificate_number || `certificat-${certificate.id}`}.pdf`, {
-      title: 'CERTIFICAT DE REUSSITE',
-      lines: [
-        'Centre C2P',
-        '',
-        'Ce certificat est attribue a',
-        `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Apprenant C2P',
-        '',
-        `Formation: ${certificate.course_name || certificate.title}`,
-        `Identifiant: ${certificate.certificate_number || certificate.certificate_id || certificate.id}`,
-        `Note finale: ${formatCertificateGrade(certificate.final_grade ?? certificate.grade ?? null)}`,
-        `Date: ${certificate.issued_at ? formatDate(certificate.issued_at) : certificate.completion_date ? formatDate(certificate.completion_date) : '-'}`,
-      ],
+    downloadCertificatePdf(`${certificate.certificateNumber || `certificat-${certificate.id}`}.pdf`, {
+      studentName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Apprenant C2P',
+      courseTitle: certificate.courseName,
+      instructor: certificate.instructor,
+      date: getCertificateCompletionDate(certificate) ? formatDate(getCertificateCompletionDate(certificate)) : '-',
+      certificateId: certificate.certificateNumber || certificate.id,
     });
-    success('Telechargement', `Le certificat ${certificate.certificate_number || certificate.id} a ete telecharge.`);
+    success('Telechargement', `Le certificat ${certificate.certificateNumber || certificate.id} a ete telecharge.`);
   };
 
   return (
@@ -107,7 +155,7 @@ export default function ApprenantCertificatsPage() {
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes certificats</h1>
-          <p className="text-gray-600">Historique des certificats emis, prets ou encore en attente.</p>
+          <p className="text-gray-600">Retrouvez vos certificats emis par C2P et ceux generes apres une formation terminee.</p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -145,84 +193,93 @@ export default function ApprenantCertificatsPage() {
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Formation</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Statut</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Note</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Emission</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-10 text-sm text-gray-500">Chargement des certificats...</td>
-                  </tr>
-                )}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          {loading && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {[0, 1, 2, 3].map((item) => (
+                <div key={item} className="h-40 animate-pulse rounded-2xl bg-gray-100" />
+              ))}
+            </div>
+          )}
 
-                {!loading && filteredCertificates.map((certificate) => (
-                  <tr key={certificate.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{certificate.course_name || certificate.title}</p>
-                        <p className="text-sm text-gray-500">{certificate.certificate_number || 'Numero non genere'}</p>
+          {!loading && filteredCertificates.length > 0 && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {filteredCertificates.map((certificate) => (
+                <article key={certificate.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                        <i className="ri-award-line text-xl" />
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                        certificate.status === 'issued'
-                          ? 'bg-green-100 text-green-700'
-                          : certificate.status === 'ready'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {certificate.status === 'issued' ? 'Emis' : certificate.status === 'ready' ? 'Pret' : 'En attente'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{formatCertificateGrade(certificate.final_grade ?? certificate.grade ?? null)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {certificate.issued_at ? formatDate(certificate.issued_at) : certificate.completion_date ? formatDate(certificate.completion_date) : '-'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => openViewer(certificate)}
-                          className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-50"
-                        >
-                          Voir
-                        </button>
-                        <button
-                          onClick={() => handleDownload(certificate)}
-                          className="px-3 py-1.5 rounded-lg bg-[#5fa6f3] text-white text-xs font-medium hover:bg-[#27346b]"
-                        >
-                          Telecharger
-                        </button>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900">{certificate.courseName}</p>
+                        <p className="mt-1 text-sm text-gray-500">{certificate.certificateNumber || 'Numero non genere'}</p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
+                    </div>
+                    <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                      certificate.status === 'issued'
+                        ? 'bg-green-100 text-green-700'
+                        : certificate.status === 'ready'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {certificate.status === 'issued' ? 'Emis' : certificate.status === 'ready' ? 'Pret' : 'En attente'}
+                    </span>
+                  </div>
 
-                {!loading && filteredCertificates.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500">
-                      Aucun certificat pour ce filtre. <Link to="/dashboard/apprenant/mes-cours" className="text-[#5fa6f3] font-medium">Voir mes formations</Link>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl bg-gray-50 px-3 py-3">
+                      <p className="text-xs text-gray-500">Note finale</p>
+                      <p className="mt-1 font-semibold text-gray-900">{formatCertificateGrade(certificate.grade)}</p>
+                    </div>
+                    <div className="rounded-xl bg-gray-50 px-3 py-3">
+                      <p className="text-xs text-gray-500">Emission</p>
+                      <p className="mt-1 font-semibold text-gray-900">
+                        {certificate.issuedAt ? formatDate(certificate.issuedAt) : certificate.completionDate ? formatDate(certificate.completionDate) : '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap justify-end gap-2">
+                    <button
+                      onClick={() => openViewer(certificate)}
+                      disabled={certificate.status !== 'issued'}
+                      className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Voir
+                    </button>
+                    <button
+                      onClick={() => handleDownload(certificate)}
+                      disabled={certificate.status !== 'issued'}
+                      className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Telecharger
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {!loading && filteredCertificates.length === 0 && (
+            <div className="py-14 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
+                <i className="ri-award-line text-2xl" />
+              </div>
+              <h2 className="mt-4 text-lg font-semibold text-gray-900">Aucun certificat</h2>
+              <p className="mt-1 text-sm text-gray-500">Terminez une formation eligible pour voir votre certificat ici.</p>
+              <Link to="/dashboard/apprenant/mes-cours" className="mt-4 inline-flex rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                Voir mes formations
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
           <h2 className="text-lg font-semibold text-gray-900">Derniere emission</h2>
           <p className="text-sm text-gray-600 mt-1">
-            {certificates[0]?.issued_at
-              ? `Dernier certificat emis le ${formatDateTime(certificates[0].issued_at)}.`
+            {latestIssuedCertificate?.issuedAt
+              ? `Dernier certificat emis le ${formatDateTime(latestIssuedCertificate.issuedAt)}.`
               : 'Aucun certificat emis pour le moment.'}
           </p>
         </div>

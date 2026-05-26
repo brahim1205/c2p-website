@@ -1,4 +1,4 @@
-import { backendClient } from './backendClient';
+import { apiRequest } from './api';
 
 export interface ParentStudentLink {
   id: string;
@@ -49,52 +49,11 @@ export interface ParentCertificate {
   completion_date?: string | null;
 }
 
-function throwApiError(error: { message?: string } | null | undefined) {
-  if (error) {
-    throw new Error(error.message || 'Backend request failed.');
-  }
-}
-
 export async function fetchParentDashboardSnapshot(userId: string) {
-  const linksRes = await backendClient
-    .from<ParentStudentLink>('student_guardians')
-    .select('*')
-    .eq('parent_id', userId)
-    .eq('status', 'active')
-    .order('created_at', { ascending: true });
-
-  throwApiError(linksRes.error);
-
-  const links = (linksRes.data as ParentStudentLink[]) || [];
-  const studentIds = Array.from(new Set(links.map((link) => link.student_id).filter(Boolean)));
-
-  if (studentIds.length === 0) {
-    return {
-      links,
-      enrollments: [] as ParentEnrollment[],
-      certificates: [] as ParentCertificate[],
-    };
-  }
-
-  const [enrollmentsRes, certificatesRes] = await Promise.all([
-    backendClient
-      .from<ParentEnrollment>('course_enrollments')
-      .select('*')
-      .in('student_id', studentIds)
-      .order('last_active', { ascending: false }),
-    backendClient
-      .from<ParentCertificate>('certificates')
-      .select('*')
-      .in('student_id', studentIds)
-      .order('issued_at', { ascending: false }),
-  ]);
-
-  throwApiError(enrollmentsRes.error);
-  throwApiError(certificatesRes.error);
-
-  return {
-    links,
-    enrollments: (enrollmentsRes.data as ParentEnrollment[]) || [],
-    certificates: (certificatesRes.data as ParentCertificate[]) || [],
-  };
+  void userId;
+  return apiRequest<{
+    links: ParentStudentLink[];
+    enrollments: ParentEnrollment[];
+    certificates: ParentCertificate[];
+  }>('/learning/parent/dashboard');
 }

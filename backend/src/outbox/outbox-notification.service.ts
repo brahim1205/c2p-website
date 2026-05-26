@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { appendAppRows, collectRowsByIds, mergeRowsToPersist, syncAppStoreFromDatabase } from '../data/data.controller.js';
+import { appendAppRows, collectRowsByIds, mergeRowsToPersist, syncAppStoreFromDatabase } from '../data/data-app-store.js';
 import type { Row } from '../data/mock-store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -6,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { fetchTrackedProjects, type TrackedProject } from '@/lib/projectApi';
 import { formatCurrency } from '@/lib/formatters';
+import { queryKeys } from '@/lib/queryKeys';
 
 function getPartnerTypeLabel(type: string | null | undefined) {
   return type === 'technique' ? 'Technique' : 'Financier';
@@ -14,30 +16,24 @@ function getPartnerTypeLabel(type: string | null | undefined) {
 export default function PartenaireProjetsSuivisPage() {
   const { user } = useAuth();
   const { error } = useToast();
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('tous');
-  const [projects, setProjects] = useState<TrackedProject[]>([]);
 
-  const loadProjects = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      setProjects(await fetchTrackedProjects(user.id));
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les projets suivis.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+  const trackedProjectsQuery = useQuery({
+    queryKey: queryKeys.partenaire.trackedProjects(user?.id),
+    queryFn: () => fetchTrackedProjects(user!.id),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+    if (trackedProjectsQuery.isError) {
+      console.error(trackedProjectsQuery.error);
+      error('Erreur', 'Impossible de charger les projets suivis.');
+    }
+  }, [error, trackedProjectsQuery.error, trackedProjectsQuery.isError]);
+
+  const loading = trackedProjectsQuery.isLoading;
+  const projects: TrackedProject[] = useMemo(() => trackedProjectsQuery.data ?? [], [trackedProjectsQuery.data]);
 
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {

@@ -1,28 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Breadcrumb from '@/components/base/Breadcrumb';
-import BrandLogo from '@/components/base/BrandLogo';
-import { fetchPublicInstructorProfile } from '@/lib/accountApi';
-import { backendClient } from '@/lib/backendClient';
+import { fetchPublicInstructorCourses, fetchPublicInstructorProfile, type PublicInstructorCourse } from '@/lib/accountApi';
 import type { AuthUser } from '@/lib/roles';
-
-interface PublishedCourse {
-  id: string | number;
-  title: string;
-  category: string;
-  description: string | null;
-  thumbnail: string | null;
-  duration: string | null;
-  level?: string | null;
-  current_price?: number | null;
-  is_free?: boolean;
-}
 
 export default function PublicInstructorProfilePage() {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<AuthUser | null>(null);
-  const [courses, setCourses] = useState<PublishedCourse[]>([]);
+  const [courses, setCourses] = useState<PublicInstructorCourse[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,11 +18,10 @@ export default function PublicInstructorProfilePage() {
       try {
         const [publicProfile, coursesRes] = await Promise.all([
           fetchPublicInstructorProfile(id),
-          backendClient.from<PublishedCourse>('courses').select('*').eq('instructor_id', id).eq('status', 'published').order('updated_at', { ascending: false }),
+          fetchPublicInstructorCourses(id),
         ]);
-        if (coursesRes.error) throw coursesRes.error;
         setProfile(publicProfile);
-        setCourses(coursesRes.data || []);
+        setCourses(coursesRes);
       } catch (err) {
         console.error(err);
         setErrorMessage('Profil formateur indisponible.');
@@ -48,9 +33,8 @@ export default function PublicInstructorProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa]">
-        <div className="mx-auto max-w-6xl px-4 py-8">
-          <BrandLogo to="/" className="mb-8 inline-flex" imageClassName="h-12 w-auto object-contain" />
+      <div className="bg-[#f8f9fa]">
+        <div className="mx-auto max-w-6xl px-4 py-10">
           <div className="rounded-2xl border border-gray-200 bg-white p-8 text-gray-500">Chargement du profil formateur...</div>
         </div>
       </div>
@@ -59,9 +43,8 @@ export default function PublicInstructorProfilePage() {
 
   if (!profile || errorMessage) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa]">
-        <div className="mx-auto max-w-6xl px-4 py-8">
-          <BrandLogo to="/" className="mb-8 inline-flex" imageClassName="h-12 w-auto object-contain" />
+      <div className="bg-[#f8f9fa]">
+        <div className="mx-auto max-w-6xl px-4 py-10">
           <div className="rounded-2xl border border-red-200 bg-white p-8 text-red-700">{errorMessage || 'Profil indisponible.'}</div>
         </div>
       </div>
@@ -69,15 +52,8 @@ export default function PublicInstructorProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa]">
-      <div className="mx-auto max-w-6xl px-4 py-8">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <BrandLogo to="/" className="inline-flex" imageClassName="h-12 w-auto object-contain" />
-          <Link to="/auth/login" className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-            Se connecter
-          </Link>
-        </div>
-
+    <div className="bg-[#f8f9fa]">
+      <div className="mx-auto max-w-6xl px-4 py-10">
         <Breadcrumb items={[{ label: 'Accueil', path: '/' }, { label: 'Formateurs' }, { label: `${profile.firstName} ${profile.lastName}` }]} />
 
         <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-8">

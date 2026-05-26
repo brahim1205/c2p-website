@@ -483,7 +483,13 @@ async function main() {
   const adminDexPayJobs = await request('/payments/admin/providers/dexpay/reconciliation-jobs', {
     headers: { Cookie: adminCookies },
   });
-  assert(adminDexPayJobs.ok, `expected 200 on DexPay admin jobs, got ${adminDexPayJobs.status}`);
+  assert(adminDexPayJobs.status === 401, `expected 401 on DexPay provider jobs for admin, got ${adminDexPayJobs.status}`);
+
+  const { cookieJar: superadminCookies } = await loginAs('superadmin@c2p.sn');
+  const superadminDexPayJobs = await request('/payments/admin/providers/dexpay/reconciliation-jobs', {
+    headers: { Cookie: superadminCookies },
+  });
+  assert(superadminDexPayJobs.ok, `expected 200 on DexPay provider jobs for superadmin, got ${superadminDexPayJobs.status}`);
 
   const forbiddenOutboxMetrics = await request('/outbox/metrics', {
     headers: { Cookie: cookieJar },
@@ -493,7 +499,12 @@ async function main() {
   const adminOutboxMetrics = await request('/outbox/metrics', {
     headers: { Cookie: adminCookies },
   });
-  assert(adminOutboxMetrics.ok, `expected 200 on outbox metrics for admin, got ${adminOutboxMetrics.status}`);
+  assert(adminOutboxMetrics.status === 401, `expected 401 on outbox metrics for admin, got ${adminOutboxMetrics.status}`);
+
+  const superadminOutboxMetrics = await request('/outbox/metrics', {
+    headers: { Cookie: superadminCookies },
+  });
+  assert(superadminOutboxMetrics.ok, `expected 200 on outbox metrics for superadmin, got ${superadminOutboxMetrics.status}`);
 
   const invalidPrivatePlanRole = await request('/payments/subscription-plans?role=admin', {
     headers: { Cookie: adminCookies },

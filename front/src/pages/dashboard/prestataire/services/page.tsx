@@ -1,12 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '../../components/DashboardLayout';
-import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonCard } from '@/components/base/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import ImageUploadField from '@/components/base/ImageUploadField';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
-import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
+import { queryKeys } from '@/lib/queryKeys';
 import {
   createPrestataireService,
   deletePrestataireService,
@@ -15,16 +14,28 @@ import {
   updatePrestataireServiceStatus,
   type PrestataireService as Service,
 } from '@/lib/prestataireDashboardApi';
+import PrestataireServiceCard from './PrestataireServiceCard';
+import PrestataireServiceFilters from './PrestataireServiceFilters';
+import { PrestataireServicesHeader } from './PrestataireServicesHeader';
+import {
+  CreateServiceModal,
+  DeleteServiceModal,
+  EditServiceModal,
+} from './PrestataireServiceModals';
+import PrestataireServiceStats from './PrestataireServiceStats';
+import {
+  computePrestataireServiceStats,
+  filterPrestataireServices,
+  type ServiceStatusFilter,
+} from './servicePageModel';
 
 export default function PrestataireServicesPage() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { success, error } = useToast();
   const { gateFor } = useSubscriptionAccess(user);
-  const [loading, setLoading] = useState(true);
-  const [providerId, setProviderId] = useState<number | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<ServiceStatusFilter>('all');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -42,46 +53,38 @@ export default function PrestataireServicesPage() {
   const [editService, setEditService] = useState<Partial<Service>>({});
   const subscriptionGate = gateFor('provider_services_manage');
 
-  const fetchServices = useCallback(async () => {
-    setLoading(true);
-      try {
-        if (!user?.id) {
-          setProviderId(null);
-          setServices([]);
-          return;
-        }
-
-        const snapshot = await fetchPrestataireServices(user.id);
-        if (!snapshot.providerId) {
-          setProviderId(null);
-          setServices([]);
-          error('Prestataire introuvable', 'Votre compte prestataire n est pas encore relie a une fiche service.');
-          return;
-        }
-
-        setProviderId(snapshot.providerId);
-        setServices(snapshot.services);
-      } catch (err) {
-        error('Erreur', 'Impossible de charger les services.');
-      console.error(err);
-      setServices([]);
-      setProviderId(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+  const servicesQuery = useQuery({
+    queryKey: queryKeys.prestataire.services(user?.id),
+    queryFn: () => fetchPrestataireServices(user!.id),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    void fetchServices();
-  }, [fetchServices]);
+    if (servicesQuery.data && !servicesQuery.data.providerId) {
+      error('Prestataire introuvable', 'Votre compte prestataire n est pas encore relie a une fiche service.');
+    }
+  }, [error, servicesQuery.data]);
 
-  const filteredServices = services.filter(s => {
-    const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  useEffect(() => {
+    if (servicesQuery.isError) {
+      console.error(servicesQuery.error);
+      error('Erreur', 'Impossible de charger les services.');
+    }
+  }, [error, servicesQuery.error, servicesQuery.isError]);
+
+  const loading = servicesQuery.isLoading;
+  const providerId = servicesQuery.data?.providerId ?? null;
+  const services: Service[] = useMemo(() => servicesQuery.data?.services ?? [], [servicesQuery.data?.services]);
+
+  const refreshServices = async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.prestataire.services(user?.id) });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.prestataire.dashboard(user?.id) });
+  };
+
+  const filteredServices = useMemo(
+    () => filterPrestataireServices(services, searchQuery, statusFilter),
+    [searchQuery, services, statusFilter],
+  );
 
   const handleToggleStatus = async (service: Service) => {
     if (!subscriptionGate.allowed) {
@@ -95,7 +98,7 @@ export default function PrestataireServicesPage() {
       error('Erreur', 'Impossible de modifier le statut.');
       return;
     }
-    setServices(prev => prev.map(s => s.id === service.id ? { ...s, status: newStatus } : s));
+    await refreshServices();
     success(
       `Service ${newStatus === 'active' ? 'activé' : 'mis en pause'}`,
       `"${service.title}" est maintenant ${newStatus === 'active' ? 'visible' : 'masqué'} sur la plateforme.`
@@ -110,7 +113,7 @@ export default function PrestataireServicesPage() {
       error('Erreur', 'Impossible de supprimer le service.');
       return;
     }
-    setServices(prev => prev.filter(s => s.id !== selectedService.id));
+    await refreshServices();
     success('Service supprimé', `Le service "${selectedService.title}" a été supprimé.`);
     setShowDeleteModal(false);
     setSelectedService(null);
@@ -151,7 +154,7 @@ export default function PrestataireServicesPage() {
       title: '', category: 'Bâtiment', description: '', price: '',
       price_type: 'fixe', status: 'active', image: '', location: 'Dakar'
     });
-    fetchServices();
+    await refreshServices();
   };
 
   const handleEdit = async () => {
@@ -172,145 +175,52 @@ export default function PrestataireServicesPage() {
       error('Erreur', 'Impossible de modifier le service.');
       return;
     }
-    setServices(prev => prev.map(s => s.id === selectedService.id
-      ? {
-          ...s,
-          title: editService.title || s.title,
-          description: editService.description || s.description,
-          price: editService.price || s.price,
-          location: editService.location || s.location,
-          image: editService.image || s.image,
-        }
-      : s
-    ));
+    await refreshServices();
     success('Service mis à jour', `"${editService.title || selectedService.title}" a été modifié.`);
     setShowEditModal(false);
     setSelectedService(null);
     setEditService({});
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      active: 'bg-green-100 text-green-700',
-      paused: 'bg-amber-100 text-amber-700',
-      pending: 'bg-blue-100 text-blue-700',
-    };
-    const labels: Record<string, string> = {
-      active: 'Actif',
-      paused: 'En pause',
-      pending: 'En attente',
-    };
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-        {labels[status] || status}
-      </span>
-    );
+  const stats = useMemo(() => computePrestataireServiceStats(services), [services]);
+
+  const openEditModal = (service: Service) => {
+    if (!subscriptionGate.allowed) {
+      error(subscriptionGate.title, subscriptionGate.message);
+      return;
+    }
+    setSelectedService(service);
+    setEditService({});
+    setShowEditModal(true);
   };
 
-  const stats = {
-    active: services.filter(s => s.status === 'active').length,
-    bookings: services.reduce((sum, s) => sum + s.bookings, 0),
-    avgRating: (() => {
-      const ratedServices = services.filter((service) => Number(service.rating) > 0);
-      if (!ratedServices.length) return '0.0';
-      const total = ratedServices.reduce((sum, service) => sum + Number(service.rating), 0);
-      return (total / ratedServices.length).toFixed(1);
-    })(),
-    revenue: services.reduce((sum, s) => {
-      const price = parseInt(s.price.replace(/[^0-9]/g, '')) || 0;
-      return sum + price * s.bookings;
-    }, 0),
+  const openDeleteModal = (service: Service) => {
+    setSelectedService(service);
+    setShowDeleteModal(true);
   };
 
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
-        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Prestataire', path: '/dashboard/prestataire' }, { label: 'Mes services' }]} />
-        <SubscriptionRequiredBanner gate={subscriptionGate} />
+        <PrestataireServicesHeader
+          gate={subscriptionGate}
+          onCreate={() => {
+            if (!subscriptionGate.allowed) {
+              error(subscriptionGate.title, subscriptionGate.message);
+              return;
+            }
+            setShowCreateModal(true);
+          }}
+        />
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Mes services</h1>
-            <p className="text-gray-600 text-sm md:text-base">Gérez et organisez vos offres de service</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (!subscriptionGate.allowed) {
-                error(subscriptionGate.title, subscriptionGate.message);
-                return;
-              }
-              setShowCreateModal(true);
-            }}
-            aria-label="Créer un nouveau service"
-            className="px-4 py-2.5 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors whitespace-nowrap flex items-center gap-2"
-          >
-            <div className="w-5 h-5 flex items-center justify-center">
-              <i className="ri-add-line text-base"></i>
-            </div>
-            Nouveau service
-          </button>
-        </div>
+        <PrestataireServiceStats stats={stats} />
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: 'Services actifs', value: String(stats.active), icon: 'ri-briefcase-line', color: 'bg-[#5fa6f3]' },
-            { label: 'Réservations', value: String(stats.bookings), icon: 'ri-calendar-check-line', color: 'bg-blue-500' },
-            { label: 'Note moyenne', value: stats.avgRating, icon: 'ri-star-line', color: 'bg-yellow-500' },
-            { label: 'Revenus estimés', value: `${(stats.revenue / 1000000).toFixed(1)}M FCFA`, icon: 'ri-coins-line', color: 'bg-green-500' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    <i className={`${stat.icon} text-white text-sm`}></i>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-xs text-gray-600">{stat.label}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <div className="w-5 h-5 flex items-center justify-center absolute left-3 top-1/2 -translate-y-1/2">
-                <i className="ri-search-line text-gray-400"></i>
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Rechercher un service"
-                placeholder="Rechercher un service..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
-              />
-            </div>
-            <div className="flex gap-2 overflow-x-auto" role="group" aria-label="Filtrer les services par statut">
-              {(['all', 'active', 'paused', 'pending'] as const).map(status => (
-                <button
-                  type="button"
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  aria-pressed={statusFilter === status}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                    statusFilter === status
-                      ? 'bg-[#5fa6f3] text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {status === 'all' ? 'Tous' : status === 'active' ? 'Actifs' : status === 'paused' ? 'En pause' : 'En attente'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <PrestataireServiceFilters
+          searchQuery={searchQuery}
+          statusFilter={statusFilter}
+          onSearchQueryChange={setSearchQuery}
+          onStatusFilterChange={setStatusFilter}
+        />
 
         {/* Services Grid */}
         {loading ? (
@@ -320,87 +230,14 @@ export default function PrestataireServicesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredServices.map((service) => (
-              <div key={service.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="relative h-40 sm:h-44 overflow-hidden">
-                  <img src={service.image || '/images/home/service.jpg'} alt={service.title} className="w-full h-full object-cover" />
-                  <div className="absolute top-3 right-3">
-                    {getStatusBadge(service.status)}
-                  </div>
-                  <div className="absolute bottom-3 left-3">
-                    <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md">{service.category}</span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-semibold text-gray-900 text-base mb-2">{service.title}</h3>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{service.description}</p>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-lg font-bold text-gray-900">{service.price}</span>
-                    <div className="flex items-center gap-1">
-                      {service.rating > 0 && (
-                        <>
-                          <div className="w-4 h-4 flex items-center justify-center">
-                            <i className="ri-star-fill text-yellow-500 text-sm"></i>
-                          </div>
-                          <span className="text-sm font-medium text-gray-700">{service.rating}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-500 mb-4">
-                    <span className="flex items-center gap-1">
-                      <i className="ri-map-pin-line"></i>{service.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <i className="ri-calendar-check-line"></i>{service.bookings} réservations
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    {service.status !== 'pending' && (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(service)}
-                        aria-label={`${service.status === 'active' ? 'Mettre en pause' : 'Réactiver'} le service ${service.title}`}
-                        disabled={!subscriptionGate.allowed}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                          !subscriptionGate.allowed
-                            ? 'cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-400'
-                            : service.status === 'active'
-                            ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
-                            : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
-                        }`}
-                      >
-                        {service.status === 'active' ? 'Mettre en pause' : 'Réactiver'}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!subscriptionGate.allowed) {
-                          error(subscriptionGate.title, subscriptionGate.message);
-                          return;
-                        }
-                        setSelectedService(service); setEditService({}); setShowEditModal(true);
-                      }}
-                      aria-label={`Modifier le service ${service.title}`}
-                      className="px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="w-4 h-4 flex items-center justify-center">
-                        <i className="ri-edit-line"></i>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedService(service); setShowDeleteModal(true); }}
-                      aria-label={`Supprimer le service ${service.title}`}
-                      className="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
-                    >
-                      <div className="w-4 h-4 flex items-center justify-center">
-                        <i className="ri-delete-bin-line"></i>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <PrestataireServiceCard
+                key={service.id}
+                service={service}
+                subscriptionAllowed={subscriptionGate.allowed}
+                onDeleteRequest={openDeleteModal}
+                onEditRequest={openEditModal}
+                onToggleStatus={handleToggleStatus}
+              />
             ))}
           </div>
         )}
@@ -415,224 +252,31 @@ export default function PrestataireServicesPage() {
           </div>
         )}
 
-        {/* Create Modal */}
         {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="prestataire-service-create-title">
-              <h3 id="prestataire-service-create-title" className="text-lg font-bold text-gray-900 mb-6">Nouveau service</h3>
-              <div className="dashboard-form-grid">
-                <div className="dashboard-form-wide">
-                  <label htmlFor="prestataire-service-create-title-input" className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
-                  <input
-                    id="prestataire-service-create-title-input"
-                    type="text"
-                    value={newService.title || ''}
-                    onChange={(e) => setNewService({ ...newService, title: e.target.value })}
-                    placeholder="Ex: Plomberie résidentielle"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="prestataire-service-create-category" className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-                    <select
-                      id="prestataire-service-create-category"
-                      value={newService.category || 'Bâtiment'}
-                      onChange={(e) => setNewService({ ...newService, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm bg-white"
-                    >
-                      <option>Bâtiment</option>
-                      <option>Électricité</option>
-                      <option>Extérieur</option>
-                      <option>Ameublement</option>
-                      <option>Informatique</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="prestataire-service-create-location" className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
-                    <input
-                      id="prestataire-service-create-location"
-                      type="text"
-                      value={newService.location || 'Dakar'}
-                      onChange={(e) => setNewService({ ...newService, location: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="dashboard-form-wide">
-                  <label htmlFor="prestataire-service-create-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    id="prestataire-service-create-description"
-                    value={newService.description || ''}
-                    onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                    placeholder="Décrivez votre service..."
-                    rows={3}
-                    maxLength={500}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm resize-none"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">{(newService.description || '').length}/500 caractères</p>
-                </div>
-                <ImageUploadField
-                  label="Image du service"
-                  value={newService.image || ''}
-                  onChange={(url) => setNewService({ ...newService, image: url })}
-                  folder="c2p/services"
-                  helper="Importez une image claire de votre service ou collez une URL publique."
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="prestataire-service-create-price" className="block text-sm font-medium text-gray-700 mb-1">Prix *</label>
-                    <input
-                      id="prestataire-service-create-price"
-                      type="text"
-                      value={newService.price || ''}
-                      onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                      placeholder="Ex: 25,000 FCFA"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="prestataire-service-create-price-type" className="block text-sm font-medium text-gray-700 mb-1">Type de prix</label>
-                    <select
-                      id="prestataire-service-create-price-type"
-                      value={newService.price_type || 'fixe'}
-                      onChange={(e) => setNewService({ ...newService, price_type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm bg-white"
-                    >
-                      <option value="fixe">Prix fixe</option>
-                      <option value="devis">Sur devis</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3 justify-end mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCreate}
-                  className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors"
-                >
-                  Créer
-                </button>
-              </div>
-            </div>
-          </div>
+          <CreateServiceModal
+            newService={newService}
+            onCancel={() => setShowCreateModal(false)}
+            onCreate={handleCreate}
+            onNewServiceChange={setNewService}
+          />
         )}
 
-        {/* Edit Modal */}
         {showEditModal && selectedService && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="prestataire-service-edit-title">
-              <h3 id="prestataire-service-edit-title" className="text-lg font-bold text-gray-900 mb-6">Modifier le service</h3>
-              <div className="dashboard-form-grid">
-                <div>
-                  <label htmlFor="prestataire-service-edit-name" className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
-                  <input
-                    id="prestataire-service-edit-name"
-                    type="text"
-                    defaultValue={selectedService.title}
-                    onChange={(e) => setEditService(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
-                  />
-                </div>
-                <div className="dashboard-form-wide">
-                  <label htmlFor="prestataire-service-edit-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    id="prestataire-service-edit-description"
-                    defaultValue={selectedService.description}
-                    onChange={(e) => setEditService(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    maxLength={500}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm resize-none"
-                  />
-                </div>
-                <ImageUploadField
-                  label="Image du service"
-                  value={editService.image || selectedService.image || ''}
-                  onChange={(url) => setEditService((prev) => ({ ...prev, image: url }))}
-                  folder="c2p/services"
-                  helper="Mettez a jour le visuel affiche dans votre catalogue."
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="prestataire-service-edit-price" className="block text-sm font-medium text-gray-700 mb-1">Prix</label>
-                    <input
-                      id="prestataire-service-edit-price"
-                      type="text"
-                      defaultValue={selectedService.price}
-                      onChange={(e) => setEditService(prev => ({ ...prev, price: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="prestataire-service-edit-location" className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
-                    <input
-                      id="prestataire-service-edit-location"
-                      type="text"
-                      defaultValue={selectedService.location}
-                      onChange={(e) => setEditService(prev => ({ ...prev, location: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3 justify-end mt-6">
-                <button
-                  type="button"
-                  onClick={() => { setShowEditModal(false); setSelectedService(null); }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleEdit}
-                  className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-colors"
-                >
-                  Enregistrer
-                </button>
-              </div>
-            </div>
-          </div>
+          <EditServiceModal
+            editService={editService}
+            selectedService={selectedService}
+            onCancel={() => { setShowEditModal(false); setSelectedService(null); }}
+            onEditServiceChange={setEditService}
+            onSave={handleEdit}
+          />
         )}
 
-        {/* Delete Modal */}
         {showDeleteModal && selectedService && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" role="dialog" aria-modal="true" aria-labelledby="prestataire-service-delete-title">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  <i className="ri-alert-line text-red-600 text-xl"></i>
-                </div>
-                <h3 id="prestataire-service-delete-title" className="text-lg font-bold text-gray-900">Supprimer le service</h3>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Êtes-vous sûr de vouloir supprimer <strong>"{selectedService.title}"</strong> ? Cette action est irréversible.
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => { setShowDeleteModal(false); setSelectedService(null); }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                >
-                  Supprimer
-                </button>
-              </div>
-            </div>
-          </div>
+          <DeleteServiceModal
+            selectedService={selectedService}
+            onCancel={() => { setShowDeleteModal(false); setSelectedService(null); }}
+            onConfirm={handleDelete}
+          />
         )}
       </div>
     </DashboardLayout>

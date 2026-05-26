@@ -99,7 +99,9 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
   }
 
   private async performSync(reason: string): Promise<PlatformSyncSummary> {
-    const appRowsSeeded = await this.ensureAppRowsSeeded();
+    const appRowsSeeded = this.config.prismaPlatformSeedEnabled
+      ? await this.ensureAppRowsSeeded()
+      : 0;
     const groupedRows = await this.loadGroupedRows();
 
     const users = this.mapUsers(groupedRows.auth_users ?? []);

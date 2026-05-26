@@ -15,7 +15,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-COMPOSE_FILE="$REPO_ROOT/docker-compose.production.yml"
+COMPOSE_FILE="${COMPOSE_FILE:-$REPO_ROOT/docker-compose.production.yml}"
 COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-$REPO_ROOT/ops/env/compose.production.env}"
 
 if [[ ! -f "$COMPOSE_ENV_FILE" ]]; then
@@ -31,6 +31,10 @@ set +a
 : "${POSTGRES_DB:?POSTGRES_DB is required}"
 : "${POSTGRES_USER:?POSTGRES_USER is required}"
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+
+if [[ -f "$BACKUP_FILE.sha256" ]]; then
+  sha256sum -c "$BACKUP_FILE.sha256"
+fi
 
 gzip -dc "$BACKUP_FILE" | docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" exec -T \
   -e PGPASSWORD="$POSTGRES_PASSWORD" \

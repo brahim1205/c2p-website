@@ -1,4 +1,7 @@
-import { backendClient } from '@/lib/backendClient';
+import {
+  createNotificationRecord,
+  fetchProviderNotificationRecipient,
+} from '@/lib/notificationsApi';
 
 
 export type NotificationType = 'message' | 'prestation' | 'formation' | 'projet' | 'paiement' | 'system' | 'rendezvous' | 'collaboration' | 'evaluation' | 'booking' | 'review';
@@ -12,16 +15,14 @@ export async function createNotification(
   avatar?: string
 ) {
   try {
-    const { error } = await backendClient.from('notifications').insert({
-      user_id: userId,
+    await createNotificationRecord({
+      userId,
       title,
       message,
       type,
-      is_read: false,
       link,
-      metadata: avatar ? { avatar } : {},
+      avatar,
     });
-    if (error) throw error;
     return true;
   } catch (err) {
     console.warn('Failed to create notification:', err);
@@ -39,13 +40,8 @@ export async function notifyBookingCreated(clientId: string, providerId: number,
     'booking',
     '/dashboard/client/reservations'
   );
-  const { data: provider } = await backendClient
-    .from<{ user_id?: string }>('providers')
-    .select('user_id')
-    .eq('id', providerId)
-    .maybeSingle();
-
-  const providerUserId = provider?.user_id ?? 'usr-prestataire';
+  const provider = await fetchProviderNotificationRecipient(providerId);
+  const providerUserId = provider.userId ?? 'usr-prestataire';
 
   // Notify provider
   await createNotification(

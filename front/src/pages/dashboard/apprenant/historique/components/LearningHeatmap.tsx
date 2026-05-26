@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { getLearningDaysForHeatmap } from '../../cours/[id]/storage';
+import type { ApprenantEnrollment } from '@/lib/apprenantDashboardApi';
 
 const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -16,9 +16,21 @@ function formatMonthLabel(date: Date): string {
   return months[date.getMonth()];
 }
 
-export default function LearningHeatmap() {
+interface LearningHeatmapProps {
+  enrollments: ApprenantEnrollment[];
+}
+
+export default function LearningHeatmap({ enrollments }: LearningHeatmapProps) {
   const daysBack = 84;
-  const dailyXP = useMemo(() => getLearningDaysForHeatmap(daysBack), []);
+  const dailyXP = useMemo(() => {
+    const activity: Record<string, number> = {};
+    for (const enrollment of enrollments) {
+      const dateKey = String(enrollment.last_active ?? enrollment.enrolled_at ?? '').slice(0, 10);
+      if (!dateKey) continue;
+      activity[dateKey] = (activity[dateKey] ?? 0) + Math.max(10, Math.round(Number(enrollment.progress || 0)));
+    }
+    return activity;
+  }, [enrollments]);
 
   const weeks = useMemo(() => {
     const result: { date: Date; dateStr: string; xp: number }[][] = [];

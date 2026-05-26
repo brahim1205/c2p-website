@@ -110,8 +110,16 @@ export class ConfigService {
     return this.configService.get('PRISMA_PLATFORM_SYNC_ENABLED') !== 'false';
   }
 
+  get prismaConnectionRequired(): boolean {
+    return this.configService.get('PRISMA_CONNECTION_REQUIRED') === 'true';
+  }
+
   get prismaPlatformSyncOnBoot(): boolean {
     return this.configService.get('PRISMA_PLATFORM_SYNC_ON_BOOT') !== 'false';
+  }
+
+  get prismaPlatformSeedEnabled(): boolean {
+    return this.configService.get('PRISMA_PLATFORM_SEED_ENABLED') === 'true';
   }
 
   get trustProxy(): boolean {
@@ -214,8 +222,8 @@ export class ConfigService {
     return Number(this.configService.get('SENDTEXT_TIMEOUT_MS') ?? '10000');
   }
 
-  get emailProvider(): 'disabled' | 'mock' | 'resend' {
-    return (this.configService.get('EMAIL_PROVIDER') ?? 'mock') as 'disabled' | 'mock' | 'resend';
+  get emailProvider(): 'disabled' | 'mock' | 'resend' | 'brevo' {
+    return (this.configService.get('EMAIL_PROVIDER') ?? 'mock') as 'disabled' | 'mock' | 'resend' | 'brevo';
   }
 
   get emailFrom(): string | undefined {
@@ -237,6 +245,15 @@ export class ConfigService {
     return value ? String(value) : undefined;
   }
 
+  get brevoApiKey(): string | undefined {
+    const value = this.configService.get('BREVO_API_KEY');
+    return value ? String(value) : undefined;
+  }
+
+  get brevoBaseUrl(): string {
+    return String(this.configService.get('BREVO_BASE_URL') ?? 'https://api.brevo.com').replace(/\/$/, '');
+  }
+
   get defaultLiveProvider(): 'jitsi' | 'custom' {
     return (this.configService.get('LIVE_PROVIDER') ?? 'jitsi') as 'jitsi' | 'custom';
   }
@@ -245,12 +262,53 @@ export class ConfigService {
     return String(this.configService.get('LIVE_JITSI_BASE_URL') ?? 'https://meet.jit.si').replace(/\/$/, '');
   }
 
+  get uploadStorageDriver(): 'local-disk' | 's3' {
+    return (this.configService.get('UPLOAD_STORAGE_DRIVER') ?? 'local-disk') as 'local-disk' | 's3';
+  }
+
+  get uploadPublicBaseUrl(): string | undefined {
+    const value = this.configService.get('UPLOAD_PUBLIC_BASE_URL');
+    return value ? String(value).replace(/\/$/, '') : undefined;
+  }
+
   get uploadStorageRoot(): string {
     return String(this.configService.get('UPLOAD_STORAGE_ROOT') ?? 'storage/uploads');
   }
 
   get uploadTmpRoot(): string {
     return String(this.configService.get('UPLOAD_TMP_ROOT') ?? 'storage/uploads/_tmp');
+  }
+
+  get uploadS3Endpoint(): string | undefined {
+    const value = this.configService.get('UPLOAD_S3_ENDPOINT');
+    return value ? String(value).replace(/\/$/, '') : undefined;
+  }
+
+  get uploadS3Region(): string {
+    return String(this.configService.get('UPLOAD_S3_REGION') ?? 'us-east-1');
+  }
+
+  get uploadS3Bucket(): string | undefined {
+    const value = this.configService.get('UPLOAD_S3_BUCKET');
+    return value ? String(value) : undefined;
+  }
+
+  get uploadS3AccessKeyId(): string | undefined {
+    const value = this.configService.get('UPLOAD_S3_ACCESS_KEY_ID');
+    return value ? String(value) : undefined;
+  }
+
+  get uploadS3SecretAccessKey(): string | undefined {
+    const value = this.configService.get('UPLOAD_S3_SECRET_ACCESS_KEY');
+    return value ? String(value) : undefined;
+  }
+
+  get uploadS3KeyPrefix(): string {
+    return String(this.configService.get('UPLOAD_S3_KEY_PREFIX') ?? 'uploads');
+  }
+
+  get uploadS3ForcePathStyle(): boolean {
+    return this.configService.get('UPLOAD_S3_FORCE_PATH_STYLE') !== 'false';
   }
 
   get uploadImageMaxBytes(): number {

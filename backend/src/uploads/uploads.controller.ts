@@ -9,16 +9,19 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags } from '@nestjs/swagger';
 import { mkdirSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { diskStorage } from 'multer';
-import { UploadsService, type StoredUploadFile, type UploadResourceType } from './uploads.service.js';
+import { UploadsService, type StoredUploadFile } from './uploads.service.js';
+import type { UploadResourceType } from './upload-policy.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 
 const TEMP_UPLOAD_ROOT = resolve(process.cwd(), process.env.UPLOAD_TMP_ROOT || 'storage/uploads/_tmp');
 const MAX_REQUEST_BYTES = Number(process.env.UPLOAD_REQUEST_MAX_MB || '5120') * 1024 * 1024;
 
+@ApiTags('uploads')
 @Controller('uploads')
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
@@ -58,14 +61,17 @@ export class UploadsController {
       throw new BadRequestException('Aucun fichier recu.');
     }
 
-    const stored = await this.uploadsService.storeFile(file, payload);
+    const stored = await this.uploadsService.storeFile(file, {
+      ...payload,
+      ownerId: request.auth.user.id,
+    });
     const protocol = String(request.headers['x-forwarded-proto'] ?? request.protocol ?? 'http');
     const host = String(request.headers.host ?? '');
-    const absoluteUrl = host ? `${protocol}://${host}${stored.relativePath}` : stored.relativePath;
+    const fallbackOrigin = host ? `${protocol}://${host}` : undefined;
 
     return {
       ...stored,
-      url: absoluteUrl,
+      url: this.uploadsService.resolvePublicUrl(stored.relativePath, fallbackOrigin),
     };
   }
 }

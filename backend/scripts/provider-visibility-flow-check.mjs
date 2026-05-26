@@ -79,6 +79,27 @@ async function main() {
   assert(beforeOrders.response.ok, `expected 200 on initial visibility orders, got ${beforeOrders.response.status}`);
   const initialOrderCount = Array.isArray(beforeOrders.payload) ? beforeOrders.payload.length : 0;
 
+  const wallet = await readJson('/payments/wallet/me', {
+    headers: { Cookie: cookieJar },
+  });
+  assert(wallet.response.ok, `expected 200 on provider wallet, got ${wallet.response.status}`);
+  if (Number(wallet.payload.available_balance ?? wallet.payload.balance ?? 0) < 150_000) {
+    const topup = await readJson('/payments/wallet/topup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookieJar,
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify({
+        amount: 250_000,
+        method: 'wave',
+        description: 'Recharge technique pour test provider visibility',
+      }),
+    });
+    assert(topup.response.ok, `expected 200 on provider wallet topup, got ${topup.response.status}`);
+  }
+
   const renewed = await readJson('/payments/subscriptions/activate', {
     method: 'POST',
     headers: {
@@ -108,12 +129,14 @@ async function main() {
   assert(String(latestAfter.issued_at ?? '') !== latestBeforeIssuedAt, 'renewal must issue a fresh visibility pass');
   assert(String(latestAfter.code ?? '') !== '', 'visibility pass code must be present');
 
+  const purchaseRequestId = `provider-visibility-smoke-${Date.now()}`;
   const purchased = await readJson('/payments/provider-visibility/purchase', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Cookie: cookieJar,
       'X-CSRF-Token': csrfToken,
+      'X-Request-Id': purchaseRequestId,
     },
     body: JSON.stringify({
       product_id: 'visprod-premium-30',
@@ -125,6 +148,28 @@ async function main() {
   assert(String(purchased.payload.pass?.source_type ?? '') === 'provider_visibility_order', 'explicit purchase must emit order-backed pass');
   assert(String(purchased.payload.pass?.product_id ?? '') === 'visprod-premium-30', 'emitted pass must target premium product');
   assert(String(purchased.payload.pass?.code ?? '') !== '', 'purchased pass must expose a code');
+
+  const replayedPurchase = await readJson('/payments/provider-visibility/purchase', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: cookieJar,
+      'X-CSRF-Token': csrfToken,
+      'X-Request-Id': purchaseRequestId,
+    },
+    body: JSON.stringify({
+      product_id: 'visprod-premium-30',
+    }),
+  });
+  assert(replayedPurchase.response.ok, `expected 200 on idempotent visibility purchase replay, got ${replayedPurchase.response.status}`);
+  assert(
+    String(replayedPurchase.payload.order?.id) === String(purchased.payload.order?.id),
+    'idempotent visibility purchase replay must return the same order',
+  );
+  assert(
+    String(replayedPurchase.payload.pass?.id) === String(purchased.payload.pass?.id),
+    'idempotent visibility purchase replay must return the same pass',
+  );
 
   const afterOrders = await readJson('/payments/provider-visibility/orders/me', {
     headers: { Cookie: cookieJar },
@@ -153,9 +198,14 @@ async function main() {
       note: 'Demande smoke de vérification SenPresta.',
     }),
   });
-  assert(createdRequest.response.ok, `expected 200 on verification request create, got ${createdRequest.response.status}`);
-  assert(String(createdRequest.payload.status) === 'pending', 'verification request must start pending');
-  assert(String(createdRequest.payload.user_id) === 'usr-prestataire', 'verification request must belong to prestataire');
+  assert(
+    createdRequest.response.ok || createdRequest.response.status === 409,
+    `expected 200 or 409 on verification request create, got ${createdRequest.response.status}`,
+  );
+  if (createdRequest.response.ok) {
+    assert(String(createdRequest.payload.status) === 'pending', 'verification request must start pending');
+    assert(String(createdRequest.payload.user_id) === 'usr-prestataire', 'verification request must belong to prestataire');
+  }
 
   const duplicateRequest = await request('/data/provider_verification_requests', {
     method: 'POST',

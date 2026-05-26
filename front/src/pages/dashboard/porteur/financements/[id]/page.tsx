@@ -1,51 +1,43 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
-import { fetchOwnerFundingRoundDetail, type FundingInvestor, type FundingRound, type ProjectDocument, type ProjectHistoryItem } from '@/lib/projectApi';
+import { fetchOwnerFundingRoundDetail, type ProjectDocument } from '@/lib/projectApi';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { openHtmlPreview } from '@/lib/downloads';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function PorteurFinancementDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [round, setRound] = useState<FundingRound | null>(null);
-  const [investors, setInvestors] = useState<FundingInvestor[]>([]);
-  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
-  const [history, setHistory] = useState<ProjectHistoryItem[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'investors' | 'documents' | 'history'>('overview');
 
-  const loadRound = useCallback(async () => {
-    if (!id || !user?.id) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const payload = await fetchOwnerFundingRoundDetail(user.id, Number(id));
-      setRound(payload.round);
-      setInvestors(payload.investors);
-      setDocuments(payload.documents);
-      setHistory(payload.history);
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger cette levee de fonds.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, id, user?.id]);
+  const roundQuery = useQuery({
+    queryKey: queryKeys.porteur.fundingDetail(user?.id, id),
+    queryFn: () => fetchOwnerFundingRoundDetail(user!.id, Number(id)),
+    enabled: Boolean(user?.id && id),
+  });
 
   useEffect(() => {
-    loadRound();
-  }, [loadRound]);
+    if (roundQuery.isError) {
+      console.error(roundQuery.error);
+      error('Erreur', 'Impossible de charger cette levee de fonds.');
+    }
+  }, [error, roundQuery.error, roundQuery.isError]);
+
+  const loading = roundQuery.isLoading;
+  const round = roundQuery.data?.round ?? null;
+  const investors = useMemo(() => roundQuery.data?.investors ?? [], [roundQuery.data?.investors]);
+  const documents = useMemo(() => roundQuery.data?.documents ?? [], [roundQuery.data?.documents]);
+  const history = useMemo(() => roundQuery.data?.history ?? [], [roundQuery.data?.history]);
 
   const progress = useMemo(() => {
     if (!round?.target_amount) return 0;
-    return Math.round((round.raised_amount / round.target_amount) * 100);
+    return Math.max(0, Math.min(100, Math.round((round.raised_amount / round.target_amount) * 100)));
   }, [round]);
 
   const handleOpenDocument = (document: ProjectDocument) => {
@@ -189,6 +181,12 @@ export default function PorteurFinancementDetailPage() {
                         </div>
                       </div>
                     ))}
+                    {investors.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center">
+                        <p className="font-medium text-gray-900">Aucun investisseur renseigne</p>
+                        <p className="mt-1 text-sm text-gray-500">Les investisseurs apparaitront ici quand C2P aura rattache des engagements a cette levee.</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -205,6 +203,12 @@ export default function PorteurFinancementDetailPage() {
                         </button>
                       </div>
                     ))}
+                    {documents.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center">
+                        <p className="font-medium text-gray-900">Aucun document disponible</p>
+                        <p className="mt-1 text-sm text-gray-500">Ajoutez ou transmettez les pieces de financement pour completer la data room.</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -217,6 +221,12 @@ export default function PorteurFinancementDetailPage() {
                         <p className="text-xs text-gray-500 mt-1">{formatDate(entry.date)}</p>
                       </div>
                     ))}
+                    {history.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center">
+                        <p className="font-medium text-gray-900">Aucun historique</p>
+                        <p className="mt-1 text-sm text-gray-500">Les actions C2P et les changements de statut seront affiches ici.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

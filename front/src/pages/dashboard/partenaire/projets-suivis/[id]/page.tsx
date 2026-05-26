@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,16 +8,12 @@ import { useToast } from '@/hooks/useToast';
 import {
   fetchTrackedProjectDetail,
   openPartnerOwnerConversation,
-  type FundingRound,
   type ProjectDocument,
-  type ProjectHistoryItem,
-  type ProjectMilestone,
-  type ProjectPartnership,
-  type ProjectRecord,
-  type TrackedProject,
 } from '@/lib/projectApi';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { openHtmlPreview } from '@/lib/downloads';
+import { queryKeys } from '@/lib/queryKeys';
+import { TrackedProjectUnavailableState } from './TrackedProjectUnavailableState';
 
 function getPartnerTypeLabel(type: string | null | undefined) {
   return type === 'technique' ? 'Technique' : 'Financier';
@@ -27,44 +24,29 @@ export default function PartenaireProjetSuiviDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [tracked, setTracked] = useState<TrackedProject | null>(null);
-  const [project, setProject] = useState<ProjectRecord | null>(null);
-  const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
-  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
-  const [history, setHistory] = useState<ProjectHistoryItem[]>([]);
-  const [partnerships, setPartnerships] = useState<ProjectPartnership[]>([]);
-  const [rounds, setRounds] = useState<FundingRound[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'documents' | 'funding' | 'history'>('overview');
 
-  const loadDetail = useCallback(async () => {
-    if (!id || !user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const payload = await fetchTrackedProjectDetail(user.id, Number(id));
-      setTracked(payload.tracked);
-      const detail = payload.detail;
-      setProject(detail.project);
-      setMilestones(detail.milestones);
-      setDocuments(detail.documents);
-      setHistory(detail.history);
-      setPartnerships(detail.partnerships);
-      setRounds(detail.rounds);
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger ce projet suivi.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, id, user?.id]);
+  const detailQuery = useQuery({
+    queryKey: queryKeys.partenaire.trackedProjectDetail(user?.id, id),
+    queryFn: () => fetchTrackedProjectDetail(user!.id, id!),
+    enabled: Boolean(user?.id && id),
+  });
 
   useEffect(() => {
-    loadDetail();
-  }, [loadDetail]);
+    if (detailQuery.isError) {
+      console.error(detailQuery.error);
+      error('Erreur', 'Impossible de charger ce projet suivi.');
+    }
+  }, [detailQuery.error, detailQuery.isError, error]);
+
+  const loading = detailQuery.isLoading;
+  const tracked = detailQuery.data?.tracked ?? null;
+  const project = detailQuery.data?.detail.project ?? null;
+  const milestones = useMemo(() => detailQuery.data?.detail.milestones ?? [], [detailQuery.data?.detail.milestones]);
+  const documents = useMemo(() => detailQuery.data?.detail.documents ?? [], [detailQuery.data?.detail.documents]);
+  const history = useMemo(() => detailQuery.data?.detail.history ?? [], [detailQuery.data?.detail.history]);
+  const partnerships = useMemo(() => detailQuery.data?.detail.partnerships ?? [], [detailQuery.data?.detail.partnerships]);
+  const rounds = useMemo(() => detailQuery.data?.detail.rounds ?? [], [detailQuery.data?.detail.rounds]);
 
   const statusTone = useMemo(() => {
     if (tracked?.status === 'en_risque') return 'bg-red-100 text-red-700';
@@ -105,6 +87,7 @@ export default function PartenaireProjetSuiviDetailPage() {
     try {
       await openPartnerOwnerConversation({
         partner: user,
+        projectId: project.id,
         ownerId: String(project.owner_id),
         ownerName: project.porteur_name,
         projectTitle: project.title,
@@ -119,19 +102,7 @@ export default function PartenaireProjetSuiviDetailPage() {
   };
 
   if (!loading && (!tracked || !project)) {
-    return (
-      <DashboardLayout>
-        <div className="max-w-5xl mx-auto">
-          <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Partenaire', path: '/dashboard/partenaire' }, { label: 'Projets suivis', path: '/dashboard/partenaire/projets-suivis' }, { label: 'Detail' }]} />
-          <div className="py-20 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Projet introuvable</h2>
-            <Link to="/dashboard/partenaire/projets-suivis" className="inline-flex px-4 py-2 rounded-lg bg-[#5fa6f3] text-white text-sm font-medium hover:bg-[#27346b]">
-              Retour au portefeuille
-            </Link>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <TrackedProjectUnavailableState />;
   }
 
   return (

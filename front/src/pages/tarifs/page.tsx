@@ -3,10 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchPublicSubscriptionPlans } from '@/lib/publicApi';
 import {
-  getPriceRangeLabel,
   groupPlansByRole,
   monetizedRoleContent,
-  publicAccessRoles,
   type MonetizedRole,
   type PublicSubscriptionPlan,
 } from '@/lib/publicSubscriptions';
@@ -17,33 +15,6 @@ function formatAmountOnly(amount: number) {
 
 function formatCurrencyLabel(currency: string) {
   return currency === 'XAF' ? 'FCFA' : currency;
-}
-
-function getSupportLabel(level: string | null) {
-  if (!level) return 'Standard';
-  if (level === 'vip') return 'VIP';
-  if (level === 'priority') return 'Prioritaire';
-  return level.charAt(0).toUpperCase() + level.slice(1);
-}
-
-function getFeatureIcon(feature: string) {
-  const normalized = feature.toLowerCase();
-  if (normalized.includes('badge') || normalized.includes('certifi')) return 'ri-verified-badge-line';
-  if (normalized.includes('matching') || normalized.includes('visibilit')) return 'ri-flashlight-line';
-  if (normalized.includes('mission') || normalized.includes('demande')) return 'ri-briefcase-line';
-  if (normalized.includes('cours') || normalized.includes('classe') || normalized.includes('formation')) return 'ri-book-open-line';
-  if (normalized.includes('analytics') || normalized.includes('rapport') || normalized.includes('kpi')) return 'ri-line-chart-line';
-  if (normalized.includes('support')) return 'ri-customer-service-2-line';
-  if (normalized.includes('mentor') || normalized.includes('incubation')) return 'ri-team-line';
-  if (normalized.includes('financement') || normalized.includes('levee')) return 'ri-bank-card-line';
-  if (normalized.includes('projet') || normalized.includes('jalon')) return 'ri-rocket-line';
-  return 'ri-check-line';
-}
-
-function getFeaturedPlanIndex(plans: PublicSubscriptionPlan[]) {
-  if (plans.length <= 1) return 0;
-  if (plans.length === 2) return 1;
-  return 1;
 }
 
 function getPlanCta(
@@ -115,14 +86,14 @@ export default function PricingPage() {
   const monetizedRoles = Object.keys(monetizedRoleContent) as MonetizedRole[];
 
   return (
-    <div className="bg-c2p-bg text-c2p-text">
+    <div className="public-premium-page bg-c2p-bg text-c2p-text">
       <section className="relative overflow-hidden bg-[#ffffff] px-5 pb-18 pt-32 sm:px-8 lg:px-10 lg:pb-24 lg:pt-36">
         <img
-          src="/images/brand/image8.jpeg"
-          alt="Plans d abonnement C2P"
-          className="absolute inset-0 h-full w-full object-cover opacity-24"
+          src="/images/home/precision.jpg"
+          alt="Plans d'abonnement C2P"
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.36]"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(247,248,252,0.94)_0%,rgba(247,248,252,0.78)_52%,rgba(247,248,252,0.88)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.84)_52%,rgba(248,250,252,0.58)_100%)]" />
         <div className="relative mx-auto max-w-7xl">
           <p className="c2p-eyebrow">
             Tarifs et abonnements
@@ -130,23 +101,24 @@ export default function PricingPage() {
           <div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
               <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl lg:text-6xl">
-                Sachez avant inscription ce qui est payant, a quel prix, et ce que chaque plan debloque.
+                Des plans simples pour passer à l’action.
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
-                C2P ne demande pas un abonnement a tout le monde. Les plans concernent surtout les acteurs qui
-                publient une offre ou exploitent un parcours premium : prestataires, formateurs et porteurs de projet.
+                Créez votre compte gratuitement. L’abonnement intervient uniquement quand vous voulez publier,
+                vendre, piloter ou développer une activité premium sur C2P.
               </p>
             </div>
             <div className="c2p-panel p-6">
-              <p className="c2p-eyebrow text-sm tracking-[0.2em]">Quand on vous le demande</p>
-              <div className="mt-5 space-y-4 text-sm leading-7 text-[#64748b]">
-                <p>Pas a l inscription, pas a la connexion.</p>
-                <p>L abonnement devient requis quand vous voulez publier un service, lancer une formation ou soumettre un projet premium.</p>
-                <p>Le backend bloque ensuite les ecritures premium si aucun plan actif n existe.</p>
-              </div>
+              <p className="c2p-eyebrow text-sm tracking-[0.2em]">Compte gratuit</p>
+              <h2 className="mt-4 text-2xl font-semibold text-[#0f1c35]">Vous pouvez démarrer sans payer.</h2>
+              <ul className="mt-5 space-y-3 text-sm leading-7 text-[#64748b]">
+                <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Créer un compte et accéder à votre espace.</span></li>
+                <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Explorer les services, formations et projets publics.</span></li>
+                <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Passer à un plan premium au moment où vous en avez besoin.</span></li>
+              </ul>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link to="/auth/register" className="c2p-btn-accent px-6 py-3">
-                  Creer mon compte
+                  Créer mon compte
                 </Link>
                 <Link to="/auth/login" className="c2p-btn-secondary px-6 py-3">
                   Me connecter
@@ -157,131 +129,15 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
+      <section className="px-5 py-10 sm:px-8 lg:px-10 lg:py-12">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="mb-7 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">Rôles monétisés</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">
-                Trois familles de plans publics aujourd’hui
-              </h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">Plans premium</p>
+              <h2 className="mt-3 text-2xl font-semibold text-[#0f1c35] sm:text-3xl">Choisissez selon votre rôle</h2>
             </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
-              Chaque famille correspond à un usage métier distinct. Les prix et les fonctionnalités affichés ici sont les vrais plans actifs exposés par la plateforme.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:gap-5 lg:grid-cols-3">
-            {monetizedRoles.map((role) => {
-              const content = monetizedRoleContent[role];
-              const priceRange = getPriceRangeLabel(plans, role);
-              return (
-                <article
-                  key={role}
-                  className="rounded-[22px] border border-[#d6dbe1] bg-white px-5 py-6 shadow-[0_18px_45px_rgba(15,28,53,0.08)] sm:rounded-[24px] sm:px-6 sm:py-7 sm:shadow-[0_22px_60px_rgba(15,28,53,0.08)]"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#1a9a96]">{content.shortLabel}</p>
-                  <h3 className="mt-3 text-xl font-semibold text-[#0f1c35] sm:mt-4 sm:text-2xl">{content.label}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#64748b] sm:mt-4 sm:leading-7">{content.summary}</p>
-                  <p className="mt-3 text-sm font-medium text-[#0f1c35] sm:mt-4">
-                    {priceRange ?? (isLoading ? 'Chargement des prix...' : 'Plans indisponibles')}
-                  </p>
-                  <ul className="mt-4 space-y-2.5 text-sm leading-6 text-[#64748b] sm:mt-5 sm:space-y-3">
-                    {content.unlocks.map((item) => (
-                      <li key={item} className="flex items-start gap-3">
-                        <i className="ri-check-line mt-0.5 text-[#1a9a96]"></i>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section id="senpresta-visibility" className="bg-white px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">SenPresta</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Visibilité, alertes et vérification</h2>
-            </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
-              Le client a demandé trois niveaux clairs dans SenPresta : consultation visiteur, accès abonné et profil vérifié. Les plans prestataire servent aujourd’hui à porter cette logique.
-            </p>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            {[
-              {
-                title: 'Visiteur',
-                tone: 'border-[#d6dbe1] bg-[#f7f6f4]',
-                pass: 'Billet standard',
-                text: 'Consulte les annonces, voit le profil résumé et passe par C2P pour la mise en relation.',
-              },
-              {
-                title: 'Abonné',
-                tone: 'border-[#d6dbe1] bg-white',
-                pass: 'Billet prioritaire',
-                text: 'Active les alertes, ouvre plus de détails et gagne en visibilité standard sur SenPresta.',
-              },
-              {
-                title: 'Vérifié',
-                tone: 'border-[#d6dbe1] bg-[#f7f6f4]',
-                pass: 'Billet premium',
-                text: 'Débloque le badge C2P, la priorité de matching et la visibilité premium dans les flux.',
-              },
-            ].map((item) => (
-              <article key={item.title} className={`rounded-[22px] border px-5 py-6 shadow-[0_18px_45px_rgba(15,28,53,0.06)] ${item.tone}`}>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#1a9a96]">{item.title}</p>
-                <p className="mt-3 inline-flex rounded-full border border-[#d6dbe1] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0f1c35]">
-                  {item.pass}
-                </p>
-                <p className="mt-4 text-sm leading-7 text-[#64748b]">{item.text}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">À quoi sert l’abonnement</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">L’accès premium se déclenche au premier usage</h2>
-            </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
-              Vous pouvez créer un compte librement. La plateforme vous demandera ensuite un plan actif quand vous voudrez utiliser une capacité premium liée à votre rôle.
-            </p>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-3">
-            {monetizedRoles.map((role, index) => (
-              <article key={role} className="border-t border-[#d6dbe1] pt-5 sm:pt-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#1a9a96]">Etape 0{index + 1}</p>
-                <h3 className="mt-3 text-xl font-semibold text-[#0f1c35] sm:text-2xl">{monetizedRoleContent[role].label}</h3>
-                <p className="mt-3 text-sm leading-6 text-[#64748b] sm:mt-4 sm:leading-7">{monetizedRoleContent[role].purpose}</p>
-                <p className="mt-4 rounded-2xl bg-[#ffffff] px-4 py-4 text-sm font-medium leading-6 text-[#0f1c35]">
-                  {monetizedRoleContent[role].gateLabel}
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">Plans actifs</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Prix mensuels et fonctionnalités</h2>
-            </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
-              Les plans ci-dessous viennent du backend public. Si l’équipe C2P modifie un tarif ou une fonctionnalité, cette page suit directement la source métier.
+            <p className="max-w-2xl text-sm leading-6 text-[#64748b]">
+              Chaque rôle peut démarrer gratuitement. Les plans payants débloquent les actions de publication, de gestion avancée et de visibilité.
             </p>
           </div>
 
@@ -290,115 +146,105 @@ export default function PricingPage() {
               {errorMessage}
             </div>
           ) : (
-            <div className="space-y-10">
+            <div className="space-y-12">
               {monetizedRoles.map((role) => {
                 const content = monetizedRoleContent[role];
                 const rolePlans = [...plansByRole[role]].sort((left, right) => left.price_monthly - right.price_monthly);
-                const featuredIndex = getFeaturedPlanIndex(rolePlans);
+                const visibleRolePlans = role === 'prestataire'
+                  ? rolePlans.filter((plan) => plan.price_monthly > 0)
+                  : rolePlans;
                 return (
                   <section
                     id={`${role}-plans`}
                     key={role}
-                    className="overflow-hidden rounded-[32px] border border-[#d6dbe1] bg-[radial-gradient(circle_at_top,rgba(26,154,150,0.08),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(15,28,53,0.05),transparent_26%),linear-gradient(180deg,#ffffff,#ffffff)] px-5 py-8 text-[#0f1c35] shadow-[0_24px_70px_rgba(15,28,53,0.10)] sm:px-8 lg:px-10"
+                    className="text-[#0f1c35]"
                   >
-                    <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="mb-7 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#1a9a96]">{content.shortLabel}</p>
-                        <h3 className="mt-3 text-3xl font-semibold text-[#0f1c35]">{content.label}</h3>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#1a9a96]">{content.shortLabel}</p>
+                        <h3 className="mt-2 text-3xl font-semibold text-[#0f1c35]">{content.label}</h3>
                       </div>
-                      <p className="max-w-2xl text-sm leading-7 text-[#64748b]">{content.purpose}</p>
-                    </div>
-
-                    <div className="mb-6 flex justify-center sm:mb-8">
-                      <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-[#d6dbe1] bg-[#ffffff] px-4 py-2.5 text-center text-xs text-[#64748b] sm:gap-3 sm:px-5 sm:py-3 sm:text-sm">
-                        <span className="rounded-full bg-[#0f1c35] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white">
-                          Mensuel
-                        </span>
-                        <span>Facturation active actuellement</span>
-                      </div>
+                      <p className="max-w-2xl text-sm leading-6 text-[#64748b]">{content.purpose}</p>
                     </div>
 
                     {isLoading ? (
-                      <div className="grid gap-5 lg:grid-cols-3">
+                      <div className="grid gap-8 lg:grid-cols-3">
                         {[1, 2, 3].map((placeholder) => (
                           <div
                             key={placeholder}
-                            className="min-h-[540px] animate-pulse rounded-[28px] border border-[#d6dbe1] bg-white"
+                            className="min-h-[540px] animate-pulse rounded-[22px] border border-[#d6dbe1] bg-white"
                           />
                         ))}
                       </div>
-                    ) : rolePlans.length === 0 ? (
+                    ) : visibleRolePlans.length === 0 ? (
                       <div className="rounded-[24px] border border-[#d6dbe1] bg-[#ffffff] px-6 py-6 text-sm text-[#64748b]">
                         Aucun plan public actif pour ce rôle.
                       </div>
                     ) : (
-                      <div className={`grid gap-5 ${rolePlans.length > 2 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
-                        {rolePlans.map((plan, index) => {
-                          const isFeatured = index === featuredIndex;
+                      <div className="grid gap-8 lg:grid-cols-3">
+                        <article className="relative flex min-h-[540px] flex-col justify-between rounded-[22px] border border-[#d6dbe1] bg-white px-7 py-10 shadow-[0_18px_46px_rgba(15,28,53,0.06)] sm:px-10">
+                            <div>
+                              <p className="text-xl font-semibold text-[#0f1c35]">Essentiel</p>
+                              <div className="mt-3">
+                                <span className="block text-5xl font-semibold tracking-tight text-[#0f1c35]">Gratuit</span>
+                              </div>
+                              <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">
+                                Démarrez votre parcours sur C2P sans frais.
+                              </p>
+                              <ul className="mt-8 space-y-5 text-base leading-6 text-[#0f1c35]">
+                                <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Accès au compte de base</span></li>
+                                <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Préparer votre profil public</span></li>
+                                <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Explorer les services et formations</span></li>
+                                <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Passer au premium quand vous êtes prêt</span></li>
+                              </ul>
+                            </div>
+                            <Link to={`/auth/register?role=${role}`} className="mt-8 inline-flex w-full items-center justify-center rounded-xl border border-[#d6dbe1] bg-white px-5 py-4 text-base font-semibold text-[#0f1c35] transition-colors hover:border-[#1a9a96]">
+                              Créer un compte
+                            </Link>
+                          </article>
+                        {visibleRolePlans.map((plan, index) => {
+                          const isPopular = index === 0;
+                          const isBestValue = index === 1;
                           const cta = getPlanCta(plan, isAuthenticated, user?.role);
                           return (
                           <article
                             key={plan.id}
-                            className={`relative flex h-full min-h-0 flex-col justify-between overflow-hidden rounded-[24px] border p-5 shadow-[0_18px_50px_rgba(15,28,53,0.10)] transition-transform duration-300 sm:min-h-[560px] sm:rounded-[28px] sm:p-6 ${
-                              isFeatured
-                                ? 'border-[#0f1c35] bg-[radial-gradient(circle_at_top_left,rgba(15,28,53,0.10),transparent_42%),linear-gradient(180deg,#ffffff,#ffffff)] shadow-[0_0_0_1px_rgba(15,28,53,0.20),0_28px_80px_rgba(15,28,53,0.14)]'
-                                : 'border-[#d6dbe1] bg-[radial-gradient(circle_at_top_left,rgba(26,154,150,0.05),transparent_42%),linear-gradient(180deg,#ffffff,#ffffff)]'
+                            className={`relative flex min-h-[540px] flex-col justify-between rounded-[22px] border bg-white px-7 py-10 shadow-[0_18px_46px_rgba(15,28,53,0.06)] sm:px-10 ${
+                              isPopular
+                                ? 'border-[#08b84f]'
+                                : isBestValue
+                                  ? 'border-[#f5bb00]'
+                                  : 'border-[#d6dbe1]'
                             }`}
                           >
-                            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(15,28,53,0.03))]" />
+                            {isPopular || isBestValue ? (
+                              <span
+                                className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full px-6 py-2 text-sm font-semibold text-white ${
+                                  isBestValue ? 'bg-[#08a846]' : 'bg-[#08a846]'
+                                }`}
+                              >
+                                {isBestValue ? 'Meilleure valeur' : 'Le plus populaire'}
+                              </span>
+                            ) : null}
                             <div>
-                              <div className="relative z-10 flex items-start justify-between gap-4">
-                                <div>
-                                  <div className="flex flex-wrap items-center gap-3">
-                                    <h4 className="text-xl font-semibold text-[#0f1c35] sm:text-2xl">{plan.name}</h4>
-                                    {isFeatured ? (
-                                      <span className="rounded-full bg-[#f7f6f4] px-3 py-1 text-xs font-semibold text-[#1a9a96]">
-                                        Le plus choisi
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                  <div className="mt-4 flex flex-wrap items-end gap-2 sm:mt-5">
-                                    <span className="text-4xl font-semibold tracking-tight text-[#0f1c35] sm:text-5xl">
-                                      {formatAmountOnly(plan.price_monthly)}
-                                    </span>
-                                    <span className="pb-1 text-xl font-semibold text-[#0f1c35] sm:text-2xl">
-                                      {formatCurrencyLabel(plan.currency)}
-                                    </span>
-                                    <span className="pb-1.5 text-base text-[#1a9a96] sm:pb-2 sm:text-lg">/ mois</span>
-                                  </div>
-                                  <p className="mt-3 max-w-sm text-sm leading-6 text-[#64748b] sm:mt-4 sm:leading-7">
-                                    {content.summary}
-                                  </p>
-                                </div>
-                                <span
-                                  className={`flex h-7 w-7 items-center justify-center rounded-full border text-sm ${
-                                    isFeatured
-                                      ? 'border-[#0f1c35] bg-[#0f1c35] text-white'
-                                      : 'border-[#1a9a96] text-[#1a9a96]'
-                                  }`}
-                                >
-                                  <i className={isFeatured ? 'ri-check-line' : 'ri-circle-line'}></i>
+                              <h4 className="text-xl font-semibold text-[#0f1c35]">{plan.name}</h4>
+                              <div className="mt-3 flex flex-wrap items-end gap-2">
+                                <span className="text-5xl font-semibold tracking-tight text-[#0f1c35]">
+                                  {formatAmountOnly(plan.price_monthly)}
+                                </span>
+                                <span className="pb-2 text-base text-[#64748b]">
+                                  {formatCurrencyLabel(plan.currency)}/mois
                                 </span>
                               </div>
+                              <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">
+                                {content.summary}
+                              </p>
 
-                              <div className="relative z-10 mt-5 grid grid-cols-2 gap-3 sm:mt-6">
-                                <div className="rounded-2xl border border-[#d6dbe1] bg-white px-3 py-3.5 sm:px-4 sm:py-4">
-                                  <p className="text-lg font-semibold text-[#0f1c35]">{plan.commission_rate}%</p>
-                                  <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#1a9a96]">Commission</p>
-                                </div>
-                                <div className="rounded-2xl border border-[#d6dbe1] bg-white px-3 py-3.5 sm:px-4 sm:py-4">
-                                  <p className="text-lg font-semibold text-[#0f1c35]">{getSupportLabel(plan.support_level)}</p>
-                                  <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[#1a9a96]">Support</p>
-                                </div>
-                              </div>
-
-                              <ul className="relative z-10 mt-5 space-y-3 text-sm leading-6 text-[#0f1c35] sm:mt-6 sm:space-y-4">
+                              <ul className="mt-8 space-y-5 text-base leading-6 text-[#0f1c35]">
                                 {plan.features.map((feature) => (
                                   <li key={feature} className="flex items-start gap-3">
-                                    <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#ffffff] text-[#1a9a96] sm:h-10 sm:w-10">
-                                      <i className={`${getFeatureIcon(feature)} text-base sm:text-lg`}></i>
-                                    </span>
-                                    <span className="pt-0.5 text-sm leading-6 text-[#0f1c35] sm:pt-1 sm:text-base sm:leading-7">{feature}</span>
+                                    <i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i>
+                                    <span>{feature}</span>
                                   </li>
                                 ))}
                               </ul>
@@ -406,15 +252,17 @@ export default function PricingPage() {
 
                             <Link
                               to={cta.to}
-                              className={`relative z-10 mt-6 inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-colors sm:mt-8 ${
-                                cta.variant === 'featured_orange' && isFeatured
-                                  ? 'bg-[#1a9a96] text-white hover:bg-[#147f7b]'
-                                  : cta.variant === 'featured_orange'
-                                    ? 'bg-[#0f1c35] text-white hover:bg-[#1b2d4a]'
-                                    : 'border border-[#d6dbe1] bg-white text-[#0f1c35] hover:border-[#1a9a96] hover:bg-[#ffffff]'
+                              className={`mt-8 inline-flex w-full items-center justify-center rounded-xl px-5 py-4 text-base font-semibold transition-colors ${
+                                isBestValue
+                                  ? 'bg-[#ffc400] text-[#0f1c35] hover:bg-[#f2b800]'
+                                  : isPopular
+                                    ? 'bg-[#08a846] text-white hover:bg-[#078f3d]'
+                                    : cta.variant === 'featured_orange'
+                                      ? 'bg-[#0f1c35] text-white hover:bg-[#1b2d4a]'
+                                      : 'border border-[#d6dbe1] bg-white text-[#0f1c35] hover:border-[#1a9a96]'
                               }`}
                             >
-                              {cta.label}
+                              {isBestValue ? "Contacter l'équipe" : isPopular ? 'Commencer maintenant' : cta.label}
                             </Link>
                           </article>
                         )})}
@@ -428,28 +276,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="bg-white px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1a9a96]">Sans abonnement</p>
-              <h2 className="mt-4 text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Qui peut entrer sans plan mensuel</h2>
-            </div>
-            <p className="max-w-2xl text-sm leading-7 text-[#64748b]">
-              Tous les rôles ne sont pas monétisés par abonnement. C2P garde une entrée libre pour les usages d’exploration, d’achat ou d’onboarding encadré.
-            </p>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-3">
-            {publicAccessRoles.map((item) => (
-              <article key={item.role} className="rounded-[24px] border border-[#d6dbe1] bg-[#ffffff] px-6 py-7">
-                <h3 className="text-2xl font-semibold text-[#0f1c35]">{item.label}</h3>
-                <p className="mt-4 text-sm leading-7 text-[#64748b]">{item.description}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

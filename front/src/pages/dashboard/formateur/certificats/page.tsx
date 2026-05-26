@@ -1,73 +1,67 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
-import { SkeletonList } from '@/components/base/Skeleton';
 import { downloadSimplePdf } from '@/lib/downloads';
+import { queryKeys } from '@/lib/queryKeys';
 import {
   deleteFormateurCertificate,
   fetchFormateurCertificates,
   issueFormateurCertificate,
 } from '@/lib/formateurDashboardApi';
-
-
-interface Certificate {
-  id: number;
-  student_name: string;
-  student_avatar: string | null;
-  course_id: number | null;
-  course_name: string | null;
-  completion_date: string | null;
-  final_grade: number | null;
-  status: string;
-  certificate_id: string | null;
-  issued_at: string | null;
-  created_at: string;
-}
-
-function formatCertificateGrade(value: number | null) {
-  return value != null ? `${value}` : '-';
-}
+import {
+  CertificateFilters,
+  CertificatePreviewModal,
+  CertificateStatsGrid,
+  CertificatesTable,
+} from './CertificatePanels';
+import {
+  filterCertificates,
+  formatCertificateGrade,
+  type Certificate,
+  type CertificateFilter,
+} from './certificatesModel';
 
 export default function FormateurCertificatsPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [certs, setCerts] = useState<Certificate[]>([]);
-  const [filter, setFilter] = useState<string>('all');
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<CertificateFilter>('all');
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  const fetchCerts = useCallback(async () => {
-    if (!user?.id) {
-      setCerts([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const data = await fetchFormateurCertificates(user.id);
-      setCerts(data as Certificate[]);
-    } catch (err: unknown) {
-      error('Erreur', 'Impossible de charger les certificats.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+  const certificatesQueryKey = useMemo(() => queryKeys.formateur.certificates(user?.id), [user?.id]);
+  const {
+    data: certs = [],
+    isLoading: loading,
+    isError,
+    error: certificatesError,
+  } = useQuery({
+    queryKey: certificatesQueryKey,
+    queryFn: async () => fetchFormateurCertificates(user?.id ?? '') as Promise<Certificate[]>,
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    fetchCerts();
-  }, [fetchCerts]);
+    if (isError) {
+      error('Erreur', 'Impossible de charger les certificats.');
+      console.error(certificatesError);
+    }
+  }, [certificatesError, error, isError]);
 
-  const filteredCerts = filter === 'all' ? certs : certs.filter((c) => c.status === filter);
+  const refreshCerts = async () => {
+    await queryClient.invalidateQueries({ queryKey: certificatesQueryKey });
+  };
+
+  const filteredCerts = filterCertificates(certs, filter);
 
   const handleIssue = async (cert: Certificate) => {
     try {
       await issueFormateurCertificate(cert);
       success('Certificat délivré', `Le certificat pour ${cert.student_name} a été généré avec succès.`);
-      await fetchCerts();
+      await refreshCerts();
     } catch (err: unknown) {
       error('Erreur', 'Impossible de délivrer le certificat.');
       console.error(err);
@@ -108,37 +102,22 @@ export default function FormateurCertificatsPage() {
     try {
       await deleteFormateurCertificate(cert.id);
       success('Supprimé', `Le certificat de ${cert.student_name} a été supprimé.`);
-      await fetchCerts();
+      await refreshCerts();
     } catch (err: unknown) {
       error('Erreur', 'Impossible de supprimer le certificat.');
       console.error(err);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      ready: 'bg-green-100 text-green-700',
-      issued: 'bg-teal-100 text-teal-700',
-      pending: 'bg-amber-100 text-amber-700',
-    };
-    const labels: Record<string, string> = {
-      ready: 'Prêt à délivrer',
-      issued: 'Délivré',
-      pending: 'En attente',
-    };
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-        {labels[status] || status}
-      </span>
-    );
+  const closePreview = () => {
+    setShowPreviewModal(false);
+    setSelectedCert(null);
   };
 
-  const totalCerts = certs.length;
-  const issuedThisMonth = certs.filter(
-    (c) => c.status === 'issued' && c.issued_at && new Date(c.issued_at).getMonth() === new Date().getMonth()
-  ).length;
-  const pendingCount = certs.filter((c) => c.status === 'pending').length;
-  const readyCount = certs.filter((c) => c.status === 'ready').length;
+  const handleIssueFromPreview = async (cert: Certificate) => {
+    await handleIssue(cert);
+    closePreview();
+  };
 
   return (
     <DashboardLayout>
@@ -150,201 +129,25 @@ export default function FormateurCertificatsPage() {
           <p className="text-gray-600 text-sm md:text-base">Délivrez et gérez les certificats de vos apprenants</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: 'Total certificats', value: String(totalCerts), icon: 'ri-award-line', color: 'bg-teal-500' },
-            { label: 'Délivrés ce mois', value: String(issuedThisMonth), icon: 'ri-check-double-line', color: 'bg-green-500' },
-            { label: 'En attente', value: String(pendingCount), icon: 'ri-time-line', color: 'bg-amber-500' },
-            { label: 'Prêts à délivrer', value: String(readyCount), icon: 'ri-file-check-line', color: 'bg-blue-500' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    <i className={`${stat.icon} text-white text-sm`}></i>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-xs text-gray-600">{stat.label}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <CertificateStatsGrid certs={certs} />
+        <CertificateFilters filter={filter} onFilterChange={setFilter} />
+        <CertificatesTable
+          certs={filteredCerts}
+          loading={loading}
+          onDelete={handleDelete}
+          onDownload={handleDownload}
+          onIssue={handleIssue}
+          onPreview={handlePreview}
+        />
 
-        {/* Filters */}
-        <div className="flex gap-2 mb-6">
-          {(['all', 'ready', 'issued', 'pending'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                filter === f ? 'bg-teal-600 text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              {f === 'all' ? 'Tous' : f === 'ready' ? 'Prêts' : f === 'issued' ? 'Délivrés' : 'En attente'}
-            </button>
-          ))}
-        </div>
-
-        {/* Certificates Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {loading ? (
-            <SkeletonList count={5} />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Apprenant</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Formation</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Note finale</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">N° Certificat</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Statut</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredCerts.map((cert) => (
-                    <tr key={cert.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {cert.student_avatar ? (
-                            <img src={cert.student_avatar} alt={cert.student_name} className="w-8 h-8 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-xs font-bold text-teal-700">
-                              {cert.student_name.charAt(0)}
-                            </div>
-                          )}
-                          <span className="font-medium text-gray-900 text-sm">{cert.student_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{cert.course_name || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {cert.completion_date ? new Date(cert.completion_date).toLocaleDateString('fr-FR') : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCertificateGrade(cert.final_grade)}</td>
-                      <td className="px-4 py-3 text-sm font-mono text-gray-600">{cert.certificate_id || '-'}</td>
-                      <td className="px-4 py-3">{getStatusBadge(cert.status)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handlePreview(cert)}
-                            className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
-                            title="Aperçu"
-                          >
-                            <i className="ri-eye-line text-gray-600 text-sm"></i>
-                          </button>
-                          {cert.status === 'ready' && (
-                            <button
-                              onClick={() => handleIssue(cert)}
-                              className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors whitespace-nowrap"
-                            >
-                              Délivrer
-                            </button>
-                          )}
-                          {cert.status === 'issued' && (
-                            <button
-                              onClick={() => handleDownload(cert)}
-                              className="w-8 h-8 flex items-center justify-center hover:bg-teal-50 rounded-lg transition-colors"
-                              title="Télécharger"
-                            >
-                              <i className="ri-download-line text-teal-600 text-sm"></i>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDelete(cert)}
-                            className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <i className="ri-delete-bin-line text-red-500 text-sm"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {filteredCerts.length === 0 && !loading && (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i className="ri-award-line text-2xl text-gray-400"></i>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun certificat trouvé</h3>
-            <p className="text-gray-600">Ajustez vos filtres</p>
-          </div>
-        )}
-
-        {/* Preview Modal */}
-        {showPreviewModal && selectedCert && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-8">
-              <div className="rounded-lg border-4 border-teal-100 bg-[#f5faf9] p-8">
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-teal-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i className="ri-award-line text-4xl text-white"></i>
-                  </div>
-                  <h2 className="text-2xl font-bold text-teal-900 mb-1">CERTIFICAT DE RÉUSSITE</h2>
-                  <p className="text-teal-600 text-sm mb-6">C2P - Compétences et Création de Projet</p>
-
-                  <p className="text-gray-700 mb-4">Ce certificat est décerné à</p>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">{selectedCert.student_name}</h3>
-                  <p className="text-gray-600 mb-6">pour avoir complété avec succès la formation</p>
-                  <h4 className="text-xl font-semibold text-teal-700 mb-4">{selectedCert.course_name || '-'}</h4>
-
-                  <div className="flex items-center justify-center gap-8 mb-6">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-gray-900">{formatCertificateGrade(selectedCert.final_grade)}</p>
-                      <p className="text-xs text-gray-500">Note finale</p>
-                    </div>
-                    <div className="w-px h-10 bg-gray-300"></div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-gray-900">
-                        {selectedCert.completion_date ? new Date(selectedCert.completion_date).toLocaleDateString('fr-FR') : '-'}
-                      </p>
-                      <p className="text-xs text-gray-500">Date d'obtention</p>
-                    </div>
-                  </div>
-
-                  {selectedCert.certificate_id && (
-                    <p className="text-xs text-gray-400 font-mono">N° {selectedCert.certificate_id}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-3 justify-end mt-6">
-                <button
-                  onClick={() => { setShowPreviewModal(false); setSelectedCert(null); }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Fermer
-                </button>
-                {selectedCert.status === 'issued' && (
-                  <button
-                    onClick={() => handleDownload(selectedCert)}
-                    className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors flex items-center gap-2"
-                  >
-                    <i className="ri-download-line"></i>
-                    Télécharger PDF
-                  </button>
-                )}
-                {selectedCert.status === 'ready' && (
-                  <button
-                    onClick={() => { handleIssue(selectedCert); setShowPreviewModal(false); }}
-                    className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
-                  >
-                    Délivrer le certificat
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {showPreviewModal && selectedCert ? (
+          <CertificatePreviewModal
+            cert={selectedCert}
+            onClose={closePreview}
+            onDownload={handleDownload}
+            onIssue={handleIssueFromPreview}
+          />
+        ) : null}
       </div>
     </DashboardLayout>
   );

@@ -13,7 +13,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: 'Quels rôles sont disponibles sur la plateforme ?',
-    answer: 'C2P propose 8 rôles adaptés à vos besoins : Apprenant pour suivre des formations, Parent pour suivre les parcours rattachés, Formateur pour dispenser des cours, Prestataire pour proposer des services, Client / Prestateur pour publier un besoin et trouver un prestataire, Porteur de projet pour lancer votre entreprise, Partenaire pour collaborer sur des projets, et Admin pour la gestion de la plateforme.'
+    answer: 'C2P propose 8 rôles adaptés à vos besoins : Apprenant pour suivre des formations, Parent pour suivre les parcours rattachés, Formateur pour dispenser des cours, Prestataire pour proposer des services, Client pour publier un besoin et trouver un prestataire, Porteur de projet pour lancer votre entreprise, Partenaire pour collaborer sur des projets, et Admin pour la gestion de la plateforme.'
   },
   {
     question: 'Les formations sont-elles certifiantes ?',
@@ -21,7 +21,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: 'Comment fonctionne AlloPresta ?',
-    answer: 'AlloPresta porte le cadre SenPresta. En tant que client / prestateur, vous publiez votre besoin ou choisissez un prestataire et C2P pilote la mise en relation. En tant que prestataire, vous activez votre visibilité, vos alertes et votre niveau de vérification selon votre plan. Le paiement reste sécurisé et libéré selon le workflow C2P.'
+    answer: 'En tant que client, vous publiez votre besoin ou choisissez un prestataire, puis C2P cadre la mise en relation lorsque c’est nécessaire. En tant que prestataire, vous pouvez renforcer votre visibilité, vos alertes et votre niveau de vérification selon votre plan. Le paiement reste sécurisé et libéré selon les étapes prévues par C2P.'
   },
   {
     question: 'Quel est le coût pour utiliser ProjectCenter ?',

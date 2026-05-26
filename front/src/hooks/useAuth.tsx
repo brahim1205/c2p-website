@@ -9,6 +9,13 @@ export interface RegisterData {
   phone: string;
   password: string;
   role: string;
+  bio?: string;
+  location?: string;
+  publicTitle?: string;
+  website?: string;
+  preferredLanguage?: string;
+  skills?: string[];
+  publicProfileEnabled?: boolean;
 }
 
 interface PendingTwoFactorState {
@@ -58,9 +65,9 @@ function persistPendingTwoFactor(value: PendingTwoFactorState | null) {
 }
 
 function clearSecuritySensitiveStorage() {
-  const preservedDarkMode = localStorage.getItem('c2p-dark-mode');
   const keysToRemove = Object.keys(localStorage).filter((key) => (
     key.startsWith('c2p_')
+    || key === 'c2p-dark-mode'
     || key.startsWith('course-')
     || key.startsWith('learning-')
     || key.startsWith('daily-xp-')
@@ -74,10 +81,6 @@ function clearSecuritySensitiveStorage() {
   }
 
   sessionStorage.removeItem(TWO_FACTOR_STORAGE_KEY);
-
-  if (preservedDarkMode !== null) {
-    localStorage.setItem('c2p-dark-mode', preservedDarkMode);
-  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

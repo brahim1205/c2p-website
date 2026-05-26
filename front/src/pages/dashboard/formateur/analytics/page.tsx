@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '../../components/DashboardLayout';
-import Breadcrumb from '@/components/base/Breadcrumb';
-import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
 import { fetchFormateurAnalytics } from '@/lib/formateurDashboardApi';
+import { queryKeys } from '@/lib/queryKeys';
+import { FormateurAnalyticsTitle } from './FormateurAnalyticsTitle';
 import {
   Bar,
   BarChart,
@@ -47,6 +48,12 @@ interface AnalyticsSubmission {
   submitted_at?: string | null;
 }
 
+interface AnalyticsSnapshot {
+  courses?: AnalyticsCourse[];
+  enrollments?: AnalyticsEnrollment[];
+  submissions?: AnalyticsSubmission[];
+}
+
 const chartColors = ['#5fa6f3', '#0F766E', '#F59E0B', '#6366F1', '#EF4444'];
 
 function formatMonthKey(value: string) {
@@ -62,59 +69,30 @@ export default function FormateurAnalyticsPage() {
   const { user } = useAuth();
   const { error } = useToast();
   const { gateFor, loading: subscriptionLoading } = useSubscriptionAccess(user);
-  const [loading, setLoading] = useState(true);
-  const [courses, setCourses] = useState<AnalyticsCourse[]>([]);
-  const [enrollments, setEnrollments] = useState<AnalyticsEnrollment[]>([]);
-  const [submissions, setSubmissions] = useState<AnalyticsSubmission[]>([]);
-  const isMountedRef = useRef(true);
   const subscriptionGate = gateFor('trainer_analytics_view');
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  const analyticsQueryKey = useMemo(() => queryKeys.formateur.analytics(user?.id), [user?.id]);
+  const {
+    data: analyticsSnapshot,
+    isLoading: loading,
+    isError,
+    error: analyticsError,
+  } = useQuery({
+    queryKey: analyticsQueryKey,
+    queryFn: async () => fetchFormateurAnalytics(user?.id ?? '') as Promise<AnalyticsSnapshot>,
+    enabled: Boolean(user?.id && !subscriptionLoading && subscriptionGate.allowed),
+  });
 
-  const loadAnalytics = useCallback(async () => {
-    if (!user?.id) {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-      return;
-    }
-    if (!subscriptionLoading && !subscriptionGate.allowed) {
-      if (isMountedRef.current) {
-        setCourses([]);
-        setEnrollments([]);
-        setSubmissions([]);
-        setLoading(false);
-      }
-      return;
-    }
-    if (isMountedRef.current) {
-      setLoading(true);
-    }
-    try {
-      const snapshot = await fetchFormateurAnalytics(user.id);
-      if (!isMountedRef.current) return;
-      setCourses(snapshot.courses as AnalyticsCourse[]);
-      setEnrollments(snapshot.enrollments as AnalyticsEnrollment[]);
-      setSubmissions(snapshot.submissions as AnalyticsSubmission[]);
-    } catch (err) {
-      if (!isMountedRef.current) return;
-      console.error(err);
+  useEffect(() => {
+    if (isError) {
       error('Erreur', 'Impossible de charger les analytics formateur.');
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
+      console.error(analyticsError);
     }
-  }, [error, subscriptionGate.allowed, subscriptionLoading, user?.id]);
+  }, [analyticsError, error, isError]);
 
-  useEffect(() => {
-    void loadAnalytics();
-  }, [loadAnalytics]);
+  const courses = useMemo(() => analyticsSnapshot?.courses || [], [analyticsSnapshot?.courses]);
+  const enrollments = useMemo(() => analyticsSnapshot?.enrollments || [], [analyticsSnapshot?.enrollments]);
+  const submissions = useMemo(() => analyticsSnapshot?.submissions || [], [analyticsSnapshot?.submissions]);
 
   const monthlyRevenue = useMemo(() => {
     const courseMap = new Map(courses.map((course) => [String(course.id), course]));
@@ -181,13 +159,7 @@ export default function FormateurAnalyticsPage() {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
-        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Formateur', path: '/dashboard/formateur' }, { label: 'Analytics' }]} />
-        <SubscriptionRequiredBanner gate={subscriptionGate} />
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Analytics formateur</h1>
-          <p className="mt-2 text-gray-600">Ventes, revenus, vues, conversion, complétion et signaux d’abandon sur vos formations.</p>
-        </div>
+        <FormateurAnalyticsTitle gate={subscriptionGate} />
 
         {!subscriptionLoading && !subscriptionGate.allowed ? (
           <section className="rounded-xl border border-dashed border-amber-300 bg-white p-10 text-center">

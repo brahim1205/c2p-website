@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -6,38 +7,34 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { fetchCollaborations, type Collaboration, updatePartnerCollaboration } from '@/lib/projectApi';
 import { formatCurrency } from '@/lib/formatters';
+import { queryKeys } from '@/lib/queryKeys';
 
 function getPartnerTypeLabel(type: string | null | undefined) {
   return type === 'technique' ? 'Technique' : 'Financier';
 }
 
 export default function PartenaireCollaborationsPage() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('tous');
-  const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
 
-  const loadCollaborations = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      setCollaborations(await fetchCollaborations(user.id));
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les collaborations.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+  const collaborationsQuery = useQuery({
+    queryKey: queryKeys.partenaire.collaborations(user?.id),
+    queryFn: () => fetchCollaborations(user!.id),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    loadCollaborations();
-  }, [loadCollaborations]);
+    if (collaborationsQuery.isError) {
+      console.error(collaborationsQuery.error);
+      error('Erreur', 'Impossible de charger les collaborations.');
+    }
+  }, [collaborationsQuery.error, collaborationsQuery.isError, error]);
+
+  const loading = collaborationsQuery.isLoading;
+  const collaborations: Collaboration[] = useMemo(() => collaborationsQuery.data ?? [], [collaborationsQuery.data]);
 
   const filteredCollaborations = useMemo(() => {
     return collaborations.filter((collaboration) => {
@@ -52,7 +49,7 @@ export default function PartenaireCollaborationsPage() {
     try {
       await updatePartnerCollaboration(user.id, collaboration.id, patch);
       success('Collaboration mise a jour', 'La collaboration a ete actualisee.');
-      loadCollaborations();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.partenaire.root(user.id) });
     } catch (err) {
       console.error(err);
       error('Erreur', 'La collaboration n a pas pu etre modifiee.');

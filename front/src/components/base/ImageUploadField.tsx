@@ -9,6 +9,8 @@ interface ImageUploadFieldProps {
   folder: string;
   disabled?: boolean;
   helper?: string;
+  allowUrlInput?: boolean;
+  compact?: boolean;
 }
 
 export default function ImageUploadField({
@@ -18,6 +20,8 @@ export default function ImageUploadField({
   folder,
   disabled = false,
   helper,
+  allowUrlInput = true,
+  compact = false,
 }: ImageUploadFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { success, error } = useToast();
@@ -82,9 +86,9 @@ export default function ImageUploadField({
       />
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-        <div className="flex min-h-48 items-center justify-center bg-gray-100">
+        <div className={`flex items-center justify-center bg-gray-100 ${compact ? 'min-h-28' : 'min-h-48'}`}>
           {value ? (
-            <img src={value} alt={label} className="h-48 w-full object-cover" />
+            <img src={value} alt={label} className={`${compact ? 'h-28' : 'h-48'} w-full object-cover`} />
           ) : (
             <div className="flex flex-col items-center gap-2 text-gray-400">
               <i className="ri-image-line text-3xl"></i>
@@ -93,14 +97,16 @@ export default function ImageUploadField({
           )}
         </div>
         <div className="border-t border-gray-200 bg-white px-4 py-3">
-          <input
-            type="url"
-            value={value || ''}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder="https://..."
-            disabled={disabled}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
-          />
+          {allowUrlInput ? (
+            <input
+              type="url"
+              value={value || ''}
+              onChange={(event) => onChange(event.target.value)}
+              placeholder="https://..."
+              disabled={disabled}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+            />
+          ) : null}
           {helper ? <p className="mt-2 text-xs text-gray-500">{helper}</p> : null}
         </div>
       </div>

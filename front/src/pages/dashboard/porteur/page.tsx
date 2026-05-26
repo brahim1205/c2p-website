@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -6,48 +7,41 @@ import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequire
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { fetchOwnerDashboardSnapshot, type FundingRound, type ProjectPartnership, type ProjectRecord } from '@/lib/projectApi';
+import { fetchOwnerDashboardSnapshot } from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
-import { fetchFinanceSnapshot, type FinanceSnapshot } from '@/lib/saasApi';
+import { queryKeys } from '@/lib/queryKeys';
+import { fetchFinanceSnapshot } from '@/lib/saasApi';
 
 export default function PorteurDashboardPage() {
   const { user } = useAuth();
   const { error } = useToast();
   const { gateFor } = useSubscriptionAccess(user);
-  const [loading, setLoading] = useState(true);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [partnerships, setPartnerships] = useState<ProjectPartnership[]>([]);
-  const [rounds, setRounds] = useState<FundingRound[]>([]);
-  const [finance, setFinance] = useState<FinanceSnapshot | null>(null);
   const subscriptionGate = gateFor('project_manage');
 
-  const loadDashboard = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.porteur.dashboard(user?.id),
+    queryFn: async () => {
       const [snapshot, financeSnapshot] = await Promise.all([
-        fetchOwnerDashboardSnapshot(user.id),
-        fetchFinanceSnapshot(user.id, user.role),
+        fetchOwnerDashboardSnapshot(user!.id),
+        fetchFinanceSnapshot(user!.id, user!.role),
       ]);
-      setProjects(snapshot.projects);
-      setPartnerships(snapshot.partnerships);
-      setRounds(snapshot.rounds);
-      setFinance(financeSnapshot);
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les donnees porteur.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id, user?.role]);
+      return { ...snapshot, finance: financeSnapshot };
+    },
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+    if (dashboardQuery.isError) {
+      console.error(dashboardQuery.error);
+      error('Erreur', 'Impossible de charger les donnees porteur.');
+    }
+  }, [dashboardQuery.error, dashboardQuery.isError, error]);
+
+  const loading = dashboardQuery.isLoading;
+  const projects = useMemo(() => dashboardQuery.data?.projects ?? [], [dashboardQuery.data?.projects]);
+  const partnerships = useMemo(() => dashboardQuery.data?.partnerships ?? [], [dashboardQuery.data?.partnerships]);
+  const rounds = useMemo(() => dashboardQuery.data?.rounds ?? [], [dashboardQuery.data?.rounds]);
+  const finance = dashboardQuery.data?.finance ?? null;
 
   const stats = useMemo(() => {
     const totalFunding = projects.reduce((sum, project) => sum + Number(project.funding || 0), 0);
@@ -86,7 +80,7 @@ export default function PorteurDashboardPage() {
 
   const mentors = partnerships.filter((partner) => partner.type === 'mentor').slice(0, 3);
   const quickLinks = [
-    { label: 'Soumettre un projet', icon: 'ri-add-circle-line', link: '/project-center/soumettre', tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Soumettre un projet', icon: 'ri-add-circle-line', link: '/dashboard/porteur/mes-projets/soumettre', tone: 'bg-emerald-50 text-emerald-700' },
     { label: 'Mes projets', icon: 'ri-folder-line', link: '/dashboard/porteur/mes-projets', tone: 'bg-sky-50 text-sky-700' },
     { label: 'Partenariats', icon: 'ri-team-line', link: '/dashboard/porteur/partenariats', tone: 'bg-violet-50 text-violet-700' },
     { label: 'Financements', icon: 'ri-funds-line', link: '/dashboard/porteur/financements', tone: 'bg-teal-50 text-teal-700' },

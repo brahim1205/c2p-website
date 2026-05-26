@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export default function NotificationBell() {
@@ -39,7 +39,9 @@ export default function NotificationBell() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+        aria-label="Ouvrir les notifications"
+        aria-expanded={isOpen}
+        className={`relative w-10 h-10 flex items-center justify-center rounded-xl active:scale-95 transition-all duration-200 ${isOpen ? 'bg-gray-100' : 'hover:bg-gray-100/80'}`}
       >
         <div className="w-5 h-5 flex items-center justify-center">
           <i className="ri-notification-3-line text-xl text-gray-600"></i>
@@ -54,7 +56,7 @@ export default function NotificationBell() {
       {isOpen && (
         <>
           <div className="fixed inset-0 bg-black/10 z-30" onClick={() => setIsOpen(false)}></div>
-          <div className="absolute right-0 top-12 w-96 max-h-[520px] bg-white rounded-xl shadow-2xl border border-gray-200 z-40 flex flex-col">
+          <div className="absolute right-0 top-12 w-[min(24rem,calc(100vw-2rem))] max-h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-40 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-bold text-gray-900">
@@ -150,14 +152,8 @@ export default function NotificationBell() {
               )}
             </div>
 
-            <div className="p-3 border-t border-gray-200">
-              <Link
-                to="/dashboard/notifications"
-                onClick={() => setIsOpen(false)}
-                className="block w-full py-2 text-center text-sm text-teal-600 hover:text-teal-700 font-medium"
-              >
-                Voir toutes les notifications
-              </Link>
+            <div className="p-3 border-t border-gray-200 text-center">
+              <p className="text-xs text-gray-400">Les notifications récentes apparaissent ici.</p>
             </div>
           </div>
         </>

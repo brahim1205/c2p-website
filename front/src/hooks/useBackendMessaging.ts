@@ -1,6 +1,14 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { backendClient } from '@/lib/backendClient';
+import { useCallback, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
+import { queryKeys } from '@/lib/queryKeys';
+import {
+  createConversation as createConversationRecord,
+  fetchConversationMessages,
+  fetchConversations,
+  markConversationRead,
+  sendConversationMessage,
+} from '@/lib/messagingApi';
 
 
 export interface Attachment {
@@ -44,6 +52,15 @@ interface CreateConversationPayload {
   members?: number;
 }
 
+interface UseBackendMessagingOptions {
+  summaryOnly?: boolean;
+}
+
+interface MessagingSnapshot {
+  conversations: Conversation[];
+  messages: Record<string, Message[]>;
+}
+
 function moveConversationToTop(
   conversations: Conversation[],
   conversationId: string,
@@ -65,173 +82,46 @@ function isIgnorableTransportError(error: unknown) {
   return code === 'NETWORK_ERROR' || code === 'REQUEST_TIMEOUT' || message === 'Failed to fetch';
 }
 
-export function useBackendMessaging() {
+export function useBackendMessaging(options: UseBackendMessagingOptions = {}) {
+  const { summaryOnly = false } = options;
   const { user } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const queryClient = useQueryClient();
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const realtimeRef = useRef<any>(null);
-  const isMountedRef = useRef(true);
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  const messagingQueryKey = useMemo(() => queryKeys.messaging.conversations(user?.id, summaryOnly), [summaryOnly, user?.id]);
+  const {
+    data,
+    isLoading: loading,
+  } = useQuery({
+    queryKey: messagingQueryKey,
+    queryFn: async () => {
+      const convs = await fetchConversations(summaryOnly);
+      const messagesMap: Record<string, Message[]> = {};
 
-  const loadData = useCallback(async (showLoader = true) => {
-    if (!user) {
-      if (isMountedRef.current) {
-        setConversations([]);
-        setMessages({});
-        setLoading(false);
+      if (!summaryOnly) {
+        await Promise.all(
+          convs.map(async (conversation) => {
+            messagesMap[conversation.id] = await fetchConversationMessages(conversation.id);
+          }),
+        );
       }
-      return;
-    }
-
-    if (showLoader && isMountedRef.current) {
-      setLoading(true);
-    }
-
-    const { data: convs, error: convError } = await backendClient
-      .from('conversations')
-      .select('*')
-      .order('updated_at', { ascending: false });
-
-    if (convError) {
-      if (!isMountedRef.current) return;
-      if (isIgnorableTransportError(convError)) {
-        setLoading(false);
-        return;
-      }
-      console.error('Error fetching conversations:', convError);
-      setLoading(false);
-      return;
-    }
-
-    const visibleConversations = (convs ?? []).filter((conversation: any) =>
-      Array.isArray(conversation.participants)
-        ? conversation.participants.map(String).includes(user.id)
-        : true
-    );
-
-    const convIds = visibleConversations.map((c: any) => c.id);
-    const messagesMap: Record<string, Message[]> = {};
-
-    if (convIds.length > 0) {
-      const { data: msgs } = await backendClient
-        .from('messages')
-        .select('*')
-        .in('conversation_id', convIds)
-        .order('created_at', { ascending: true });
-
-      msgs?.forEach((m: any) => {
-        const convId = String(m.conversation_id);
-        if (!messagesMap[convId]) messagesMap[convId] = [];
-        messagesMap[convId].push({
-          id: String(m.id),
-          conversationId: convId,
-          content: m.content,
-          senderId: m.sender_id,
-          senderName: m.sender_name,
-          senderAvatar: m.sender_avatar,
-          timestamp: m.created_at,
-          read: m.read,
-          attachments: m.attachments || []
-        });
-      });
-    }
-
-    const enrichedConvs: Conversation[] = visibleConversations.map((c: any) => {
-      const convMessages = messagesMap[String(c.id)] ?? [];
-      const lastMsg = convMessages[convMessages.length - 1];
-      const unreadCount = convMessages.filter(
-        (m: Message) => !m.read && m.senderId !== user.id
-      ).length;
 
       return {
-        id: String(c.id),
-        name: c.name,
-        avatar: c.avatar,
-        role: c.role || 'Conversation',
-        lastMessage: lastMsg?.content || 'Nouvelle conversation',
-        lastMessageAt: lastMsg?.timestamp || c.updated_at || c.created_at,
-        unreadCount,
-        online: Boolean(c.online ?? false),
-        type: c.type || 'individual',
-        members: c.members,
-        participants: c.participants || []
-      };
-    });
+        conversations: convs,
+        messages: messagesMap,
+      } satisfies MessagingSnapshot;
+    },
+    enabled: Boolean(user),
+    refetchInterval: 20000,
+    retry: (failureCount, queryError) => !isIgnorableTransportError(queryError) && failureCount < 2,
+  });
 
-    if (!isMountedRef.current) return;
-    setConversations(enrichedConvs);
-    setMessages(messagesMap);
-    setLoading(false);
-  }, [user]);
+  const conversations = useMemo(() => data?.conversations || [], [data?.conversations]);
+  const messages = useMemo(() => data?.messages || {}, [data?.messages]);
 
-  useEffect(() => {
-    void loadData(true);
-
-    if (!user) return;
-
-    const intervalId = window.setInterval(() => {
-      void loadData(false);
-    }, 20000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [loadData, user]);
-
-  // Real-time subscriptions
-  useEffect(() => {
-    if (!user) return;
-
-    realtimeRef.current = backendClient
-      .channel('messages-channel')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload: any) => {
-          const newMsg: Message = {
-            id: String(payload.new.id),
-            conversationId: String(payload.new.conversation_id),
-            content: payload.new.content,
-            senderId: payload.new.sender_id,
-            senderName: payload.new.sender_name,
-            senderAvatar: payload.new.sender_avatar,
-            timestamp: payload.new.created_at,
-            read: payload.new.read,
-            attachments: payload.new.attachments || []
-          };
-
-          setMessages(prev => {
-            const convId = newMsg.conversationId;
-            const existing = prev[convId] || [];
-            // Avoid duplicates
-            if (existing.find(m => m.id === newMsg.id)) return prev;
-            return { ...prev, [convId]: [...existing, newMsg] };
-          });
-
-          setConversations((prev) => moveConversationToTop(prev, newMsg.conversationId, (conversation) => ({
-            ...conversation,
-            lastMessage: newMsg.content,
-            lastMessageAt: newMsg.timestamp,
-            unreadCount: newMsg.senderId !== user.id ? conversation.unreadCount + 1 : conversation.unreadCount,
-          })));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (realtimeRef.current) {
-        backendClient.removeChannel(realtimeRef.current);
-      }
-    };
-  }, [user]);
+  const updateMessagingCache = useCallback((updater: (current: MessagingSnapshot) => MessagingSnapshot) => {
+    queryClient.setQueryData<MessagingSnapshot>(messagingQueryKey, (current) => updater(current || { conversations: [], messages: {} }));
+  }, [messagingQueryKey, queryClient]);
 
   const getConversationMessages = useCallback((conversationId: string): Message[] => {
     return messages[conversationId] || [];
@@ -240,110 +130,79 @@ export function useBackendMessaging() {
   const sendMessage = useCallback(async (conversationId: string, content: string, attachments?: Attachment[]) => {
     if (!user || (!content.trim() && (!attachments || attachments.length === 0))) return;
 
-    const senderName = `${user.firstName} ${user.lastName}`;
-
-    // Optimistic insert into backend
-    const { error } = await backendClient.from('messages').insert({
-      conversation_id: conversationId,
-      content: content.trim(),
-      sender_id: user.id,
-      sender_name: senderName,
-      sender_avatar: user.avatar,
-      read: false,
-      attachments: attachments || []
-    });
-
-    if (error) {
+    try {
+      const createdMessage = await sendConversationMessage(conversationId, content.trim(), attachments);
+      updateMessagingCache((current) => {
+        const existing = current.messages[conversationId] || [];
+        const nextMessages = existing.find((message) => message.id === createdMessage.id)
+          ? existing
+          : [...existing, createdMessage];
+        return {
+          conversations: moveConversationToTop(current.conversations, conversationId, (conversation) => ({
+            ...conversation,
+            lastMessage: createdMessage.content,
+            lastMessageAt: createdMessage.timestamp,
+          })),
+          messages: {
+            ...current.messages,
+            [conversationId]: nextMessages,
+          },
+        };
+      });
+    } catch (error) {
       console.error('Error sending message:', error);
       return;
     }
-
-    // Update conversation updated_at
-    await backendClient
-      .from('conversations')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', conversationId);
-
-    setConversations((prev) => moveConversationToTop(prev, conversationId, (conversation) => ({
-      ...conversation,
-      lastMessage: content.trim(),
-      lastMessageAt: new Date().toISOString(),
-    })));
-  }, [user]);
+  }, [updateMessagingCache, user]);
 
   const createConversation = useCallback(async (payload: CreateConversationPayload) => {
     if (!user) return null;
 
-    const conversationPayload = {
-      name: payload.name,
-      role: payload.role,
-      avatar: payload.avatar,
-      participants: Array.from(new Set(payload.participants.map(String))),
-      type: payload.type ?? 'individual',
-      members: payload.members ?? payload.participants.length,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const { data, error } = await backendClient
-      .from('conversations')
-      .insert(conversationPayload)
-      .select('*')
-      .single();
-
-    if (error || !data) {
+    try {
+      const createdConversation = await createConversationRecord({
+        ...payload,
+        participants: Array.from(new Set(payload.participants.map(String))),
+        type: payload.type ?? 'individual',
+        members: payload.members ?? payload.participants.length,
+      });
+      updateMessagingCache((current) => ({
+        conversations: [createdConversation, ...current.conversations.filter((item) => item.id !== createdConversation.id)],
+        messages: {
+          ...current.messages,
+          [createdConversation.id]: current.messages[createdConversation.id] || [],
+        },
+      }));
+      setActiveConversationId(createdConversation.id);
+      return createdConversation;
+    } catch (error) {
       console.error('Error creating conversation:', error);
       return null;
     }
-
-    const createdConversation: Conversation = {
-      id: String((data as any).id),
-      name: (data as any).name,
-      avatar: (data as any).avatar,
-      role: (data as any).role || payload.role,
-      lastMessage: 'Nouvelle conversation',
-      lastMessageAt: (data as any).updated_at || new Date().toISOString(),
-      unreadCount: 0,
-      online: false,
-      type: ((data as any).type || payload.type || 'individual') as Conversation['type'],
-      members: (data as any).members ?? payload.members,
-      participants: (data as any).participants || payload.participants,
-    };
-
-    setConversations((prev) => [createdConversation, ...prev.filter((item) => item.id !== createdConversation.id)]);
-    setMessages((prev) => ({ ...prev, [createdConversation.id]: prev[createdConversation.id] || [] }));
-    setActiveConversationId(createdConversation.id);
-    return createdConversation;
-  }, [user]);
+  }, [updateMessagingCache, user]);
 
   const markAsRead = useCallback(async (conversationId: string) => {
     if (!user) return;
 
-    // Update unread messages in backend
-    const { error } = await backendClient
-      .from('messages')
-      .update({ read: true })
-      .eq('conversation_id', conversationId)
-      .eq('read', false)
-      .neq('sender_id', user.id);
-
-    if (error) {
+    try {
+      await markConversationRead(conversationId);
+    } catch (error) {
       console.error('Error marking as read:', error);
       return;
     }
 
-    setMessages(prev => {
-      const convMessages = prev[conversationId] || [];
+    updateMessagingCache((current) => {
+      const convMessages = current.messages[conversationId] || [];
       return {
-        ...prev,
-        [conversationId]: convMessages.map(m => ({ ...m, read: true }))
+        conversations: current.conversations.map((conversation) => (
+          conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+        )),
+        messages: {
+          ...current.messages,
+          [conversationId]: convMessages.map((message) => ({ ...message, read: true })),
+        },
       };
     });
-
-    setConversations(prev =>
-      prev.map(c => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
-    );
-  }, [user]);
+  }, [updateMessagingCache, user]);
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 

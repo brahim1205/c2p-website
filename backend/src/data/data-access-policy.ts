@@ -25,6 +25,7 @@ export const ADMIN_ONLY_TABLES = new Set([
   'admin_reports',
   'admin_platform_categories',
   'admin_platform_rules',
+  'admin_feature_flags',
   'admin_integrations',
   'admin_backups',
   'admin_security_alerts',
@@ -33,9 +34,50 @@ export const ADMIN_ONLY_TABLES = new Set([
   'auth_sessions',
 ]);
 
+const SUPERADMIN_ONLY_TABLES = new Set([
+  'admin_backups',
+  'admin_security_alerts',
+  'admin_audit_logs',
+  'admin_feature_flags',
+  'admin_integrations',
+  'auth_users',
+  'auth_sessions',
+]);
+
 export const APPEND_ONLY_TABLES = new Set([
   'payment_transactions',
   'commission_ledger',
+]);
+
+export const COMMAND_ONLY_WRITE_TABLES = new Set([
+  'payment_transactions',
+  'wallet_accounts',
+  'invoices',
+  'payout_accounts',
+  'payout_requests',
+  'commission_ledger',
+  'escrow_cases',
+  'provider_visibility_orders',
+  'user_subscriptions',
+  'provider_visibility_passes',
+  'provider_visibility_products',
+  'subscription_plans',
+  'conversations',
+  'messages',
+  'notifications',
+  'admin_accreditations',
+  'admin_content_items',
+  'admin_campaigns',
+  'admin_reports',
+  'admin_platform_categories',
+  'admin_platform_rules',
+  'admin_feature_flags',
+  'admin_integrations',
+  'admin_backups',
+  'admin_security_alerts',
+  'admin_audit_logs',
+  'auth_users',
+  'auth_sessions',
 ]);
 
 const PROVIDER_CATALOG_TABLES = new Set([
@@ -112,6 +154,25 @@ const PROJECT_TABLES = new Set([
   'project_collaborations',
 ]);
 
+export const KNOWN_DATA_TABLES = new Set([
+  ...PUBLIC_READ_TABLES,
+  ...ADMIN_ONLY_TABLES,
+  ...APPEND_ONLY_TABLES,
+  ...PROVIDER_CATALOG_TABLES,
+  ...REVIEW_TABLES,
+  ...MARKETPLACE_TABLES,
+  ...FINANCE_TABLES,
+  ...SUBSCRIPTION_TABLES,
+  ...LEARNING_TABLES,
+  ...MESSAGING_TABLES,
+  ...NOTIFICATION_TABLES,
+  ...PROJECT_TABLES,
+]);
+
+export function isKnownDataTable(table: string) {
+  return KNOWN_DATA_TABLES.has(table);
+}
+
 export function canReadWithoutAuth(table: string) {
   return PUBLIC_READ_TABLES.has(table);
 }
@@ -126,6 +187,9 @@ export function getRequiredPermissionForTable(table: string, method: DataRequest
   }
   if (table === 'admin_reports') {
     return method === 'POST' ? 'support.request' : 'support.manage';
+  }
+  if (SUPERADMIN_ONLY_TABLES.has(table)) {
+    return permissionPair(method, 'superadmin.sensitive.read', 'superadmin.sensitive.write');
   }
   if (ADMIN_ONLY_TABLES.has(table)) {
     return permissionPair(method, 'data.admin.read', 'data.admin.write');

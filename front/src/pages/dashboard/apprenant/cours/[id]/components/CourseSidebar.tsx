@@ -34,14 +34,17 @@ export default function CourseSidebar({
   onToggleBookmark,
   onOpenNotes,
 }: Props) {
+  const totalLessons = Math.max(0, course.totalLessons);
+  const courseProgress = totalLessons > 0 ? Math.round((completedLessons.size / totalLessons) * 100) : 0;
+
   const getModuleProgress = (module: Module) => {
     const done = module.lessons.filter((l) => completedLessons.has(l.id)).length;
-    const pct = Math.round((done / module.lessons.length) * 100);
+    const pct = module.lessons.length > 0 ? Math.round((done / module.lessons.length) * 100) : 0;
     return { done, total: module.lessons.length, pct };
   };
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col h-full ${showMobile ? 'fixed inset-0 z-50 rounded-none border-0' : ''}`}>
+    <div className={`flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white ${showMobile ? 'fixed inset-0 z-50 rounded-none border-0' : ''}`}>
       <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">Contenu du cours</h3>
@@ -55,17 +58,17 @@ export default function CourseSidebar({
           )}
         </div>
         <p className="text-xs text-gray-500 mt-0.5">
-          {completedLessons.size}/{course.totalLessons} leçons complétées
+          {completedLessons.size}/{totalLessons} leçons complétées
         </p>
         <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
           <div
             className="bg-teal-500 h-1.5 rounded-full transition-all duration-500"
-            style={{ width: `${Math.round((completedLessons.size / course.totalLessons) * 100)}%` }}
+            style={{ width: `${courseProgress}%` }}
           ></div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {course.modules.map((module) => {
           const prog = getModuleProgress(module);
           return (

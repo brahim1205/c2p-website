@@ -1,10 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { copyFile, mkdir, rename, rm, unlink } from 'node:fs/promises';
-import { extname, join, resolve } from 'node:path';
+import { rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { ConfigService } from '../config/config.service.js';
-
-export type UploadResourceType = 'image' | 'video' | 'raw';
+import { PrismaService } from '../database/prisma.service.js';
+import { MonitoringService } from '../monitoring/monitoring.service.js';
+import {
+  assertUploadTypeAllowed,
+  resolveUploadExtension,
+  type UploadResourceType,
+} from './upload-policy.js';
+import {
+  LocalDiskUploadStorageProvider,
+  S3UploadStorageProvider,
+  type UploadStorageProvider,
+} from './upload-storage-provider.js';
 
 export interface StoredUploadFile {
   path: string;
@@ -23,22 +32,24 @@ interface UploadPolicy {
 
 @Injectable()
 export class UploadsService {
-  constructor(private readonly config: ConfigService) {}
+  private readonly storageProvider: UploadStorageProvider;
 
-  private get storageRoot() {
-    return resolve(process.cwd(), this.config.uploadStorageRoot);
-  }
-
-  private get tmpRoot() {
-    return resolve(process.cwd(), this.config.uploadTmpRoot);
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly monitoring: MonitoringService,
+  ) {
+    this.storageProvider = this.createStorageProvider();
   }
 
   getStrategy() {
     return {
-      mode: 'local-disk',
+      mode: this.storageProvider.driver,
       supportsUploadProgress: true,
-      tempRoot: this.tmpRoot,
-      storageRoot: this.storageRoot,
+      supportsSignedUrls: false,
+      publicBaseUrl: this.config.uploadPublicBaseUrl ?? null,
+      tempRoot: this.storageProvider.tempRoot,
+      storageRoot: this.storageProvider.publicRoot,
       requestMaxBytes: this.config.uploadRequestMaxBytes,
       resourceTypes: {
         image: this.getPolicy('image'),
@@ -49,8 +60,35 @@ export class UploadsService {
   }
 
   async ensureTempRoot() {
-    await mkdir(this.tmpRoot, { recursive: true });
-    return this.tmpRoot;
+    return this.storageProvider.ensureTempRoot();
+  }
+
+  private createStorageProvider(): UploadStorageProvider {
+    if (this.config.uploadStorageDriver === 's3') {
+      return new S3UploadStorageProvider({
+        endpoint: requiredUploadConfig(this.config.uploadS3Endpoint, 'UPLOAD_S3_ENDPOINT'),
+        region: this.config.uploadS3Region,
+        bucket: requiredUploadConfig(this.config.uploadS3Bucket, 'UPLOAD_S3_BUCKET'),
+        accessKeyId: requiredUploadConfig(this.config.uploadS3AccessKeyId, 'UPLOAD_S3_ACCESS_KEY_ID'),
+        secretAccessKey: requiredUploadConfig(this.config.uploadS3SecretAccessKey, 'UPLOAD_S3_SECRET_ACCESS_KEY'),
+        tempRoot: this.config.uploadTmpRoot,
+        keyPrefix: this.config.uploadS3KeyPrefix,
+        forcePathStyle: this.config.uploadS3ForcePathStyle,
+      });
+    }
+
+    return LocalDiskUploadStorageProvider.create({
+      storageRoot: this.config.uploadStorageRoot,
+      tempRoot: this.config.uploadTmpRoot,
+    });
+  }
+
+  resolvePublicUrl(relativePath: string, fallbackOrigin?: string) {
+    const normalizedPath = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
+    if (this.config.uploadPublicBaseUrl) {
+      return `${this.config.uploadPublicBaseUrl}${normalizedPath}`;
+    }
+    return fallbackOrigin ? `${fallbackOrigin.replace(/\/$/, '')}${normalizedPath}` : normalizedPath;
   }
 
   private getPolicy(resourceType: UploadResourceType): UploadPolicy {
@@ -96,64 +134,15 @@ export class UploadsService {
   }
 
   private normalizeExtension(file: StoredUploadFile) {
-    const fromOriginal = extname(file.originalname || '').toLowerCase();
-    if (fromOriginal) {
-      return fromOriginal.replace(/[^.a-z0-9]/g, '');
-    }
-
-    const mimeExtensionMap: Record<string, string> = {
-      'image/jpeg': '.jpg',
-      'image/png': '.png',
-      'image/webp': '.webp',
-      'image/gif': '.gif',
-      'image/svg+xml': '.svg',
-      'video/mp4': '.mp4',
-      'video/webm': '.webm',
-      'video/quicktime': '.mov',
-      'audio/mpeg': '.mp3',
-      'audio/wav': '.wav',
-      'audio/mp4': '.m4a',
-      'application/pdf': '.pdf',
-      'application/zip': '.zip',
-      'application/x-zip-compressed': '.zip',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
-      'application/vnd.ms-powerpoint': '.ppt',
-      'text/plain': '.txt',
-      'text/markdown': '.md',
-      'application/json': '.json',
-    };
-
-    return mimeExtensionMap[file.mimetype] ?? '';
+    return resolveUploadExtension(file.originalname, file.mimetype);
   }
 
   private assertMimeType(file: StoredUploadFile, resourceType: UploadResourceType) {
-    const mime = String(file.mimetype || '').toLowerCase();
-
-    if (resourceType === 'image' && !mime.startsWith('image/')) {
-      throw new BadRequestException('Le fichier doit etre une image.');
-    }
-
-    if (resourceType === 'video' && !mime.startsWith('video/')) {
-      throw new BadRequestException('Le fichier doit etre une video.');
-    }
-
-    if (resourceType === 'raw') {
-      const allowed = [
-        'application/pdf',
-        'application/zip',
-        'application/x-zip-compressed',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'application/json',
-        'application/octet-stream',
-        'text/plain',
-        'text/markdown',
-      ];
-
-      if (!mime.startsWith('audio/') && !allowed.includes(mime)) {
-        throw new BadRequestException('Type de fichier non autorise.');
-      }
-    }
+    assertUploadTypeAllowed({
+      resourceType,
+      mimeType: file.mimetype,
+      originalName: file.originalname,
+    });
   }
 
   private assertFileSize(file: StoredUploadFile, resourceType: UploadResourceType) {
@@ -168,24 +157,26 @@ export class UploadsService {
     }
   }
 
-  private async moveFile(sourcePath: string, targetPath: string) {
-    try {
-      await rename(sourcePath, targetPath);
-      return;
-    } catch (error) {
-      const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
-      if (code !== 'EXDEV') {
-        throw error;
-      }
+  private classifyUploadRejection(error: unknown) {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    if (message.includes('taille') || message.includes('limite') || message.includes('dépasse') || message.includes('depasse')) {
+      return 'size_limit';
     }
-
-    await copyFile(sourcePath, targetPath);
-    await unlink(sourcePath);
+    if (message.includes('mime') || message.includes('type') || message.includes('extension') || message.includes('image') || message.includes('video')) {
+      return 'type_policy';
+    }
+    if (message.includes('dossier')) {
+      return 'invalid_folder';
+    }
+    if (message.includes('aucun fichier')) {
+      return 'empty_file';
+    }
+    return 'storage_error';
   }
 
   async storeFile(
     file: StoredUploadFile,
-    payload: { folder?: string; filename?: string; resourceType?: UploadResourceType },
+    payload: { folder?: string; filename?: string; resourceType?: UploadResourceType; ownerId?: string },
   ) {
     if (!file?.path) {
       throw new BadRequestException('Aucun fichier a enregistrer.');
@@ -200,31 +191,101 @@ export class UploadsService {
       .replace(/^-+|-+$/g, '')
       .slice(0, 80) || randomUUID();
     const finalFilename = `${Date.now()}-${safeFilenameBase}${extension}`;
-    const absoluteFolder = join(this.storageRoot, folder);
-    const absolutePath = join(absoluteFolder, finalFilename);
     let moved = false;
 
     try {
       this.assertMimeType(file, resourceType);
       this.assertFileSize(file, resourceType);
-      await mkdir(absoluteFolder, { recursive: true });
-      await this.moveFile(file.path, absolutePath);
-      moved = true;
-
-      return {
+      const storedObject = await this.storageProvider.storeObject({
+        sourcePath: file.path,
         folder,
         filename: finalFilename,
+        contentType: file.mimetype,
+      });
+      moved = true;
+      const uploadId = await this.recordUploadObject({
+        ownerId: payload.ownerId,
+        folder,
+        filename: finalFilename,
+        storedObject,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
         resourceType,
-        relativePath: `/uploads/${folder}/${finalFilename}`,
+      });
+      this.monitoring.recordUploadAccepted(resourceType, file.size);
+
+      return {
+        uploadId,
+        folder,
+        filename: finalFilename,
+        driver: storedObject.driver,
+        storageKey: storedObject.storageKey,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        resourceType,
+        relativePath: storedObject.relativePath,
       };
     } catch (error) {
+      this.monitoring.recordUploadRejected(resourceType, this.classifyUploadRejection(error));
       if (!moved) {
         await rm(file.path, { force: true }).catch(() => undefined);
       }
       throw error;
     }
   }
+
+  private async recordUploadObject(input: {
+    ownerId?: string;
+    folder: string;
+    filename: string;
+    storedObject: Awaited<ReturnType<UploadStorageProvider['storeObject']>>;
+    originalName: string;
+    mimeType: string;
+    size: number;
+    resourceType: UploadResourceType;
+  }) {
+    if (!this.prisma.isConnected) return null;
+
+    try {
+      const publicUrl = this.config.uploadPublicBaseUrl
+        ? this.resolvePublicUrl(input.storedObject.relativePath)
+        : null;
+      const row = await this.prisma.uploadObject.create({
+        data: {
+          ownerId: input.ownerId ?? null,
+          driver: input.storedObject.driver,
+          storageKey: input.storedObject.storageKey,
+          relativePath: input.storedObject.relativePath,
+          publicUrl,
+          folder: input.folder,
+          filename: input.filename,
+          originalName: input.originalName,
+          mimeType: input.mimeType,
+          resourceType: input.resourceType,
+          sizeBytes: BigInt(input.size),
+          status: 'active',
+        },
+        select: { id: true },
+      });
+      return row.id;
+    } catch (error) {
+      console.error(JSON.stringify({
+        level: 'error',
+        ts: new Date().toISOString(),
+        event: 'upload_metadata_write_failed',
+        storageKey: input.storedObject.storageKey,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+      return null;
+    }
+  }
+}
+
+function requiredUploadConfig(value: string | undefined, key: string) {
+  if (!value?.trim()) {
+    throw new Error(`${key} is required by the configured upload storage driver.`);
+  }
+  return value;
 }

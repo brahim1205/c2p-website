@@ -20,6 +20,7 @@ function toUploadError(error: unknown) {
 }
 
 export interface UploadedFilePayload {
+  uploadId?: string | null;
   url: string;
   relativePath: string;
   folder: string;
@@ -28,10 +29,12 @@ export interface UploadedFilePayload {
   mimeType: string;
   size: number;
   resourceType: UploadResourceType;
+  driver?: 'local-disk' | 's3';
+  storageKey?: string;
 }
 
 export interface UploadStrategyPayload {
-  mode: 'local-disk';
+  mode: 'local-disk' | 's3';
   supportsUploadProgress: boolean;
   tempRoot: string;
   storageRoot: string;

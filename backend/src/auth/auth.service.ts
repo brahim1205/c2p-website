@@ -2,25 +2,20 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { CookieOptions, Response } from 'express';
-import type { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service.js';
 import { AuditLogService } from '../database/audit-log.service.js';
 import { ConfigService } from '../config/config.service.js';
 import { SmsService } from '../communications/sms.service.js';
 import { RbacService } from './rbac.service.js';
 import {
-  getInitialAuditLogs,
-  getInitialPendingTwoFactorChallenges,
-  getInitialRefreshTokens,
-  getInitialSessions,
-  getInitialUsers,
   editableProfileUser,
   directoryUser,
+  isAdminRole,
   publicUser,
   publicInstructorProfile,
   type AuditLog,
@@ -39,75 +34,38 @@ import {
   type UserStatus,
 } from './auth.store.js';
 import type { AuthenticatedRequest, RequestMeta } from '../common/http/request-context.js';
-
-type AuthTableName =
-  | 'auth_users'
-  | 'auth_sessions'
-  | 'auth_refresh_tokens'
-  | 'auth_pending_2fa'
-  | 'auth_audit_logs';
-
-interface AccessSession extends UserSession {
-  tokenHash: string;
-  csrfToken: string;
-  createdAt: string;
-  expiresAt: string;
-  absoluteExpiresAt: string;
-  revokedAt?: string | null;
-  userAgent: string;
-}
-
-interface LoginResult {
-  user: AuthUser;
-  requires2FA?: boolean;
-  challengeId?: string;
-  devCodePreview?: string;
-  csrfToken?: string;
-}
-
-interface RefreshResult {
-  user: AuthUser;
-  csrfToken: string;
-}
-
-interface RegisterPayload {
-  email?: string;
-  password?: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  role?: Role;
-}
-
-interface PasswordChangePayload {
-  userId?: string;
-  currentPassword?: string;
-  newPassword?: string;
-}
-
-interface TwoFactorVerificationPayload {
-  challengeId?: string;
-  userId?: string;
-  code?: string;
-}
-
-interface SecurityPayload {
-  user: AuthUser;
-  sessions: UserSession[];
-  auditLogs: AuditLog[];
-  backupCodes: string[];
-}
-
-interface PermissionAuditContext {
-  targetType?: string | null;
-  targetId?: string | null;
-  httpMethod?: string | null;
-  route?: string | null;
-  requestId?: string | null;
-  ip?: string | null;
-  userAgent?: string | null;
-  reason?: string | null;
-}
+import type {
+  AccessSession,
+  AuthTableName,
+  LoginResult,
+  PasswordChangePayload,
+  PermissionAuditContext,
+  RefreshResult,
+  RegisterPayload,
+  SecurityPayload,
+  TwoFactorVerificationPayload,
+} from './auth.types.js';
+import {
+  addDays,
+  addHours,
+  addMinutes,
+  isExpired,
+  normalizeIp,
+  summarizeUserAgent,
+} from './auth-session-utils.js';
+import {
+  MANAGED_USER_PATCH_KEYS,
+  PASSWORD_RESET_CHALLENGE_TTL_MINUTES,
+  PASSWORD_RESET_COOLDOWN_SECONDS,
+  PASSWORD_RESET_MAX_ATTEMPTS,
+  SELF_PROFILE_PATCH_KEYS,
+  authRowKey,
+  createAuthId,
+  hashAuthToken,
+  randomAuthToken,
+  randomNumericSecurityCode,
+  toPrismaJson,
+} from './auth.service-helpers.js';
 
 @Injectable()
 export class AuthService {
@@ -119,83 +77,7 @@ export class AuthService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
-  private readonly managedUserPatchKeys: (keyof Omit<
-    StoredUser,
-    'id' | 'password' | 'passwordHash' | 'passwordHistory' | 'backupCodes' | 'createdAt'
-  >)[] = [
-    'firstName',
-    'lastName',
-    'email',
-    'phone',
-    'avatar',
-    'bio',
-    'location',
-    'publicTitle',
-    'website',
-    'preferredLanguage',
-    'languages',
-    'skills',
-    'socialLinks',
-    'certifications',
-    'portfolioItems',
-    'introVideo',
-    'publicProfileEnabled',
-    'expertVerified',
-    'paymentSettings',
-    'role',
-    'status',
-    'is2FAEnabled',
-  ];
-
-  private readonly selfProfilePatchKeys: (keyof Omit<
-    StoredUser,
-    'id' | 'password' | 'passwordHash' | 'passwordHistory' | 'backupCodes' | 'createdAt'
-  >)[] = [
-    'firstName',
-    'lastName',
-    'email',
-    'phone',
-    'avatar',
-    'bio',
-    'location',
-    'publicTitle',
-    'website',
-    'preferredLanguage',
-    'languages',
-    'skills',
-    'socialLinks',
-    'certifications',
-    'portfolioItems',
-    'introVideo',
-    'publicProfileEnabled',
-    'paymentSettings',
-  ];
-
-  private readonly fallback = {
-    users: getInitialUsers(),
-    sessions: getInitialSessions(),
-    refreshTokens: getInitialRefreshTokens(),
-    pendingChallenges: getInitialPendingTwoFactorChallenges(),
-    auditLogs: getInitialAuditLogs(),
-  };
-
-  private seedPromise: Promise<void> | null = null;
   private mutationQueue: Promise<void> = Promise.resolve();
-  private readonly passwordResetChallengeTtlMinutes = 10;
-  private readonly passwordResetCooldownSeconds = 60;
-  private readonly passwordResetMaxAttempts = 5;
-
-  private clone<T>(value: T): T {
-    return JSON.parse(JSON.stringify(value)) as T;
-  }
-
-  private toJson(value: unknown): Prisma.InputJsonValue {
-    return this.clone(value) as Prisma.InputJsonValue;
-  }
-
-  private rowKey(table: AuthTableName, rowId: string) {
-    return `${table}:${rowId}`;
-  }
 
   private async runSerializedMutation<T>(operation: () => Promise<T>) {
     const previous = this.mutationQueue;
@@ -212,26 +94,6 @@ export class AuthService {
     } finally {
       release();
     }
-  }
-
-  private hashToken(token: string) {
-    return createHash('sha256').update(token).digest('hex');
-  }
-
-  private createId(prefix: string) {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  }
-
-  private randomToken(bytes = 32) {
-    return randomBytes(bytes).toString('base64url');
-  }
-
-  private randomCode(prefix: string) {
-    return `${prefix}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  }
-
-  private randomNumericCode() {
-    return `${Math.floor(100000 + Math.random() * 900000)}`;
   }
 
   private async deliverSecurityCode(
@@ -253,72 +115,6 @@ export class AuthService {
     });
   }
 
-  private normalizeIp(ip?: string | null) {
-    const value = String(ip ?? '').trim();
-    if (!value) return 'Adresse masquee';
-    if (['::1', '127.0.0.1', '::ffff:127.0.0.1', 'localhost'].includes(value)) {
-      return 'Environnement local';
-    }
-    return value;
-  }
-
-  private summarizeUserAgent(userAgent?: string | null) {
-    const value = String(userAgent ?? '').trim();
-    if (!value) return 'Navigateur Web';
-    if (
-      /^Navigateur /i.test(value)
-      || /^(Google Chrome|Microsoft Edge|Mozilla Firefox|Safari) sur /i.test(value)
-    ) {
-      return value;
-    }
-
-    const browser = /HeadlessChrome/i.test(value)
-      ? 'Navigateur de test'
-      : /Edg\//i.test(value)
-        ? 'Microsoft Edge'
-        : /Chrome\//i.test(value)
-          ? 'Google Chrome'
-          : /Firefox\//i.test(value)
-            ? 'Mozilla Firefox'
-            : /Safari\//i.test(value) && !/Chrome\//i.test(value)
-              ? 'Safari'
-              : 'Navigateur Web';
-
-    const platform = /Windows/i.test(value)
-      ? 'Windows'
-      : /Mac OS X|Macintosh/i.test(value)
-        ? 'macOS'
-        : /Android/i.test(value)
-          ? 'Android'
-          : /iPhone|iPad|iOS/i.test(value)
-            ? 'iOS'
-            : /Linux/i.test(value)
-              ? 'Linux'
-              : '';
-
-    if (browser === 'Navigateur de test') {
-      return 'Navigateur local de test';
-    }
-
-    return platform ? `${browser} sur ${platform}` : browser;
-  }
-
-  private addMinutes(baseIso: string, minutes: number) {
-    return new Date(Date.parse(baseIso) + minutes * 60_000).toISOString();
-  }
-
-  private addHours(baseIso: string, hours: number) {
-    return new Date(Date.parse(baseIso) + hours * 3_600_000).toISOString();
-  }
-
-  private addDays(baseIso: string, days: number) {
-    return new Date(Date.parse(baseIso) + days * 86_400_000).toISOString();
-  }
-
-  private isExpired(date?: string | null) {
-    return !date ? false : Date.parse(date) <= Date.now();
-  }
-
   private normalizeUser(user: StoredUser): StoredUser {
     return {
       ...user,
@@ -337,16 +133,16 @@ export class AuthService {
     return {
       id: session.id,
       userId: session.userId,
-      device: this.summarizeUserAgent(session.device),
+      device: summarizeUserAgent(session.device),
       location: session.location,
-      ip: this.normalizeIp(session.ip),
+      ip: normalizeIp(session.ip),
       lastActive: session.lastActive,
       current: session.current,
       tokenHash: base.tokenHash ?? '',
       csrfToken: base.csrfToken ?? '',
       createdAt: base.createdAt ?? now,
-      expiresAt: base.expiresAt ?? this.addMinutes(now, this.config.accessTokenTtlMinutes),
-      absoluteExpiresAt: base.absoluteExpiresAt ?? this.addHours(now, this.config.sessionAbsoluteTimeoutHours),
+      expiresAt: base.expiresAt ?? addMinutes(now, this.config.accessTokenTtlMinutes),
+      absoluteExpiresAt: base.absoluteExpiresAt ?? addHours(now, this.config.sessionAbsoluteTimeoutHours),
       revokedAt: base.revokedAt ?? null,
       userAgent: base.userAgent ?? 'unknown',
     };
@@ -384,75 +180,11 @@ export class AuthService {
     };
   }
 
-  private async ensureSeeded() {
-    if (!this.prisma.isConnected) {
-      return;
-    }
-
-    if (!this.seedPromise) {
-      this.seedPromise = (async () => {
-        const tables: { table: AuthTableName; rows: { id: string }[] }[] = [
-          { table: 'auth_users', rows: getInitialUsers() },
-          { table: 'auth_sessions', rows: getInitialSessions() },
-          { table: 'auth_refresh_tokens', rows: getInitialRefreshTokens() },
-          { table: 'auth_pending_2fa', rows: getInitialPendingTwoFactorChallenges() },
-          { table: 'auth_audit_logs', rows: getInitialAuditLogs() },
-        ];
-
-        for (const { table, rows } of tables) {
-          const count = await this.prisma.appRow.count({ where: { table } });
-          if (count === 0 && rows.length > 0) {
-            await this.prisma.appRow.createMany({
-              data: rows.map((row) => ({
-                key: this.rowKey(table, row.id),
-                table,
-                rowId: row.id,
-                data: this.toJson(row),
-              })),
-              skipDuplicates: true,
-            });
-          }
-        }
-      })();
-    }
-
-    await this.seedPromise;
-  }
-
-  private getFallbackRows<T>(table: AuthTableName): T[] {
-    if (table === 'auth_users') return this.clone(this.fallback.users) as T[];
-    if (table === 'auth_sessions') return this.clone(this.fallback.sessions) as T[];
-    if (table === 'auth_refresh_tokens') return this.clone(this.fallback.refreshTokens) as T[];
-    if (table === 'auth_pending_2fa') return this.clone(this.fallback.pendingChallenges) as T[];
-    return this.clone(this.fallback.auditLogs) as T[];
-  }
-
-  private setFallbackRows(table: AuthTableName, rows: unknown[]) {
-    if (table === 'auth_users') {
-      this.fallback.users = this.clone(rows) as StoredUser[];
-      return;
-    }
-    if (table === 'auth_sessions') {
-      this.fallback.sessions = this.clone(rows) as UserSession[];
-      return;
-    }
-    if (table === 'auth_refresh_tokens') {
-      this.fallback.refreshTokens = this.clone(rows) as RefreshTokenSession[];
-      return;
-    }
-    if (table === 'auth_pending_2fa') {
-      this.fallback.pendingChallenges = this.clone(rows) as PendingTwoFactorChallenge[];
-      return;
-    }
-    this.fallback.auditLogs = this.clone(rows) as AuditLog[];
-  }
-
   private async loadRows<T>(table: AuthTableName): Promise<T[]> {
     if (!this.prisma.isConnected) {
-      return this.getFallbackRows<T>(table);
+      throw new ServiceUnavailableException('La base de donnees est indisponible.');
     }
 
-    await this.ensureSeeded();
     const rows = await this.prisma.appRow.findMany({
       where: { table },
       orderBy: [{ createdAt: 'asc' }],
@@ -463,8 +195,7 @@ export class AuthService {
 
   private async saveRows<T extends { id: string }>(table: AuthTableName, rows: T[]) {
     if (!this.prisma.isConnected) {
-      this.setFallbackRows(table, rows);
-      return;
+      throw new ServiceUnavailableException('La base de donnees est indisponible.');
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -472,10 +203,10 @@ export class AuthService {
       if (rows.length > 0) {
         await tx.appRow.createMany({
           data: rows.map((row) => ({
-            key: this.rowKey(table, row.id),
+            key: authRowKey(table, row.id),
             table,
             rowId: row.id,
-            data: this.toJson(row),
+            data: toPrismaJson(row),
           })),
         });
       }
@@ -572,8 +303,8 @@ export class AuthService {
       .filter((entry) => entry.userId === userId)
       .map((entry) => ({
         ...entry,
-        device: this.summarizeUserAgent(entry.device),
-        ip: this.normalizeIp(entry.ip),
+        device: summarizeUserAgent(entry.device),
+        ip: normalizeIp(entry.ip),
       }))
       .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp));
   }
@@ -588,21 +319,21 @@ export class AuthService {
   ) {
     const latestSession = this.listSessionsForUser(userId, sessions)[0];
     auditLogs.unshift({
-      id: this.createId('audit'),
+      id: createAuthId('audit'),
       userId,
       action,
       status,
       timestamp: overrides.timestamp ?? new Date().toISOString(),
-      ip: this.normalizeIp(overrides.ip ?? latestSession?.ip ?? '127.0.0.1'),
-      device: this.summarizeUserAgent(overrides.device ?? latestSession?.device ?? 'Navigateur Web'),
+      ip: normalizeIp(overrides.ip ?? latestSession?.ip ?? '127.0.0.1'),
+      device: summarizeUserAgent(overrides.device ?? latestSession?.device ?? 'Navigateur Web'),
     });
   }
 
   private getRequestMeta(request: Pick<AuthenticatedRequest, 'ip' | 'headers' | 'requestId'>): RequestMeta {
     return {
-      ip: this.normalizeIp(request.ip || '127.0.0.1'),
-      userAgent: this.summarizeUserAgent(String(request.headers['user-agent'] ?? 'Navigateur Web')),
-      requestId: String(request.requestId ?? request.headers['x-request-id'] ?? this.createId('req')),
+      ip: normalizeIp(request.ip || '127.0.0.1'),
+      userAgent: summarizeUserAgent(String(request.headers['user-agent'] ?? 'Navigateur Web')),
+      requestId: String(request.requestId ?? request.headers['x-request-id'] ?? createAuthId('req')),
     };
   }
 
@@ -652,11 +383,11 @@ export class AuthService {
     meta: RequestMeta,
   ) {
     const now = new Date().toISOString();
-    const accessToken = this.randomToken();
-    const refreshToken = this.randomToken();
-    const csrfToken = this.randomToken(24);
-    const sessionId = this.createId('sess');
-    const refreshId = this.createId('rt');
+    const accessToken = randomAuthToken();
+    const refreshToken = randomAuthToken();
+    const csrfToken = randomAuthToken(24);
+    const sessionId = createAuthId('sess');
+    const refreshId = createAuthId('rt');
 
     const session: AccessSession = {
       id: sessionId,
@@ -666,11 +397,11 @@ export class AuthService {
       ip: meta.ip,
       lastActive: now,
       current: true,
-      tokenHash: this.hashToken(accessToken),
+      tokenHash: hashAuthToken(accessToken),
       csrfToken,
       createdAt: now,
-      expiresAt: this.addMinutes(now, this.config.accessTokenTtlMinutes),
-      absoluteExpiresAt: this.addHours(now, this.config.sessionAbsoluteTimeoutHours),
+      expiresAt: addMinutes(now, this.config.accessTokenTtlMinutes),
+      absoluteExpiresAt: addHours(now, this.config.sessionAbsoluteTimeoutHours),
       revokedAt: null,
       userAgent: meta.userAgent,
     };
@@ -679,9 +410,9 @@ export class AuthService {
       id: refreshId,
       userId: user.id,
       sessionId,
-      tokenHash: this.hashToken(refreshToken),
+      tokenHash: hashAuthToken(refreshToken),
       createdAt: now,
-      expiresAt: this.addDays(now, this.config.refreshTokenTtlDays),
+      expiresAt: addDays(now, this.config.refreshTokenTtlDays),
       ip: meta.ip,
       userAgent: meta.userAgent,
       revokedAt: null,
@@ -745,8 +476,8 @@ export class AuthService {
   private buildPublicSessions(sessions: AccessSession[]): UserSession[] {
     return sessions.map(({ tokenHash: _tokenHash, csrfToken: _csrfToken, createdAt: _createdAt, expiresAt: _expiresAt, absoluteExpiresAt: _absoluteExpiresAt, revokedAt: _revokedAt, userAgent: _userAgent, ...session }) => ({
       ...session,
-      device: this.summarizeUserAgent(session.device),
-      ip: this.normalizeIp(session.ip),
+      device: summarizeUserAgent(session.device),
+      ip: normalizeIp(session.ip),
     }));
   }
 
@@ -778,6 +509,7 @@ export class AuthService {
       permission.startsWith('users.')
       || permission.startsWith('communications.')
       || permission.startsWith('payments.')
+      || permission.startsWith('superadmin.')
       || permission.startsWith('support.')
       || permission.startsWith('data.admin.')
       || permission.startsWith('data.finance.')
@@ -848,7 +580,7 @@ export class AuthService {
 
   requireSelfOrAdmin(request: AuthenticatedRequest, userId: string) {
     const actor = this.getActor(request);
-    if (actor.role !== 'admin' && actor.id !== userId) {
+    if (!isAdminRole(actor) && actor.id !== userId) {
       throw new UnauthorizedException('Acces refuse.');
     }
     return actor;
@@ -889,10 +621,10 @@ export class AuthService {
   private async findSessionByAccessToken(accessToken: string | undefined) {
     if (!accessToken) return null;
     const { users, sessions } = await this.loadSnapshot();
-    const tokenHash = this.hashToken(accessToken);
+    const tokenHash = hashAuthToken(accessToken);
     const session = sessions.find((candidate) => candidate.tokenHash === tokenHash && !candidate.revokedAt);
     if (!session) return null;
-    if (this.isExpired(session.expiresAt) || this.isExpired(session.absoluteExpiresAt)) {
+    if (isExpired(session.expiresAt) || isExpired(session.absoluteExpiresAt)) {
       return null;
     }
     const user = this.findUserById(session.userId, users);
@@ -919,6 +651,28 @@ export class AuthService {
     return request.auth?.user ?? null;
   }
 
+  async acceptMonetizedClauses(request: AuthenticatedRequest) {
+    return this.runSerializedMutation(async () => {
+      const actor = this.getActor(request);
+      const { users, sessions, auditLogs } = await this.loadSnapshot();
+      const user = this.findUserById(actor.id, users);
+      if (!user) {
+        throw new BadRequestException('Utilisateur introuvable.');
+      }
+
+      user.onboardingClausesAcceptedAt = new Date().toISOString();
+      user.onboardingClausesVersion = 'monetized-v1';
+      this.appendAuditLog(auditLogs, sessions, user.id, 'Acceptation clauses abonnement', 'success');
+
+      await Promise.all([
+        this.saveUsers(users),
+        this.saveAuditLogs(auditLogs),
+      ]);
+
+      return publicUser(user);
+    });
+  }
+
   async login(payload: { email?: string; password?: string }, request: AuthenticatedRequest, response: Response): Promise<LoginResult> {
     return this.runSerializedMutation(async () => {
       const email = payload.email?.trim().toLowerCase();
@@ -931,7 +685,7 @@ export class AuthService {
         throw new UnauthorizedException('Adresse email ou mot de passe incorrect.');
       }
 
-      if (user.lockedUntil && !this.isExpired(user.lockedUntil)) {
+      if (user.lockedUntil && !isExpired(user.lockedUntil)) {
         this.appendAuditLog(auditLogs, sessions, user.id, 'Tentative de connexion sur compte verrouille', 'failed', {
           ip: meta.ip,
           device: this.ensureDevice(meta),
@@ -944,7 +698,7 @@ export class AuthService {
       if (!passwordValid) {
         user.failedLoginAttempts = (user.failedLoginAttempts ?? 0) + 1;
         if ((user.failedLoginAttempts ?? 0) >= 5) {
-          user.lockedUntil = this.addMinutes(new Date().toISOString(), 15);
+          user.lockedUntil = addMinutes(new Date().toISOString(), 15);
         }
         this.appendAuditLog(auditLogs, sessions, user.id, 'Tentative de connexion echouee', 'failed', {
           ip: meta.ip,
@@ -1007,8 +761,8 @@ export class AuthService {
 
       const meta = this.getRequestMeta(request);
       const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-      const refreshRow = refreshTokens.find((candidate) => candidate.tokenHash === this.hashToken(refreshToken) && !candidate.revokedAt);
-      if (!refreshRow || this.isExpired(refreshRow.expiresAt)) {
+      const refreshRow = refreshTokens.find((candidate) => candidate.tokenHash === hashAuthToken(refreshToken) && !candidate.revokedAt);
+      if (!refreshRow || isExpired(refreshRow.expiresAt)) {
         throw new UnauthorizedException('Session expiree.');
       }
 
@@ -1050,7 +804,7 @@ export class AuthService {
       let userId: string | null = null;
 
       if (accessToken) {
-        const session = sessions.find((candidate) => candidate.tokenHash === this.hashToken(accessToken) && !candidate.revokedAt);
+        const session = sessions.find((candidate) => candidate.tokenHash === hashAuthToken(accessToken) && !candidate.revokedAt);
         if (session) {
           userId = session.userId;
           session.revokedAt = now;
@@ -1059,7 +813,7 @@ export class AuthService {
       }
 
       if (refreshToken) {
-        const refreshRow = refreshTokens.find((candidate) => candidate.tokenHash === this.hashToken(refreshToken) && !candidate.revokedAt);
+        const refreshRow = refreshTokens.find((candidate) => candidate.tokenHash === hashAuthToken(refreshToken) && !candidate.revokedAt);
         if (refreshRow) {
           userId = userId ?? refreshRow.userId;
           refreshRow.revokedAt = now;
@@ -1097,7 +851,7 @@ export class AuthService {
       const meta = this.getRequestMeta(request);
       const passwordHash = await argon2.hash(payload.password, { type: argon2.argon2id });
       const user: StoredUser = {
-        id: this.createId('usr'),
+        id: createAuthId('usr'),
         email,
         passwordHash,
         passwordHistory: [passwordHash],
@@ -1107,8 +861,13 @@ export class AuthService {
         role: payload.role,
         status: 'active',
         avatar: undefined,
-        bio: undefined,
-        location: undefined,
+        bio: payload.bio?.trim() || undefined,
+        location: payload.location?.trim() || undefined,
+        publicTitle: payload.publicTitle?.trim() || undefined,
+        website: payload.website?.trim() || undefined,
+        preferredLanguage: payload.preferredLanguage?.trim() || undefined,
+        skills: Array.isArray(payload.skills) ? payload.skills.map((skill) => String(skill).trim()).filter(Boolean).slice(0, 12) : undefined,
+        publicProfileEnabled: Boolean(payload.publicProfileEnabled),
         is2FAEnabled: false,
         backupCodes: [],
         failedLoginAttempts: 0,
@@ -1151,7 +910,7 @@ export class AuthService {
         const latestChallenge = this.listPasswordResetChallenges(user.id, pendingChallenges)[0];
         if (
           latestChallenge
-          && (Date.now() - Date.parse(latestChallenge.createdAt)) < this.passwordResetCooldownSeconds * 1000
+          && (Date.now() - Date.parse(latestChallenge.createdAt)) < PASSWORD_RESET_COOLDOWN_SECONDS * 1000
         ) {
           this.appendAuditLog(auditLogs, sessions, user.id, 'Demande de reinitialisation du mot de passe ignoree (cooldown)', 'failed', {
             ip: meta.ip,
@@ -1163,17 +922,17 @@ export class AuthService {
           };
         }
 
-        const code = process.env.NODE_ENV === 'production' ? this.randomNumericCode() : '123456';
+        const code = process.env.NODE_ENV === 'production' ? randomNumericSecurityCode() : '123456';
         const createdAt = new Date().toISOString();
         const remainingChallenges = this.removePasswordResetChallenges(user.id, pendingChallenges);
 
         remainingChallenges.unshift({
-          id: this.createId('pwd-reset'),
+          id: createAuthId('pwd-reset'),
           userId: user.id,
-          codeHash: this.hashToken(code),
+          codeHash: hashAuthToken(code),
           purpose: 'password-reset',
           createdAt,
-          expiresAt: this.addMinutes(createdAt, this.passwordResetChallengeTtlMinutes),
+          expiresAt: addMinutes(createdAt, PASSWORD_RESET_CHALLENGE_TTL_MINUTES),
           attempts: 0,
         });
 
@@ -1220,14 +979,14 @@ export class AuthService {
 
       const challenge = this.listPasswordResetChallenges(user.id, pendingChallenges)[0];
 
-      if (!challenge || this.isExpired(challenge.expiresAt)) {
+      if (!challenge || isExpired(challenge.expiresAt)) {
         throw new UnauthorizedException('Code de verification expire.');
       }
 
       challenge.attempts += 1;
-      const codeMatches = challenge.codeHash === this.hashToken(code);
-      if (!codeMatches || challenge.attempts > this.passwordResetMaxAttempts) {
-        const shouldInvalidateChallenge = !codeMatches && challenge.attempts >= this.passwordResetMaxAttempts;
+      const codeMatches = challenge.codeHash === hashAuthToken(code);
+      if (!codeMatches || challenge.attempts > PASSWORD_RESET_MAX_ATTEMPTS) {
+        const shouldInvalidateChallenge = !codeMatches && challenge.attempts >= PASSWORD_RESET_MAX_ATTEMPTS;
         this.appendAuditLog(auditLogs, sessions, user.id, 'Echec de reinitialisation du mot de passe', 'failed', {
           ip: meta.ip,
           device: this.ensureDevice(meta),
@@ -1337,12 +1096,43 @@ export class AuthService {
         throw new BadRequestException('Utilisateur introuvable.');
       }
 
-      const patch = this.pickUserPatch(payload as Record<string, unknown>, this.managedUserPatchKeys);
+      const patch = this.pickUserPatch(payload as Record<string, unknown>, MANAGED_USER_PATCH_KEYS);
       if (patch.email) {
         patch.email = patch.email.trim().toLowerCase();
         const existing = this.findUserByEmail(patch.email, users);
         if (existing && existing.id !== id) {
           throw new ConflictException('Un compte existe deja avec cette adresse email.');
+        }
+      }
+
+      const roleWillChange = patch.role !== undefined && patch.role !== user.role;
+      const statusWillChange = patch.status !== undefined && patch.status !== user.status;
+      const twoFactorWillChange = patch.is2FAEnabled !== undefined && patch.is2FAEnabled !== user.is2FAEnabled;
+      const touchesPrivilegedAccount = user.role === 'superadmin' || user.role === 'admin' || patch.role === 'superadmin' || patch.role === 'admin';
+      const sensitiveAccessChange = roleWillChange || ((statusWillChange || twoFactorWillChange) && touchesPrivilegedAccount);
+
+      if (sensitiveAccessChange) {
+        if (actor.id === user.id && (roleWillChange || statusWillChange)) {
+          throw new BadRequestException('Un administrateur ne peut pas modifier son propre role ou statut.');
+        }
+
+        await this.assertPermissionForActor(actor, 'superadmin.sensitive.write', {
+          targetType: 'auth_user',
+          targetId: user.id,
+          httpMethod: 'PATCH',
+          route: `/auth/users/${user.id}`,
+          reason: 'privileged_identity_change',
+        });
+      }
+
+      const disablesSuperadmin = user.role === 'superadmin' && (
+        (patch.role !== undefined && patch.role !== 'superadmin')
+        || patch.status === 'suspended'
+      );
+      if (disablesSuperadmin) {
+        const activeSuperadmins = users.filter((candidate) => candidate.role === 'superadmin' && candidate.status === 'active');
+        if (activeSuperadmins.length <= 1) {
+          throw new BadRequestException('Impossible de retirer le dernier superadmin actif.');
         }
       }
 
@@ -1372,7 +1162,7 @@ export class AuthService {
     const users = await this.loadRows<StoredUser>('auth_users');
     const user = this.findUserById(id, users);
     const actor = request?.auth?.user;
-    const canPreviewUnpublished = Boolean(actor && (actor.id === id || actor.role === 'admin'));
+    const canPreviewUnpublished = Boolean(actor && (actor.id === id || isAdminRole(actor)));
     if (!user || user.role !== 'formateur' || (!user.publicProfileEnabled && !canPreviewUnpublished)) {
       throw new BadRequestException('Profil formateur introuvable.');
     }
@@ -1399,6 +1189,7 @@ export class AuthService {
       | 'introVideo'
       | 'publicProfileEnabled'
       | 'expertVerified'
+      | 'userPreferences'
     >> & {
       socialLinks?: SocialLinks;
       certifications?: CertificationItem[];
@@ -1414,7 +1205,7 @@ export class AuthService {
         throw new BadRequestException('Utilisateur introuvable.');
       }
 
-      const patch = this.pickUserPatch(payload as Record<string, unknown>, this.selfProfilePatchKeys);
+      const patch = this.pickUserPatch(payload as Record<string, unknown>, SELF_PROFILE_PATCH_KEYS);
       if (patch.email) {
         patch.email = patch.email.trim().toLowerCase();
         const existing = this.findUserByEmail(patch.email, users);
@@ -1432,6 +1223,45 @@ export class AuthService {
       ]);
 
       return editableProfileUser(user);
+    });
+  }
+
+  async deleteProfile(request: AuthenticatedRequest, id: string, response: Response) {
+    return this.runSerializedMutation(async () => {
+      this.requireSelf(request, id);
+      const { users, sessions, refreshTokens, pendingChallenges, auditLogs } = await this.loadSnapshot();
+      const user = this.findUserById(id, users);
+      if (!user) {
+        throw new BadRequestException('Utilisateur introuvable.');
+      }
+
+      if (user.role === 'superadmin') {
+        const activeSuperadmins = users.filter((candidate) => (
+          candidate.id !== user.id
+          && candidate.role === 'superadmin'
+          && candidate.status === 'active'
+        ));
+        if (activeSuperadmins.length === 0) {
+          throw new BadRequestException('Impossible de supprimer le dernier superadmin actif.');
+        }
+      }
+
+      const nextUsers = users.filter((candidate) => candidate.id !== user.id);
+      const nextSessions = sessions.filter((session) => session.userId !== user.id);
+      const nextRefreshTokens = refreshTokens.filter((token) => token.userId !== user.id);
+      const nextPendingChallenges = pendingChallenges.filter((challenge) => challenge.userId !== user.id);
+      const nextAuditLogs = auditLogs.filter((entry) => entry.userId !== user.id);
+
+      await Promise.all([
+        this.saveUsers(nextUsers),
+        this.saveSessions(nextSessions),
+        this.saveRefreshTokens(nextRefreshTokens),
+        this.savePendingChallenges(nextPendingChallenges),
+        this.saveAuditLogs(nextAuditLogs),
+      ]);
+
+      this.clearAuthCookies(response);
+      return { success: true };
     });
   }
 

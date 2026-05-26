@@ -1,4 +1,10 @@
 import { Course, Lesson } from '../types';
+import { useState } from 'react';
+import { createApprenantLessonComment } from '@/lib/apprenantDashboardApi';
+import ChapterQuizPrompt from './ChapterQuizPrompt';
+import LessonArticle from './LessonArticle';
+import LessonExerciseBox from './LessonExerciseBox';
+import LessonResources from './LessonResources';
 import VideoPlayer from './VideoPlayer';
 
 const typeIcons: Record<string, string> = {
@@ -24,6 +30,27 @@ interface Props {
   onOpenNotes: (lesson: Lesson) => void;
   onToggleComplete: (lessonId: number) => void;
   onToggleBookmark: (lessonId: number) => void;
+  onSelectLesson: (lesson: Lesson) => void;
+  getInitialVideoTime: (lessonId: number) => number;
+  onVideoProgress: (lessonId: number, seconds: number) => void;
+}
+
+function getActiveModule(course: Course, lessonId: number) {
+  return course.modules.find((module) => module.lessons.some((lesson) => lesson.id === lessonId)) ?? null;
+}
+
+function getNextQuizInModule(course: Course, activeLesson: Lesson) {
+  const module = getActiveModule(course, activeLesson.id);
+  if (!module || activeLesson.type === 'quiz') return null;
+
+  const activeIndex = module.lessons.findIndex((lesson) => lesson.id === activeLesson.id);
+  const nextQuiz = module.lessons.slice(activeIndex + 1).find((lesson) => lesson.type === 'quiz');
+  const nextContentBeforeQuiz = module.lessons
+    .slice(activeIndex + 1)
+    .find((lesson) => lesson.type !== 'quiz');
+
+  if (!nextQuiz || nextContentBeforeQuiz) return null;
+  return nextQuiz;
 }
 
 export default function LessonsTab({
@@ -35,7 +62,16 @@ export default function LessonsTab({
   onOpenNotes,
   onToggleComplete,
   onToggleBookmark,
+  onSelectLesson,
+  getInitialVideoTime,
+  onVideoProgress,
 }: Props) {
+  const [instructorQuestion, setInstructorQuestion] = useState('');
+  const [showInstructorQuestion, setShowInstructorQuestion] = useState(false);
+  const [questionSent, setQuestionSent] = useState(false);
+  const [questionError, setQuestionError] = useState('');
+  const [questionSubmitting, setQuestionSubmitting] = useState(false);
+
   if (!activeLesson) {
     return (
       <div className="text-center py-10">
@@ -50,29 +86,51 @@ export default function LessonsTab({
   const isCompleted = completedLessons.has(activeLesson.id);
   const isBookmarked = bookmarkedLessons.has(activeLesson.id);
   const hasNote = !!notes[activeLesson.id]?.trim();
+  const nextQuiz = getNextQuizInModule(course, activeLesson);
+  const articleBlocks = activeLesson.contentBlocks ?? [];
+  const lessonResources = activeLesson.resources ?? [];
+
+  const submitInstructorQuestion = async () => {
+    const question = instructorQuestion.trim();
+    if (!question) return;
+
+    setQuestionSubmitting(true);
+    setQuestionError('');
+    try {
+      await createApprenantLessonComment(activeLesson.id, question);
+      setInstructorQuestion('');
+      setQuestionSent(true);
+    } catch (error) {
+      setQuestionError(error instanceof Error ? error.message : 'Impossible d envoyer la question.');
+    } finally {
+      setQuestionSubmitting(false);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Video player for video lessons */}
+    <div className="space-y-6">
       {activeLesson.type === 'video' && (
         <VideoPlayer
+          key={activeLesson.id}
           duration={activeLesson.duration}
           title={activeLesson.title}
           isCompleted={isCompleted}
           onComplete={() => onToggleComplete(activeLesson.id)}
           chapters={activeLesson.chapters}
           thumbnail={activeLesson.thumbnail}
+          initialTime={getInitialVideoTime(activeLesson.id)}
+          onProgress={(seconds) => onVideoProgress(activeLesson.id, seconds)}
         />
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-white rounded-2xl border border-gray-200">
         <div className="flex items-start justify-between gap-4 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-4 px-6 pt-6">
+            <div className="w-11 h-11 bg-teal-600 rounded-xl flex items-center justify-center flex-shrink-0">
               <i className={`${typeIcons[activeLesson.type]} text-white text-lg`}></i>
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-900">{activeLesson.title}</h3>
+              <h1 className="text-3xl font-bold leading-tight text-slate-950">{activeLesson.title}</h1>
               <p className="text-xs text-gray-500">
                 {typeLabels[activeLesson.type]} · {activeLesson.duration}
                 {isCompleted && (
@@ -84,7 +142,7 @@ export default function LessonsTab({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0 px-6 pt-6">
             {hasNote && (
               <div className="w-8 h-8 flex items-center justify-center rounded-lg text-amber-500" title="Note enregistrée">
                 <i className="ri-sticky-note-fill text-sm"></i>
@@ -109,57 +167,46 @@ export default function LessonsTab({
           </div>
         </div>
 
-        <p className="text-sm text-gray-700 mb-4 leading-relaxed">{activeLesson.description}</p>
+        <div className="px-6 pb-6">
+          <p className="mx-auto max-w-4xl text-lg leading-8 text-slate-700">{activeLesson.description}</p>
+        </div>
 
-        {activeLesson.type === 'reading' && (
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
-            <div className="prose prose-sm max-w-none text-gray-700">
-              <p className="text-sm leading-relaxed">
-                Ce contenu de lecture couvre les fondamentaux théoriques de cette leçon.
-                Prenez des notes personnelles en cliquant sur l&apos;icône de note pour retenir les points clés.
-              </p>
-              <ul className="text-sm mt-3 space-y-1.5 list-disc list-inside text-gray-600">
-                <li>Comprendre les concepts fondamentaux présentés</li>
-                <li>Relier cette leçon aux modules précédents</li>
-                <li>Appliquer les principes dans les exercices pratiques</li>
-                <li>Poser des questions dans l&apos;onglet Discussions si besoin</li>
-              </ul>
-            </div>
+        {activeLesson.type !== 'quiz' && (
+          <div className="border-t border-gray-100 px-6 py-8">
+        {articleBlocks.length > 0 ? (
+          <LessonArticle blocks={articleBlocks} />
+        ) : (
+          <div className="mx-auto max-w-4xl rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
+            Aucun contenu textuel n'a encore ete publie pour cette lecon.
           </div>
         )}
+          </div>
+        )}
+
+        <LessonResources resources={lessonResources} />
 
         {activeLesson.type === 'exercise' && (
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
-            <p className="text-sm text-gray-700 mb-3 font-medium">Instructions de l&apos;exercice :</p>
-            <div className="bg-white rounded-lg p-3 font-mono text-xs text-gray-700 border border-gray-200">
-              {/* Simulated exercise content */}
-              <p className="mb-2">// Objectif : Appliquez les concepts de cette leçon</p>
-              <p className="mb-2">// Étape 1 : Lisez attentivement l&apos;énoncé</p>
-              <p className="mb-2">// Étape 2 : Réalisez l&apos;exercice dans votre environnement</p>
-              <p>// Étape 3 : Soumettez votre solution pour évaluation</p>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button className="px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-md hover:bg-teal-700 transition-colors cursor-pointer">
-                Télécharger le sujet
-              </button>
-              <button className="px-3 py-1.5 border border-gray-300 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors cursor-pointer">
-                Voir la correction
-              </button>
-            </div>
-          </div>
+          <LessonExerciseBox />
         )}
 
-        {activeLesson.type === 'quiz' && (
-          <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 mb-4">
-            <p className="text-sm text-amber-800">
-              <i className="ri-question-line mr-1"></i>
-              Ce quiz évalue vos connaissances sur ce module. Rendez-vous dans l&apos;onglet
-              <strong> Quiz</strong> pour le passer.
-            </p>
-          </div>
-        )}
+        <ChapterQuizPrompt
+          nextQuiz={nextQuiz}
+          showInstructorQuestion={showInstructorQuestion}
+          instructorQuestion={instructorQuestion}
+          questionSent={questionSent}
+          questionError={questionError}
+          questionSubmitting={questionSubmitting}
+          onToggleInstructorQuestion={() => setShowInstructorQuestion((value) => !value)}
+          onInstructorQuestionChange={(value) => {
+            setInstructorQuestion(value);
+            setQuestionSent(false);
+            setQuestionError('');
+          }}
+          onSubmitInstructorQuestion={submitInstructorQuestion}
+          onSelectLesson={onSelectLesson}
+        />
 
-        <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-3 border-t border-gray-100 px-6 py-5">
           <button
             onClick={() => onToggleComplete(activeLesson.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${

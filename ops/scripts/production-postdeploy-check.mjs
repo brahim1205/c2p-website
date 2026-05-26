@@ -123,6 +123,10 @@ async function main() {
   const skipComposePs = args.get('skip-compose-ps') === 'true';
   const skipHttp = args.get('skip-http') === 'true';
   const skipMonitoring = args.get('skip-monitoring') === 'true';
+  const skipUploadStorageCheck = args.get('skip-upload-storage-check') === 'true';
+  const skipUploadMetadataAudit = args.get('skip-upload-metadata-audit') === 'true';
+  const skipUploadTempCleanup = args.get('skip-upload-temp-cleanup') === 'true';
+  const skipBackupCheck = args.get('skip-backup-check') === 'true';
 
   const failures = [];
   const backendConfig = fs.existsSync(backendEnv) ? parseEnvFile(backendEnv) : {};
@@ -140,6 +144,32 @@ async function main() {
     alertmanager: String(args.get('alertmanager-url') ?? 'http://127.0.0.1:9093/-/healthy').trim(),
     grafana: String(args.get('grafana-url') ?? 'http://127.0.0.1:3004/api/health').trim(),
   };
+
+  if (!skipBackupCheck) {
+    try {
+      const backupDir = resolveRepoPath(args.get('backup-dir'), 'backups/postgres');
+      const maxAgeHours = String(args.get('backup-max-age-hours') ?? 26);
+      execFileSync(
+        'node',
+        [
+          'ops/scripts/postgres-backup-check.mjs',
+          '--backup-dir',
+          backupDir,
+          '--max-age-hours',
+          maxAgeHours,
+        ],
+        {
+          cwd: repoRoot,
+          stdio: 'pipe',
+        },
+      );
+    } catch (error) {
+      const stderr = error instanceof Error && 'stderr' in error
+        ? String(error.stderr ?? '').trim()
+        : '';
+      failures.push(`Backup PostgreSQL récent invalide: ${stderr || (error instanceof Error ? error.message : String(error))}`);
+    }
+  }
 
   if (!skipComposePs) {
     try {
@@ -188,6 +218,117 @@ async function main() {
       }
     } catch (error) {
       failures.push(`Impossible de lire docker compose ps: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  if (!skipUploadStorageCheck && !skipComposePs) {
+    try {
+      const raw = execFileSync(
+        'docker',
+        [
+          'compose',
+          '--env-file',
+          composeEnv,
+          '-f',
+          composeFile,
+          'exec',
+          '-T',
+          'backend',
+          'npm',
+          'run',
+          'uploads:storage:check',
+          '--silent',
+        ],
+        {
+          cwd: repoRoot,
+          stdio: 'pipe',
+        },
+      );
+      const report = JSON.parse(String(raw).trim());
+      if (!report.ok) {
+        failures.push('Check storage uploads a renvoyé un payload non OK.');
+      }
+      if (String(backendConfig.UPLOAD_STORAGE_DRIVER ?? '').trim().toLowerCase() === 's3' && report.driver !== 's3') {
+        failures.push(`Check storage uploads a utilisé ${report.driver} au lieu de s3.`);
+      }
+    } catch (error) {
+      const stderr = error instanceof Error && 'stderr' in error
+        ? String(error.stderr ?? '').trim()
+        : '';
+      failures.push(
+        `Check storage uploads indisponible: ${stderr || (error instanceof Error ? error.message : String(error))}`,
+      );
+    }
+  }
+
+  if (!skipUploadMetadataAudit && !skipComposePs) {
+    try {
+      const raw = execFileSync(
+        'docker',
+        [
+          'compose',
+          '--env-file',
+          composeEnv,
+          '-f',
+          composeFile,
+          'exec',
+          '-T',
+          'backend',
+          'node',
+          'scripts/upload-object-audit.mjs',
+          '--limit=1000',
+        ],
+        {
+          cwd: repoRoot,
+          stdio: 'pipe',
+        },
+      );
+      const report = JSON.parse(String(raw));
+      if (!report.ok) {
+        failures.push('Audit metadata uploads a renvoyé un payload non OK.');
+      }
+    } catch (error) {
+      const stderr = error instanceof Error && 'stderr' in error
+        ? String(error.stderr ?? '').trim()
+        : '';
+      failures.push(
+        `Audit metadata uploads indisponible: ${stderr || (error instanceof Error ? error.message : String(error))}`,
+      );
+    }
+  }
+
+  if (!skipUploadTempCleanup && !skipComposePs) {
+    try {
+      const raw = execFileSync(
+        'docker',
+        [
+          'compose',
+          '--env-file',
+          composeEnv,
+          '-f',
+          composeFile,
+          'exec',
+          '-T',
+          'backend',
+          'node',
+          'scripts/upload-temp-cleanup.mjs',
+        ],
+        {
+          cwd: repoRoot,
+          stdio: 'pipe',
+        },
+      );
+      const report = JSON.parse(String(raw));
+      if (!report.ok) {
+        failures.push('Nettoyage tmp uploads a renvoyé un payload non OK.');
+      }
+    } catch (error) {
+      const stderr = error instanceof Error && 'stderr' in error
+        ? String(error.stderr ?? '').trim()
+        : '';
+      failures.push(
+        `Nettoyage tmp uploads indisponible: ${stderr || (error instanceof Error ? error.message : String(error))}`,
+      );
     }
   }
 

@@ -29,8 +29,8 @@
     --c2p-accent: #0f1c35;
     --c2p-accent-hover: #1b2d4a;
     --c2p-accent-strong: #64748b;
-    --c2p-gold: #1a9a96;
-    --c2p-gold-strong: #147f7b;
+    --c2p-gold: #b7832f;
+    --c2p-gold-strong: #8f641f;
     --c2p-success: #1a9a96;
     --c2p-success-soft: rgba(26, 154, 150, 0.12);
     --c2p-warning: #64748b;
@@ -207,6 +207,134 @@
     border-color: var(--c2p-border);
     color: var(--c2p-text-soft);
     box-shadow: none;
+  }
+
+  .public-premium-page {
+    --public-section-bg: #f8fafc;
+    --public-card-border: rgba(15, 28, 53, 0.10);
+    --public-card-shadow: 0 22px 54px rgba(15, 28, 53, 0.08);
+    --public-muted: #526174;
+    --public-photo-filter: saturate(0.82) contrast(1.05) brightness(1.03);
+    background:
+      linear-gradient(180deg, #ffffff 0%, #f8fafc 36%, #ffffff 100%);
+    color: #0f1c35;
+    font-family: Aptos, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .public-premium-page > section:first-child {
+    border-bottom: 1px solid rgba(15, 28, 53, 0.08);
+    background-color: #ffffff;
+    min-height: clamp(560px, 78vh, 760px) !important;
+  }
+
+  .public-premium-page > section:first-child::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 18% 20%, rgba(183, 131, 47, 0.08), transparent 26%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.16));
+  }
+
+  .public-premium-page > section:first-child h1,
+  .public-premium-page h2 {
+    text-wrap: balance;
+    letter-spacing: 0;
+  }
+
+  .public-premium-page > section:first-child p:not(.c2p-eyebrow),
+  .public-premium-page h1 + p,
+  .public-premium-page h2 + p {
+    color: var(--public-muted);
+  }
+
+  .public-premium-page .c2p-panel {
+    border-color: rgba(15, 28, 53, 0.11);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 22px 58px rgba(15, 28, 53, 0.08);
+  }
+
+  .public-premium-page article,
+  .public-premium-page a.group,
+  .public-premium-page .c2p-panel {
+    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease, background-color 220ms ease;
+  }
+
+  .public-premium-page > section:first-child img {
+    filter: var(--public-photo-filter);
+  }
+
+  .public-premium-page .c2p-card,
+  .public-premium-page .c2p-card-soft,
+  .public-premium-page article,
+  .public-premium-page a.group {
+    border-color: var(--public-card-border);
+    box-shadow: 0 14px 38px rgba(15, 28, 53, 0.055);
+  }
+
+  .public-premium-page a.group:hover,
+  .public-premium-page article:hover {
+    border-color: rgba(183, 131, 47, 0.28);
+    box-shadow: var(--public-card-shadow);
+    transform: translateY(-2px);
+  }
+
+  .public-premium-page .c2p-btn-accent,
+  .public-premium-page .c2p-btn-primary {
+    min-height: 2.875rem;
+    box-shadow: 0 12px 26px rgba(15, 28, 53, 0.12);
+  }
+
+  .public-premium-page .c2p-btn-accent:hover,
+  .public-premium-page .c2p-btn-primary:hover {
+    box-shadow: 0 16px 34px rgba(15, 28, 53, 0.16);
+    transform: translateY(-1px);
+  }
+
+  .public-premium-page .c2p-btn-secondary {
+    min-height: 2.875rem;
+    background: rgba(255, 255, 255, 0.74);
+    color: #0f1c35;
+  }
+
+  .public-premium-page .c2p-input {
+    border-color: rgba(15, 28, 53, 0.14);
+    background: rgba(255, 255, 255, 0.88);
+  }
+
+  .public-premium-page .c2p-eyebrow {
+    color: #9a6b23;
+    letter-spacing: 0.18em;
+  }
+
+  .public-premium-page > section:first-child h1 {
+    max-width: 60rem;
+    font-size: clamp(2rem, 4vw, 3.65rem) !important;
+    line-height: 1.08 !important;
+    font-weight: 650;
+  }
+
+  .public-premium-page h2 {
+    font-size: clamp(2rem, 3.3vw, 3.5rem) !important;
+    line-height: 1.08 !important;
+    font-weight: 650;
+  }
+
+  .public-premium-page .public-mobile-title {
+    max-width: 100%;
+    font-size: clamp(0.92rem, 3.2vw, 2rem) !important;
+    line-height: 1.12 !important;
+    white-space: nowrap;
+   }
+
+  .public-premium-page p {
+    line-height: 1.75;
+  }
+
+  .public-premium-page section {
+    scroll-margin-top: 6rem;
   }
 
   .dashboard-layout [class*='from-teal-'],

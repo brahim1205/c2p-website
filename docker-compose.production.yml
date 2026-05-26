@@ -67,6 +67,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+      - /usr/src/app/storage/uploads/_tmp
     security_opt:
       - no-new-privileges:true
     cap_drop:

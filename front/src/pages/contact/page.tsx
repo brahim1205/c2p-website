@@ -108,16 +108,16 @@ export default function ContactPage() {
   };
 
   return (
-    <main className="min-h-screen bg-c2p-bg text-c2p-text">
+    <main className="public-premium-page min-h-screen bg-c2p-bg text-c2p-text">
       <section className="relative min-h-[620px] overflow-hidden bg-[#ffffff]">
         <div className="absolute inset-0">
           <img
-            src="/images/brand/images14.jpeg"
+            src="/images/home/support.jpg"
             alt="Contact C2P"
-            className="h-full w-full object-cover object-center opacity-24"
+            className="h-full w-full object-cover object-center opacity-[0.36]"
           />
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.94)_0%,rgba(247,248,252,0.76)_46%,rgba(247,248,252,0.30)_100%)]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]"></div>
         <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
         <div className="relative z-10 flex min-h-[620px] items-center px-4 pt-24 sm:px-6 lg:px-20">

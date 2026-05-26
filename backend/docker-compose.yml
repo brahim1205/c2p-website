@@ -5,9 +5,23 @@ services:
       - '3001:3000'
     env_file:
       - .env
+    environment:
+      UPLOAD_STORAGE_DRIVER: s3
+      UPLOAD_PUBLIC_BASE_URL: http://localhost:9000/c2p-uploads
+      UPLOAD_S3_ENDPOINT: http://minio:9000
+      UPLOAD_S3_REGION: us-east-1
+      UPLOAD_S3_BUCKET: c2p-uploads
+      UPLOAD_S3_ACCESS_KEY_ID: c2p-minio
+      UPLOAD_S3_SECRET_ACCESS_KEY: c2p-minio-password
+      UPLOAD_S3_KEY_PREFIX: uploads
+      UPLOAD_S3_FORCE_PATH_STYLE: "true"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      minio-create-bucket:
+        condition: service_completed_successfully
     command: npm run start
 
   db:
@@ -24,6 +38,36 @@ services:
     volumes:
       - redis-data:/data
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: c2p-minio
+      MINIO_ROOT_PASSWORD: c2p-minio-password
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/ready || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-create-bucket:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 c2p-minio c2p-minio-password &&
+      mc mb --ignore-existing local/c2p-uploads &&
+      mc anonymous set download local/c2p-uploads
+      "
+
 volumes:
   db-data:
   redis-data:
+  minio-data:

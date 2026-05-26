@@ -1,50 +1,56 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  loadCourseHistory,
-  type CourseHistoryEntry,
-} from '@/pages/dashboard/apprenant/cours/[id]/storage';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { fetchApprenantEnrollments, type ApprenantEnrollment } from '@/lib/apprenantDashboardApi';
+import { queryKeys } from '@/lib/queryKeys';
 
-const DISMISS_PREFIX = 'resume-banner-dismissed-';
-const DISMISS_TTL_MS = 24 * 60 * 60 * 1000;
-
-function isDismissed(courseId: number): boolean {
-  const raw = localStorage.getItem(`${DISMISS_PREFIX}${courseId}`);
-  if (!raw) return false;
-  const ts = parseInt(raw, 10);
-  return !isNaN(ts) && Date.now() - ts < DISMISS_TTL_MS;
-}
-
-function dismiss(courseId: number) {
-  localStorage.setItem(`${DISMISS_PREFIX}${courseId}`, String(Date.now()));
+interface ResumeCourseEntry {
+  courseId: number;
+  title: string;
+  progress: number;
 }
 
 export default function ResumeCourseBanner() {
-  const [entry, setEntry] = useState<CourseHistoryEntry | null>(null);
+  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
+  const [dismissedCourseId, setDismissedCourseId] = useState<number | null>(null);
 
-  const refresh = useCallback(() => {
-    const history = loadCourseHistory();
-    const candidates = history
-      .filter((h) => h.progress > 0 && h.progress < 100)
-      .sort((a, b) => new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime());
+  const { data: enrollments = [] } = useQuery({
+    queryKey: queryKeys.apprenant.enrollments(user?.id),
+    queryFn: () => fetchApprenantEnrollments(user?.id ?? ''),
+    enabled: Boolean(user?.id),
+    refetchInterval: 30_000,
+  });
+
+  const entry = useMemo<ResumeCourseEntry | null>(() => {
+    const candidates = enrollments
+      .map((enrollment: ApprenantEnrollment) => ({
+        enrollment,
+        progress: Math.max(0, Math.min(100, Math.round(Number(enrollment.progress || 0)))),
+      }))
+      .filter(({ progress, enrollment }) => progress > 0 && progress < 100 && enrollment.courses?.id)
+      .sort((a, b) => new Date(b.enrollment.last_active).getTime() - new Date(a.enrollment.last_active).getTime());
     const top = candidates[0] ?? null;
-    if (top && !isDismissed(top.courseId)) {
-      setEntry(top);
-      setVisible(true);
-    } else {
-      setVisible(false);
-    }
-  }, []);
+    const courseId = top?.enrollment.courses?.id;
+    if (!top || !courseId || dismissedCourseId === courseId) return null;
+    return {
+      courseId,
+      title: top.enrollment.courses?.title || top.enrollment.course_name || 'Formation',
+      progress: top.progress,
+    };
+  }, [dismissedCourseId, enrollments]);
 
   useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 30000);
-    return () => clearInterval(id);
-  }, [refresh]);
+    setVisible(Boolean(entry));
+  }, [entry]);
+
+  useEffect(() => {
+    setDismissedCourseId(null);
+  }, [user?.id]);
 
   const handleDismiss = () => {
-    if (entry) dismiss(entry.courseId);
+    if (entry) setDismissedCourseId(entry.courseId);
     setVisible(false);
   };
 

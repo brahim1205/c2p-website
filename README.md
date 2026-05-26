@@ -197,12 +197,16 @@ npm run build
 npm run start:dev
 ```
 
+Par défaut, le backend local est attendu sur `http://localhost:3003/api` si `backend/.env` contient `PORT=3003`.
+Le script `start:dev` utilise le watcher Nest CLI, plus stable sous Node 22 que l'ancien loader `ts-node/esm`.
+
 ## Vérifications utiles
 
 ### Front
 
 ```bash
 cd front
+npm run verify
 npm run type-check
 npm run build
 npm run smoke:test
@@ -212,12 +216,31 @@ npm run smoke:test
 
 ```bash
 cd backend
+npm run db:check
 npm run build
+npm run verify
 npm run security:test
 npm run data:access:test
 npm run messaging:flow:test
 npm run notifications:flow:test
 ```
+
+Les checks HTTP backend supposent une API déjà lancée. Pour les exécuter ensemble :
+
+```bash
+cd backend
+API_URL=http://localhost:3003/api npm run http:checks
+```
+
+Pour les smoke tests front, garder le même hostname côté front et API afin que les cookies de session soient renvoyés :
+
+```bash
+cd front
+npm run dev -- --host 0.0.0.0 --port 3000
+npm run smoke:test:client
+```
+
+Le registre des limites et risques techniques est maintenu dans `docs/ARCHITECTURE_RISK_REGISTER.md`.
 
 ## Mise en production
 
@@ -231,12 +254,25 @@ Le projet dispose déjà :
 Séquence de base :
 
 ```bash
-cd backend && npm run production:preflight
-cd backend && npm run production:compose:check
+npm --prefix backend run production:env:init
+# remplir ensuite BREVO_API_KEY, SendText, DexPay et Cloudflare R2
+npm --prefix backend run production:env:set -- --require-all
+npm --prefix backend run production:readiness:local
+npm --prefix backend run production:readiness:report -- --strict
+npm --prefix backend run production:env:status -- --strict
+npm --prefix backend run production:external:check
+npm --prefix backend run production:ready:check
+npm --prefix backend run production:preflight
+npm --prefix backend run production:compose:check
 docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml build
 docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml up -d
-cd backend && npm run production:postdeploy
+npm --prefix backend run production:postdeploy
+npm --prefix backend run production:restore:drill -- --backup-dir backups/postgres
 ```
+
+`production:readiness:local` ignore uniquement Docker et le backup PostgreSQL pour faciliter le diagnostic depuis un poste de développement. Sur le VPS, utiliser `production:readiness:report -- --strict` sans option de skip avant tout déploiement.
+
+`production:external:check` charge `ops/env/backend.production.env`, refuse les placeholders actifs, puis vérifie le provider uploads configuré. En production avec Cloudflare R2, ce check doit écrire puis supprimer un objet de test dans le bucket R2 avant tout go-live.
 
 ## Résumé
 

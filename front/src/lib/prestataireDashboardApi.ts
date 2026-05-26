@@ -1,6 +1,5 @@
-import { backendClient } from '@/lib/backendClient';
-import { fetchProviderByUserId } from '@/lib/providerApi';
-import { fetchFinanceSnapshot, type FinanceSnapshot } from '@/lib/saasApi';
+import { apiRequest } from '@/lib/api';
+import { fetchFinanceSnapshot } from '@/lib/saasApi';
 import {
   notifyBookingStatusChanged,
   notifyClientReviewReply,
@@ -105,95 +104,47 @@ export interface PrestataireService {
   created_at: string;
 }
 
-function throwApiError(error: { message?: string } | null | undefined) {
-  if (error) {
-    throw new Error(error.message || 'Backend request failed.');
-  }
-}
-
-async function requireProvider(userId: string) {
-  const provider = await fetchProviderByUserId(userId);
-  if (!provider?.id) return null;
-  return provider;
-}
-
 export async function fetchPrestataireDashboardSnapshot(user: PrestataireDashboardUser) {
-  const provider = await requireProvider(user.id);
-  if (!provider?.id) {
-    return {
-      provider: null,
-      bookings: [] as PrestataireBooking[],
-      reviews: [] as PrestataireReview[],
-      finance: null as FinanceSnapshot | null,
-      visibilityPass: null as PrestataireVisibilityPass | null,
-      verificationRequest: null as PrestataireVerificationRequest | null,
-    };
-  }
-
-  const [bookingsRes, reviewsRes, finance, visibilityPassRes, verificationRequestRes] = await Promise.all([
-    backendClient.from('bookings').select('*').eq('provider_id', provider.id).order('created_at', { ascending: false }).limit(4),
-    backendClient.from('provider_reviews').select('*').eq('provider_id', provider.id).order('created_at', { ascending: false }).limit(3),
+  const [snapshot, finance] = await Promise.all([
+    apiRequest<{
+      provider: PrestataireProvider | null;
+      bookings: PrestataireBooking[];
+      reviews: PrestataireReview[];
+      visibilityPass: PrestataireVisibilityPass | null;
+      verificationRequest: PrestataireVerificationRequest | null;
+    }>('/marketplace/prestataire/dashboard'),
     fetchFinanceSnapshot(user.id, user.role),
-    backendClient.from('provider_visibility_passes').select('*').eq('user_id', user.id).order('issued_at', { ascending: false }).limit(1),
-    backendClient.from('provider_verification_requests').select('*').eq('user_id', user.id).order('requested_at', { ascending: false }).limit(1),
   ]);
 
-  throwApiError(bookingsRes.error);
-  throwApiError(reviewsRes.error);
-  throwApiError(visibilityPassRes.error);
-  throwApiError(verificationRequestRes.error);
-
   return {
-    provider: provider as PrestataireProvider,
-    bookings: (bookingsRes.data as PrestataireBooking[]) || [],
-    reviews: (reviewsRes.data as PrestataireReview[]) || [],
+    provider: snapshot.provider,
+    bookings: snapshot.bookings,
+    reviews: snapshot.reviews,
     finance,
-    visibilityPass: ((visibilityPassRes.data as PrestataireVisibilityPass[] | null) || [])[0] ?? null,
-    verificationRequest: ((verificationRequestRes.data as PrestataireVerificationRequest[] | null) || [])[0] ?? null,
+    visibilityPass: snapshot.visibilityPass,
+    verificationRequest: snapshot.verificationRequest,
   };
 }
 
 export async function requestPrestataireVerification(providerId: number, note?: string) {
-  const { data, error } = await backendClient
-    .from<PrestataireVerificationRequest>('provider_verification_requests')
-    .insert({
-      provider_id: providerId,
-      note: note?.trim() || '',
-    })
-    .select('*')
-    .single();
-
-  throwApiError(error);
-  return data;
+  return apiRequest<PrestataireVerificationRequest>('/marketplace/prestataire/verification-requests', {
+    method: 'POST',
+    body: JSON.stringify({ provider_id: providerId, note: note?.trim() || '' }),
+  });
 }
 
 export async function updatePrestataireBookingStatus(booking: PrestataireBooking, status: PrestataireBooking['status']) {
-  const { error } = await backendClient
-    .from('bookings')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', booking.id);
-  throwApiError(error);
+  await apiRequest<PrestataireBooking>(`/marketplace/prestataire/bookings/${encodeURIComponent(String(booking.id))}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
 
   await notifyBookingStatusChanged(booking.client_id, booking.service, status);
 }
 
 export async function fetchPrestataireBookings(userId: string) {
-  const provider = await requireProvider(userId);
-  if (!provider?.id) {
-    return { providerId: null, bookings: [] as PrestataireBooking[] };
-  }
-
-  const { data, error } = await backendClient
-    .from('bookings')
-    .select('*')
-    .eq('provider_id', provider.id)
-    .order('created_at', { ascending: false });
-  throwApiError(error);
-
-  return {
-    providerId: provider.id,
-    bookings: (data as PrestataireBooking[]) || [],
-  };
+  void userId;
+  return apiRequest<{ providerId: number | null; bookings: PrestataireBooking[] }>('/marketplace/prestataire/bookings');
 }
 
 export function subscribePrestataireBookings(
@@ -203,31 +154,15 @@ export function subscribePrestataireBookings(
     onUpdate?: (booking: PrestataireBooking) => void;
   },
 ) {
-  return backendClient
-    .channel(`bookings-channel-${providerId}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bookings', filter: `provider_id=eq.${providerId}` }, (payload) => {
-      handlers.onInsert?.(payload.new as PrestataireBooking);
-    })
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookings', filter: `provider_id=eq.${providerId}` }, (payload) => {
-      handlers.onUpdate?.(payload.new as PrestataireBooking);
-    })
-    .subscribe();
+  void providerId;
+  void handlers;
+  return { unsubscribe: () => undefined };
 }
 
 export async function fetchPrestataireReviews(userId: string) {
-  const provider = await requireProvider(userId);
-  if (!provider?.id) {
-    return [] as PrestataireReview[];
-  }
-
-  const { data, error } = await backendClient
-    .from('provider_reviews')
-    .select('*')
-    .eq('provider_id', provider.id)
-    .order('created_at', { ascending: false });
-  throwApiError(error);
-
-  return ((data || []) as PrestataireReview[]).map((review) => ({
+  void userId;
+  const data = await apiRequest<PrestataireReview[]>('/marketplace/prestataire/reviews');
+  return data.map((review) => ({
     ...review,
     date: review.created_at ? new Date(review.created_at).toISOString().split('T')[0] : '',
   }));
@@ -235,11 +170,10 @@ export async function fetchPrestataireReviews(userId: string) {
 
 export async function replyPrestataireReview(review: PrestataireReview, replyText: string) {
   const response = replyText.trim();
-  const { error } = await backendClient
-    .from('provider_reviews')
-    .update({ response })
-    .eq('id', review.id);
-  throwApiError(error);
+  await apiRequest<PrestataireReview>(`/marketplace/prestataire/reviews/${encodeURIComponent(String(review.id))}/reply`, {
+    method: 'PATCH',
+    body: JSON.stringify({ response }),
+  });
 
   await notifyClientReviewReply(review.client_id, review.service);
 
@@ -247,43 +181,28 @@ export async function replyPrestataireReview(review: PrestataireReview, replyTex
 }
 
 export async function incrementPrestataireReviewHelpful(reviewId: number, helpful: number) {
-  const { error } = await backendClient
-    .from('provider_reviews')
-    .update({ helpful })
-    .eq('id', reviewId);
-  throwApiError(error);
+  await apiRequest<PrestataireReview>(`/marketplace/prestataire/reviews/${encodeURIComponent(String(reviewId))}/helpful`, {
+    method: 'PATCH',
+    body: JSON.stringify({ helpful }),
+  });
 }
 
 export async function fetchPrestataireServices(userId: string) {
-  const provider = await requireProvider(userId);
-  if (!provider?.id) {
-    return { providerId: null, services: [] as PrestataireService[] };
-  }
-
-  const { data, error } = await backendClient
-    .from('provider_services')
-    .select('*')
-    .eq('provider_id', provider.id)
-    .order('created_at', { ascending: false });
-  throwApiError(error);
-
-  return {
-    providerId: provider.id,
-    services: (data as PrestataireService[]) || [],
-  };
+  void userId;
+  return apiRequest<{ providerId: number | null; services: PrestataireService[] }>('/marketplace/prestataire/services');
 }
 
 export async function updatePrestataireServiceStatus(serviceId: number, status: string) {
-  const { error } = await backendClient
-    .from('provider_services')
-    .update({ status })
-    .eq('id', serviceId);
-  throwApiError(error);
+  await apiRequest<PrestataireService>(`/marketplace/prestataire/services/${encodeURIComponent(String(serviceId))}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
 }
 
 export async function deletePrestataireService(serviceId: number) {
-  const { error } = await backendClient.from('provider_services').delete().eq('id', serviceId);
-  throwApiError(error);
+  await apiRequest<PrestataireService>(`/marketplace/prestataire/services/${encodeURIComponent(String(serviceId))}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function createPrestataireService(providerId: number, payload: {
@@ -296,24 +215,16 @@ export async function createPrestataireService(providerId: number, payload: {
   image: string;
   location: string;
 }) {
-  const { data, error } = await backendClient
-    .from('provider_services')
-    .insert({
-      provider_id: providerId,
-      ...payload,
-      bookings: 0,
-      rating: 0,
-    })
-    .select('id')
-    .single();
-  throwApiError(error);
-  return data;
+  void providerId;
+  return apiRequest<PrestataireService>('/marketplace/prestataire/services', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function updatePrestataireService(serviceId: number, payload: Partial<Pick<PrestataireService, 'title' | 'description' | 'price' | 'location' | 'image'>>) {
-  const { error } = await backendClient
-    .from('provider_services')
-    .update(payload)
-    .eq('id', serviceId);
-  throwApiError(error);
+  await apiRequest<PrestataireService>(`/marketplace/prestataire/services/${encodeURIComponent(String(serviceId))}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
 }

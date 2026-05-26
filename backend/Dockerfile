@@ -38,6 +38,11 @@ RUN rm -rf /usr/local/lib/node_modules/npm \
 
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
+COPY scripts/upload-object-audit.mjs ./scripts/upload-object-audit.mjs
+COPY scripts/upload-temp-cleanup.mjs ./scripts/upload-temp-cleanup.mjs
+
+RUN mkdir -p /usr/src/app/storage/uploads/_tmp \
+ && chown -R node:node /usr/src/app/storage
 
 ENV NODE_ENV=production
 ENV PORT=3000

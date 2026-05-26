@@ -189,7 +189,7 @@ function appendCommissionEntry(
   return ctx.findRow('commission_ledger', entry.id) ?? entry;
 }
 
-function createWalletMutationHooks(
+export function createWalletMutationHooks(
   ctx: FinanceSideEffectsContext,
   rowsToPersist: Record<string, Row[]>,
 ) {
@@ -537,7 +537,7 @@ export async function applySubscriptionMutationSideEffects(
   for (const subscription of updatedRows) {
     const previous = previousById.get(String(subscription.id));
     const shouldCharge = !previous || String(previous.last_billed_at ?? '') !== String(subscription.last_billed_at ?? '');
-    if (!shouldCharge || String(subscription.status) === 'cancelled') {
+    if (!shouldCharge || String(subscription.status) === 'cancelled' || String(subscription.status) === 'trialing') {
       const syncedPassiveSubscription = await walletService.syncUserSubscription({
         ...subscription,
         updated_at: new Date().toISOString(),

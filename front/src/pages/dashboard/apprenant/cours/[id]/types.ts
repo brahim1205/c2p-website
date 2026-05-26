@@ -9,10 +9,24 @@ export interface Lesson {
   duration: string;
   type: 'video' | 'quiz' | 'reading' | 'exercise';
   completed: boolean;
+  bookmarked?: boolean;
+  note?: string;
+  videoPositionSeconds?: number;
+  lastViewedAt?: string;
   description: string;
   chapters?: Chapter[];
   thumbnail?: string;
+  quizRequired?: boolean;
+  contentBlocks?: LessonContentBlock[];
+  resources?: Resource[];
 }
+
+export type LessonContentBlock =
+  | { type: 'heading'; text: string }
+  | { type: 'paragraph'; text: string }
+  | { type: 'callout'; tone: 'warning' | 'info'; text: string }
+  | { type: 'quote'; text: string }
+  | { type: 'list'; items: string[] };
 
 export interface Module {
   id: number;
@@ -26,6 +40,14 @@ export interface QuizQuestion {
   options: string[];
   correctIndex: number;
   explanation?: string;
+}
+
+export interface QuizAttempt {
+  id?: number | string;
+  date: string;
+  score: number;
+  total: number;
+  answers: Record<string, number>;
 }
 
 export interface Resource {
@@ -60,6 +82,7 @@ export interface Course {
   completedLessons: number;
   modules: Module[];
   quiz: QuizQuestion[];
+  quizAttempts: QuizAttempt[];
   resources: Resource[];
   comments: Comment[];
 }

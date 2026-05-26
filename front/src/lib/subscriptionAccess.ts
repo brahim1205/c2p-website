@@ -35,7 +35,7 @@ function getRecommendedPlan(plans: SubscriptionPlan[]) {
 }
 
 export function getActiveSubscription(subscriptions: UserSubscription[]) {
-  return subscriptions.find((entry) => entry.status === 'active') ?? null;
+  return subscriptions.find((entry) => entry.status === 'active' || entry.status === 'trialing') ?? null;
 }
 
 export function isSubscriptionManagedRole(role: UserRole | null | undefined) {
@@ -125,6 +125,30 @@ export function resolveSubscriptionGate(input: {
   }
 
   if (activeSubscription) {
+    const isTrial = activeSubscription.status === 'trialing';
+    const trialAllowedActions = new Set<SubscriptionGuardAction>([
+      'provider_services_manage',
+      'trainer_courses_manage',
+      'trainer_live_classes_manage',
+      'project_submit',
+      'project_manage',
+    ]);
+    if (isTrial && !trialAllowedActions.has(input.action)) {
+      const copy = getCopy(role, input.action, recommendedPlan?.name ?? null);
+      return {
+        required: true,
+        allowed: false,
+        role,
+        action: input.action,
+        reason: 'renewal_required',
+        title: 'Abonnement complet requis',
+        message: `${copy.message} Votre essai gratuit permet seulement de démarrer et de tester l espace.`,
+        ctaLabel: copy.ctaLabel,
+        recommendedPlanId: recommendedPlan?.id ?? activeSubscription.plan_id ?? null,
+        recommendedPlanName: recommendedPlan?.name ?? activeSubscription.plan_name ?? null,
+      };
+    }
+
     return {
       required: true,
       allowed: true,
@@ -132,8 +156,10 @@ export function resolveSubscriptionGate(input: {
       action: input.action,
       reason: 'active_subscription',
       title: 'Accès autorisé',
-      message: `Votre plan ${activeSubscription.plan_name} est actif.`,
-      ctaLabel: 'Gérer mon abonnement',
+      message: isTrial
+        ? `Votre essai ${activeSubscription.plan_name} est actif. Certaines fonctions premium restent limitées.`
+        : `Votre plan ${activeSubscription.plan_name} est actif.`,
+      ctaLabel: isTrial ? 'Choisir un plan complet' : 'Gérer mon abonnement',
       recommendedPlanId: activeSubscription.plan_id ?? null,
       recommendedPlanName: activeSubscription.plan_name ?? null,
     };

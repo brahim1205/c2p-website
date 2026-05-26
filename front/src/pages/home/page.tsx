@@ -1,16 +1,14 @@
-import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const heroImage =
-  '/images/brand/image1.jpeg';
-const ecosystemVideo = '/videos/c2p-ecosystem.mp4';
+  '/images/home/hero.jpg';
 
 const fleet = [
   {
     eyebrow: 'AlloPresta',
     title: 'Prestations Qualifiées',
-    subtitle: 'Le module SenPresta permet de publier, rechercher et qualifier des prestations, avec prise en charge sensible par le centre d’opération C2P.',
-    image: '/images/brand/image2.jpeg',
+    subtitle: 'Publiez un besoin, trouvez un professionnel fiable ou proposez vos services dans un cadre simple et sécurisé.',
+    image: '/images/home/service.jpg',
     stats: [
       ['24/7', 'Assistance'],
       ['1.2K+', 'Experts'],
@@ -21,8 +19,8 @@ const fleet = [
   {
     eyebrow: 'Espace Numérique',
     title: 'Formations Certifiantes',
-    subtitle: 'L’Espace Numérique regroupe Form’Actions et l’École Numérique de Dakar, avec cours en ligne, en présentiel, hybrides et programmés.',
-    image: '/images/brand/image3.jpeg',
+    subtitle: 'Des formations en ligne, en présentiel ou hybrides pour apprendre à votre rythme et obtenir des certifications utiles.',
+    image: '/images/home/academy.jpg',
     stats: [
       ['50+', 'Formations'],
       ['98%', 'Reussite'],
@@ -33,8 +31,8 @@ const fleet = [
   {
     eyebrow: 'ProjectCenter',
     title: 'Incubation de projets',
-    subtitle: 'Projects Center aide les porteurs à structurer leurs dossiers et à mobiliser experts associés, partenaires techniques et financiers.',
-    image: '/images/brand/image4',
+    subtitle: 'Un accompagnement complet pour transformer une idée en projet structuré, finançable et prêt à être lancé.',
+    image: '/images/home/venture.jpg',
     stats: [
       ['150+', 'Projets'],
       ['12M', 'FCFA leves'],
@@ -44,67 +42,16 @@ const fleet = [
   },
 ];
 
-const advantages = [
-  {
-    title: "Un seul point d'entrée",
-    text: "Un utilisateur peut trouver un service, suivre une formation ou soumettre un projet sans changer d'écosystème.",
-    image: '/images/brand/image5.jpeg',
-  },
-  {
-    title: 'Des profils mieux encadrés',
-    text: "Prestataires, formateurs, apprenants et porteurs de projets disposent chacun d'un espace adapté à leur rôle.",
-    image: '/images/brand/image6.jpeg',
-  },
-  {
-    title: "Du besoin a l'impact",
-    text: 'C2P relie exécution terrain, montée en compétence et développement entrepreneurial pour créer des résultats mesurables.',
-    image: '/images/brand/image7.jpeg',
-  },
-];
-
-const destinations = [
-  'Prestataires',
-  'Clients / Prestateurs',
-  'Apprenants',
-  'Formateurs',
-  'Porteurs',
-  'Partenaires',
-  'Admin',
-  'Paiements',
-  'Messages',
-  'Certificats',
-  'Projets',
-  'Services',
-];
-
 export default function HomePage() {
-  const navigate = useNavigate();
-
-  const handleStarterSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const params = new URLSearchParams();
-
-    const fullName = String(formData.get('fullName') || '').trim();
-    const email = String(formData.get('email') || '').trim();
-    const need = String(formData.get('need') || '').trim();
-
-    if (fullName) params.set('fullName', fullName);
-    if (email) params.set('email', email);
-    if (need) params.set('need', need);
-
-    navigate(`/contact${params.toString() ? `?${params.toString()}` : ''}`);
-  };
-
   return (
-    <div className="bg-c2p-bg text-c2p-text">
+    <div className="public-premium-page bg-c2p-bg text-c2p-text">
       <section className="relative min-h-[92vh] overflow-hidden">
         <img
           src={heroImage}
           alt="Centre C2P premium"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.72]"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.92)_0%,rgba(247,248,252,0.76)_44%,rgba(247,248,252,0.28)_100%)]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.95)_0%,rgba(248,250,252,0.82)_46%,rgba(248,250,252,0.42)_100%)]"></div>
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
         <div className="relative z-10 mx-auto flex min-h-[92vh] max-w-7xl flex-col justify-end px-5 pb-12 pt-32 sm:px-8 lg:px-10">
@@ -112,19 +59,18 @@ export default function HomePage() {
             <p className="c2p-eyebrow mb-5 tracking-[0.38em]">
               Centre C2P | Services, Formation, Incubation
             </p>
-            <h1 className="max-w-2xl animate-fade-in-up text-3xl font-semibold leading-[1.08] text-[#06053a] sm:text-4xl lg:text-[3.25rem]">
-              Le hub professionnel qui transforme vos ambitions en actions.
+            <h1 className="max-w-4xl animate-fade-in-up text-4xl font-semibold leading-[1.02] text-[#06053a] sm:text-5xl lg:text-6xl">
+              Votre Succès Professionnel Commence Ici
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-[#27346b] sm:text-lg">
-              C2P relie les besoins de prestations, la montee en competence et l incubation de
-              projets autour d un meme centre d operation.
+              C2P connecte prestataires, apprenants, entrepreneurs et partenaires dans un écosystème numérique unique — services, formation et incubation de projets, tout en un.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/auth/register"
                 className="c2p-btn-primary px-7 py-4"
               >
-                Creer mon compte
+                Créer mon compte
               </Link>
               <Link
                 to="/tarifs"
@@ -141,160 +87,60 @@ export default function HomePage() {
             </div>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-[#27346b]">
               Les plans publics concernent surtout les prestataires, formateurs et porteurs de projet.
-              Les clients / prestateurs et apprenants peuvent entrer sans abonnement mensuel.
+              Les clients et apprenants peuvent entrer sans abonnement mensuel.
             </p>
           </div>
 
-          <div className="mt-12 grid max-w-4xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/20 bg-white/22 backdrop-blur-[2px] md:grid-cols-4">
-            {[
-              ['3', 'Piliers C2P'],
-              ['7', 'Espaces roles'],
-              ['150+', 'Projets suivis'],
-              ['24/7', 'Acces plateforme'],
-            ].map(([value, label]) => (
-              <div key={label} className="bg-white/72 px-5 py-5">
-                <p className="text-2xl font-semibold text-[#06053a]">{value}</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#5fa6f3]">{label}</p>
-              </div>
-            ))}
+          <div className="mt-12 max-w-3xl rounded-3xl border border-white/50 bg-white/72 px-5 py-5 shadow-[0_22px_60px_rgba(15,28,53,0.12)] backdrop-blur-md sm:px-6">
+            <p className="text-sm font-medium leading-7 text-[#0f1c35]">
+              Un seul compte pour accéder aux services, aux formations et à l’accompagnement projet.
+            </p>
           </div>
         </div>
       </section>
 
-      <div className="relative isolate bg-[#ffffff]">
-        <div className="pointer-events-none sticky top-0 z-0 h-screen overflow-hidden">
-          <video
-            className="absolute inset-0 h-full w-full object-cover opacity-[0.18] brightness-125 contrast-105"
-            autoPlay
-            loop
-            muted
-            playsInline
-            poster="/images/brand/image8.jpeg"
-            aria-hidden="true"
-          >
-            <source src={ecosystemVideo} type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-[#ffffff]/88"></div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(39,52,107,0.14),transparent_30%),radial-gradient(circle_at_80%_42%,rgba(219,173,41,0.10),transparent_28%)]"></div>
-          <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#ffffff] to-transparent"></div>
-          <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
-        </div>
-
-        <div className="relative z-10 -mt-[100vh]">
-        <section className="relative z-10 mx-auto grid max-w-7xl gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:px-10 lg:py-28">
-          <div>
-            <p className="c2p-eyebrow">Écosystème C2P</p>
-            <h2 className="mt-5 text-4xl font-semibold leading-tight text-[#06053a] sm:text-5xl">
-              Une plateforme unique pour travailler, apprendre et entreprendre.
-            </h2>
-          </div>
-          <div className="space-y-8 text-lg leading-9 text-[#27346b]">
-              <p>
-              Le projet C2P rassemble SenPresta pour les prestations, Form’Actions et l’END pour
-              la formation, puis Projects Center pour l’incubation et le co-portage.
-              </p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {['AlloPresta', 'Espace Numérique', 'ProjectCenter'].map((item) => (
-                <div key={item} className="border-t border-[#27346b]/45 pt-4 text-sm uppercase tracking-[0.18em] text-[#06053a]">
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="relative z-10 px-5 py-20 sm:px-8 lg:px-10">
+      <section className="bg-white px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-12 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+            <div className="mb-10 max-w-3xl">
             <div>
               <p className="c2p-eyebrow">Modules principaux</p>
-              <h2 className="mt-4 text-4xl font-semibold text-[#06053a] sm:text-6xl">
-                Trois portes d&apos;entrée pour chaque parcours.
+              <h2 className="mt-4 text-3xl font-semibold leading-tight text-[#06053a] sm:text-5xl">
+                Choisissez ce que vous voulez faire.
               </h2>
             </div>
-            <p className="max-w-md text-sm leading-7 text-[#27346b]">
-              Chaque module correspond à un usage clair de la plateforme : trouver une compétence,
-              se former ou faire avancer un projet.
+            <p className="mt-4 max-w-2xl text-base leading-8 text-[#4a5b70]">
+              Trois espaces, trois actions simples : trouver un service, apprendre, ou faire avancer un projet.
             </p>
           </div>
 
-            <div className="grid gap-4 sm:gap-5 lg:grid-cols-3">
+            <div className="grid gap-5 lg:grid-cols-3">
               {fleet.map((item) => (
                 <Link
                   key={item.title}
                   to={item.path}
-                  className="group relative min-h-[500px] overflow-hidden rounded-[24px] border border-[#80bfdf] bg-white shadow-[0_20px_56px_rgba(12,14,58,0.10)] sm:min-h-[560px] sm:rounded-[28px] lg:min-h-[620px]"
+                  className="group relative min-h-[390px] overflow-hidden rounded-[22px] border border-[#d6dbe1] bg-white shadow-[0_14px_38px_rgba(15,28,53,0.055)]"
                 >
                   <img
                     src={item.image}
                     alt={item.title}
                     className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#ffffff] via-[#ffffff]/68 to-transparent"></div>
-                  <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 lg:p-7">
-                    <p className="inline-flex items-center rounded-full border border-white/14 bg-[#06053a]/84 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#c24141] shadow-[0_12px_30px_rgba(6,5,58,0.24)] backdrop-blur-[2px] sm:px-4 sm:py-2 sm:text-[11px] sm:tracking-[0.28em]">
+                  <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/20"></div>
+                  <div className="absolute inset-x-0 bottom-0 p-6 lg:p-7">
+                    <p className="inline-flex items-center rounded-full border border-[#d6dbe1] bg-white/86 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#147f7b] shadow-sm backdrop-blur-md">
                       {item.eyebrow}
                     </p>
-                    <h3 className="mt-3 text-2xl font-semibold text-[#06053a] sm:text-3xl lg:text-4xl">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-6 text-[#27346b] sm:mt-4 sm:min-h-16 sm:leading-7">{item.subtitle}</p>
-                    <div className="mt-5 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-[#80bfdf] sm:mt-7">
-                      {item.stats.map(([value, label]) => (
-                        <div key={label} className="bg-[#ffffff] px-2.5 py-3 sm:px-3 sm:py-4">
-                          <p className="text-sm font-semibold text-[#06053a] sm:text-base">{value}</p>
-                          <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[#5fa6f3]">{label}</p>
-                        </div>
-                      ))}
-                    </div>
+                    <h3 className="mt-4 text-2xl font-semibold text-[#06053a] sm:text-3xl">{item.title}</h3>
+                    <p className="mt-3 max-w-md text-sm leading-7 text-[#4a5b70]">{item.subtitle}</p>
+                    <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#0f1c35]">
+                      Découvrir <i className="ri-arrow-right-line"></i>
+                    </span>
                   </div>
                 </Link>
               ))}
             </div>
           </div>
         </section>
-
-        <section className="relative z-10 mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10">
-          <div className="grid gap-4 sm:gap-5 lg:grid-cols-3">
-            {advantages.map((advantage) => (
-              <article key={advantage.title} className="overflow-hidden rounded-[26px] border border-[#80bfdf] bg-white shadow-[0_24px_60px_rgba(12,14,58,0.08)]">
-                <img src={advantage.image} alt={advantage.title} className="h-52 w-full object-cover sm:h-64" />
-                <div className="p-5 sm:p-7">
-                  <h3 className="text-xl font-semibold text-[#06053a] sm:text-2xl">{advantage.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#27346b] sm:mt-4 sm:leading-7">{advantage.text}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-        </div>
-      </div>
-
-      <section className="relative overflow-hidden bg-[#ffffff] px-5 py-20 sm:px-8 lg:px-10 lg:py-28">
-        <img
-          src="/images/brand/image8.jpeg"
-          alt="Réseau global C2P"
-          className="absolute inset-0 h-full w-full object-cover opacity-18"
-        />
-        <div className="absolute inset-0 bg-[#ffffff]/82"></div>
-        <div className="relative z-10 mx-auto max-w-7xl">
-          <p className="c2p-eyebrow">Rôles et usages</p>
-          <div className="mt-5 grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-            <h2 className="animate-fade-in-up text-3xl font-semibold leading-tight text-[#06053a] sm:text-4xl lg:text-5xl">
-              Un tableau de bord adapté à chaque acteur de l&apos;écosystème.
-            </h2>
-            <p className="rounded-2xl bg-white/88 px-5 py-4 text-base leading-8 text-[#06053a] shadow-[0_14px_34px_rgba(12,14,58,0.08)] backdrop-blur-[2px]">
-              Les droits, les menus et les actions changent selon le profil: client / prestateur, prestataire,
-              apprenant, formateur, porteur, partenaire ou administrateur.
-            </p>
-          </div>
-          <div className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-[22px] border border-[#80bfdf] bg-[#80bfdf] sm:mt-12 sm:rounded-[26px] sm:grid-cols-3 lg:grid-cols-6">
-            {destinations.map((city) => (
-              <div key={city} className="bg-white px-3 py-4 text-center text-xs font-semibold uppercase tracking-[0.14em] text-[#1f2937] sm:px-5 sm:py-6 sm:text-sm sm:tracking-[0.16em]">
-                {city}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       <section className="border-y border-[#e6eaf4] bg-white px-5 py-14 sm:px-8 lg:px-10 lg:py-20">
         <div className="mx-auto max-w-7xl rounded-[24px] bg-[#f3f6ff] px-5 py-8 sm:px-8 sm:py-10 lg:rounded-[28px] lg:px-12">
@@ -309,7 +155,7 @@ export default function HomePage() {
             </div>
 
             <div>
-              <h2 className="text-2xl font-semibold leading-tight text-[#06053a] sm:text-4xl">
+              <h2 className="public-mobile-title text-2xl font-semibold leading-tight text-[#06053a] sm:text-4xl">
                 Application mobile bientôt disponible !
               </h2>
               <p className="mt-3 max-w-3xl text-base leading-7 text-[#4f5f78] sm:mt-4 sm:text-lg sm:leading-8">
@@ -357,56 +203,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-28">
-        <div>
-          <p className="c2p-eyebrow">Démarrer</p>
-          <h2 className="mt-5 max-w-3xl text-4xl font-semibold leading-tight text-[#06053a] sm:text-6xl">
-            Choisissez votre rôle et accédez au bon espace.
-          </h2>
-          <p className="mt-6 max-w-2xl text-base leading-8 text-[#27346b]">
-            Que vous soyez client / prestateur, prestataire, apprenant, formateur ou porteur de projet,
-            C2P vous oriente vers les outils utiles dès votre connexion.
-          </p>
-        </div>
-        <div className="c2p-panel p-7">
-          <form className="grid gap-4" onSubmit={handleStarterSubmit}>
-            <label htmlFor="starter-full-name" className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-[#5fa6f3]">Nom complet</span>
-              <input
-                id="starter-full-name"
-                name="fullName"
-                type="text"
-                className="w-full rounded-full border border-[#80bfdf] bg-[#ffffff] px-5 py-4 text-[#1f2937] outline-none transition placeholder:text-[#94a3b8] focus:border-[#27346b]"
-                placeholder="Votre nom complet"
-              />
-            </label>
-            <label htmlFor="starter-email" className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-[#5fa6f3]">Email</span>
-              <input
-                id="starter-email"
-                name="email"
-                type="email"
-                className="w-full rounded-full border border-[#80bfdf] bg-[#ffffff] px-5 py-4 text-[#1f2937] outline-none transition placeholder:text-[#94a3b8] focus:border-[#27346b]"
-                placeholder="votre@email.com"
-              />
-            </label>
-            <label htmlFor="starter-need" className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-[#5fa6f3]">Votre rôle ou besoin</span>
-              <input
-                id="starter-need"
-                name="need"
-                type="text"
-                className="w-full rounded-full border border-[#80bfdf] bg-[#ffffff] px-5 py-4 text-[#1f2937] outline-none transition placeholder:text-[#94a3b8] focus:border-[#27346b]"
-                placeholder="Ex. prestataire, apprenant, projet à lancer"
-              />
-            </label>
-            <button
-              type="submit"
-              className="c2p-btn-accent mt-2 px-7 py-4"
-            >
+      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
+        <div className="rounded-[28px] border border-[#d6dbe1] bg-white px-6 py-8 shadow-[0_18px_48px_rgba(15,28,53,0.07)] sm:px-10 sm:py-10 lg:flex lg:items-center lg:justify-between lg:gap-10">
+          <div>
+            <p className="c2p-eyebrow">Démarrer</p>
+            <h2 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#06053a] sm:text-4xl">
+              Accédez au bon espace C2P.
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-8 text-[#4a5b70]">
+              Créez un compte ou contactez l’équipe pour être orienté vers le bon parcours.
+            </p>
+          </div>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row lg:mt-0">
+            <Link to="/auth/register" className="c2p-btn-primary px-7 py-4">
+              Créer mon compte
+            </Link>
+            <Link to="/contact" className="c2p-btn-secondary px-7 py-4">
               Contacter C2P
-            </button>
-          </form>
+            </Link>
+          </div>
         </div>
       </section>
     </div>

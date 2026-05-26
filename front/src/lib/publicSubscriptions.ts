@@ -56,7 +56,7 @@ export const monetizedRoleContent: Record<
 export const publicAccessRoles = [
   {
     role: 'client',
-    label: 'Clients / Prestateurs',
+    label: 'Clients',
     description: 'Aucun abonnement plateforme requis pour chercher un service, publier un besoin, reserver ou payer une prestation.',
   },
   {

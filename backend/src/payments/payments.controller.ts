@@ -9,6 +9,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { PaymentCommandsService } from './payment-commands.service.js';
 import { FinanceReadService } from './finance-read.service.js';
 import { ProviderIntegrationService } from './provider-integration.service.js';
@@ -53,6 +54,7 @@ import {
   type WalletTopupDto,
   type WalletWithdrawDto,
 } from './dto/finance-commands.dto.js';
+@ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
   private static readonly SUBSCRIPTION_PLAN_ROLES = new Set(['prestataire', 'formateur', 'porteur']);
@@ -305,6 +307,25 @@ export class PaymentsController {
     return this.financeReadService.getInvoices(actor);
   }
 
+  @Get('admin/ledger')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('payments.admin.read')
+  async getAdminLedger(
+    @Req() request: AuthenticatedRequest,
+    @Query('limit') limit?: string,
+  ) {
+    this.getActor(request);
+    return this.financeReadService.getAdminLedgerEntries(Number(limit ?? 200) || 200);
+  }
+
+  @Get('admin/ledger/reconciliation')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('payments.admin.read')
+  async getAdminLedgerReconciliation(@Req() request: AuthenticatedRequest) {
+    this.getActor(request);
+    return this.financeReadService.getAdminLedgerReconciliation();
+  }
+
   @Post('wallet/topup')
   @UseGuards(PermissionGuard)
   @RequirePermission('finance.self_service')
@@ -357,7 +378,7 @@ export class PaymentsController {
     @Body(new ZodValidationPipe(payoutRequestCreateSchema)) payload: PayoutRequestCreateDto,
   ) {
     const actor = this.getActor(request);
-    return this.paymentCommandsService.createPayoutRequest(actor, payload);
+    return this.paymentCommandsService.createPayoutRequest(actor, payload, request.requestId ?? `req-${Date.now()}`);
   }
 
   @Post('subscriptions/activate')
@@ -490,7 +511,7 @@ export class PaymentsController {
 
   @Post('admin/providers/dexpay/reconcile')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.write')
+  @RequirePermission('superadmin.sensitive.write')
   async reconcileDexPay(
     @Req() request: AuthenticatedRequest,
     @Body(new ZodValidationPipe(dexpayReconcileSchema)) payload: DexPayReconcileDto,
@@ -501,7 +522,7 @@ export class PaymentsController {
 
   @Get('admin/providers/dexpay/reconciliation-jobs')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getDexPayReconciliationJobs(
     @Req() request: AuthenticatedRequest,
     @Query('limit') limit?: string,
@@ -512,7 +533,7 @@ export class PaymentsController {
 
   @Get('admin/providers/dexpay/webhook-receipts')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getDexPayWebhookReceipts(
     @Req() request: AuthenticatedRequest,
     @Query('limit') limit?: string,
@@ -524,7 +545,7 @@ export class PaymentsController {
 
   @Get('admin/providers/dexpay/transactions')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getDexPayProviderTransactions(
     @Req() request: AuthenticatedRequest,
     @Query('limit') limit?: string,
@@ -536,7 +557,7 @@ export class PaymentsController {
 
   @Get('admin/providers/dexpay/transactions/:providerReference/capabilities')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getDexPayProviderTransactionCapabilities(
     @Req() request: AuthenticatedRequest,
     @Param('providerReference') providerReference: string,
@@ -547,7 +568,7 @@ export class PaymentsController {
 
   @Get('admin/providers/dexpay/intents')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getDexPayPaymentIntents(
     @Req() request: AuthenticatedRequest,
     @Query('limit') limit?: string,
@@ -559,7 +580,7 @@ export class PaymentsController {
 
   @Get('admin/providers/dexpay/intents/:intentId/capabilities')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getDexPayPaymentIntentCapabilities(
     @Req() request: AuthenticatedRequest,
     @Param('intentId') intentId: string,
@@ -570,7 +591,7 @@ export class PaymentsController {
 
   @Post('admin/providers/dexpay/webhook-receipts/:receiptId/reprocess')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.write')
+  @RequirePermission('superadmin.sensitive.write')
   async reprocessDexPayWebhookReceipt(
     @Req() request: AuthenticatedRequest,
     @Param('receiptId') receiptId: string,
@@ -587,7 +608,7 @@ export class PaymentsController {
 
   @Post('admin/providers/dexpay/transactions/:providerReference/force-sync')
   @UseGuards(PermissionGuard)
-  @RequirePermission('payments.admin.write')
+  @RequirePermission('superadmin.sensitive.write')
   async forceSyncDexPayProviderTransaction(
     @Req() request: AuthenticatedRequest,
     @Param('providerReference') providerReference: string,

@@ -11,6 +11,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from './auth.service.js';
 import type { AuthUser, CertificationItem, PaymentSettings, PortfolioItem, Role, SocialLinks } from './auth.store.js';
@@ -18,6 +19,7 @@ import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { PermissionGuard } from './permission.guard.js';
 import { RequirePermission } from './require-permission.decorator.js';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -79,6 +81,13 @@ export class AuthController {
       lastName?: string;
       phone?: string;
       role?: Role;
+      bio?: string;
+      location?: string;
+      publicTitle?: string;
+      website?: string;
+      preferredLanguage?: string;
+      skills?: string[];
+      publicProfileEnabled?: boolean;
     },
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: Response,
@@ -89,6 +98,11 @@ export class AuthController {
   @Post('forgot-password')
   forgotPassword(@Body() payload: { email?: string }, @Req() request: AuthenticatedRequest) {
     return this.authService.forgotPassword(payload, request);
+  }
+
+  @Post('onboarding/monetized-clauses/accept')
+  acceptMonetizedClauses(@Req() request: AuthenticatedRequest) {
+    return this.authService.acceptMonetizedClauses(request);
   }
 
   @Post('reset-password')
@@ -185,9 +199,24 @@ export class AuthController {
       certifications?: CertificationItem[];
       portfolioItems?: PortfolioItem[];
       paymentSettings?: PaymentSettings;
+      userPreferences?: {
+        language?: string;
+        emailNotifications?: boolean;
+        productUpdates?: boolean;
+        compactMode?: boolean;
+      };
     },
   ) {
     return this.authService.updateProfile(request, id, payload);
+  }
+
+  @Delete('profile/:id')
+  deleteProfile(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.authService.deleteProfile(request, id, response);
   }
 
   @Post('change-password')

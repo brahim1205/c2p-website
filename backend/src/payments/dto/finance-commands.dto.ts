@@ -44,6 +44,8 @@ export const subscriptionActivateSchema = z.object({
   plan_id: z.string().trim().min(1),
   auto_renew: z.boolean().optional(),
   renew_now: z.boolean().optional(),
+  trial: z.boolean().optional(),
+  trial_days: z.number().int().min(1).max(30).optional(),
 });
 
 export const providerVisibilityPurchaseSchema = z.object({

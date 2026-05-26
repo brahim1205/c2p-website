@@ -1,5 +1,9 @@
-import { useState, useEffect } from 'react';
-import { loadXP, getCurrentStreak } from '../../cours/[id]/storage';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchApprenantProgressionSnapshot } from '@/lib/apprenantDashboardApi';
+import { deriveLearningStreak, deriveLearningXp } from '@/lib/learningAchievements';
+import { useAuth } from '@/hooks/useAuth';
+import { queryKeys } from '@/lib/queryKeys';
 
 function getLevel(xp: number): { level: number; title: string; nextThreshold: number } {
   const levels = [
@@ -26,13 +30,15 @@ function getLevel(xp: number): { level: number; title: string; nextThreshold: nu
 }
 
 export default function XPBar() {
-  const [xp, setXp] = useState(loadXP());
-  const [streak, setStreak] = useState(getCurrentStreak());
+  const { user } = useAuth();
+  const { data: snapshot } = useQuery({
+    queryKey: queryKeys.apprenant.progression(user?.id),
+    queryFn: () => fetchApprenantProgressionSnapshot(user?.id ?? ''),
+    enabled: Boolean(user?.id),
+  });
 
-  useEffect(() => {
-    setXp(loadXP());
-    setStreak(getCurrentStreak());
-  }, []);
+  const xp = useMemo(() => (snapshot ? deriveLearningXp(snapshot) : 0), [snapshot]);
+  const streak = useMemo(() => deriveLearningStreak(snapshot?.enrollments ?? []), [snapshot?.enrollments]);
 
   const { level, title, nextThreshold } = getLevel(xp);
   const prevThreshold = [0, 100, 500, 1000, 2500, 5000, 10000, 20000][level - 1] ?? 0;

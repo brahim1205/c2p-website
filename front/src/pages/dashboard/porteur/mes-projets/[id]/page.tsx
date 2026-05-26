@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -6,55 +7,39 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import {
   fetchOwnerProjectDetail,
-  type FundingRound,
   type ProjectDocument,
-  type ProjectHistoryItem,
-  type ProjectMilestone,
-  type ProjectPartnership,
-  type ProjectRecord,
 } from '@/lib/projectApi';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { openHtmlPreview } from '@/lib/downloads';
+import { queryKeys } from '@/lib/queryKeys';
+import { ProjectUnavailableState } from './ProjectUnavailableState';
 
 export default function PorteurProjetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [project, setProject] = useState<ProjectRecord | null>(null);
-  const [milestones, setMilestones] = useState<ProjectMilestone[]>([]);
-  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
-  const [history, setHistory] = useState<ProjectHistoryItem[]>([]);
-  const [partnerships, setPartnerships] = useState<ProjectPartnership[]>([]);
-  const [rounds, setRounds] = useState<FundingRound[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'milestones' | 'documents' | 'history' | 'funding'>('overview');
 
-  const loadDetail = useCallback(async () => {
-    if (!id || !user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const payload = await fetchOwnerProjectDetail(user.id, Number(id));
-      setProject(payload.project);
-      setMilestones(payload.milestones);
-      setDocuments(payload.documents);
-      setHistory(payload.history);
-      setPartnerships(payload.partnerships);
-      setRounds(payload.rounds);
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger le detail de ce projet.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, id, user?.id]);
+  const detailQuery = useQuery({
+    queryKey: queryKeys.porteur.projectDetail(user?.id, id),
+    queryFn: () => fetchOwnerProjectDetail(user!.id, Number(id)),
+    enabled: Boolean(user?.id && id),
+  });
 
   useEffect(() => {
-    loadDetail();
-  }, [loadDetail]);
+    if (detailQuery.isError) {
+      console.error(detailQuery.error);
+      error('Erreur', 'Impossible de charger le detail de ce projet.');
+    }
+  }, [detailQuery.error, detailQuery.isError, error]);
+
+  const loading = detailQuery.isLoading;
+  const project = detailQuery.data?.project ?? null;
+  const milestones = useMemo(() => detailQuery.data?.milestones ?? [], [detailQuery.data?.milestones]);
+  const documents = useMemo(() => detailQuery.data?.documents ?? [], [detailQuery.data?.documents]);
+  const history = useMemo(() => detailQuery.data?.history ?? [], [detailQuery.data?.history]);
+  const partnerships = useMemo(() => detailQuery.data?.partnerships ?? [], [detailQuery.data?.partnerships]);
+  const rounds = useMemo(() => detailQuery.data?.rounds ?? [], [detailQuery.data?.rounds]);
 
   const fundingPercent = useMemo(() => {
     if (!project?.funding_goal) return 0;
@@ -88,19 +73,7 @@ export default function PorteurProjetDetailPage() {
   };
 
   if (!loading && !project) {
-    return (
-      <DashboardLayout>
-        <div className="max-w-5xl mx-auto">
-          <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Porteur', path: '/dashboard/porteur' }, { label: 'Mes projets', path: '/dashboard/porteur/mes-projets' }, { label: 'Detail' }]} />
-          <div className="py-20 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Projet indisponible</h2>
-            <Link to="/dashboard/porteur/mes-projets" className="inline-flex px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
-              Retour aux projets
-            </Link>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <ProjectUnavailableState />;
   }
 
   return (
@@ -234,15 +207,18 @@ export default function PorteurProjetDetailPage() {
                           </div>
                         </div>
                         <div className="w-full h-2 rounded-full bg-gray-200 mb-4">
-                          <div className="h-2 rounded-full bg-green-500" style={{ width: `${milestone.progress}%` }}></div>
+                          <div className="h-2 rounded-full bg-green-500" style={{ width: `${Math.min(100, Math.max(0, Number(milestone.progress ?? 0)))}%` }}></div>
                         </div>
                         <div className="grid gap-2">
-                          {milestone.tasks.map((task) => (
+                          {(milestone.tasks ?? []).map((task) => (
                             <div key={task.id} className="flex items-center gap-2 text-sm text-gray-700">
                               <i className={`${task.completed ? 'ri-checkbox-circle-fill text-green-500' : 'ri-checkbox-blank-circle-line text-gray-300'}`}></i>
                               <span>{task.title}</span>
                             </div>
                           ))}
+                          {(milestone.tasks ?? []).length === 0 && (
+                            <p className="text-sm text-gray-500">Aucune tache detaillee pour ce jalon.</p>
+                          )}
                         </div>
                       </div>
                     ))}

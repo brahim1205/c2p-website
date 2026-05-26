@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonList } from '@/components/base/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
+import { queryKeys } from '@/lib/queryKeys';
 import {
   fetchPrestataireReviews,
   incrementPrestataireReviewHelpful,
@@ -12,34 +14,28 @@ import {
 } from '@/lib/prestataireDashboardApi';
 
 export default function PrestataireAvisPage() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { success } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const { success, error } = useToast();
   const [ratingFilter, setRatingFilter] = useState<number | 'all'>('all');
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
 
-  const fetchReviews = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (!user?.id) {
-        setReviews([]);
-        return;
-      }
-
-      setReviews(await fetchPrestataireReviews(user.id));
-    } catch (error) {
-      console.error(error);
-      setReviews([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
+  const reviewsQuery = useQuery({
+    queryKey: queryKeys.prestataire.reviews(user?.id),
+    queryFn: () => fetchPrestataireReviews(user!.id),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    void fetchReviews();
-  }, [fetchReviews]);
+    if (reviewsQuery.isError) {
+      console.error(reviewsQuery.error);
+      error('Erreur', 'Impossible de charger les avis.');
+    }
+  }, [error, reviewsQuery.error, reviewsQuery.isError]);
+
+  const loading = reviewsQuery.isLoading;
+  const reviews: Review[] = useMemo(() => reviewsQuery.data ?? [], [reviewsQuery.data]);
 
   const filteredReviews = ratingFilter === 'all'
     ? reviews
@@ -61,8 +57,9 @@ export default function PrestataireAvisPage() {
     if (!review) return;
 
     try {
-      const response = await replyPrestataireReview(review, replyText);
-      setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, response } : r));
+      await replyPrestataireReview(review, replyText);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.prestataire.reviews(user?.id) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.prestataire.dashboard(user?.id) });
       success('Réponse publiée', 'Votre réponse a été publiée avec succès.');
       setReplyingTo(null);
       setReplyText('');
@@ -77,7 +74,7 @@ export default function PrestataireAvisPage() {
     const newHelpful = review.helpful + 1;
     try {
       await incrementPrestataireReviewHelpful(reviewId, newHelpful);
-      setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, helpful: newHelpful } : r));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.prestataire.reviews(user?.id) });
       success('Merci !', 'Vous avez trouvé cet avis utile.');
     } catch (helpfulError) {
       console.error(helpfulError);

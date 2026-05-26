@@ -1,4 +1,4 @@
-import { backendClient } from './backendClient';
+import { apiRequest } from './api';
 import type { AuthUser } from './roles';
 
 export type ProviderViewerAccessTier = 'visitor' | 'subscriber' | 'verified';
@@ -33,6 +33,19 @@ export interface ProviderRecord {
   alerts_enabled?: boolean | null;
   plan_name?: string | null;
   subscription_status?: string | null;
+}
+
+export interface ProviderReviewRecord {
+  id: number;
+  provider_id: number;
+  client_id?: string | null;
+  client_name: string;
+  client_avatar?: string | null;
+  rating: number;
+  comment: string;
+  service: string;
+  helpful?: number;
+  created_at: string;
 }
 
 export interface ProviderCatalogRecord extends ProviderRecord {
@@ -206,42 +219,19 @@ export function getProviderDisplayName(
 }
 
 export async function fetchProviderByUserId(userId: string) {
-  const { data, error } = await backendClient
-    .from<ProviderRecord>('providers')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
+  return apiRequest<ProviderRecord | null>(`/marketplace/providers/by-user/${encodeURIComponent(userId)}`);
 }
 
 export async function fetchPublicProviders() {
-  const { data, error } = await backendClient
-    .from<ProviderRecord>('providers')
-    .select('*')
-    .order('rating', { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data || []).map(normalizeProviderCatalogRecord);
+  const data = await apiRequest<ProviderRecord[]>('/marketplace/providers/public');
+  return data.map(normalizeProviderCatalogRecord);
 }
 
 export async function fetchPublicProvider(id: number) {
-  const { data, error } = await backendClient
-    .from<ProviderRecord>('providers')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  const data = await apiRequest<ProviderRecord | null>(`/marketplace/providers/public/${encodeURIComponent(String(id))}`);
   return data ? normalizeProviderCatalogRecord(data) : null;
+}
+
+export async function fetchPublicProviderReviews(id: number) {
+  return apiRequest<ProviderReviewRecord[]>(`/marketplace/providers/public/${encodeURIComponent(String(id))}/reviews`);
 }

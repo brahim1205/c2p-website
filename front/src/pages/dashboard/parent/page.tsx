@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import DashboardLayout from '@/pages/dashboard/components/DashboardLayout';
@@ -6,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { fetchParentDashboardSnapshot, type ParentCertificate, type ParentEnrollment, type ParentStudentLink } from '@/lib/parentDashboardApi';
 import { getCourseDeliveryLabel } from '@/lib/courseDelivery';
 import { getCourseBranchLabel } from '@/lib/courseBranch';
+import { queryKeys } from '@/lib/queryKeys';
 
 function formatDate(value: string | null | undefined) {
   if (!value) return 'Aucune activite recente';
@@ -14,39 +16,23 @@ function formatDate(value: string | null | undefined) {
 
 export default function ParentDashboardPage() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [links, setLinks] = useState<ParentStudentLink[]>([]);
-  const [enrollments, setEnrollments] = useState<ParentEnrollment[]>([]);
-  const [certificates, setCertificates] = useState<ParentCertificate[]>([]);
+
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.parent.dashboard(user?.id),
+    queryFn: () => fetchParentDashboardSnapshot(user!.id),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    const run = async () => {
-      if (!user?.id) {
-        setLinks([]);
-        setEnrollments([]);
-        setCertificates([]);
-        setLoading(false);
-        return;
-      }
+    if (dashboardQuery.isError) {
+      console.error(dashboardQuery.error);
+    }
+  }, [dashboardQuery.error, dashboardQuery.isError]);
 
-      setLoading(true);
-      try {
-        const snapshot = await fetchParentDashboardSnapshot(user.id);
-        setLinks(snapshot.links);
-        setEnrollments(snapshot.enrollments);
-        setCertificates(snapshot.certificates);
-      } catch (error) {
-        console.error(error);
-        setLinks([]);
-        setEnrollments([]);
-        setCertificates([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void run();
-  }, [user?.id]);
+  const loading = dashboardQuery.isLoading;
+  const links: ParentStudentLink[] = useMemo(() => dashboardQuery.data?.links ?? [], [dashboardQuery.data?.links]);
+  const enrollments: ParentEnrollment[] = useMemo(() => dashboardQuery.data?.enrollments ?? [], [dashboardQuery.data?.enrollments]);
+  const certificates: ParentCertificate[] = useMemo(() => dashboardQuery.data?.certificates ?? [], [dashboardQuery.data?.certificates]);
 
   const trackedStudentIds = useMemo(() => Array.from(new Set(links.map((entry) => entry.student_id))), [links]);
   const activeEnrollments = useMemo(() => enrollments.filter((entry) => entry.status !== 'inactive'), [enrollments]);

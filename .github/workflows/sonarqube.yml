@@ -1,0 +1,74 @@
+name: sonarqube
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            front/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: front
+        run: npm ci
+
+      - name: Validate SonarQube configuration
+        run: test -f sonar-project.properties
+
+      - name: Check SonarQube availability
+        id: sonar-health
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
+        shell: bash
+        run: |
+          set +e
+          body="$(curl -fsSL --max-time 10 "${SONAR_HOST_URL%/}/api/system/status" 2>/dev/null)"
+          status=$?
+          if [ "$status" -eq 0 ] && echo "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"(UP|GREEN|YELLOW)"'; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "SonarQube is reachable."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "SonarQube is not reachable or not serving the expected API; skipping scan for this run."
+          fi
+
+      - name: Skip SonarQube scan when secrets are absent
+        if: ${{ env.SONAR_TOKEN == '' || env.SONAR_HOST_URL == '' }}
+        run: |
+          echo "SONAR_TOKEN or SONAR_HOST_URL is not configured; skipping SonarQube scan."
+
+      - name: Skip SonarQube scan when service is unavailable
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && steps.sonar-health.outputs.available != 'true' }}
+        run: |
+          echo "SonarQube is configured but not reachable; skipping SonarQube scan."
+
+      - name: SonarQube scan
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && steps.sonar-health.outputs.available == 'true' }}
+        uses: SonarSource/sonarqube-scan-action@v6

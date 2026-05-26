@@ -2,6 +2,14 @@ import { z } from 'zod';
 
 const booleanString = z.enum(['true', 'false']);
 const sameSiteSchema = z.enum(['strict', 'lax', 'none']);
+const uploadStorageDriverSchema = z.enum(['local-disk', 's3']);
+const legacyDataApiModeSchema = z.enum(['compat', 'read-only', 'disabled']);
+const optionalUrl = z.preprocess((value) => {
+  if (typeof value === 'string' && value.trim() === '') {
+    return undefined;
+  }
+  return value;
+}, z.string().url().optional());
 
 function normalizeEnvironmentConfig(rawConfig: Record<string, unknown>) {
   const config = { ...rawConfig };
@@ -33,8 +41,11 @@ export const configValidationSchema = z.object({
   COOKIE_SECURE: booleanString.default('false'),
   TRUST_PROXY: booleanString.default('false'),
   COOKIE_SAMESITE: sameSiteSchema.default('lax'),
+  PRISMA_CONNECTION_REQUIRED: booleanString.default('false'),
   PRISMA_PLATFORM_SYNC_ENABLED: booleanString.default('true'),
   PRISMA_PLATFORM_SYNC_ON_BOOT: booleanString.default('true'),
+  PRISMA_PLATFORM_SEED_ENABLED: booleanString.default('false'),
+  DATA_LEGACY_API_MODE: legacyDataApiModeSchema.default('compat'),
   ACCESS_TOKEN_TTL_MINUTES: z.string().default('15'),
   REFRESH_TOKEN_TTL_DAYS: z.string().default('14'),
   SESSION_ABSOLUTE_TIMEOUT_HOURS: z.string().default('12'),
@@ -52,7 +63,7 @@ export const configValidationSchema = z.object({
   REDIS_HOST: z.string().default('redis'),
   REDIS_PORT: z.string().default('6379'),
   REDIS_DISABLED: booleanString.default('false'),
-  REDIS_URL: z.string().url().optional(),
+  REDIS_URL: optionalUrl,
   REDIS_USERNAME: z.string().optional(),
   REDIS_PASSWORD: z.string().optional(),
   REDIS_DB: z.string().default('0'),
@@ -60,20 +71,32 @@ export const configValidationSchema = z.object({
   SMS_PROVIDER: z.enum(['disabled', 'mock', 'sendtext']).default('mock'),
   SMS_SENDER_ID: z.string().optional(),
   SMS_TEST_RECIPIENT: z.string().optional(),
-  SENDTEXT_BASE_URL: z.string().url().optional(),
+  SENDTEXT_BASE_URL: optionalUrl,
   SENDTEXT_SEND_PATH: z.string().optional(),
   SENDTEXT_API_KEY: z.string().optional(),
   SENDTEXT_API_SECRET: z.string().optional(),
   SENDTEXT_TIMEOUT_MS: z.string().default('10000'),
-  EMAIL_PROVIDER: z.enum(['disabled', 'mock', 'resend']).default('mock'),
+  EMAIL_PROVIDER: z.enum(['disabled', 'mock', 'resend', 'brevo']).default('mock'),
   EMAIL_FROM: z.string().email().optional(),
   EMAIL_REPLY_TO: z.string().email().optional(),
   EMAIL_TIMEOUT_MS: z.string().default('10000'),
   RESEND_API_KEY: z.string().optional(),
+  BREVO_API_KEY: z.string().optional(),
+  BREVO_BASE_URL: z.string().url().default('https://api.brevo.com'),
   LIVE_PROVIDER: z.enum(['jitsi', 'custom']).default('jitsi'),
   LIVE_JITSI_BASE_URL: z.string().url().default('https://meet.jit.si'),
+  UPLOAD_STORAGE_DRIVER: uploadStorageDriverSchema.default('local-disk'),
+  UPLOAD_PUBLIC_BASE_URL: optionalUrl,
   UPLOAD_STORAGE_ROOT: z.string().default('storage/uploads'),
   UPLOAD_TMP_ROOT: z.string().default('storage/uploads/_tmp'),
+  UPLOAD_TMP_MAX_AGE_HOURS: z.string().default('24'),
+  UPLOAD_S3_ENDPOINT: optionalUrl,
+  UPLOAD_S3_REGION: z.string().default('us-east-1'),
+  UPLOAD_S3_BUCKET: z.string().optional(),
+  UPLOAD_S3_ACCESS_KEY_ID: z.string().optional(),
+  UPLOAD_S3_SECRET_ACCESS_KEY: z.string().optional(),
+  UPLOAD_S3_KEY_PREFIX: z.string().default('uploads'),
+  UPLOAD_S3_FORCE_PATH_STYLE: booleanString.default('true'),
   UPLOAD_IMAGE_MAX_MB: z.string().default('8'),
   UPLOAD_RAW_MAX_MB: z.string().default('512'),
   UPLOAD_VIDEO_MAX_MB: z.string().default('5120'),
@@ -83,7 +106,7 @@ export const configValidationSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional(),
   CLOUDINARY_UPLOAD_FOLDER: z.string().default('c2p'),
   DEXPAY_ENABLED: z.enum(['true', 'false']).default('false'),
-  DEXPAY_BASE_URL: z.string().url().optional(),
+  DEXPAY_BASE_URL: optionalUrl,
   DEXPAY_API_KEY: z.string().optional(),
   DEXPAY_API_SECRET: z.string().optional(),
   DEXPAY_TIMEOUT_MS: z.string().default('12000'),
@@ -139,6 +162,68 @@ export const configValidationSchema = z.object({
         message: 'Production origins must not include localhost or 127.0.0.1.',
       });
     }
+
+    if (config.PRISMA_CONNECTION_REQUIRED !== 'true') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['PRISMA_CONNECTION_REQUIRED'],
+        message: 'PRISMA_CONNECTION_REQUIRED must be true in production.',
+      });
+    }
+
+    if (config.PRISMA_PLATFORM_SEED_ENABLED === 'true') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['PRISMA_PLATFORM_SEED_ENABLED'],
+        message: 'PRISMA_PLATFORM_SEED_ENABLED must be false in production.',
+      });
+    }
+
+    if (!config.UPLOAD_PUBLIC_BASE_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['UPLOAD_PUBLIC_BASE_URL'],
+        message: 'UPLOAD_PUBLIC_BASE_URL is required in production.',
+      });
+    } else if (/localhost|127\.0\.0\.1/i.test(config.UPLOAD_PUBLIC_BASE_URL)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['UPLOAD_PUBLIC_BASE_URL'],
+        message: 'UPLOAD_PUBLIC_BASE_URL must not include localhost or 127.0.0.1 in production.',
+      });
+    }
+
+    if (config.EMAIL_PROVIDER !== 'brevo') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['EMAIL_PROVIDER'],
+        message: 'EMAIL_PROVIDER must be brevo in production.',
+      });
+    }
+
+    if (config.UPLOAD_STORAGE_DRIVER !== 's3') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['UPLOAD_STORAGE_DRIVER'],
+        message: 'UPLOAD_STORAGE_DRIVER must be s3 in production.',
+      });
+    }
+
+    if (config.UPLOAD_S3_ENDPOINT && !/\.r2\.cloudflarestorage\.com/i.test(config.UPLOAD_S3_ENDPOINT)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['UPLOAD_S3_ENDPOINT'],
+        message: 'UPLOAD_S3_ENDPOINT must target Cloudflare R2 in production.',
+      });
+    }
+
+    if (config.UPLOAD_S3_REGION !== 'auto') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['UPLOAD_S3_REGION'],
+        message: 'UPLOAD_S3_REGION must be auto for Cloudflare R2 in production.',
+      });
+    }
   }
 
   if (config.SMS_PROVIDER === 'sendtext') {
@@ -165,6 +250,18 @@ export const configValidationSchema = z.object({
     }
   }
 
+  if (config.EMAIL_PROVIDER === 'brevo') {
+    for (const key of ['EMAIL_FROM', 'BREVO_API_KEY'] as const) {
+      if (!config[key]?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when EMAIL_PROVIDER=brevo.`,
+        });
+      }
+    }
+  }
+
   if (config.DEXPAY_ENABLED === 'true') {
     for (const key of ['DEXPAY_BASE_URL', 'DEXPAY_API_KEY', 'DEXPAY_API_SECRET'] as const) {
       if (!config[key]?.trim()) {
@@ -183,6 +280,18 @@ export const configValidationSchema = z.object({
       path: ['REDIS_HOST'],
       message: 'REDIS_HOST or REDIS_URL is required when Redis is enabled.',
     });
+  }
+
+  if (config.UPLOAD_STORAGE_DRIVER === 's3') {
+    for (const key of ['UPLOAD_S3_ENDPOINT', 'UPLOAD_S3_BUCKET', 'UPLOAD_S3_ACCESS_KEY_ID', 'UPLOAD_S3_SECRET_ACCESS_KEY'] as const) {
+      if (!config[key]?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is required when UPLOAD_STORAGE_DRIVER=s3.`,
+        });
+      }
+    }
   }
 
   if (config.ENABLE_METRICS === 'true' && !config.METRICS_AUTH_TOKEN?.trim()) {

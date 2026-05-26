@@ -7,128 +7,39 @@ import { useNotifications } from '@/hooks/useNotifications';
 import BrandLogo from '@/components/base/BrandLogo';
 import LiveNotifications from '@/components/feature/LiveNotifications';
 import AvatarUpload from '@/components/base/AvatarUpload';
+import { DashboardMessagesMenu } from './DashboardMessagesMenu';
+import NotificationBell from './NotificationBell';
+import {
+  baseNavItems,
+  getActiveNavPath,
+  getNavGapClass,
+  roleNavOverrides,
+} from './dashboardLayoutNav';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  hideMainScrollbar?: boolean;
 }
 
-// ... existing nav items ...
-
-const baseNavItems = [
-  { label: 'Tableau de bord', icon: 'ri-dashboard-line', path: '/dashboard' },
-  { label: 'Mon profil', icon: 'ri-user-line', path: '/dashboard/profile' },
-  { label: 'Mes projets', icon: 'ri-folder-line', path: '/dashboard/mes-projets' },
-  { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
-  { label: 'Factures', icon: 'ri-file-list-line', path: '/dashboard/factures' },
-  { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
-  { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
-];
-
-// ... existing roleNavOverrides ...
-
-const roleNavOverrides: Record<string, { label: string; icon: string; path: string }[]> = {
-  client: [
-    { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/client' },
-    { label: 'Trouver un prestataire', icon: 'ri-search-line', path: '/dashboard/client/prestataires' },
-    { label: 'Mes réservations', icon: 'ri-calendar-check-line', path: '/dashboard/client/reservations' },
-    { label: 'Mes commandes', icon: 'ri-shopping-bag-line', path: '/dashboard/client/commandes' },
-    { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
-    { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
-    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
-  ],
-  prestataire: [
-    { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/prestataire' },
-    { label: 'Mes services', icon: 'ri-briefcase-line', path: '/dashboard/prestataire/services' },
-    { label: 'Demandes', icon: 'ri-inbox-line', path: '/dashboard/prestataire/demandes' },
-    { label: 'Avis clients', icon: 'ri-star-line', path: '/dashboard/prestataire/avis' },
-    { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
-    { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
-    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
-  ],
-  formateur: [
-    { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/formateur' },
-    { label: 'Profil public', icon: 'ri-user-star-line', path: '/dashboard/formateur/profil-public' },
-    { label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/formateur/mes-cours' },
-    { label: 'Classes virtuelles', icon: 'ri-video-line', path: '/dashboard/formateur/classes-virtuelles' },
-    { label: 'Mes apprenants', icon: 'ri-group-line', path: '/dashboard/formateur/apprenants' },
-    { label: 'Évaluations', icon: 'ri-file-list-3-line', path: '/dashboard/formateur/evaluations' },
-    { label: 'Certificats', icon: 'ri-award-line', path: '/dashboard/formateur/certificats' },
-    { label: 'Revenus', icon: 'ri-wallet-3-line', path: '/dashboard/formateur/revenus' },
-    { label: 'Analytics', icon: 'ri-line-chart-line', path: '/dashboard/formateur/analytics' },
-    { label: 'Communauté', icon: 'ri-chat-3-line', path: '/dashboard/formateur/communaute' },
-    { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
-    { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
-    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
-  ],
-  apprenant: [
-    { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/apprenant' },
-    { label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/apprenant/mes-cours' },
-    { label: 'Mes examens', icon: 'ri-file-list-3-line', path: '/dashboard/apprenant/examens' },
-    { label: 'Mon historique', icon: 'ri-history-line', path: '/dashboard/apprenant/historique' },
-    { label: 'Classement', icon: 'ri-trophy-line', path: '/dashboard/apprenant/leaderboard' },
-    { label: 'Défis quotidiens', icon: 'ri-flag-line', path: '/dashboard/apprenant/defis' },
-    { label: 'Ma progression', icon: 'ri-bar-chart-grouped-line', path: '/dashboard/apprenant/progression' },
-    { label: 'Mes certificats', icon: 'ri-award-line', path: '/dashboard/apprenant/certificats' },
-    { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
-    { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
-    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
-  ],
-  parent: [
-    { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/parent' },
-    { label: 'Messagerie C2P', icon: 'ri-message-3-line', path: '/dashboard/messages' },
-    { label: 'Mon profil', icon: 'ri-user-line', path: '/dashboard/profile' },
-    { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
-    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
-  ],
-  porteur: [
-    { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/porteur' },
-    { label: 'Mes projets', icon: 'ri-folder-line', path: '/dashboard/porteur/mes-projets' },
-    { label: 'Partenariats', icon: 'ri-team-line', path: '/dashboard/porteur/partenariats' },
-    { label: 'Financements', icon: 'ri-funds-line', path: '/dashboard/porteur/financements' },
-    { label: 'Mon profil', icon: 'ri-user-line', path: '/dashboard/profile' },
-    { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
-    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
-  ],
-  partenaire: [
-    { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/partenaire' },
-    { label: 'Opportunités', icon: 'ri-search-line', path: '/dashboard/partenaire/opportunites' },
-    { label: 'Projets suivis', icon: 'ri-eye-line', path: '/dashboard/partenaire/projets-suivis' },
-    { label: 'Collaborations', icon: 'ri-team-line', path: '/dashboard/partenaire/collaborations' },
-    { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
-    { label: 'Mon profil', icon: 'ri-user-line', path: '/dashboard/profile' },
-    { label: 'Sécurité', icon: 'ri-shield-check-line', path: '/dashboard/securite' },
-    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
-  ],
-};
-
-const getActiveNavPath = (
-  pathname: string,
-  navItems: { label: string; icon: string; path: string }[],
-) => {
-  const exactMatch = navItems.find((item) => item.path === pathname);
-
-  if (exactMatch) {
-    return exactMatch.path;
-  }
-
-  return navItems
-    .filter((item) => item.path !== '/dashboard' && pathname.startsWith(`${item.path}/`))
-    .sort((a, b) => b.path.length - a.path.length)[0]?.path;
-};
-
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, hideMainScrollbar = false }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { totalUnread: messageUnread } = useBackendMessaging();
-  const { notifications, unreadCount: notifUnread } = useNotifications();
+  const {
+    conversations: messageConversations,
+    totalUnread: messageUnread,
+    loading: messagesLoading,
+    markAsRead,
+  } = useBackendMessaging();
+  const { notifications } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(false);
 
   const navItems = user && roleNavOverrides[user.role]
     ? roleNavOverrides[user.role]
     : baseNavItems;
   const activeNavPath = getActiveNavPath(location.pathname, navItems);
-  const navGapClass = navItems.length >= 9 ? 'gap-1' : navItems.length >= 7 ? 'gap-1.5' : 'gap-2';
+  const navGapClass = getNavGapClass(navItems.length);
 
   const handleLogout = () => {
     logout();
@@ -138,6 +49,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const userInitials = user
     ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
     : '?';
+  const isApprenant = user?.role === 'apprenant';
+  const profileTarget = isApprenant ? '/dashboard/parametres' : '/dashboard/profile';
+  const recentConversations = messageConversations.slice(0, 5);
 
   // Desktop sidebar width
   const sidebarWidth = 'w-64';
@@ -167,38 +81,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Right: messages + notifications + user */}
           <div className="ml-auto flex items-center space-x-1">
-            {/* Messages */}
-            <Link
-              to="/dashboard/messages"
-              className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100/80 active:scale-95 transition-all duration-200"
-            >
-              <div className="w-5 h-5 flex items-center justify-center">
-                <i className="ri-message-3-line text-lg text-gray-600"></i>
-              </div>
-              {messageUnread > 0 && (
-                <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold animate-pulse">
-                  {messageUnread > 9 ? '9+' : messageUnread}
-                </span>
-              )}
-            </Link>
+            <DashboardMessagesMenu
+              isApprenant={isApprenant}
+              loading={messagesLoading}
+              markAsRead={markAsRead}
+              messagesOpen={messagesOpen}
+              recentConversations={recentConversations}
+              setMessagesOpen={setMessagesOpen}
+              unreadCount={messageUnread}
+            />
 
             {/* Notifications */}
-            <Link
-              to="/dashboard/notifications"
-              className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100/80 active:scale-95 transition-all duration-200"
-            >
-              <div className="w-5 h-5 flex items-center justify-center">
-                <i className="ri-notification-3-line text-lg text-gray-600"></i>
-              </div>
-              {notifUnread > 0 && (
-                <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold animate-pulse">
-                  {notifUnread > 9 ? '9+' : notifUnread}
-                </span>
-              )}
-            </Link>
+            <NotificationBell />
 
             {/* User profile */}
-            <Link to="/dashboard/profile" className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-gray-100/80 active:scale-95 transition-all duration-200 ml-1">
+            <Link to={profileTarget} className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-gray-100/80 active:scale-95 transition-all duration-200 ml-1">
               <AvatarUpload
                 src={user?.avatar ?? null}
                 initials={userInitials}
@@ -275,7 +172,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main content */}
         <main
-          className="h-full min-w-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] lg:ml-64"
+          className={`h-full min-w-0 overflow-y-auto overscroll-contain lg:ml-64 ${
+            hideMainScrollbar
+              ? '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+              : '[scrollbar-gutter:stable]'
+          }`}
         >
           <div className="min-h-full p-4 lg:p-8">
             {children}

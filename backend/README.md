@@ -54,6 +54,7 @@ Variables importantes :
 - `COOKIE_SECURE`
 - `COOKIE_SAMESITE`
 - `TRUST_PROXY`
+- `PRISMA_CONNECTION_REQUIRED`
 - `REDIS_URL` ou `REDIS_HOST/PORT`
 - `SENDTEXT_*`
 - `DEXPAY_*`
@@ -63,6 +64,10 @@ Variables importantes :
 
 - `npm install`
 - `npm run start:dev`
+- `npm run db:check`
+- `C2P_CONFIRM_LOCAL_DB_RESET=reset npm run db:reset:local`
+- `npm run verify`
+- `npm run http:checks`
 - `npm run build`
 - `npm run start`
 - `npm run security:test`
@@ -75,7 +80,16 @@ Variables importantes :
 
 1. Copier `.env.example` en `.env`
 2. Ajuster `DATABASE_URL`
-3. Lancer `npm run start:dev`
+3. Verifier la connexion avec `npm run db:check`
+4. Lancer `npm run start:dev`
+
+Notes locales :
+
+- `start:dev` utilise `nest start --watch`.
+- L'ancien chemin `ts-node/esm` reste disponible via `npm run start:dev:loader` uniquement pour diagnostic.
+- `PRISMA_CONNECTION_REQUIRED=true` force l'application a echouer au demarrage si PostgreSQL est indisponible, au lieu de demarrer en mode degrade.
+- Les scripts `security:test`, `data:access:test`, `messaging:flow:test`, `notifications:flow:test` et `provider:visibility:test` attendent une API HTTP deja lancee, par defaut sur `http://localhost:3003/api`.
+- `db:reset:local` est volontairement destructif et refuse de tourner hors `localhost` ou sans `C2P_CONFIRM_LOCAL_DB_RESET=reset`.
 
 ## Transition Prisma
 

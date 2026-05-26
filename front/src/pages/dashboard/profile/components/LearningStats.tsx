@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import {
-  loadCourseHistory,
-  loadLearningDays,
-  loadDailyXP,
-} from '../../apprenant/cours/[id]/storage';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { fetchApprenantEnrollments, type ApprenantEnrollment } from '@/lib/apprenantDashboardApi';
+import { queryKeys } from '@/lib/queryKeys';
 
 function getWeekLabel(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -12,12 +11,13 @@ function getWeekLabel(dateStr: string): string {
   return weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-function getWeeklyXP(): { label: string; xp: number }[] {
-  const days = loadLearningDays();
+function getWeeklyActivity(enrollments: ApprenantEnrollment[]): { label: string; xp: number }[] {
   const weekly: Record<string, number> = {};
-  for (const ds of days) {
+  for (const enrollment of enrollments) {
+    const ds = String(enrollment.last_active ?? enrollment.enrolled_at ?? '').slice(0, 10);
+    if (!ds) continue;
     const label = getWeekLabel(ds);
-    weekly[label] = (weekly[label] || 0) + loadDailyXP(ds);
+    weekly[label] = (weekly[label] || 0) + Math.max(1, Math.round(Number(enrollment.progress || 0) / 10));
   }
   const entries = Object.entries(weekly).map(([label, xp]) => ({ label, xp }));
   entries.sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
@@ -38,9 +38,33 @@ function parseDurationToMinutes(d: string): number {
 }
 
 export default function LearningStats() {
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const history = loadCourseHistory();
-  const weeklyXP = getWeeklyXP();
+  const enrollmentsQuery = useQuery({
+    queryKey: queryKeys.apprenant.enrollments(user?.id),
+    enabled: user?.role === 'apprenant' && Boolean(user.id),
+    queryFn: () => fetchApprenantEnrollments(user?.id ?? ''),
+  });
+  const enrollments: ApprenantEnrollment[] = enrollmentsQuery.data ?? [];
+  const weeklyXP = getWeeklyActivity(enrollments);
+  const history = enrollments.map((enrollment) => {
+    const totalLessons = Math.max(
+      enrollment.course_lessons_count ?? 0,
+      enrollment.courses?.modules ?? 0,
+      enrollment.completed_lessons_estimate ?? 0,
+      1,
+    );
+    return {
+      courseId: enrollment.courses?.id ?? enrollment.course_id,
+      title: enrollment.courses?.title || enrollment.course_name || 'Formation',
+      progress: Math.max(0, Math.min(100, Math.round(Number(enrollment.progress || 0)))),
+      totalLessons,
+      completedLessons: Math.max(
+        0,
+        enrollment.completed_lessons_estimate ?? Math.round((Number(enrollment.progress || 0) / 100) * totalLessons),
+      ),
+    };
+  });
   const completedCourses = history.filter((h) => h.progress === 100).length;
   const inProgress = history.filter((h) => h.progress < 100).length;
   const totalLessons = history.reduce((s, h) => s + h.totalLessons, 0);

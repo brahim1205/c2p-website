@@ -1,6 +1,16 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
-import { backendClient } from '@/lib/backendClient';
+import {
+  clearMyNotifications,
+  createNotificationRecord,
+  deleteNotificationRecord,
+  fetchMyNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type NotificationRecord,
+} from '@/lib/notificationsApi';
+import { queryKeys } from '@/lib/queryKeys';
 
 export type NotificationType = 'message' | 'prestation' | 'formation' | 'projet' | 'paiement' | 'system' | 'rendezvous' | 'collaboration' | 'evaluation' | 'booking' | 'review';
 
@@ -17,205 +27,145 @@ export interface Notification {
 
 
 export function useNotifications() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
+  const queryKey = queryKeys.notifications.mine(user?.id, 30);
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const isMountedRef = useRef(true);
+  const notificationsQuery = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const data = await fetchMyNotifications(30);
+      return data.map(mapNotificationRecord);
+    },
+    enabled: Boolean(user?.id),
+    refetchInterval: 20000,
+  });
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const fetchNotifications = useCallback(async () => {
-    if (!user?.id) return;
-    if (isMountedRef.current) {
-      setIsLoading(true);
-    }
-    try {
-      const { data, error } = await backendClient
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      if (!isMountedRef.current) return;
-      if (data) {
-        const mapped: Notification[] = data.map((n) => ({
-          id: String(n.id),
-          type: (n.type as NotificationType) || 'system',
-          title: String(n.title || ''),
-          message: String(n.message || ''),
-          timestamp: formatTimestamp(n.created_at),
-          read: Boolean(n.is_read),
-          link: n.link ? String(n.link) : undefined,
-          avatar: n.metadata && typeof n.metadata === 'object' && (n.metadata as Record<string, unknown>).avatar
-            ? String((n.metadata as Record<string, unknown>).avatar)
-            : undefined,
-        }));
-        setNotifications(mapped);
-      }
-    } catch (err) {
-      if (!isMountedRef.current) return;
-      console.warn('Failed to fetch notifications:', err);
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-
-    // Subscribe to notifications table changes for this user
-    const channel = backendClient
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotif = payload.new as Record<string, unknown>;
-          const notification: Notification = {
-            id: String(newNotif.id),
-            type: (newNotif.type as NotificationType) || 'system',
-            title: String(newNotif.title || ''),
-            message: String(newNotif.message || ''),
-            timestamp: 'À l\'instant',
-            read: false,
-            link: newNotif.link ? String(newNotif.link) : undefined,
-            avatar: newNotif.metadata && typeof newNotif.metadata === 'object' && (newNotif.metadata as Record<string, unknown>).avatar
-              ? String((newNotif.metadata as Record<string, unknown>).avatar)
-              : undefined,
-          };
-          setNotifications((prev) => [notification, ...prev]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const updated = payload.new as Record<string, unknown>;
-          setNotifications((prev) =>
-            prev.map((n) =>
-              n.id === String(updated.id)
-                ? { ...n, read: Boolean(updated.is_read) }
-                : n
-            )
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [user?.id]);
+  const notifications = useMemo(() => notificationsQuery.data ?? [], [notificationsQuery.data]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const updateCachedNotifications = useCallback((updater: (current: Notification[]) => Notification[]) => {
+    queryClient.setQueryData<Notification[]>(queryKey, (current = []) => updater(current));
+  }, [queryClient, queryKey]);
+
+  const markAsReadMutation = useMutation({
+    mutationFn: markNotificationRead,
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Notification[]>(queryKey) ?? [];
+      updateCachedNotifications((current) => current.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      return { previous };
+    },
+    onError: (err, _id, context) => {
+      console.warn('Failed to mark notification as read:', err);
+      queryClient.setQueryData(queryKey, context?.previous ?? []);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const markAllAsReadMutation = useMutation({
+    mutationFn: markAllNotificationsRead,
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Notification[]>(queryKey) ?? [];
+      updateCachedNotifications((current) => current.map((n) => ({ ...n, read: true })));
+      return { previous };
+    },
+    onError: (err, _variables, context) => {
+      console.warn('Failed to mark all notifications as read:', err);
+      queryClient.setQueryData(queryKey, context?.previous ?? []);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const deleteNotificationMutation = useMutation({
+    mutationFn: deleteNotificationRecord,
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Notification[]>(queryKey) ?? [];
+      updateCachedNotifications((current) => current.filter((n) => n.id !== id));
+      return { previous };
+    },
+    onError: (err, _id, context) => {
+      console.warn('Failed to delete notification:', err);
+      queryClient.setQueryData(queryKey, context?.previous ?? []);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: clearMyNotifications,
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Notification[]>(queryKey) ?? [];
+      queryClient.setQueryData<Notification[]>(queryKey, []);
+      return { previous };
+    },
+    onError: (err, _variables, context) => {
+      console.warn('Failed to clear notifications:', err);
+      queryClient.setQueryData(queryKey, context?.previous ?? []);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const addNotificationMutation = useMutation({
+    mutationFn: createNotificationRecord,
+    onSuccess: (data) => {
+      updateCachedNotifications((current) => [mapNotificationRecord(data), ...current]);
+      void queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (err) => {
+      console.warn('Failed to add notification:', err);
+    },
+  });
+
   const markAsRead = useCallback(async (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    if (user?.id) {
-      try {
-        await backendClient
-          .from('notifications')
-          .update({ is_read: true, updated_at: new Date().toISOString() })
-          .eq('id', id)
-          .eq('user_id', user.id);
-      } catch (err) {
-        console.warn('Failed to mark notification as read:', err);
-      }
-    }
-  }, [user?.id]);
+    if (!user?.id) return;
+    await markAsReadMutation.mutateAsync(id);
+  }, [markAsReadMutation, user?.id]);
 
   const markAllAsRead = useCallback(async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    if (user?.id) {
-      try {
-        await backendClient
-          .from('notifications')
-          .update({ is_read: true, updated_at: new Date().toISOString() })
-          .eq('user_id', user.id)
-          .eq('is_read', false);
-      } catch (err) {
-        console.warn('Failed to mark all notifications as read:', err);
-      }
-    }
-  }, [user?.id]);
+    if (!user?.id) return;
+    await markAllAsReadMutation.mutateAsync();
+  }, [markAllAsReadMutation, user?.id]);
 
   const deleteNotification = useCallback(async (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    if (user?.id) {
-      try {
-        await backendClient.from('notifications').delete().eq('id', id).eq('user_id', user.id);
-      } catch (err) {
-        console.warn('Failed to delete notification:', err);
-      }
-    }
-  }, [user?.id]);
+    if (!user?.id) return;
+    await deleteNotificationMutation.mutateAsync(id);
+  }, [deleteNotificationMutation, user?.id]);
 
   const clearAll = useCallback(async () => {
-    const previous = notifications;
-    setNotifications([]);
-    if (user?.id) {
-      try {
-        await backendClient.from('notifications').delete().eq('user_id', user.id);
-      } catch (err) {
-        console.warn('Failed to clear notifications:', err);
-        setNotifications(previous);
-      }
-    }
-  }, [notifications, user?.id]);
+    if (!user?.id) return;
+    await clearAllMutation.mutateAsync();
+  }, [clearAllMutation, user?.id]);
 
   const addNotification = useCallback(
     async (notification: Omit<Notification, 'id'>) => {
       if (!user?.id) return;
-      try {
-        const { data, error } = await backendClient
-          .from('notifications')
-          .insert({
-            user_id: user.id,
-            title: notification.title,
-            message: notification.message,
-            type: notification.type,
-            is_read: false,
-            link: notification.link,
-            metadata: notification.avatar ? { avatar: notification.avatar } : {},
-          })
-          .select('id')
-          .single();
-        if (error) throw error;
-        if (data) {
-          setNotifications((prev) => [
-            { ...notification, id: String(data.id), timestamp: 'À l\'instant' },
-            ...prev,
-          ]);
-        }
-      } catch (err) {
-        console.warn('Failed to add notification:', err);
-      }
+      await addNotificationMutation.mutateAsync({
+        userId: user.id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        link: notification.link,
+        avatar: notification.avatar,
+      });
     },
-    [user?.id]
+    [addNotificationMutation, user?.id]
   );
+
+  const refresh = useCallback(async () => {
+    await notificationsQuery.refetch();
+  }, [notificationsQuery]);
 
   return {
     notifications,
@@ -225,9 +175,24 @@ export function useNotifications() {
     deleteNotification,
     clearAll,
     addNotification,
-    isLoading,
-    error: null,
-    refresh: fetchNotifications,
+    isLoading: notificationsQuery.isLoading,
+    error: notificationsQuery.error,
+    refresh,
+  };
+}
+
+function mapNotificationRecord(n: NotificationRecord): Notification {
+  return {
+    id: String(n.id),
+    type: (n.type as NotificationType) || 'system',
+    title: String(n.title || ''),
+    message: String(n.message || ''),
+    timestamp: formatTimestamp(String(n.created_at || new Date().toISOString())),
+    read: Boolean(n.is_read),
+    link: n.link ? String(n.link) : undefined,
+    avatar: n.metadata && typeof n.metadata === 'object' && n.metadata.avatar
+      ? String(n.metadata.avatar)
+      : undefined,
   };
 }
 

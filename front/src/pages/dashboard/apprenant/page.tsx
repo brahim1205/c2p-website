@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,40 +7,27 @@ import { useToast } from '@/hooks/useToast';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
 import ResumeCourseBanner from '@/components/feature/ResumeCourseBanner';
 import {
-  fetchApprenantDashboardSnapshot,
+  fetchApprenantCertificates,
+  fetchApprenantEnrollments,
   type ApprenantCertificate as Certificate,
   type ApprenantEnrollment as Enrollment,
 } from '@/lib/apprenantDashboardApi';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function ApprenantDashboardPage() {
   const { user } = useAuth();
   const { success } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.id) {
-        setEnrollments([]);
-        setCertificates([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const snapshot = await fetchApprenantDashboardSnapshot(user.id);
-        setEnrollments(snapshot.enrollments);
-        setCertificates(snapshot.certificates);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [user?.id]);
+  const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery<Enrollment[]>({
+    queryKey: queryKeys.apprenant.enrollments(user?.id),
+    queryFn: () => fetchApprenantEnrollments(user?.id ?? ''),
+    enabled: Boolean(user?.id),
+  });
+  const { data: certificates = [], isLoading: certificatesLoading } = useQuery<Certificate[]>({
+    queryKey: queryKeys.apprenant.certificates(user?.id),
+    queryFn: () => fetchApprenantCertificates(user?.id ?? ''),
+    enabled: Boolean(user?.id),
+  });
+  const loading = enrollmentsLoading || certificatesLoading;
 
   const totalEnrolled = enrollments.length;
   const inProgressCount = enrollments.filter((e) => e.progress > 0 && e.progress < 100).length;
@@ -57,7 +44,6 @@ export default function ApprenantDashboardPage() {
     { label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/apprenant/mes-cours', tone: 'bg-teal-50 text-teal-700' },
     { label: 'Ma progression', icon: 'ri-bar-chart-grouped-line', path: '/dashboard/apprenant/progression', tone: 'bg-emerald-50 text-emerald-700' },
     { label: 'Mes certificats', icon: 'ri-award-line', path: '/dashboard/apprenant/certificats', tone: 'bg-amber-50 text-amber-700' },
-    { label: 'Messagerie', icon: 'ri-message-3-line', path: '/dashboard/messages', tone: 'bg-sky-50 text-sky-700' },
     { label: 'Catalogue', icon: 'ri-compass-line', path: '/espace-numerique', tone: 'bg-violet-50 text-violet-700' },
   ];
 
@@ -119,7 +105,7 @@ export default function ApprenantDashboardPage() {
               Explorer le catalogue
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {quickLinks.map((link) => (
               <Link
                 key={link.path}

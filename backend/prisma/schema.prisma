@@ -233,6 +233,28 @@ model FinancialOperation {
   @@index([resourceType, resourceId])
 }
 
+model FinanceLedgerEntry {
+  id                   String   @id
+  financialOperationId String
+  entryType            String
+  accountType          String
+  accountId            String?
+  userId               String?
+  direction            String
+  amount               Int
+  currency             String   @default("FCFA")
+  sourceType           String?
+  sourceId             String?
+  transactionId        String?
+  metadata             Json?
+  createdAt            DateTime @default(now())
+
+  @@index([financialOperationId])
+  @@index([accountType, accountId])
+  @@index([userId, createdAt])
+  @@index([sourceType, sourceId])
+}
+
 model Wallet {
   id                    String   @id
   userId                String
@@ -548,8 +570,8 @@ model WebhookReceipt {
 
   @@index([provider, status])
   @@unique([provider, providerEventId])
+  @@unique([provider, idempotencyKey])
   @@index([providerEventId])
-  @@index([idempotencyKey])
   @@index([correlationId])
 }
 
@@ -606,6 +628,30 @@ model CommissionLedgerEntry {
   @@index([sourceType, sourceId])
   @@index([beneficiaryUserId])
   @@index([source])
+}
+
+model UploadObject {
+  id           String   @id @default(cuid())
+  ownerId      String?
+  driver       String
+  storageKey   String   @unique
+  relativePath String
+  publicUrl    String?
+  folder       String
+  filename     String
+  originalName String
+  mimeType     String
+  resourceType String
+  sizeBytes    BigInt
+  status       String   @default("active")
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([ownerId, status])
+  @@index([driver, status])
+  @@index([folder])
+  @@index([resourceType])
 }
 
 model AppRow {

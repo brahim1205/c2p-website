@@ -12,7 +12,11 @@ interface BreadcrumbProps {
 export default function Breadcrumb({ items }: BreadcrumbProps) {
   const location = useLocation();
 
-  if (location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/admin')) {
+  if (
+    location.pathname.startsWith('/dashboard')
+    || location.pathname.startsWith('/admin')
+    || location.pathname.startsWith('/compte')
+  ) {
     return null;
   }
 

@@ -1,5 +1,9 @@
-import { useEffect, useState } from 'react';
-import { loadUnlockedBadges, BADGES } from '../../apprenant/cours/[id]/storage';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchApprenantProgressionSnapshot } from '@/lib/apprenantDashboardApi';
+import { deriveUnlockedLearningBadges, LEARNING_BADGES } from '@/lib/learningAchievements';
+import { useAuth } from '@/hooks/useAuth';
+import { queryKeys } from '@/lib/queryKeys';
 
 const rarityConfig: Record<string, { border: string; bg: string; glow: string }> = {
   amber: { border: 'border-amber-300', bg: 'bg-amber-50', glow: 'shadow-amber-200' },
@@ -20,16 +24,23 @@ function getRarityStars(badgeId: string): number {
 }
 
 export default function BadgeShowcase() {
-  const [unlocked, setUnlocked] = useState<string[]>([]);
+  const { user } = useAuth();
   const [showAll, setShowAll] = useState(false);
 
-  useEffect(() => {
-    setUnlocked(loadUnlockedBadges());
-  }, []);
+  const progressionQuery = useQuery({
+    queryKey: queryKeys.apprenant.progression(user?.id),
+    enabled: Boolean(user?.id),
+    queryFn: () => fetchApprenantProgressionSnapshot(user?.id ?? ''),
+  });
 
-  const unlockedBadges = BADGES.filter((b) => unlocked.includes(b.id));
-  const lockedBadges = BADGES.filter((b) => !unlocked.includes(b.id));
-  const totalBadges = BADGES.length;
+  const unlocked = useMemo(
+    () => progressionQuery.data ? deriveUnlockedLearningBadges(progressionQuery.data) : [],
+    [progressionQuery.data],
+  );
+
+  const unlockedBadges = LEARNING_BADGES.filter((b) => unlocked.includes(b.id));
+  const lockedBadges = LEARNING_BADGES.filter((b) => !unlocked.includes(b.id));
+  const totalBadges = LEARNING_BADGES.length;
 
   return (
     <div className="space-y-5">

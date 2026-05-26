@@ -1,29 +1,32 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { fetchAdminReports, updateAdminReport, type AdminReport } from '@/lib/adminApi';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function AdminReportsPage() {
+  const queryClient = useQueryClient();
   const { success, error } = useToast();
   const [activeTab, setActiveTab] = useState<'pending' | 'resolved' | 'dismissed'>('pending');
-  const [reports, setReports] = useState<AdminReport[]>([]);
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [pendingSuspend, setPendingSuspend] = useState<AdminReport | null>(null);
   const [suspendReason, setSuspendReason] = useState('');
 
-  const loadReports = useCallback(async () => {
-    try {
-      setReports(await fetchAdminReports());
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les signalements.');
-    }
-  }, [error]);
+  const reportsQuery = useQuery({
+    queryKey: queryKeys.admin.reports(),
+    queryFn: fetchAdminReports,
+  });
 
   useEffect(() => {
-    loadReports();
-  }, [loadReports]);
+    if (reportsQuery.isError) {
+      console.error(reportsQuery.error);
+      error('Erreur', 'Impossible de charger les signalements.');
+    }
+  }, [error, reportsQuery.error, reportsQuery.isError]);
+
+  const reports: AdminReport[] = useMemo(() => reportsQuery.data ?? [], [reportsQuery.data]);
 
   const filteredReports = useMemo(() => reports.filter((report) => report.status === activeTab), [activeTab, reports]);
 
@@ -42,7 +45,8 @@ export default function AdminReportsPage() {
   const mutateReport = async (id: number, patch: Partial<AdminReport>, message: string) => {
     try {
       const updated = await updateAdminReport(id, patch);
-      setReports((prev) => prev.map((report) => report.id === id ? updated : report));
+      queryClient.setQueryData<AdminReport[]>(queryKeys.admin.reports(), (current = []) => current.map((report) => report.id === id ? updated : report));
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.reports() });
       success(message, updated.reported);
     } catch (err) {
       console.error(err);

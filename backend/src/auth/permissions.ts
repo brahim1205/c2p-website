@@ -13,6 +13,7 @@ export interface RbacPermissionDefinition {
 }
 
 export const RBAC_ROLE_DEFINITIONS: readonly RbacRoleDefinition[] = [
+  { id: 'superadmin', label: 'Super administrateur', description: 'Acces exclusif aux actions sensibles, securite, logs, provider et gouvernance.' },
   { id: 'admin', label: 'Administrateur', description: 'Controle total de la plateforme C2P.' },
   { id: 'client', label: 'Client / Prestateur', description: 'Soumet des besoins de prestation, suit les missions et passe par C2P pour la mise en relation.' },
   { id: 'prestataire', label: 'Prestataire', description: 'Recoit des missions attribuees et gere ses flux financiers.' },
@@ -36,6 +37,8 @@ export const RBAC_PERMISSION_DEFINITIONS: readonly RbacPermissionDefinition[] = 
   { id: 'payments.dexpay.write', label: 'Utiliser DexPay', description: 'Creer ou synchroniser des ordres DexPay.' },
   { id: 'payments.admin.read', label: 'Lire l administration finance', description: 'Consulter les vues et journaux de supervision finance reserves a l administration.' },
   { id: 'payments.admin.write', label: 'Administrer la finance', description: 'Executer les actions d administration finance et provider reservees a l administration.' },
+  { id: 'superadmin.sensitive.read', label: 'Lire les surfaces superadmin', description: 'Consulter logs, securite, provider, outbox et autres surfaces sensibles.' },
+  { id: 'superadmin.sensitive.write', label: 'Executer les actions superadmin', description: 'Executer les actions sensibles de supervision et de reprise.' },
   { id: 'finance.self_service', label: 'Utiliser les commandes finance', description: 'Executer les commandes self-service de wallet, retrait et comptes de retrait.' },
   { id: 'subscription.self_service', label: 'Utiliser les commandes abonnement', description: 'Activer ou renouveler son abonnement SaaS via les commandes metier.' },
   { id: 'data.admin.read', label: 'Lire les donnees admin', description: 'Consulter les tables et modules reserves a l administration.' },
@@ -61,9 +64,11 @@ export const RBAC_PERMISSION_DEFINITIONS: readonly RbacPermissionDefinition[] = 
 ] as const;
 
 export const RBAC_ALL_PERMISSION_IDS = RBAC_PERMISSION_DEFINITIONS.map((definition) => definition.id);
+const RBAC_ADMIN_PERMISSION_IDS = RBAC_ALL_PERMISSION_IDS.filter((permission) => !permission.startsWith('superadmin.'));
 
 export const RBAC_DEFAULT_ROLE_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
-  admin: RBAC_ALL_PERMISSION_IDS,
+  superadmin: RBAC_ALL_PERMISSION_IDS,
+  admin: RBAC_ADMIN_PERMISSION_IDS,
   client: [
     'payments.dexpay.read',
     'payments.dexpay.write',
@@ -203,5 +208,5 @@ export function getDefaultPermissionsForRoles(roles: Iterable<string>) {
 }
 
 export function isKnownApplicationRole(role: string): role is Role {
-  return ['admin', 'apprenant', 'formateur', 'prestataire', 'parent', 'porteur', 'partenaire', 'client'].includes(role);
+  return ['superadmin', 'admin', 'apprenant', 'formateur', 'prestataire', 'parent', 'porteur', 'partenaire', 'client'].includes(role);
 }

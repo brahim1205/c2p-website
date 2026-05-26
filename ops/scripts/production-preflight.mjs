@@ -111,10 +111,32 @@ function requireNonPlaceholder(env, key, failures, label = key) {
   return value;
 }
 
+function requirePositiveInteger(env, key, failures, label = key) {
+  const value = requireNonPlaceholder(env, key, failures, label);
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    fail(failures, `${label} doit être un entier positif.`);
+    return null;
+  }
+  return parsed;
+}
+
 function checkNoLocalhost(value, failures, label) {
   const normalized = String(value ?? '').toLowerCase();
   if (normalized.includes('localhost') || normalized.includes('127.0.0.1')) {
     fail(failures, `${label} pointe encore vers localhost/127.0.0.1.`);
+  }
+}
+
+function checkSecretFileMode(filePath, failures, label) {
+  if (!filePath || !fs.existsSync(filePath)) return;
+  const mode = fs.statSync(filePath).mode & 0o777;
+  if ((mode & 0o077) !== 0) {
+    fail(
+      failures,
+      `${label} doit être lisible uniquement par le propriétaire (chmod 600 recommandé, mode actuel ${mode.toString(8)}).`,
+    );
   }
 }
 
@@ -134,12 +156,14 @@ function main() {
 
   try {
     composeEnv = parseEnvFile(composeEnvPath);
+    checkSecretFileMode(composeEnvPath, failures, path.relative(repoRoot, composeEnvPath));
   } catch (error) {
     fail(failures, error instanceof Error ? error.message : `Impossible de lire ${composeEnvPath}`);
   }
 
   try {
     backendEnv = parseEnvFile(backendEnvPath);
+    checkSecretFileMode(backendEnvPath, failures, path.relative(repoRoot, backendEnvPath));
   } catch (error) {
     fail(failures, error instanceof Error ? error.message : `Impossible de lire ${backendEnvPath}`);
   }
@@ -180,6 +204,19 @@ function main() {
     fail(failures, 'TRUST_PROXY doit être à true derrière Nginx.');
   }
 
+  if (!isTruthy(backendEnv.PRISMA_CONNECTION_REQUIRED, false)) {
+    fail(failures, 'PRISMA_CONNECTION_REQUIRED doit être à true en production.');
+  }
+
+  if (isTruthy(backendEnv.PRISMA_PLATFORM_SEED_ENABLED, false)) {
+    fail(failures, 'PRISMA_PLATFORM_SEED_ENABLED doit rester à false en production.');
+  }
+
+  const dataLegacyApiMode = String(backendEnv.DATA_LEGACY_API_MODE ?? '').trim().toLowerCase();
+  if (!['read-only', 'disabled'].includes(dataLegacyApiMode)) {
+    fail(failures, 'DATA_LEGACY_API_MODE doit être read-only ou disabled en production.');
+  }
+
   if (!isTruthy(backendEnv.REDIS_DISABLED, false)) {
     requireNonPlaceholder(backendEnv, 'REDIS_PASSWORD', failures);
     if (!backendEnv.REDIS_URL && !backendEnv.REDIS_HOST) {
@@ -196,6 +233,7 @@ function main() {
     if (metricsSecret === null) {
       fail(failures, `Secret metrics introuvable: ${path.relative(repoRoot, metricsSecretPath)}`);
     } else {
+      checkSecretFileMode(metricsSecretPath, failures, path.relative(repoRoot, metricsSecretPath));
       const normalizedSecret = metricsSecret.trim();
       if (!normalizedSecret) {
         fail(failures, 'Le fichier metrics-token est vide.');
@@ -222,11 +260,15 @@ function main() {
   const emailProvider = String(backendEnv.EMAIL_PROVIDER ?? '').trim().toLowerCase();
   if (!emailProvider) {
     fail(failures, 'EMAIL_PROVIDER manquant. Le projet ne doit pas retomber sur le provider mock en production.');
-  } else if (emailProvider === 'mock') {
-    fail(failures, 'EMAIL_PROVIDER ne doit pas être mock en production.');
-  } else if (emailProvider === 'resend') {
+  } else if (emailProvider !== 'brevo') {
+    fail(failures, 'EMAIL_PROVIDER doit être brevo en production.');
+  } else if (emailProvider === 'brevo') {
     requireNonPlaceholder(backendEnv, 'EMAIL_FROM', failures);
-    requireNonPlaceholder(backendEnv, 'RESEND_API_KEY', failures);
+    requireNonPlaceholder(backendEnv, 'BREVO_API_KEY', failures);
+    const brevoBaseUrl = requireNonPlaceholder(backendEnv, 'BREVO_BASE_URL', failures);
+    if (brevoBaseUrl) {
+      checkNoLocalhost(brevoBaseUrl, failures, 'BREVO_BASE_URL');
+    }
   }
 
   if (isTruthy(backendEnv.DEXPAY_ENABLED, false)) {
@@ -236,9 +278,58 @@ function main() {
     requireNonPlaceholder(backendEnv, 'DEXPAY_WEBHOOK_SECRET', failures);
   }
 
+  const uploadStorageDriver = String(backendEnv.UPLOAD_STORAGE_DRIVER ?? 'local-disk').trim().toLowerCase();
+  if (uploadStorageDriver !== 's3') {
+    fail(failures, 'UPLOAD_STORAGE_DRIVER doit être s3 en production. Le stockage local n est pas multi-instance safe.');
+  } else {
+    const uploadS3Endpoint = requireNonPlaceholder(backendEnv, 'UPLOAD_S3_ENDPOINT', failures);
+    requireNonPlaceholder(backendEnv, 'UPLOAD_S3_BUCKET', failures);
+    requireNonPlaceholder(backendEnv, 'UPLOAD_S3_ACCESS_KEY_ID', failures);
+    requireNonPlaceholder(backendEnv, 'UPLOAD_S3_SECRET_ACCESS_KEY', failures);
+    if (uploadS3Endpoint) {
+      checkNoLocalhost(uploadS3Endpoint, failures, 'UPLOAD_S3_ENDPOINT');
+      if (!/\.r2\.cloudflarestorage\.com/i.test(uploadS3Endpoint)) {
+        fail(failures, 'UPLOAD_S3_ENDPOINT doit pointer vers Cloudflare R2 en production.');
+      }
+    }
+    if (String(backendEnv.UPLOAD_S3_REGION ?? '').trim().toLowerCase() !== 'auto') {
+      fail(failures, 'UPLOAD_S3_REGION doit être auto pour Cloudflare R2 en production.');
+    }
+  }
+  const uploadPublicBaseUrl = requireNonPlaceholder(backendEnv, 'UPLOAD_PUBLIC_BASE_URL', failures);
+  if (uploadPublicBaseUrl) {
+    checkNoLocalhost(uploadPublicBaseUrl, failures, 'UPLOAD_PUBLIC_BASE_URL');
+  }
+  const uploadTmpMaxAgeHours = requirePositiveInteger(backendEnv, 'UPLOAD_TMP_MAX_AGE_HOURS', failures);
+  if (uploadTmpMaxAgeHours !== null && uploadTmpMaxAgeHours > 168) {
+    fail(failures, 'UPLOAD_TMP_MAX_AGE_HOURS doit être <= 168 en production.');
+  }
+
   requireNonPlaceholder(composeEnv, 'POSTGRES_PASSWORD', failures);
   requireNonPlaceholder(composeEnv, 'REDIS_PASSWORD', failures);
   requireNonPlaceholder(composeEnv, 'GF_SECURITY_ADMIN_PASSWORD', failures);
+  const backupRetentionDays = requirePositiveInteger(composeEnv, 'BACKUP_RETENTION_DAYS', failures);
+  if (backupRetentionDays !== null && backupRetentionDays < 7) {
+    fail(failures, 'BACKUP_RETENTION_DAYS doit être >= 7 en production.');
+  }
+  requireNonPlaceholder(composeEnv, 'BACKUP_CRON_SCHEDULE', failures);
+
+  for (const scriptPath of [
+    'ops/scripts/postgres-backup.sh',
+    'ops/scripts/postgres-restore.sh',
+    'ops/scripts/postgres-backup-check.mjs',
+    'ops/scripts/install-postgres-backup-cron.sh',
+  ]) {
+    const fullPath = path.join(repoRoot, scriptPath);
+    if (!fs.existsSync(fullPath)) {
+      fail(failures, `Script backup manquant: ${scriptPath}`);
+    } else {
+      const mode = fs.statSync(fullPath).mode;
+      if ((mode & 0o111) === 0) {
+        fail(failures, `Script backup non executable: ${scriptPath}`);
+      }
+    }
+  }
 
   const fullchainPath = path.join(certDir, 'fullchain.pem');
   const privkeyPath = path.join(certDir, 'privkey.pem');

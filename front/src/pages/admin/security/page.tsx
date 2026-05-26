@@ -1,46 +1,53 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { createAdminBackup, fetchAdminSecurityOverview, forceSuspendUser, markAlertReviewed, updateAdminRule, type AdminBackup, type AdminRule, type AdminSecurityAlert } from '@/lib/adminApi';
 import { ROLE_LABELS, type AuthUser } from '@/lib/roles';
 import { downloadCsvFile } from '@/lib/downloads';
+import { queryKeys } from '@/lib/queryKeys';
+import { AdminSecurityHeaderTabs, type AdminSecurityTab } from './AdminSecurityHeaderTabs';
 
 type AuditLog = { id: string; admin?: string; action: string; target?: string; timestamp: string; ip: string; status: string };
+type AdminSecurityOverview = Awaited<ReturnType<typeof fetchAdminSecurityOverview>>;
 
 export default function AdminSecurityPage() {
   const { success, error } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'backups' | 'settings'>('overview');
-  const [securityStats, setSecurityStats] = useState({ totalUsers: 0, activeUsers: 0, suspendedAccounts: 0, failedLogins: 0, passwordResetProtected: 0, securityAlerts: 0 });
-  const [securityAlerts, setSecurityAlerts] = useState<AdminSecurityAlert[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [backups, setBackups] = useState<AdminBackup[]>([]);
-  const [rules, setRules] = useState<AdminRule[]>([]);
-  const [users, setUsers] = useState<(AuthUser & { status: string })[]>([]);
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<AdminSecurityTab>('overview');
 
-  const loadSecurity = useCallback(async () => {
-    try {
-      const overview = await fetchAdminSecurityOverview();
-      setSecurityStats(overview.securityStats);
-      setSecurityAlerts(overview.securityAlerts);
-      setAuditLogs(overview.auditLogs as AuditLog[]);
-      setBackups(overview.backups);
-      setRules(overview.rules);
-      setUsers(overview.users as (AuthUser & { status: string })[]);
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger le bloc securite.');
-    }
-  }, [error]);
+  const securityQuery = useQuery({
+    queryKey: queryKeys.admin.security(),
+    queryFn: fetchAdminSecurityOverview,
+  });
 
   useEffect(() => {
-    loadSecurity();
-  }, [loadSecurity]);
+    if (securityQuery.isError) {
+      console.error(securityQuery.error);
+      error('Erreur', 'Impossible de charger le bloc securite.');
+    }
+  }, [error, securityQuery.error, securityQuery.isError]);
+
+  const securityStats = securityQuery.data?.securityStats ?? { totalUsers: 0, activeUsers: 0, suspendedAccounts: 0, failedLogins: 0, passwordResetProtected: 0, securityAlerts: 0 };
+  const securityAlerts = useMemo(() => securityQuery.data?.securityAlerts ?? [], [securityQuery.data?.securityAlerts]);
+  const auditLogs = useMemo(() => (securityQuery.data?.auditLogs ?? []) as AuditLog[], [securityQuery.data?.auditLogs]);
+  const backups = useMemo(() => securityQuery.data?.backups ?? [], [securityQuery.data?.backups]);
+  const rules = useMemo(() => securityQuery.data?.rules ?? [], [securityQuery.data?.rules]);
+  const users = useMemo(() => (securityQuery.data?.users ?? []) as (AuthUser & { status: string })[], [securityQuery.data?.users]);
+
+  const updateSecurityCache = (updater: (snapshot: AdminSecurityOverview) => AdminSecurityOverview) => {
+    queryClient.setQueryData<AdminSecurityOverview>(queryKeys.admin.security(), (current) => current ? updater(current) : current);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.admin.security() });
+  };
 
   const saveRule = async (id: string, value: boolean | number) => {
     try {
       const updated = await updateAdminRule(id, { value });
-      setRules((prev) => prev.map((rule) => rule.id === id ? updated : rule));
+      updateSecurityCache((snapshot) => ({
+        ...snapshot,
+        rules: snapshot.rules.map((rule) => rule.id === id ? updated : rule),
+      }));
       success('Parametre mis a jour', updated.label);
     } catch (err) {
       console.error(err);
@@ -60,7 +67,10 @@ export default function AdminSecurityPage() {
         provider: 'AWS S3',
         automatic: false,
       });
-      setBackups((prev) => [created, ...prev]);
+      updateSecurityCache((snapshot) => ({
+        ...snapshot,
+        backups: [created, ...snapshot.backups],
+      }));
       success('Sauvegarde creee', 'La sauvegarde manuelle a ete enregistree.');
     } catch (err) {
       console.error(err);
@@ -85,40 +95,7 @@ export default function AdminSecurityPage() {
     <AdminLayout>
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={[{ label: 'Admin', path: '/admin/dashboard' }, { label: 'Securite' }]} />
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Securite et protection</h1>
-            <p className="text-gray-600">Gestion de la securite de la plateforme</p>
-          </div>
-          <div className="w-14 h-14 lg:w-16 lg:h-16 bg-[#5fa6f3] rounded-2xl flex items-center justify-center self-start sm:self-auto">
-            <i className="ri-shield-check-line text-white text-2xl lg:text-3xl"></i>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-          <div className="flex border-b border-gray-200 overflow-x-auto" role="tablist" aria-label="Navigation securite admin">
-            {[
-              ['overview', 'Vue d ensemble'],
-              ['users', 'Utilisateurs'],
-              ['logs', 'Journaux'],
-              ['backups', 'Sauvegardes'],
-              ['settings', 'Parametres'],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                id={`admin-security-tab-${id}`}
-                aria-selected={activeTab === id}
-                aria-controls={`admin-security-panel-${id}`}
-                onClick={() => setActiveTab(id as typeof activeTab)}
-                className={`px-4 lg:px-6 py-4 font-medium whitespace-nowrap transition-colors text-sm ${activeTab === id ? 'text-[#5fa6f3] border-b-2 border-[#5fa6f3]' : 'text-gray-600 hover:text-gray-900'}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <AdminSecurityHeaderTabs activeTab={activeTab} onChange={setActiveTab} />
 
         {activeTab === 'overview' && (
           <div className="space-y-6" role="tabpanel" id="admin-security-panel-overview" aria-labelledby="admin-security-tab-overview">
@@ -142,7 +119,7 @@ export default function AdminSecurityPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg lg:text-xl font-bold text-gray-900">Alertes de securite</h2>
-                <button type="button" aria-label="Actualiser les alertes et indicateurs de securite" onClick={loadSecurity} className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg font-medium hover:bg-[#27346b] transition-all whitespace-nowrap text-sm">Actualiser</button>
+                <button type="button" aria-label="Actualiser les alertes et indicateurs de securite" onClick={() => void securityQuery.refetch()} className="px-4 py-2 bg-[#5fa6f3] text-white rounded-lg font-medium hover:bg-[#27346b] transition-all whitespace-nowrap text-sm">Actualiser</button>
               </div>
               <div className="space-y-4">
                 {securityAlerts.map((alert) => (
@@ -162,7 +139,7 @@ export default function AdminSecurityPage() {
                         </div>
                       </div>
                       {alert.status === 'active' && (
-                        <button type="button" aria-label={`Traiter l alerte ${alert.title}`} onClick={() => void markAlertReviewed(alert.id).then(() => { success('Alerte traitee', alert.title); loadSecurity(); })} className="px-3 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-all whitespace-nowrap">
+                        <button type="button" aria-label={`Traiter l alerte ${alert.title}`} onClick={() => void markAlertReviewed(alert.id).then(() => { success('Alerte traitee', alert.title); void securityQuery.refetch(); })} className="px-3 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b] transition-all whitespace-nowrap">
                           Traiter
                         </button>
                       )}
@@ -185,7 +162,7 @@ export default function AdminSecurityPage() {
                 <div className="flex items-center gap-3">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.status === 'active' ? 'bg-green-100 text-green-700' : user.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>{user.status}</span>
                   {user.status !== 'suspended' && (
-                    <button type="button" aria-label={`Suspendre le compte de ${user.firstName} ${user.lastName}`} onClick={() => void forceSuspendUser(user.id).then(() => { success('Compte suspendu', user.email); loadSecurity(); })} className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors whitespace-nowrap">
+                    <button type="button" aria-label={`Suspendre le compte de ${user.firstName} ${user.lastName}`} onClick={() => void forceSuspendUser(user.id).then(() => { success('Compte suspendu', user.email); void securityQuery.refetch(); })} className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors whitespace-nowrap">
                       Suspendre
                     </button>
                   )}

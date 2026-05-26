@@ -32,6 +32,18 @@ export interface AuditLogEntry {
   status: 'success' | 'failed';
 }
 
+export interface PublicInstructorCourse {
+  id: string | number;
+  title: string;
+  category: string;
+  description: string | null;
+  thumbnail: string | null;
+  duration: string | null;
+  level?: string | null;
+  current_price?: number | null;
+  is_free?: boolean;
+}
+
 export interface SecurityPayload {
   user: AuthUser;
   sessions: SecuritySession[];
@@ -71,8 +83,18 @@ export async function updateProfile(
   });
 }
 
+export async function deleteAccount(id: string) {
+  return apiRequest<{ success: boolean }>(`/auth/profile/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function fetchPublicInstructorProfile(id: string) {
   return apiRequest<AuthUser>(`/auth/public-profile/${id}`, {}, { retryOnAuth: false });
+}
+
+export async function fetchPublicInstructorCourses(id: string) {
+  return apiRequest<PublicInstructorCourse[]>(`/learning/public/instructors/${encodeURIComponent(id)}/courses`, {}, { retryOnAuth: false });
 }
 
 export async function changeAccountPassword(userId: string, currentPassword: string, newPassword: string) {

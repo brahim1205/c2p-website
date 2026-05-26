@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, Req, ServiceUnavailableException, UseGuards } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/require-permission.decorator.js';
@@ -8,6 +9,7 @@ import { PrismaService } from '../database/prisma.service.js';
 import { OutboxHandlerRegistryService } from './outbox-handler-registry.service.js';
 import { OutboxProcessorService } from './outbox.processor.service.js';
 
+@ApiTags('outbox')
 @Controller('outbox')
 @UseGuards(PermissionGuard)
 export class OutboxController {
@@ -24,7 +26,7 @@ export class OutboxController {
   }
 
   @Get('metrics')
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getMetrics(@Req() _request: AuthenticatedRequest) {
     if (!this.prisma.isConnected) {
       return {
@@ -91,7 +93,7 @@ export class OutboxController {
   }
 
   @Get('dead-letter')
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getDeadLetter(
     @Req() _request: AuthenticatedRequest,
     @Query('limit') limit?: string,
@@ -125,7 +127,7 @@ export class OutboxController {
   }
 
   @Get('deliveries')
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getDeliveries(
     @Req() _request: AuthenticatedRequest,
     @Query('limit') limit?: string,
@@ -143,7 +145,7 @@ export class OutboxController {
   }
 
   @Get('webhooks/history')
-  @RequirePermission('payments.admin.read')
+  @RequirePermission('superadmin.sensitive.read')
   async getWebhookHistory(
     @Req() _request: AuthenticatedRequest,
     @Query('limit') limit?: string,
@@ -161,7 +163,7 @@ export class OutboxController {
   }
 
   @Post('process')
-  @RequirePermission('payments.admin.write')
+  @RequirePermission('superadmin.sensitive.write')
   async processNow(
     @Req() _request: AuthenticatedRequest,
     @Query('limit') limit?: string,
@@ -172,7 +174,7 @@ export class OutboxController {
   }
 
   @Post('events/:eventId/requeue')
-  @RequirePermission('payments.admin.write')
+  @RequirePermission('superadmin.sensitive.write')
   async requeueEvent(
     @Req() request: AuthenticatedRequest,
     @Param('eventId') eventId: string,
@@ -188,7 +190,7 @@ export class OutboxController {
   }
 
   @Post('events/:eventId/ignore')
-  @RequirePermission('payments.admin.write')
+  @RequirePermission('superadmin.sensitive.write')
   async ignoreEvent(
     @Req() request: AuthenticatedRequest,
     @Param('eventId') eventId: string,
@@ -204,7 +206,7 @@ export class OutboxController {
   }
 
   @Post('events/:eventId/replay')
-  @RequirePermission('payments.admin.write')
+  @RequirePermission('superadmin.sensitive.write')
   async replayEvent(
     @Req() request: AuthenticatedRequest,
     @Param('eventId') eventId: string,

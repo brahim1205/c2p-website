@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -6,38 +7,36 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { expressPartnerInterestAndNotify, fetchOpenProjects, fetchTrackedProjects, type PartnerType, type ProjectRecord } from '@/lib/projectApi';
 import { formatShortCurrency } from '@/lib/formatters';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function PartenaireOpportunitesPage() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sectorFilter, setSectorFilter] = useState('tous');
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
 
-  const loadOpportunities = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
+  const opportunitiesQuery = useQuery({
+    queryKey: queryKeys.partenaire.opportunities(user?.id),
+    queryFn: async () => {
       const [openProjects, tracked] = await Promise.all([
         fetchOpenProjects(),
-        fetchTrackedProjects(user.id),
+        fetchTrackedProjects(user!.id),
       ]);
-      setProjects(openProjects.filter((project) => !tracked.some((item) => item.project_id === project.id)));
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les opportunites.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+      return openProjects.filter((project) => !tracked.some((item) => item.project_id === project.id));
+    },
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    loadOpportunities();
-  }, [loadOpportunities]);
+    if (opportunitiesQuery.isError) {
+      console.error(opportunitiesQuery.error);
+      error('Erreur', 'Impossible de charger les opportunites.');
+    }
+  }, [error, opportunitiesQuery.error, opportunitiesQuery.isError]);
+
+  const loading = opportunitiesQuery.isLoading;
+  const projects: ProjectRecord[] = useMemo(() => opportunitiesQuery.data ?? [], [opportunitiesQuery.data]);
 
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
@@ -63,7 +62,7 @@ export default function PartenaireOpportunitesPage() {
         result.alreadyTracked ? 'Suivi deja actif' : 'Interet manifeste',
         result.alreadyTracked ? 'Ce projet est deja dans vos suivis.' : 'L equipe C2P a ete notifiee et le projet a ete ajoute a vos suivis.',
       );
-      loadOpportunities();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.partenaire.root(user.id) });
     } catch (err) {
       console.error(err);
       error('Erreur', 'Impossible d enregistrer votre interet.');

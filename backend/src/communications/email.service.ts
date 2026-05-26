@@ -16,14 +16,14 @@ interface EmailSendPayload {
 }
 
 interface EmailProviderStatus {
-  provider: 'disabled' | 'mock' | 'resend';
+  provider: 'disabled' | 'mock' | 'resend' | 'brevo';
   configured: boolean;
   from?: string;
   replyTo?: string;
 }
 
 export interface EmailSendResult {
-  provider: 'mock' | 'resend';
+  provider: 'mock' | 'resend' | 'brevo';
   accepted: boolean;
   providerMessageId?: string | null;
   raw?: unknown;
@@ -47,7 +47,13 @@ export class EmailService {
   isConfigured() {
     if (this.config.emailProvider === 'disabled') return false;
     if (this.config.emailProvider === 'mock') return true;
-    return Boolean(this.config.emailFrom && this.config.resendApiKey);
+    if (this.config.emailProvider === 'resend') {
+      return Boolean(this.config.emailFrom && this.config.resendApiKey);
+    }
+    if (this.config.emailProvider === 'brevo') {
+      return Boolean(this.config.emailFrom && this.config.brevoApiKey);
+    }
+    return false;
   }
 
   async send(payload: EmailSendPayload): Promise<EmailSendResult> {
@@ -82,6 +88,14 @@ export class EmailService {
       throw new ServiceUnavailableException('Configuration email incomplete.');
     }
 
+    if (this.config.emailProvider === 'brevo') {
+      return this.sendWithBrevo(email, payload);
+    }
+
+    return this.sendWithResend(email, payload);
+  }
+
+  private async sendWithResend(email: string, payload: EmailSendPayload): Promise<EmailSendResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.emailTimeoutMs);
 
@@ -114,6 +128,57 @@ export class EmailService {
         accepted: true,
         providerMessageId: this.extractMessageId(body),
         raw: body,
+      };
+    } catch (error) {
+      if (error instanceof BadGatewayException || error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      throw new BadGatewayException('Passerelle email indisponible.');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private async sendWithBrevo(email: string, payload: EmailSendPayload): Promise<EmailSendResult> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.emailTimeoutMs);
+    const body: Record<string, unknown> = {
+      sender: this.parseSender(this.config.emailFrom!),
+      to: [{ email }],
+      replyTo: this.config.emailReplyTo ? this.parseSender(this.config.emailReplyTo) : undefined,
+      subject: payload.subject,
+      tags: [payload.purpose].filter(Boolean),
+      headers: payload.userId ? { 'X-C2P-User-Id': payload.userId } : undefined,
+    };
+
+    if (payload.html) {
+      body.htmlContent = payload.html;
+    } else {
+      body.textContent = payload.text;
+    }
+
+    try {
+      const response = await fetch(`${this.config.brevoBaseUrl}/v3/smtp/email`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'api-key': this.config.brevoApiKey!,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const responseBody = await this.safeJson(response);
+      if (!response.ok) {
+        throw new BadGatewayException('Echec de remise email chez Brevo.');
+      }
+
+      return {
+        provider: 'brevo',
+        accepted: true,
+        providerMessageId: this.extractMessageId(responseBody),
+        raw: responseBody,
       };
     } catch (error) {
       if (error instanceof BadGatewayException || error instanceof ServiceUnavailableException) {
@@ -167,7 +232,18 @@ export class EmailService {
   private extractMessageId(body: unknown) {
     if (!body || typeof body !== 'object') return null;
     const candidate = body as Record<string, unknown>;
-    return String(candidate.id ?? candidate.message_id ?? '') || null;
+    return String(candidate.messageId ?? candidate.id ?? candidate.message_id ?? '') || null;
+  }
+
+  private parseSender(value: string) {
+    const match = value.match(/^\s*(.*?)\s*<([^<>]+)>\s*$/);
+    if (match) {
+      return {
+        name: match[1]?.trim() || undefined,
+        email: match[2].trim(),
+      };
+    }
+    return { email: value.trim() };
   }
 
   private async safeJson(response: Response) {

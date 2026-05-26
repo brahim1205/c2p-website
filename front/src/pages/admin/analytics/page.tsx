@@ -1,31 +1,33 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { fetchAdminAnalytics, type AdminAnalyticsSnapshot } from '@/lib/adminApi';
 import { downloadCsvFile } from '@/lib/downloads';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function AdminAnalyticsPage() {
   const { success, error } = useToast();
   const [timeRange, setTimeRange] = useState('7');
-  const [loading, setLoading] = useState(true);
-  const [snapshot, setSnapshot] = useState<AdminAnalyticsSnapshot>({ stats: [], moduleStats: [], topPrestataires: [] });
 
-  const loadAnalytics = useCallback(async () => {
-    setLoading(true);
-    try {
-      setSnapshot(await fetchAdminAnalytics());
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger les statistiques administrateur.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error]);
+  const analyticsQuery = useQuery({
+    queryKey: queryKeys.admin.analytics(timeRange),
+    queryFn: fetchAdminAnalytics,
+  });
 
   useEffect(() => {
-    loadAnalytics();
-  }, [loadAnalytics, timeRange]);
+    if (analyticsQuery.isError) {
+      console.error(analyticsQuery.error);
+      error('Erreur', 'Impossible de charger les statistiques administrateur.');
+    }
+  }, [analyticsQuery.error, analyticsQuery.isError, error]);
+
+  const loading = analyticsQuery.isLoading;
+  const snapshot: AdminAnalyticsSnapshot = useMemo(
+    () => analyticsQuery.data ?? { stats: [], moduleStats: [], topPrestataires: [] },
+    [analyticsQuery.data],
+  );
 
   const handleExport = () => {
     downloadCsvFile('admin-analytics-report.csv', [
@@ -98,7 +100,7 @@ export default function AdminAnalyticsPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg lg:text-xl font-bold text-gray-900">Performance par module</h2>
-            <button onClick={loadAnalytics} className="text-sm text-[#5fa6f3] hover:text-[#27346b] font-medium">Actualiser</button>
+            <button onClick={() => void analyticsQuery.refetch()} className="text-sm text-[#5fa6f3] hover:text-[#27346b] font-medium">Actualiser</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {snapshot.moduleStats.map((module) => (

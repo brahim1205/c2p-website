@@ -151,7 +151,8 @@ export async function apiRequest<T>(
         return undefined as T;
       }
 
-      const data = await response.json() as T;
+      const rawBody = await response.text();
+      const data = (rawBody.trim() ? JSON.parse(rawBody) : null) as T;
       if (isUnsafeMethod(method)) {
         responseCache.clear();
       }

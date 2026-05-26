@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
@@ -8,40 +9,35 @@ import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
 import { fetchOwnerProjects, type ProjectRecord, updateOwnerProject } from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function PorteurMesProjetsPage() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { success, error } = useToast();
   const { gateFor } = useSubscriptionAccess(user);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('tous');
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ title: '', description: '', status: 'pre-incubation' });
   const subscriptionGate = gateFor('project_manage');
 
-  const loadProjects = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      setProjects(await fetchOwnerProjects(user.id));
-    } catch (err) {
-      console.error(err);
-      error('Erreur', 'Impossible de charger vos projets.');
-    } finally {
-      setLoading(false);
-    }
-  }, [error, user?.id]);
+  const projectsQuery = useQuery({
+    queryKey: queryKeys.porteur.projects(user?.id),
+    queryFn: () => fetchOwnerProjects(user!.id),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+    if (projectsQuery.isError) {
+      console.error(projectsQuery.error);
+      error('Erreur', 'Impossible de charger vos projets.');
+    }
+  }, [error, projectsQuery.error, projectsQuery.isError]);
+
+  const loading = projectsQuery.isLoading;
+  const projects: ProjectRecord[] = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
 
   const filteredProjects = useMemo(() => {
     return projects.filter((project) => {
@@ -77,7 +73,7 @@ export default function PorteurMesProjetsPage() {
       success('Projet mis a jour', 'Les modifications ont ete enregistrees.');
       setShowEditModal(false);
       setSelectedProject(null);
-      loadProjects();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.porteur.root(user.id) });
     } catch (err) {
       console.error(err);
       error('Erreur', 'Le projet n a pas pu etre mis a jour.');
@@ -113,9 +109,18 @@ export default function PorteurMesProjetsPage() {
         <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Porteur', path: '/dashboard/porteur' }, { label: 'Mes projets' }]} />
         <SubscriptionRequiredBanner gate={subscriptionGate} />
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes projets</h1>
-          <p className="text-gray-600">Suivi complet des projets, de l avancement et du besoin de financement.</p>
+        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes projets</h1>
+            <p className="text-gray-600">Suivi complet des projets, de l avancement et du besoin de financement.</p>
+          </div>
+          <Link
+            to="/dashboard/porteur/mes-projets/soumettre"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
+          >
+            <i className="ri-add-circle-line text-base"></i>
+            Soumettre un projet
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -191,6 +196,25 @@ export default function PorteurMesProjetsPage() {
             </div>
           ))}
         </div>
+
+        {!loading && filteredProjects.length === 0 && (
+          <div className="mt-6 rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 text-green-700">
+              <i className="ri-lightbulb-flash-line text-2xl"></i>
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">Aucun projet à afficher</h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
+              Soumettez votre premier projet pour lancer l analyse C2P, suivre son avancement et préparer le besoin de financement.
+            </p>
+            <Link
+              to="/dashboard/porteur/mes-projets/soumettre"
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+            >
+              <i className="ri-add-circle-line text-base"></i>
+              Soumettre un projet
+            </Link>
+          </div>
+        )}
 
         {showEditModal && selectedProject && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

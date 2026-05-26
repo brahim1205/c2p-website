@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -13,12 +14,14 @@ import { PrismaService } from '../database/prisma.service.js';
 import {
   appendAppRows,
   collectRowsByIds,
-  ensureWalletAccount,
   listAppRows,
   mergeRowsToPersist,
   patchAppRows,
   syncAppStoreFromDatabase,
-} from '../data/data.controller.js';
+} from '../data/data-app-store.js';
+import {
+  ensureWalletAccount,
+} from '../data/data-finance-runtime.js';
 import type { Row } from '../data/mock-store.js';
 import type { DexPayOrder } from './dexpay.service.js';
 import type { DexPayReconcileDto, DexPayWebhookDto } from './dto/dexpay.dto.js';
@@ -29,6 +32,22 @@ import {
   resolveProviderLifecycleState,
 } from './finance-domain-guards.js';
 import { ProviderRegistryService } from './provider-registry.service.js';
+import {
+  createProviderWebhookFingerprint,
+  createProviderWebhookReceiptId,
+} from './provider-webhook-fingerprint.js';
+import { upsertProviderWebhookReceipt } from './provider-webhook-receipt.persistence.js';
+import { flagProviderWebhookReplayMismatch } from './provider-webhook-replay-guard.js';
+import {
+  extractDexPayProviderEventId,
+  extractDexPayProviderReference,
+  extractDexPayProviderStatus,
+  mapDexPayStatus,
+  providerJson,
+  readProviderHeader,
+  readProviderRecord,
+  readProviderString,
+} from './provider-integration.helpers.js';
 
 type SyncSource = 'user_sync' | 'webhook' | 'reconciliation' | 'operator_reprocess' | 'operator_force_sync';
 
@@ -73,14 +92,14 @@ export class ProviderIntegrationService {
     const now = new Date();
     const intentId = `pi-dexpay-${input.providerReference}`;
     const normalizedDirection = input.direction === 'offramp' ? 'wallet_withdraw' : 'wallet_topup';
-    const metadata = this.toJson({
+    const metadata = providerJson({
       asset: input.asset ?? null,
       chain: input.chain ?? null,
       direction: input.direction,
       quote: input.quote ?? null,
       order: input.order,
     });
-    const rawPayload = this.toJson({ order: input.order, quote: input.quote ?? null });
+    const rawPayload = providerJson({ order: input.order, quote: input.quote ?? null });
     const [currentPaymentIntent, currentProviderTransaction] = await Promise.all([
       this.prisma.paymentIntent.findUnique({ where: { id: intentId } }),
       this.prisma.providerTransaction.findUnique({
@@ -92,7 +111,7 @@ export class ProviderIntegrationService {
         },
       }),
     ]);
-    const currentProviderMetadata = this.readRecord(currentProviderTransaction?.metadata) ?? {};
+    const currentProviderMetadata = readProviderRecord(currentProviderTransaction?.metadata) ?? {};
     const effectiveSettledToWallet = Boolean(currentProviderMetadata.settled_to_wallet) || Boolean(input.settledToWallet);
     const nextIntentState = normalizePaymentIntentState(input.status);
     const nextProviderLifecycle = resolveProviderLifecycleState({
@@ -118,7 +137,7 @@ export class ProviderIntegrationService {
     );
     const paymentIntentStatus = intentResolution.nextState;
     const providerTransactionStatus = providerResolution.nextState;
-    const providerMetadata = this.toJson({
+    const providerMetadata = providerJson({
       asset: input.asset ?? null,
       chain: input.chain ?? null,
       settled_to_wallet: effectiveSettledToWallet,
@@ -126,7 +145,7 @@ export class ProviderIntegrationService {
       transition_decision: providerResolution.decision,
       attempted_lifecycle_state: nextProviderLifecycle,
     });
-    const paymentIntentMetadata = this.toJson({
+    const paymentIntentMetadata = providerJson({
       asset: input.asset ?? null,
       chain: input.chain ?? null,
       direction: input.direction,
@@ -250,7 +269,7 @@ export class ProviderIntegrationService {
       amount: Number(input.order.fiatAmount ?? input.quote.fiatAmount ?? input.fiatAmount ?? 0),
       currency: 'XAF',
       method: 'dexpay',
-      status: this.mapStatus(input.order.status),
+      status: mapDexPayStatus(input.order.status),
       description: input.direction === 'onramp'
         ? `DexPay on-ramp ${input.asset}/${input.chain}`
         : `DexPay off-ramp ${input.asset}/${input.chain}`,
@@ -285,7 +304,7 @@ export class ProviderIntegrationService {
       direction: input.direction,
       amount: Number(transaction.amount ?? 0),
       currency: 'XAF',
-      status: this.mapStatus(input.order.status),
+      status: mapDexPayStatus(input.order.status),
       asset: input.asset,
       chain: input.chain,
       quote: input.quote,
@@ -308,7 +327,7 @@ export class ProviderIntegrationService {
     this.assertDexPayConfigured('la synchronisation provider');
     await syncAppStoreFromDatabase(this.prisma);
     const order = input.order ?? await this.getDexPay().getOrder(input.providerReference);
-    const status = this.mapStatus(order.status);
+    const status = mapDexPayStatus(order.status);
     const matchingTransaction = listAppRows('payment_transactions').find((row) => (
       String(row.provider_order_id ?? row.reference) === input.providerReference
       && (!input.transactionId || String(row.id) === input.transactionId)
@@ -325,13 +344,13 @@ export class ProviderIntegrationService {
 
     if (matchingTransaction) {
       const currentLifecycle = resolveProviderLifecycleState({
-        type: this.readString(matchingTransaction.type),
-        status: this.readString(matchingTransaction.status),
-        providerStatus: this.readString(matchingTransaction.provider_status),
+        type: readProviderString(matchingTransaction.type),
+        status: readProviderString(matchingTransaction.status),
+        providerStatus: readProviderString(matchingTransaction.provider_status),
         settledToWallet: Boolean(matchingTransaction.settled_to_wallet),
       });
       const attemptedLifecycle = resolveProviderLifecycleState({
-        type: this.readString(matchingTransaction.type),
+        type: readProviderString(matchingTransaction.type),
         status,
         providerStatus: order.status ?? status,
         settledToWallet: Boolean(matchingTransaction.settled_to_wallet),
@@ -403,8 +422,8 @@ export class ProviderIntegrationService {
       amount: Number(currentTransaction?.amount ?? order.fiatAmount ?? 0),
       currency: String(currentTransaction?.currency ?? 'XAF'),
       status,
-      asset: this.readString(currentTransaction?.asset) ?? undefined,
-      chain: this.readString(currentTransaction?.chain) ?? undefined,
+      asset: readProviderString(currentTransaction?.asset) ?? undefined,
+      chain: readProviderString(currentTransaction?.chain) ?? undefined,
       order,
       settledToWallet: Boolean(currentTransaction?.settled_to_wallet ?? walletSettled),
     });
@@ -445,10 +464,19 @@ export class ProviderIntegrationService {
     ip?: string | undefined;
     userAgent?: string | undefined;
   }) {
-    const providerEventId = this.extractProviderEventId(input.payload);
-    const providerReference = this.extractProviderReference(input.payload);
-    const providerStatus = this.extractProviderStatus(input.payload);
+    const providerEventId = extractDexPayProviderEventId(input.payload);
+    const providerReference = extractDexPayProviderReference(input.payload);
+    const providerStatus = extractDexPayProviderStatus(input.payload);
+    const eventType = readProviderString(input.payload.type ?? input.payload.eventType) ?? 'provider.webhook.received';
     const idempotencyKey = `dexpay:webhook:${providerEventId ?? providerReference}:${providerStatus ?? 'unknown'}`;
+    const payloadFingerprint = createProviderWebhookFingerprint({
+      provider: 'dexpay',
+      providerEventId,
+      providerReference,
+      providerStatus,
+      eventType,
+      payload: input.payload,
+    });
     const existingReceipt = await this.prisma.webhookReceipt.findFirst({
       where: {
         provider: 'dexpay',
@@ -461,6 +489,21 @@ export class ProviderIntegrationService {
     });
 
     if (existingReceipt?.status === 'processed') {
+      const existingFingerprint = readProviderString(readProviderRecord(existingReceipt.metadata)?.payloadFingerprint);
+      if (existingFingerprint && existingFingerprint !== payloadFingerprint) {
+        await flagProviderWebhookReplayMismatch(this.prisma, this.auditLogService, existingReceipt.id, {
+          requestId: input.requestId,
+          providerEventId,
+          providerReference,
+          providerStatus,
+          receivedFingerprint: payloadFingerprint,
+          storedFingerprint: existingFingerprint,
+          ip: input.ip ?? null,
+          userAgent: input.userAgent ?? null,
+        });
+        throw new ConflictException('Webhook DexPay deja traite avec un payload different.');
+      }
+
       return {
         accepted: true,
         duplicate: true,
@@ -468,35 +511,37 @@ export class ProviderIntegrationService {
       };
     }
 
-    const receiptId = existingReceipt?.id ?? `whr-dexpay-${providerEventId ?? providerReference}-${Date.now()}`;
-    await this.upsertWebhookReceipt(receiptId, {
+    const receiptId = existingReceipt?.id ?? createProviderWebhookReceiptId('dexpay', idempotencyKey);
+    await upsertProviderWebhookReceipt(this.prisma, receiptId, {
       provider: 'dexpay',
       providerEventId,
-      eventType: this.readString(input.payload.type ?? input.payload.eventType) ?? 'provider.webhook.received',
+      eventType,
       status: 'received',
       idempotencyKey,
       correlationId: input.requestId,
       rawPayload: input.payload,
       metadata: {
+        payloadFingerprint,
         ip: input.ip ?? null,
         userAgent: input.userAgent ?? null,
       },
     });
 
     const resolvedSignature = input.signature
-      || this.readHeader(input.headers, this.config.dexPayWebhookSignatureHeader)
-      || this.readHeader(input.headers, 'x-dexpay-signature');
+      || readProviderHeader(input.headers, this.config.dexPayWebhookSignatureHeader)
+      || readProviderHeader(input.headers, 'x-dexpay-signature');
     const verification = this.getDexPay().verifyWebhookSignature(input.rawBody, resolvedSignature);
     if (!verification.valid) {
-      await this.upsertWebhookReceipt(receiptId, {
+      await upsertProviderWebhookReceipt(this.prisma, receiptId, {
         provider: 'dexpay',
         providerEventId,
-        eventType: this.readString(input.payload.type ?? input.payload.eventType) ?? 'provider.webhook.received',
+        eventType,
         status: 'rejected',
         idempotencyKey,
         correlationId: input.requestId,
         rawPayload: input.payload,
         metadata: {
+          payloadFingerprint,
           verification: verification.reason,
           ip: input.ip ?? null,
           userAgent: input.userAgent ?? null,
@@ -507,15 +552,16 @@ export class ProviderIntegrationService {
     }
 
     if (!providerReference) {
-      await this.upsertWebhookReceipt(receiptId, {
+      await upsertProviderWebhookReceipt(this.prisma, receiptId, {
         provider: 'dexpay',
         providerEventId,
-        eventType: this.readString(input.payload.type ?? input.payload.eventType) ?? 'provider.webhook.received',
+        eventType,
         status: 'failed',
         idempotencyKey,
         correlationId: input.requestId,
         rawPayload: input.payload,
         metadata: {
+          payloadFingerprint,
           verification: verification.reason,
         },
         error: 'provider_reference_missing',
@@ -532,16 +578,17 @@ export class ProviderIntegrationService {
         allowMissingTransaction: true,
       });
 
-      await this.upsertWebhookReceipt(receiptId, {
+      await upsertProviderWebhookReceipt(this.prisma, receiptId, {
         provider: 'dexpay',
         providerEventId,
-        eventType: this.readString(input.payload.type ?? input.payload.eventType) ?? 'provider.webhook.received',
+        eventType,
         status: 'processed',
         idempotencyKey,
         correlationId: input.requestId,
         rawPayload: input.payload,
         processedAt: new Date(),
         metadata: {
+          payloadFingerprint,
           verification: verification.reason,
           providerReference,
           matched: result.matched,
@@ -558,16 +605,17 @@ export class ProviderIntegrationService {
         matched: result.matched,
       };
     } catch (error) {
-      await this.upsertWebhookReceipt(receiptId, {
+      await upsertProviderWebhookReceipt(this.prisma, receiptId, {
         provider: 'dexpay',
         providerEventId,
-        eventType: this.readString(input.payload.type ?? input.payload.eventType) ?? 'provider.webhook.received',
+        eventType,
         status: 'failed',
         idempotencyKey,
         correlationId: input.requestId,
         rawPayload: input.payload,
         processedAt: new Date(),
         metadata: {
+          payloadFingerprint,
           providerReference,
           verification: verification.reason,
         },
@@ -590,7 +638,7 @@ export class ProviderIntegrationService {
         startedAt,
         windowStart: new Date(startedAt.getTime() - 7 * 24 * 60 * 60 * 1000),
         windowEnd: startedAt,
-        metadata: this.toJson({
+        metadata: providerJson({
           limit: payload.limit,
           onlyPending: payload.onlyPending,
           providerReference: payload.providerReference ?? null,
@@ -621,7 +669,7 @@ export class ProviderIntegrationService {
           data: {
             status: 'completed',
             completedAt: new Date(),
-            summary: this.toJson(summary),
+            summary: providerJson(summary),
           },
         });
 
@@ -675,7 +723,7 @@ export class ProviderIntegrationService {
         data: {
           status: summary.failed > 0 ? 'completed_with_errors' : 'completed',
           completedAt: new Date(),
-          summary: this.toJson(summary),
+          summary: providerJson(summary),
         },
       });
 
@@ -709,9 +757,9 @@ export class ProviderIntegrationService {
       throw new NotFoundException('Webhook receipt DexPay introuvable.');
     }
 
-    const rawPayload = this.readRecord(receipt.rawPayload) as DexPayWebhookDto | null;
-    const providerReference = this.extractProviderReference(rawPayload ?? {})
-      ?? this.readString(this.readRecord(receipt.metadata)?.providerReference);
+    const rawPayload = readProviderRecord(receipt.rawPayload) as DexPayWebhookDto | null;
+    const providerReference = extractDexPayProviderReference(rawPayload ?? {})
+      ?? readProviderString(readProviderRecord(receipt.metadata)?.providerReference);
     if (!providerReference) {
       throw new BadRequestException('Reference provider absente sur ce webhook receipt.');
     }
@@ -725,7 +773,7 @@ export class ProviderIntegrationService {
         allowMissingTransaction: true,
       });
 
-      await this.upsertWebhookReceipt(receipt.id, {
+      await upsertProviderWebhookReceipt(this.prisma, receipt.id, {
         provider: 'dexpay',
         providerEventId: receipt.providerEventId,
         eventType: receipt.eventType,
@@ -735,7 +783,7 @@ export class ProviderIntegrationService {
         rawPayload: receipt.rawPayload,
         processedAt: new Date(),
         metadata: {
-          ...(this.readRecord(receipt.metadata) ?? {}),
+          ...(readProviderRecord(receipt.metadata) ?? {}),
           operatorAction: 'reprocess',
           operatorReason: input.reason ?? 'manual_reprocess',
           operatorActorId: input.actorId,
@@ -769,7 +817,7 @@ export class ProviderIntegrationService {
         status: result.status,
       };
     } catch (error) {
-      await this.upsertWebhookReceipt(receipt.id, {
+      await upsertProviderWebhookReceipt(this.prisma, receipt.id, {
         provider: 'dexpay',
         providerEventId: receipt.providerEventId,
         eventType: receipt.eventType,
@@ -779,7 +827,7 @@ export class ProviderIntegrationService {
         rawPayload: receipt.rawPayload,
         processedAt: new Date(),
         metadata: {
-          ...(this.readRecord(receipt.metadata) ?? {}),
+          ...(readProviderRecord(receipt.metadata) ?? {}),
           operatorAction: 'reprocess',
           operatorReason: input.reason ?? 'manual_reprocess',
           operatorActorId: input.actorId,
@@ -884,7 +932,7 @@ export class ProviderIntegrationService {
       lifecycleStatus: resolveProviderLifecycleState({
         status: row.providerStatus,
         providerStatus: row.providerStatus,
-        settledToWallet: Boolean(this.readRecord(row.metadata)?.settled_to_wallet),
+        settledToWallet: Boolean(readProviderRecord(row.metadata)?.settled_to_wallet),
       }),
     })));
   }
@@ -903,123 +951,4 @@ export class ProviderIntegrationService {
     });
   }
 
-  private async upsertWebhookReceipt(
-    receiptId: string,
-    input: {
-      provider: string;
-      providerEventId?: string | null;
-      eventType?: string | null;
-      status: string;
-      idempotencyKey?: string | null;
-      correlationId?: string | null;
-      rawPayload?: unknown;
-      metadata?: Record<string, unknown>;
-      processedAt?: Date;
-      error?: string | null;
-    },
-  ) {
-    const existing = await this.prisma.webhookReceipt.findFirst({
-      where: {
-        provider: input.provider,
-        OR: [
-          input.providerEventId ? { providerEventId: input.providerEventId } : undefined,
-          input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined,
-          { id: receiptId },
-        ].filter(Boolean) as Prisma.WebhookReceiptWhereInput[],
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    const id = existing?.id ?? receiptId;
-
-    await this.prisma.webhookReceipt.upsert({
-      where: { id },
-      update: {
-        provider: input.provider,
-        providerEventId: input.providerEventId ?? undefined,
-        eventType: input.eventType ?? undefined,
-        status: input.status,
-        idempotencyKey: input.idempotencyKey ?? undefined,
-        correlationId: input.correlationId ?? undefined,
-        processedAt: input.processedAt ?? undefined,
-        error: input.error ?? undefined,
-        rawPayload: input.rawPayload ? this.toJson(input.rawPayload) : undefined,
-        metadata: this.toJson(input.metadata ?? {}),
-      },
-      create: {
-        id,
-        provider: input.provider,
-        providerEventId: input.providerEventId ?? undefined,
-        eventType: input.eventType ?? undefined,
-        status: input.status,
-        idempotencyKey: input.idempotencyKey ?? undefined,
-        correlationId: input.correlationId ?? undefined,
-        processedAt: input.processedAt ?? undefined,
-        error: input.error ?? undefined,
-        rawPayload: this.toJson(input.rawPayload ?? {}),
-        metadata: this.toJson(input.metadata ?? {}),
-      },
-    });
-  }
-
-  private extractProviderReference(payload: DexPayWebhookDto) {
-    return this.readString(
-      payload.orderId
-      ?? payload.order_id
-      ?? payload.reference
-      ?? payload.id
-      ?? this.readRecord(payload.data)?.id
-      ?? this.readRecord(payload.order)?.id,
-    );
-  }
-
-  private extractProviderEventId(payload: DexPayWebhookDto) {
-    return this.readString(
-      payload.eventId
-      ?? payload.event_id
-      ?? this.readRecord(payload.event)?.id
-      ?? this.readRecord(payload.data)?.eventId,
-    );
-  }
-
-  private extractProviderStatus(payload: DexPayWebhookDto) {
-    return this.readString(
-      payload.status
-      ?? payload.orderStatus
-      ?? payload.order_status
-      ?? this.readRecord(payload.data)?.status
-      ?? this.readRecord(payload.order)?.status,
-    );
-  }
-
-  private mapStatus(status?: string) {
-    const normalized = String(status ?? '').trim().toUpperCase();
-    if (['COMPLETED', 'SUCCESS', 'SETTLED'].includes(normalized)) return 'completed';
-    if (['FAILED', 'ERROR', 'REJECTED', 'EXPIRED'].includes(normalized)) return 'failed';
-    if (['CANCELLED', 'CANCELED'].includes(normalized)) return 'cancelled';
-    return 'pending';
-  }
-
-  private readRecord(value: unknown): Record<string, unknown> | null {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return value as Record<string, unknown>;
-    }
-    return null;
-  }
-
-  private readString(value: unknown) {
-    if (value === null || value === undefined) return null;
-    const normalized = String(value).trim();
-    return normalized.length > 0 ? normalized : null;
-  }
-
-  private readHeader(headers: Record<string, string | string[] | undefined> | undefined, name: string) {
-    if (!headers) return undefined;
-    const value = headers[name.toLowerCase()] ?? headers[name];
-    if (Array.isArray(value)) return value[0];
-    return value;
-  }
-
-  private toJson(value: unknown) {
-    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-  }
 }

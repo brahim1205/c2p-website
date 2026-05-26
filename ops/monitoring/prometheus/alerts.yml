@@ -37,6 +37,33 @@ groups:
           summary: "Erreurs frontend detectees"
           description: "Plus de 5 erreurs frontend ont ete remontees en 10 minutes."
 
+      - alert: C2PUploadRejectionSpike
+        expr: sum(increase(c2p_uploads_total{status="rejected"}[10m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hausse des uploads refuses"
+          description: "Plus de 10 uploads ont ete refuses en 10 minutes. Verifier les types MIME, extensions et tailles envoyees."
+
+      - alert: C2PUploadTypePolicySpike
+        expr: sum(increase(c2p_uploads_total{status="rejected",reason="type_policy"}[10m])) > 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Uploads suspects refuses par politique de type"
+          description: "Plusieurs fichiers ont ete refuses pour type MIME ou extension incoherente."
+
+      - alert: C2PUploadVolumeHigh
+        expr: sum(increase(c2p_upload_bytes_total[30m])) > 10737418240
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Volume upload eleve"
+          description: "Plus de 10 Go de fichiers ont ete acceptes sur les 30 dernieres minutes."
+
       - alert: C2PExcessive401Rate
         expr: sum(rate(c2p_http_requests_total{status_code="401"}[5m])) > 0.3
         for: 5m
@@ -63,6 +90,33 @@ groups:
         annotations:
           summary: "Hausse des 429"
           description: "Le backend applique fortement le rate limiting."
+
+      - alert: C2PRateLimitBlockedSpike
+        expr: sum(increase(c2p_rate_limit_blocked_total[10m])) > 25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pic de requetes bloquees"
+          description: "Le rate limiting a bloque plus de 25 requetes en 10 minutes. Verifier abus API, brute force ou client frontend instable."
+
+      - alert: C2PLegacyDataMutationAttempt
+        expr: sum(increase(c2p_legacy_data_api_requests_total{status="blocked"}[10m])) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mutation legacy /data bloquee"
+          description: "Au moins une requete /data a ete bloquee par DATA_LEGACY_API_MODE. Identifier le client restant avant de passer en disabled."
+
+      - alert: C2PLegacyDataApiStillUsed
+        expr: sum(increase(c2p_legacy_data_api_requests_total{status="allowed"}[30m])) > 20
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API legacy /data encore utilisee"
+          description: "Le legacy /data est encore appele. Migrer le flux vers un endpoint metier avant suppression."
 
       - alert: C2PBruteforceSuspected
         expr: sum(rate(c2p_http_requests_total{route="/api/auth/login",status_code="401"}[5m])) > 0.2

@@ -1,5 +1,9 @@
-import { useEffect, useState } from 'react';
-import { loadXP } from '../../apprenant/cours/[id]/storage';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchApprenantProgressionSnapshot } from '@/lib/apprenantDashboardApi';
+import { deriveLearningXp } from '@/lib/learningAchievements';
+import { useAuth } from '@/hooks/useAuth';
+import { queryKeys } from '@/lib/queryKeys';
 
 interface Level {
   name: string;
@@ -33,8 +37,16 @@ function getNextLevel(level: Level): Level | null {
 }
 
 export default function LevelSystem() {
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const xp = loadXP();
+  const progressionQuery = useQuery({
+    queryKey: queryKeys.apprenant.progression(user?.id),
+    queryFn: () => fetchApprenantProgressionSnapshot(user!.id),
+    enabled: Boolean(user?.id),
+  });
+  const xp = useMemo(() => (
+    progressionQuery.data ? deriveLearningXp(progressionQuery.data) : 0
+  ), [progressionQuery.data]);
   const currentLevel = getLevelForXP(xp);
   const nextLevel = getNextLevel(currentLevel);
 

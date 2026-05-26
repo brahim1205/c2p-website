@@ -1,3 +1,5 @@
+export { downloadCertificatePdf } from './downloads/certificatePdf';
+
 type DownloadValue = string | number | boolean | null | undefined;
 type CsvRow = Record<string, DownloadValue>;
 

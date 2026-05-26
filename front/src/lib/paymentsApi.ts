@@ -75,6 +75,8 @@ export interface SubscriptionActivatePayload {
   plan_id: string;
   auto_renew?: boolean;
   renew_now?: boolean;
+  trial?: boolean;
+  trial_days?: number;
 }
 
 export interface ProviderVisibilityPurchasePayload {

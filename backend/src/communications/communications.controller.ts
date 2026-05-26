@@ -6,6 +6,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { CommunicationsService } from './communications.service.js';
 import { EmailService } from './email.service.js';
@@ -24,6 +25,7 @@ import {
   type SmsTestDto,
 } from './dto/communications.dto.js';
 
+@ApiTags('communications')
 @Controller('communications')
 @UseGuards(PermissionGuard)
 @RequirePermission('communications.manage')

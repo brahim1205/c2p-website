@@ -57,7 +57,7 @@ async function main() {
   const { cookieJar, csrfToken } = await loginAs('apprenant@c2p.sn');
   assert(csrfToken, 'missing csrf cookie for apprenant');
 
-  const ownNotifications = await readJson('/data/notifications', {
+  const ownNotifications = await readJson('/notifications/me', {
     headers: { Cookie: cookieJar },
   });
   assert(ownNotifications.response.ok, `expected 200 on apprenant notifications, got ${ownNotifications.response.status}`);
@@ -66,7 +66,23 @@ async function main() {
     'apprenant must only receive own notifications',
   );
 
-  const spoofedNotification = await request('/data/notifications', {
+  const legacyNotificationWrite = await request('/data/notifications', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: cookieJar,
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify({
+      user_id: 'usr-apprenant',
+      type: 'system',
+      title: 'Ecriture legacy interdite',
+      message: 'Cette ecriture doit passer par /notifications.',
+    }),
+  });
+  assert(legacyNotificationWrite.status === 400, `expected 400 on legacy notification write, got ${legacyNotificationWrite.status}`);
+
+  const spoofedNotification = await request('/notifications', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -82,7 +98,7 @@ async function main() {
   });
   assert(spoofedNotification.status === 401, `expected 401 on foreign notification create, got ${spoofedNotification.status}`);
 
-  const forbiddenMessageNotification = await request('/data/notifications', {
+  const forbiddenMessageNotification = await request('/notifications', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -99,7 +115,7 @@ async function main() {
   assert(forbiddenMessageNotification.status === 401, `expected 401 on forbidden direct message notification, got ${forbiddenMessageNotification.status}`);
 
   const title = `smoke-notification-${Date.now()}`;
-  const createdNotification = await readJson('/data/notifications', {
+  const createdNotification = await readJson('/notifications', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -119,7 +135,7 @@ async function main() {
 
   const { cookieJar: formateurCookies, csrfToken: formateurCsrf } = await loginAs('formateur@c2p.sn');
   assert(formateurCsrf, 'missing csrf cookie for formateur');
-  const directLearnerNotification = await readJson('/data/notifications', {
+  const directLearnerNotification = await readJson('/notifications', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -138,7 +154,7 @@ async function main() {
   const { cookieJar: clientCookies, csrfToken: clientCsrf } = await loginAs('client@c2p.sn');
   assert(clientCsrf, 'missing csrf cookie for client');
 
-  const forbiddenClientSystemNotification = await request('/data/notifications', {
+  const forbiddenClientSystemNotification = await request('/notifications', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -157,7 +173,7 @@ async function main() {
     `expected 401 on client -> prestataire system notification, got ${forbiddenClientSystemNotification.status}`,
   );
 
-  const allowedClientReviewNotification = await readJson('/data/notifications', {
+  const allowedClientReviewNotification = await readJson('/notifications', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -177,24 +193,26 @@ async function main() {
     `expected 200 on client -> prestataire review notification, got ${allowedClientReviewNotification.response.status}`,
   );
 
-  const markedRead = await readJson(`/data/notifications?eq_id=${encodeURIComponent(String(createdNotification.payload.id))}&eq_user_id=usr-apprenant`, {
+  const markedRead = await readJson(`/notifications/${encodeURIComponent(String(createdNotification.payload.id))}/read`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       Cookie: cookieJar,
       'X-CSRF-Token': csrfToken,
     },
-    body: JSON.stringify({ is_read: true }),
   });
   assert(markedRead.response.ok, `expected 200 on notification mark-as-read, got ${markedRead.response.status}`);
 
-  const afterRead = await readJson(`/data/notifications?eq_id=${encodeURIComponent(String(createdNotification.payload.id))}`, {
+  const afterRead = await readJson('/notifications/me', {
     headers: { Cookie: cookieJar },
   });
   assert(afterRead.response.ok, `expected 200 on notification refetch, got ${afterRead.response.status}`);
-  assert(afterRead.payload[0]?.is_read === true, 'notification must be marked as read after PATCH');
+  assert(
+    afterRead.payload.find((row) => String(row.id) === String(createdNotification.payload.id))?.is_read === true,
+    'notification must be marked as read after PATCH',
+  );
 
-  const deleted = await request(`/data/notifications?eq_id=${encodeURIComponent(String(createdNotification.payload.id))}&eq_user_id=usr-apprenant`, {
+  const deleted = await request(`/notifications/${encodeURIComponent(String(createdNotification.payload.id))}`, {
     method: 'DELETE',
     headers: {
       Cookie: cookieJar,
@@ -203,11 +221,14 @@ async function main() {
   });
   assert(deleted.ok, `expected 200 on notification delete, got ${deleted.status}`);
 
-  const afterDelete = await readJson(`/data/notifications?eq_id=${encodeURIComponent(String(createdNotification.payload.id))}`, {
+  const afterDelete = await readJson('/notifications/me', {
     headers: { Cookie: cookieJar },
   });
   assert(afterDelete.response.ok, `expected 200 on notification post-delete fetch, got ${afterDelete.response.status}`);
-  assert(afterDelete.payload.length === 0, 'deleted notification must not remain visible');
+  assert(
+    !afterDelete.payload.some((row) => String(row.id) === String(createdNotification.payload.id)),
+    'deleted notification must not remain visible',
+  );
 
   console.log('notification-flow-check: ok');
 }
