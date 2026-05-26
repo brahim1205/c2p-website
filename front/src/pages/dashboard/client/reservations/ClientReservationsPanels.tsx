@@ -167,8 +167,14 @@ export function ProblemReportModal({
   if (!reportForm.bookingId || !reportTarget) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+      <button
+        type="button"
+        aria-label="Fermer le signalement"
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold text-gray-900">Signaler un problème</h3>

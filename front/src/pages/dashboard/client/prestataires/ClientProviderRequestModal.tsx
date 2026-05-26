@@ -18,8 +18,14 @@ export function ClientProviderRequestModal({
   submitRequest: () => void | Promise<void>;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center" onClick={closeRequestModal}>
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+      <button
+        type="button"
+        aria-label="Fermer la demande"
+        className="absolute inset-0 bg-black/50"
+        onClick={closeRequestModal}
+      />
+      <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-bold text-gray-900">

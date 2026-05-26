@@ -108,9 +108,9 @@ export function SkeletonChart({ className = '' }: { className?: string }) {
             key={i}
             className="flex-1 bg-gray-200 rounded-t-lg"
             style={{
-              height: `${30 + Math.random() * 60}%`,
+              height: `${35 + ((i * 17) % 45)}%`,
               animationDelay: `${i * 80}ms`,
-              opacity: 0.6 + Math.random() * 0.4,
+              opacity: 0.65 + ((i % 3) * 0.1),
             }}
           />
         ))}

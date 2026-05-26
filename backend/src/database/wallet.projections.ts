@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type {
   ChargeProviderVisibilityInput,
   ChargeSubscriptionInput,
@@ -13,7 +14,7 @@ import type {
 } from './wallet.types.js';
 
 export function nextFinancialOperationId(kind = 'op') {
-  return `finop_${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return `finop_${kind}_${Date.now()}_${randomUUID()}`;
 }
 
 function toAmount(value: unknown) {

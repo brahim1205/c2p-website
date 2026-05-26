@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomInt, randomUUID } from 'crypto';
 import type { StoredUser } from './auth.store.js';
 
 type EditableUserPatchKey = keyof Omit<
@@ -76,7 +76,7 @@ export function hashAuthToken(token: string) {
 }
 
 export function createAuthId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}-${Date.now()}-${randomUUID()}`;
 }
 
 export function randomAuthToken(bytes = 32) {
@@ -84,5 +84,5 @@ export function randomAuthToken(bytes = 32) {
 }
 
 export function randomNumericSecurityCode() {
-  return `${Math.floor(100000 + Math.random() * 900000)}`;
+  return `${randomInt(100000, 1000000)}`;
 }

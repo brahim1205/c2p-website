@@ -67,6 +67,18 @@ import {
   toPrismaJson,
 } from './auth.service-helpers.js';
 
+function isBasicEmail(value: string) {
+  const atIndex = value.indexOf('@');
+  const lastAtIndex = value.lastIndexOf('@');
+  if (atIndex <= 0 || atIndex !== lastAtIndex) return false;
+  const domain = value.slice(atIndex + 1);
+  return domain.includes('.') && !value.includes(' ') && !value.includes('\t') && !value.includes('\n');
+}
+
+function isSixDigitCode(value: string) {
+  return value.length === 6 && Array.from(value).every((char) => char >= '0' && char <= '9');
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -898,7 +910,7 @@ export class AuthService {
   async forgotPassword(payload: { email?: string }, request: AuthenticatedRequest) {
     return this.runSerializedMutation(async () => {
       const email = payload.email?.trim().toLowerCase();
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!email || !isBasicEmail(email)) {
         throw new BadRequestException('Adresse email invalide.');
       }
 
@@ -963,10 +975,10 @@ export class AuthService {
       const code = payload.code?.trim() ?? '';
       const newPassword = payload.newPassword ?? '';
 
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!email || !isBasicEmail(email)) {
         throw new BadRequestException('Adresse email invalide.');
       }
-      if (!/^\d{6}$/.test(code)) {
+      if (!isSixDigitCode(code)) {
         throw new BadRequestException('Code de verification invalide.');
       }
 

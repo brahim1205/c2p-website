@@ -25,16 +25,24 @@ function getWeeklyActivity(enrollments: ApprenantEnrollment[]): { label: string;
 }
 
 function parseDurationToMinutes(d: string): number {
-  let total = 0;
-  const hMatch = d.match(/(\d+)\s*h/);
-  const mMatch = d.match(/(\d+)\s*min/);
-  if (hMatch) total += parseInt(hMatch[1], 10) * 60;
-  if (mMatch) total += parseInt(mMatch[1], 10);
+  let total = readDurationUnit(d, 'h') * 60;
+  total += readDurationUnit(d, 'min');
   if (total === 0) {
     const num = parseInt(d, 10);
     if (!isNaN(num)) total = num;
   }
   return total;
+}
+
+function readDurationUnit(duration: string, unit: string) {
+  const unitIndex = duration.indexOf(unit);
+  if (unitIndex <= 0) return 0;
+  let cursor = unitIndex - 1;
+  while (cursor >= 0 && duration[cursor] === ' ') cursor -= 1;
+  let start = cursor;
+  while (start >= 0 && duration[start] >= '0' && duration[start] <= '9') start -= 1;
+  const value = Number(duration.slice(start + 1, cursor + 1));
+  return Number.isFinite(value) ? value : 0;
 }
 
 export default function LearningStats() {

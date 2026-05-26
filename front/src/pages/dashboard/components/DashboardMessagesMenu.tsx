@@ -47,7 +47,12 @@ export function DashboardMessagesMenu({
 
       {messagesOpen && (
         <>
-          <div className="fixed inset-0 z-30 bg-black/10" onClick={() => setMessagesOpen(false)}></div>
+          <button
+            type="button"
+            aria-label="Fermer les messages"
+            className="fixed inset-0 z-30 bg-black/10"
+            onClick={() => setMessagesOpen(false)}
+          />
           <div className="absolute right-0 top-12 z-40 flex max-h-[520px] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
             <div className="border-b border-gray-200 p-4">
               <div className="flex items-center justify-between gap-3">

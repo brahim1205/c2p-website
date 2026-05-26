@@ -200,7 +200,7 @@ export class S3UploadStorageProvider implements UploadStorageProvider {
       'x-amz-content-sha256': payloadHash,
       'x-amz-date': amzDate,
     };
-    const signedHeaderNames = Object.keys(headers).sort();
+    const signedHeaderNames = Object.keys(headers).sort((left, right) => left.localeCompare(right));
     const canonicalHeaders = signedHeaderNames
       .map((header) => `${header}:${headers[header].trim()}\n`)
       .join('');

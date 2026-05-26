@@ -22,6 +22,14 @@ interface EmailProviderStatus {
   replyTo?: string;
 }
 
+function isBasicEmail(value: string) {
+  const atIndex = value.indexOf('@');
+  const lastAtIndex = value.lastIndexOf('@');
+  if (atIndex <= 0 || atIndex !== lastAtIndex) return false;
+  const domain = value.slice(atIndex + 1);
+  return domain.includes('.') && !value.includes(' ') && !value.includes('\t') && !value.includes('\n');
+}
+
 export interface EmailSendResult {
   provider: 'mock' | 'resend' | 'brevo';
   accepted: boolean;
@@ -219,7 +227,7 @@ export class EmailService {
 
   private normalizeEmail(email: string) {
     const normalized = String(email ?? '').trim().toLowerCase();
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ? normalized : null;
+    return isBasicEmail(normalized) ? normalized : null;
   }
 
   private maskEmail(email: string) {
@@ -236,11 +244,13 @@ export class EmailService {
   }
 
   private parseSender(value: string) {
-    const match = value.match(/^\s*(.*?)\s*<([^<>]+)>\s*$/);
-    if (match) {
+    const trimmed = value.trim();
+    const openBracketIndex = trimmed.indexOf('<');
+    const closeBracketIndex = trimmed.lastIndexOf('>');
+    if (openBracketIndex > 0 && closeBracketIndex === trimmed.length - 1) {
       return {
-        name: match[1]?.trim() || undefined,
-        email: match[2].trim(),
+        name: trimmed.slice(0, openBracketIndex).trim() || undefined,
+        email: trimmed.slice(openBracketIndex + 1, closeBracketIndex).trim(),
       };
     }
     return { email: value.trim() };

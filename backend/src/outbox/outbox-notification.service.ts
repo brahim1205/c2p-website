@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { appendAppRows, collectRowsByIds, mergeRowsToPersist, syncAppStoreFromDatabase } from '../data/data-app-store.js';
 import type { Row } from '../data/mock-store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
@@ -18,7 +19,7 @@ export class OutboxNotificationService {
 
     await syncAppStoreFromDatabase(this.prisma, { force: true });
     const rows = notifications.map((notification) => ({
-      id: String(notification.id ?? `notif-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`),
+      id: String(notification.id ?? `notif-${Date.now()}-${randomUUID()}`),
       type: 'communication',
       is_read: false,
       created_at: new Date().toISOString(),

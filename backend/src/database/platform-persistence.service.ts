@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from './prisma.service.js';
 import { AuditLogService } from './audit-log.service.js';
 import type { Row } from '../data/mock-store.js';
@@ -262,7 +263,7 @@ export class PlatformPersistenceService {
   private async persistOutboxEvents(tx: Prisma.TransactionClient, events: OutboxEventInput[]) {
     for (const rawEvent of events) {
       const event = normalizeOutboxEventInput(rawEvent);
-      const eventId = this.toString(event.id || `outbox-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+      const eventId = this.toString(event.id || `outbox-${Date.now()}-${randomUUID()}`);
       const idempotencyKey = event.idempotencyKey ?? event.dedupeKey ?? undefined;
       if (idempotencyKey) {
         await tx.outboxEvent.upsert({

@@ -82,16 +82,24 @@ export function formatLearningTime(totalSeconds: number) {
 
 function parseDurationToMinutes(duration: string | null | undefined) {
   if (!duration) return 0;
-  let total = 0;
-  const hourMatch = duration.match(/(\d+)\s*h/);
-  const minuteMatch = duration.match(/(\d+)\s*min/);
-  if (hourMatch) total += Number(hourMatch[1]) * 60;
-  if (minuteMatch) total += Number(minuteMatch[1]);
+  let total = readDurationUnit(duration, 'h') * 60;
+  total += readDurationUnit(duration, 'min');
   if (total === 0) {
-    const numeric = Number(duration.replace(/[^\d]/g, ''));
+    const numeric = Number(Array.from(duration).filter((char) => char >= '0' && char <= '9').join(''));
     if (Number.isFinite(numeric)) total = numeric;
   }
   return total;
+}
+
+function readDurationUnit(duration: string, unit: string) {
+  const unitIndex = duration.indexOf(unit);
+  if (unitIndex <= 0) return 0;
+  let cursor = unitIndex - 1;
+  while (cursor >= 0 && duration[cursor] === ' ') cursor -= 1;
+  let start = cursor;
+  while (start >= 0 && duration[start] >= '0' && duration[start] <= '9') start -= 1;
+  const value = Number(duration.slice(start + 1, cursor + 1));
+  return Number.isFinite(value) ? value : 0;
 }
 
 function getCategoryPresentation(category: string) {

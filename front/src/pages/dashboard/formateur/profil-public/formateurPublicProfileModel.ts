@@ -1,4 +1,5 @@
 import type { AuthUser, CertificationItem, PaymentSettings, PortfolioItem, SocialLinks } from '@/lib/roles';
+import { createClientRandomId } from '@/lib/randomId';
 
 export type ProfileFormState = Pick<
   AuthUser,
@@ -21,7 +22,7 @@ export interface PublicProfileSnapshot {
 
 export function emptyCertification(): CertificationItem {
   return {
-    id: `cert-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createClientRandomId('cert'),
     title: '',
     issuer: '',
     year: '',
@@ -31,7 +32,7 @@ export function emptyCertification(): CertificationItem {
 
 export function emptyPortfolioItem(): PortfolioItem {
   return {
-    id: `portfolio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createClientRandomId('portfolio'),
     title: '',
     summary: '',
     image: '',

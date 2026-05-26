@@ -27,7 +27,7 @@ export function ClientOrderCard({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="cursor-pointer p-5 hover:bg-gray-50" onClick={onToggle}>
+      <button type="button" className="block w-full cursor-pointer p-5 text-left hover:bg-gray-50" onClick={onToggle}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
@@ -47,11 +47,11 @@ export function ClientOrderCard({
               <p className="mt-2 text-sm text-gray-600">{order.items.map((item) => item.name).join(', ')}</p>
             </div>
           </div>
-          <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-200">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-200">
             <i className={`ri-arrow-down-s-line text-lg text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}></i>
-          </button>
+          </span>
         </div>
-      </div>
+      </button>
 
       {isExpanded ? (
         <ClientOrderDetails

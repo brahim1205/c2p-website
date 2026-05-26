@@ -1,6 +1,7 @@
 import { createContext, useState, useCallback, ReactNode } from 'react';
 import { ToastData } from './Toast';
 import ToastContainer from './ToastContainer';
+import { createClientRandomId } from '@/lib/randomId';
 
 interface ToastContextValue {
   addToast: (toast: Omit<ToastData, 'id'>) => void;
@@ -12,7 +13,7 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastData[]>([]);
 
   const addToast = useCallback((toast: Omit<ToastData, 'id'>) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const id = createClientRandomId('toast');
     setToasts((prev) => [...prev, { ...toast, id }]);
   }, []);
 

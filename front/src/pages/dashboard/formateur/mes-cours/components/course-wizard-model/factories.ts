@@ -8,14 +8,12 @@ import type {
   SectionDraft,
   WizardDraftState,
 } from '../courseWizardTypes';
+import { createClientRandomId } from '@/lib/randomId';
 
 export const LEGACY_DRAFT_KEY_PREFIX = 'c2p:trainer-course-draft:';
 
 export function createLocalId(prefix: string) {
-  const suffix = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  return `${prefix}-${suffix}`;
+  return createClientRandomId(prefix);
 }
 
 export function makeChoiceDraft(label = '', value = '', isCorrect = false): QuestionChoiceDraft {

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/useToast';
 import { uploadImageToServer } from '@/lib/uploadApi';
+import { createClientRandomId } from '@/lib/randomId';
 
 // Singleton backend client
 
@@ -52,7 +53,7 @@ export default function AvatarUpload({
       setUploadProgress(0);
 
       try {
-        const filename = `avatar-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const filename = createClientRandomId('avatar');
         const uploaded = await uploadImageToServer(file, {
           folder: 'c2p/avatars',
           filename,

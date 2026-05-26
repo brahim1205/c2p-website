@@ -50,7 +50,7 @@ export function deriveLearningStreak(enrollments: ApprenantEnrollment[]) {
     enrollments
       .map((enrollment) => String(enrollment.last_active ?? '').slice(0, 10))
       .filter(Boolean),
-  )).sort();
+  )).sort((left, right) => left.localeCompare(right));
   if (activeDays.length === 0) return 0;
 
   const today = new Date().toISOString().slice(0, 10);

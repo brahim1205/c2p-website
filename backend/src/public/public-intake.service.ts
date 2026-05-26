@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service.js';
 import { buildNotificationDispatchOutboxEvent } from '../notifications/notification-outbox.js';
 import { createAppNotificationRow } from '../notifications/notification-payloads.js';
@@ -29,7 +30,6 @@ interface NewsletterSubscription {
 @Injectable()
 export class PublicIntakeService {
   private readonly logger = new Logger(PublicIntakeService.name);
-  private static readonly EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -54,11 +54,19 @@ export class PublicIntakeService {
   }
 
   private createId(prefix: string) {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `${prefix}-${Date.now()}-${randomUUID()}`;
   }
 
   private normalizeText(value?: string) {
-    return value?.trim().replace(/\s+/g, ' ');
+    return value?.trim().split(' ').filter(Boolean).join(' ');
+  }
+
+  private isBasicEmail(value: string) {
+    const atIndex = value.indexOf('@');
+    const lastAtIndex = value.lastIndexOf('@');
+    if (atIndex <= 0 || atIndex !== lastAtIndex) return false;
+    const domain = value.slice(atIndex + 1);
+    return domain.includes('.') && !value.includes(' ') && !value.includes('\t') && !value.includes('\n');
   }
 
   private assertLength(value: string, label: string, minimum: number, maximum: number) {
@@ -128,7 +136,7 @@ export class PublicIntakeService {
     if (!firstName || !lastName || !email || !subject || !message) {
       throw new BadRequestException('Formulaire incomplet.');
     }
-    if (!PublicIntakeService.EMAIL_PATTERN.test(email)) {
+    if (!this.isBasicEmail(email)) {
       throw new BadRequestException('Adresse email invalide.');
     }
     this.assertLength(email, "L'adresse email", 6, 254);
@@ -240,7 +248,7 @@ export class PublicIntakeService {
   async subscribeNewsletter(payload: { email?: string; source?: string }) {
     const email = payload.email?.trim().toLowerCase();
     const source = this.normalizeText(payload.source) || 'public-site';
-    if (!email || !PublicIntakeService.EMAIL_PATTERN.test(email)) {
+    if (!email || !this.isBasicEmail(email)) {
       throw new BadRequestException('Adresse email invalide.');
     }
     this.assertLength(email, "L'adresse email", 6, 254);

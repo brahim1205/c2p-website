@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { uploadFileToServer } from '@/lib/uploadApi';
+import { createClientRandomId } from '@/lib/randomId';
 import type { AssetFormErrors, AssetFormState } from './programmeModel';
 
 interface CourseProgramAssetUploadOptions {
@@ -40,7 +41,7 @@ export function useCourseProgramAssetUpload({
     setAssetUploadProgress(0);
     try {
       const resourceType = assetForm.asset_type === 'video' ? 'video' : 'raw';
-      const filename = `lesson-${assetForm.lesson_id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const filename = createClientRandomId(`lesson-${assetForm.lesson_id}`);
       const uploaded = await uploadFileToServer(file, {
         folder: `c2p/courses/${courseId}/lessons/${assetForm.lesson_id}`,
         filename,

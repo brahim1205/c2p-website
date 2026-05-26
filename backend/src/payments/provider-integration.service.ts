@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { ConfigService } from '../config/config.service.js';
 import { AuditLogService } from '../database/audit-log.service.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
@@ -627,7 +628,7 @@ export class ProviderIntegrationService {
 
   async runDexPayReconciliation(actorId: string, payload: DexPayReconcileDto) {
     this.assertDexPayConfigured('la reconciliation live');
-    const jobId = `rec-dexpay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const jobId = `rec-dexpay-${Date.now()}-${randomUUID()}`;
     const startedAt = new Date();
     await this.prisma.reconciliationJob.create({
       data: {

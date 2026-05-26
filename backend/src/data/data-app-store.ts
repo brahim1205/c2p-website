@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service.js';
 import { createInitialStore, type Row, type Store } from './mock-store.js';
 import { toNumber } from './data-normalizers.js';
@@ -54,7 +55,7 @@ export function matches(row: Row, query: Record<string, string | string[] | unde
 export function withId(row: Row): Row {
   return {
     ...row,
-    id: row.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: row.id ?? `${Date.now()}-${randomUUID()}`,
     created_at: row.created_at ?? new Date().toISOString(),
   };
 }

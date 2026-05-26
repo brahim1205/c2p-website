@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export type AppNotificationRow = {
   id: string;
   user_id: string;
@@ -27,7 +29,7 @@ type VirtualClassLike = {
 
 export function createNotificationId(prefix = 'notif', recipientId?: string) {
   const suffix = recipientId ? `-${String(recipientId)}` : '';
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}${suffix}`;
+  return `${prefix}-${Date.now()}-${randomUUID()}${suffix}`;
 }
 
 export function createAppNotificationRow(input: {

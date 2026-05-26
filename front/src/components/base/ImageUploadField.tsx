@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { uploadImageToServer } from '@/lib/uploadApi';
 import { useToast } from '@/hooks/useToast';
+import { createClientRandomId } from '@/lib/randomId';
 
 interface ImageUploadFieldProps {
   label: string;
@@ -45,7 +46,7 @@ export default function ImageUploadField({
     setIsUploading(true);
     setUploadProgress(0);
     try {
-      const filename = `image-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const filename = createClientRandomId('image');
       const uploaded = await uploadImageToServer(file, { folder, filename, onProgress: setUploadProgress });
       onChange(uploaded.url);
       success('Image importee', 'L image a ete televersee avec succes.');

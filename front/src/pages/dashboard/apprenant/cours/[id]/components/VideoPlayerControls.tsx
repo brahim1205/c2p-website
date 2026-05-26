@@ -135,13 +135,18 @@ function ChapterMarkers({
   );
 }
 
-function ProgressBar({ progressPct, onSeek }: { progressPct: number; onSeek: (event: MouseEvent<HTMLDivElement>) => void }) {
+function ProgressBar({ progressPct, onSeek }: { progressPct: number; onSeek: (event: MouseEvent<HTMLElement>) => void }) {
   return (
-    <div className="mb-3 h-1.5 w-full cursor-pointer rounded-full bg-white/20" onClick={onSeek}>
+    <button
+      type="button"
+      aria-label="Se déplacer dans la vidéo"
+      className="mb-3 block h-1.5 w-full cursor-pointer rounded-full bg-white/20"
+      onClick={onSeek}
+    >
       <div className="relative h-1.5 rounded-full bg-teal-500 transition-all duration-200" style={{ width: `${progressPct}%` }}>
         <div className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-teal-400 opacity-0 shadow-lg transition-opacity group-hover:opacity-100"></div>
       </div>
-    </div>
+    </button>
   );
 }
 

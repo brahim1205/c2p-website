@@ -220,7 +220,7 @@ export default function PricingPage() {
                             {isPopular || isBestValue ? (
                               <span
                                 className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full px-6 py-2 text-sm font-semibold text-white ${
-                                  isBestValue ? 'bg-[#08a846]' : 'bg-[#08a846]'
+                                  isBestValue ? 'bg-[#f5bb00] text-[#0f1c35]' : 'bg-[#08a846]'
                                 }`}
                               >
                                 {isBestValue ? 'Meilleure valeur' : 'Le plus populaire'}

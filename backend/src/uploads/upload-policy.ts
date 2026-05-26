@@ -65,7 +65,7 @@ export function getUploadPolicySnapshot() {
   return Object.fromEntries(
     Object.entries(ALLOWED_MIME_BY_RESOURCE).map(([resourceType, mimeTypes]) => [
       resourceType,
-      [...mimeTypes].sort(),
+      [...mimeTypes].sort((left, right) => left.localeCompare(right)),
     ]),
   ) as Record<UploadResourceType, string[]>;
 }

@@ -1,4 +1,5 @@
 import type { Row } from './mock-store.js';
+import { randomUUID } from 'node:crypto';
 import { store } from './data-app-store.js';
 
 export function computeBookingFinancials(
@@ -41,7 +42,7 @@ export function computeBookingFinancials(
 }
 
 export function createSyntheticId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}-${Date.now()}-${randomUUID()}`;
 }
 
 export function createReference(prefix: string) {

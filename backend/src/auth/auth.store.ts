@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export type Role = 'superadmin' | 'admin' | 'apprenant' | 'formateur' | 'prestataire' | 'parent' | 'porteur' | 'partenaire' | 'client';
 export type UserStatus = 'active' | 'pending' | 'suspended';
 export type AuditStatus = 'success' | 'failed';
@@ -526,7 +528,7 @@ const auditLogs: AuditLog[] = [
 ];
 
 function randomCode(prefix: string) {
-  return `${prefix}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  return `${prefix}-${randomUUID().slice(0, 6).toUpperCase()}`;
 }
 
 export function publicUser(user: StoredUser): AuthUser {
@@ -678,7 +680,7 @@ export function listAuditLogs(userId: string) {
 export function addAuditLog(userId: string, action: string, status: AuditStatus, overrides: Partial<Omit<AuditLog, 'id' | 'userId' | 'action' | 'status'>> = {}) {
   const latestSession = listSessions(userId)[0];
   auditLogs.unshift({
-    id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: `audit-${Date.now()}-${randomUUID()}`,
     userId,
     action,
     status,

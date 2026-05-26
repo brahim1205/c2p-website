@@ -135,7 +135,7 @@ export function useVideoPlayerSession({
     }
   };
 
-  const handleSeek = (event: ReactMouseEvent<HTMLDivElement>) => {
+  const handleSeek = (event: ReactMouseEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     const newTime = Math.floor(pct * totalSeconds);
