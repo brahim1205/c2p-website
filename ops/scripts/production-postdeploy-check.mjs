@@ -129,6 +129,7 @@ async function main() {
   const skipUploadMetadataAudit = args.get('skip-upload-metadata-audit') === 'true';
   const skipUploadTempCleanup = args.get('skip-upload-temp-cleanup') === 'true';
   const skipBackupCheck = args.get('skip-backup-check') === 'true';
+  const skipSonarqube = args.get('skip-sonarqube') === 'true';
 
   const failures = [];
   const backendConfig = fs.existsSync(backendEnv) ? parseEnvFile(backendEnv) : {};
@@ -138,6 +139,12 @@ async function main() {
         .split(',')
         .map((value) => value.trim())
         .filter(Boolean)[0]
+      ?? '',
+  ).trim());
+  const sonarUrl = trimTrailingSlash(String(
+    args.get('sonar-url')
+      ?? process.env.SONAR_HOST_URL
+      ?? deriveSonarUrl(baseUrl)
       ?? '',
   ).trim());
 
@@ -198,6 +205,8 @@ async function main() {
         'promtail',
         'node-exporter',
         'cadvisor',
+        'sonar-postgres',
+        'sonarqube',
       ];
 
       for (const serviceName of requiredRunning) {
@@ -354,6 +363,22 @@ async function main() {
     }
   }
 
+  if (!skipSonarqube) {
+    if (!sonarUrl) {
+      failures.push('SonarQube URL introuvable. Utilisez --sonar-url ou SONAR_HOST_URL.');
+    } else {
+      const sonarStatus = await fetchJson(
+        `${sonarUrl}/api/system/status`,
+        {},
+        'SonarQube system status',
+        failures,
+      );
+      if (sonarStatus && sonarStatus.status !== 'UP') {
+        failures.push(`SonarQube n'est pas UP: ${JSON.stringify(sonarStatus)}.`);
+      }
+    }
+  }
+
   if (failures.length > 0) {
     console.error('Production postdeploy check: FAILED');
     for (const message of failures) {
@@ -369,6 +394,22 @@ function trimTrailingSlash(value) {
   let end = value.length;
   while (end > 0 && value[end - 1] === '/') end -= 1;
   return value.slice(0, end);
+}
+
+function deriveSonarUrl(baseUrl) {
+  if (!baseUrl) return '';
+  try {
+    const parsed = new URL(baseUrl);
+    const hostname = parsed.hostname.replace(/^www\./, '');
+    if (hostname.startsWith('sonar.')) return parsed.origin;
+    parsed.hostname = `sonar.${hostname}`;
+    parsed.pathname = '';
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.origin;
+  } catch {
+    return '';
+  }
 }
 
 await main();
