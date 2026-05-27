@@ -64,6 +64,10 @@ services:
     networks:
       - app
       - monitoring
+      - egress
+    dns:
+      - ${BACKEND_DNS_PRIMARY:-153.92.2.6}
+      - ${BACKEND_DNS_SECONDARY:-1.1.1.1}
     read_only: true
     tmpfs:
       - /tmp
@@ -118,6 +122,7 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    user: "999:1000"
     command:
       - redis-server
       - --appendonly
@@ -154,6 +159,7 @@ services:
       - "9090"
     networks:
       - monitoring
+      - host-access
     ports:
       - "127.0.0.1:9090:9090"
 
@@ -170,6 +176,7 @@ services:
       - "9093"
     networks:
       - monitoring
+      - host-access
     ports:
       - "127.0.0.1:9093:9093"
 
@@ -190,6 +197,7 @@ services:
       - "3000"
     networks:
       - monitoring
+      - host-access
     ports:
       - "127.0.0.1:3004:3000"
 
@@ -205,6 +213,7 @@ services:
       - "3100"
     networks:
       - monitoring
+      - host-access
     ports:
       - "127.0.0.1:3100:3100"
 
@@ -253,6 +262,8 @@ networks:
     internal: true
   monitoring:
     internal: true
+  egress:
+  host-access:
 
 volumes:
   prometheus-data:

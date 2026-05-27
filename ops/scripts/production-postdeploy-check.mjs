@@ -177,7 +177,7 @@ async function main() {
     try {
       const raw = execFileSync(
         dockerBin,
-        ['compose', '--env-file', composeEnv, '-f', composeFile, 'ps', '--format', 'json'],
+        ['compose', '--env-file', composeEnv, '-f', composeFile, 'ps', '-a', '--format', 'json'],
         {
           cwd: repoRoot,
           stdio: 'pipe',
@@ -236,10 +236,8 @@ async function main() {
           'exec',
           '-T',
           'backend',
-          'npm',
-          'run',
-          'uploads:storage:check',
-          '--silent',
+          'node',
+          'dist/uploads/upload-storage-check.cli.js',
         ],
         {
           cwd: repoRoot,
