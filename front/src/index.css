@@ -212,7 +212,7 @@
   .public-premium-page {
     --public-section-bg: #f8fafc;
     --public-card-border: rgba(15, 28, 53, 0.10);
-    --public-card-shadow: 0 22px 54px rgba(15, 28, 53, 0.08);
+    --public-card-shadow: 0 18px 44px rgba(15, 28, 53, 0.08);
     --public-muted: #526174;
     --public-photo-filter: saturate(0.82) contrast(1.05) brightness(1.03);
     background:
@@ -224,7 +224,7 @@
   .public-premium-page > section:first-child {
     border-bottom: 1px solid rgba(15, 28, 53, 0.08);
     background-color: #ffffff;
-    min-height: clamp(560px, 78vh, 760px) !important;
+    min-height: clamp(500px, 72vh, 700px) !important;
   }
 
   .public-premium-page > section:first-child::before {
@@ -311,13 +311,13 @@
 
   .public-premium-page > section:first-child h1 {
     max-width: 60rem;
-    font-size: clamp(2rem, 4vw, 3.65rem) !important;
+    font-size: clamp(2rem, 3.5vw, 3.2rem) !important;
     line-height: 1.08 !important;
     font-weight: 650;
   }
 
   .public-premium-page h2 {
-    font-size: clamp(2rem, 3.3vw, 3.5rem) !important;
+    font-size: clamp(1.75rem, 2.6vw, 2.75rem) !important;
     line-height: 1.08 !important;
     font-weight: 650;
   }

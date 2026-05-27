@@ -36,7 +36,7 @@ interface AlloPrestaFiltersSidebarProps {
 
 export function AlloPrestaCategoriesBar({ selectedCategory, onSelectCategory }: AlloPrestaCategoriesBarProps) {
   return (
-    <section className="border-y border-[#80bfdf] bg-[#ffffff] px-4 py-6 sm:px-6 lg:px-20">
+    <section className="border-y border-[#80bfdf] bg-[#ffffff] px-4 py-4 sm:px-6 lg:px-20">
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center gap-3 overflow-x-auto pb-2" role="group" aria-label="Filtrer les prestataires par categorie">
           {alloprestaCategories.map((category) => (
@@ -45,7 +45,7 @@ export function AlloPrestaCategoriesBar({ selectedCategory, onSelectCategory }: 
               type="button"
               aria-pressed={selectedCategory === category.id}
               onClick={() => onSelectCategory(category.id)}
-              className={`flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-5 py-3 text-sm font-medium transition-all ${
+              className={`flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-medium transition-all ${
                 selectedCategory === category.id
                   ? 'border-[#27346b] bg-[#27346b] text-white'
                   : 'border-[#80bfdf] bg-white text-[#27346b] hover:border-[#27346b]/60 hover:text-[#06053a]'
@@ -98,9 +98,9 @@ export function AlloPrestaFiltersSidebar({
 }: AlloPrestaFiltersSidebarProps) {
   return (
     <aside className="w-full lg:w-72 flex-shrink-0">
-      <div className="c2p-card rounded-[24px] p-6 lg:sticky lg:top-24">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-[#06053a]">Filtres</h3>
+      <div className="c2p-card rounded-[22px] p-5 lg:sticky lg:top-24">
+        <div className="mb-5 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[#06053a]">Affiner</h3>
           <button
             type="button"
             aria-expanded={showFiltersMobile}
@@ -115,7 +115,7 @@ export function AlloPrestaFiltersSidebar({
           </button>
         </div>
 
-        <div id="allopresta-mobile-filters" className={`${showFiltersMobile ? 'block' : 'hidden'} lg:block space-y-6`}>
+        <div id="allopresta-mobile-filters" className={`${showFiltersMobile ? 'block' : 'hidden'} space-y-5 lg:block`}>
           <div>
             <p className="mb-3 block text-sm font-medium text-[#27346b]">Niveau de profil</p>
             <div className="space-y-2" role="group" aria-label="Filtrer par niveau de profil">

@@ -43,7 +43,7 @@ interface EspaceNumeriqueCoursesGridProps {
 
 export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }: EspaceNumeriqueHeroProps) {
   return (
-    <section className="relative min-h-[680px] w-full overflow-hidden bg-[#ffffff]">
+    <section className="relative min-h-[540px] w-full overflow-hidden bg-[#ffffff]">
       <div className="absolute inset-0">
         <img
           src="/images/home/academy.jpg"
@@ -54,17 +54,17 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]"></div>
       <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
-      <div className="relative z-10 flex min-h-[680px] items-center px-4 pt-24 sm:px-6 lg:px-20">
+      <div className="relative z-10 flex min-h-[540px] items-center px-4 pt-24 sm:px-6 lg:px-20">
         <div className="mx-auto w-full max-w-7xl">
           <div className="max-w-3xl">
             <p className="c2p-eyebrow mb-5">{branchCopy.eyebrow}</p>
-            <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#06053a] sm:text-5xl lg:text-7xl">
+            <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#06053a] sm:text-5xl">
               {branchCopy.title}
             </h1>
             <p className="max-w-2xl text-base leading-8 text-[#27346b] sm:text-lg">{branchCopy.description}</p>
           </div>
 
-          <div className="c2p-panel mt-12 max-w-3xl p-3">
+          <div className="c2p-panel mt-10 max-w-3xl p-3">
             <div className="flex min-h-14 items-center gap-3 rounded-2xl bg-white/82 px-5 py-3">
               <div className="flex h-6 w-6 items-center justify-center">
                 <i className="ri-search-line text-xl text-[#27346b]"></i>
@@ -87,7 +87,7 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
 
 export function EspaceNumeriqueCategories({ selectedCategory, onSelectCategory }: EspaceNumeriqueCategoriesProps) {
   return (
-    <section className="border-y border-[#80bfdf] bg-[#ffffff] px-4 py-6 sm:px-6 lg:px-20">
+    <section className="border-y border-[#80bfdf] bg-[#ffffff] px-4 py-4 sm:px-6 lg:px-20">
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center gap-3 overflow-x-auto pb-2" role="group" aria-label="Filtrer les formations par catégorie">
           {courseCategories.map((category) => (
@@ -96,7 +96,7 @@ export function EspaceNumeriqueCategories({ selectedCategory, onSelectCategory }
               type="button"
               aria-pressed={selectedCategory === category.id}
               onClick={() => onSelectCategory(category.id)}
-              className={`flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-5 py-3 text-sm font-medium transition-all ${
+              className={`flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-medium transition-all ${
                 selectedCategory === category.id
                   ? 'border-[#27346b] bg-[#27346b] text-white'
                   : 'border-[#80bfdf] bg-white text-[#27346b] hover:border-[#27346b]/60 hover:text-[#06053a]'
@@ -125,7 +125,7 @@ export function EspaceNumeriqueFilters({
   onResetFilters,
 }: EspaceNumeriqueFiltersProps) {
   return (
-    <section className="border-b border-[#80bfdf] bg-[#ffffff] px-4 py-4 sm:px-6 lg:px-20">
+    <section className="border-b border-[#80bfdf] bg-[#ffffff] px-4 py-3 sm:px-6 lg:px-20">
       <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
           <span className="text-sm text-[#27346b]">

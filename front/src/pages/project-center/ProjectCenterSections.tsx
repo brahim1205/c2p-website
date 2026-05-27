@@ -33,7 +33,7 @@ type ProjectCenterGridProps = {
 
 export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenterHeroProps) {
   return (
-    <section className="relative min-h-[680px] w-full overflow-hidden bg-[#ffffff]">
+    <section className="relative min-h-[540px] w-full overflow-hidden bg-[#ffffff]">
       <div className="absolute inset-0">
         <img
           src="/images/home/venture.jpg"
@@ -44,11 +44,11 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent" />
 
-      <div className="relative z-10 flex min-h-[680px] items-center px-4 pt-24 sm:px-6 lg:px-20">
+      <div className="relative z-10 flex min-h-[540px] items-center px-4 pt-24 sm:px-6 lg:px-20">
         <div className="mx-auto w-full max-w-7xl">
           <div className="max-w-3xl">
             <p className="c2p-eyebrow mb-5">Projects Center C2P</p>
-            <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#0f1c35] sm:text-5xl lg:text-7xl">
+            <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl">
               De l&apos;idée au lancement
             </h1>
             <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
@@ -62,17 +62,17 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
                 Découvrir les projets
               </a>
             </div>
-            <div className="mt-8 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="mt-7 flex max-w-3xl flex-wrap gap-2">
               {projectCenterSteps.map((step, index) => (
-                <div key={step} className="rounded-2xl border border-[#dbe7f3] bg-white/82 px-4 py-3 shadow-sm">
+                <div key={step} className="rounded-full border border-[#dbe7f3] bg-white/82 px-3 py-2 shadow-sm">
                   <span className="text-sm font-semibold text-[#1a9a96]">{index + 1}</span>
-                  <p className="mt-1 text-sm font-semibold text-[#0f1c35]">{step}</p>
+                  <span className="ml-2 text-sm font-semibold text-[#0f1c35]">{step}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="c2p-panel mt-12 max-w-3xl p-3">
+          <div className="c2p-panel mt-10 max-w-3xl p-3">
             <div className="flex min-h-14 items-center gap-3 rounded-2xl bg-white/82 px-5 py-3">
               <div className="flex h-6 w-6 items-center justify-center">
                 <i className="ri-search-line text-xl text-[#64748b]" />
@@ -95,7 +95,7 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
 
 export function ProjectCenterCategoryBar({ selectedCategory, onSelectCategory }: ProjectCenterCategoryBarProps) {
   return (
-    <section className="border-y border-[#d6dbe1] bg-[#ffffff] px-4 py-6 sm:px-6 lg:px-20">
+    <section className="border-y border-[#d6dbe1] bg-[#ffffff] px-4 py-4 sm:px-6 lg:px-20">
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center gap-3 overflow-x-auto pb-2" role="group" aria-label="Filtrer les projets par categorie">
           {projectCenterCategories.map((category) => (
@@ -104,7 +104,7 @@ export function ProjectCenterCategoryBar({ selectedCategory, onSelectCategory }:
               type="button"
               aria-pressed={selectedCategory === category.id}
               onClick={() => onSelectCategory(category.id)}
-              className={`flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-5 py-3 text-sm font-medium transition-all ${
+              className={`flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-medium transition-all ${
                 selectedCategory === category.id
                   ? 'border-[#0f1c35] bg-[#0f1c35] text-white'
                   : 'border-[#d6dbe1] bg-white text-[#64748b] hover:border-[#1a9a96] hover:text-[#0f1c35]'

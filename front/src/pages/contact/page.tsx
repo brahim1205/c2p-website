@@ -109,7 +109,7 @@ export default function ContactPage() {
 
   return (
     <main className="public-premium-page min-h-screen bg-c2p-bg text-c2p-text">
-      <section className="relative min-h-[620px] overflow-hidden bg-[#ffffff]">
+      <section className="relative min-h-[520px] overflow-hidden bg-[#ffffff]">
         <div className="absolute inset-0">
           <img
             src="/images/home/support.jpg"
@@ -120,13 +120,13 @@ export default function ContactPage() {
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]"></div>
         <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
-        <div className="relative z-10 flex min-h-[620px] items-center px-4 pt-24 sm:px-6 lg:px-20">
+        <div className="relative z-10 flex min-h-[520px] items-center px-4 pt-24 sm:px-6 lg:px-20">
           <div className="mx-auto w-full max-w-7xl">
             <div className="max-w-3xl">
               <p className="c2p-eyebrow mb-5">
                 Contact C2P
               </p>
-              <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#0f1c35] sm:text-5xl lg:text-7xl">
+              <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl">
                 Parlons de votre prochain mouvement professionnel
               </h1>
               <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
@@ -137,7 +137,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section className="px-4 py-16 sm:px-6 lg:px-20 lg:py-24">
+      <section className="px-4 py-12 sm:px-6 lg:px-20 lg:py-16">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="c2p-panel p-6 sm:p-8 lg:p-10">
             <p className="c2p-eyebrow mb-3">Message</p>

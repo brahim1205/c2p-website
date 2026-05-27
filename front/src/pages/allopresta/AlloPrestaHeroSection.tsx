@@ -12,7 +12,7 @@ export function AlloPrestaHero({
   onScrollToResults,
 }: AlloPrestaHeroProps) {
   return (
-    <section className="relative min-h-[560px] w-full overflow-hidden bg-[#ffffff]">
+    <section className="relative min-h-[520px] w-full overflow-hidden bg-[#ffffff]">
       <div className="absolute inset-0">
         <img
           src="/images/home/service.jpg"
@@ -23,11 +23,11 @@ export function AlloPrestaHero({
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent" />
 
-      <div className="relative z-10 flex min-h-[560px] items-center px-4 pt-24 sm:px-6 lg:px-20">
+      <div className="relative z-10 flex min-h-[520px] items-center px-4 pt-24 sm:px-6 lg:px-20">
         <div className="mx-auto w-full max-w-7xl">
           <div className="max-w-3xl">
             <p className="c2p-eyebrow mb-5">AlloPresta by C2P</p>
-            <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl lg:text-6xl">
+            <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl">
               La marketplace de services professionnels la plus complète d'Afrique de l'Ouest.
             </h1>
             <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
@@ -35,7 +35,7 @@ export function AlloPrestaHero({
             </p>
           </div>
 
-          <div className="c2p-panel mt-12 max-w-4xl p-3">
+          <div className="c2p-panel mt-10 max-w-4xl p-3">
             <div className="flex flex-col gap-3 sm:flex-row">
               <div className="flex min-h-14 flex-1 items-center gap-3 rounded-2xl bg-white/82 px-4">
                 <div className="flex h-6 w-6 items-center justify-center">
@@ -61,17 +61,9 @@ export function AlloPrestaHero({
             </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-[#64748b]">
-            <span className="rounded-full border border-[#d6dbe1] bg-white px-4 py-2">
-              {providersCount}+ prestataires visibles
-            </span>
-            <span className="rounded-full border border-[#d6dbe1] bg-white px-4 py-2">
-              4.8/5 satisfaction moyenne
-            </span>
-            <span className="rounded-full border border-[#d6dbe1] bg-white px-4 py-2">
-              Mise en relation cadrée par C2P
-            </span>
-          </div>
+          <p className="mt-5 text-sm text-[#64748b]">
+            {providersCount > 0 ? `${providersCount}+ prestataires visibles` : 'Des prestataires visibles'}, avec une mise en relation cadrée par C2P.
+          </p>
         </div>
       </div>
     </section>

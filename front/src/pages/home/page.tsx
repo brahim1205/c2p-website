@@ -9,11 +9,6 @@ const fleet = [
     title: 'Prestations Qualifiées',
     subtitle: 'Publiez un besoin, trouvez un professionnel fiable ou proposez vos services dans un cadre simple et sécurisé.',
     image: '/images/home/service.jpg',
-    stats: [
-      ['24/7', 'Assistance'],
-      ['1.2K+', 'Experts'],
-      ['4.8/5', 'Satisfaction'],
-    ],
     path: '/allopresta',
   },
   {
@@ -21,11 +16,6 @@ const fleet = [
     title: 'Formations Certifiantes',
     subtitle: 'Des formations en ligne, en présentiel ou hybrides pour apprendre à votre rythme et obtenir des certifications utiles.',
     image: '/images/home/academy.jpg',
-    stats: [
-      ['50+', 'Formations'],
-      ['98%', 'Reussite'],
-      ['Live', 'Classes'],
-    ],
     path: '/espace-numerique',
   },
   {
@@ -33,11 +23,6 @@ const fleet = [
     title: 'Incubation de projets',
     subtitle: 'Un accompagnement complet pour transformer une idée en projet structuré, finançable et prêt à être lancé.',
     image: '/images/home/venture.jpg',
-    stats: [
-      ['150+', 'Projets'],
-      ['12M', 'FCFA leves'],
-      ['Elite', 'Mentorat'],
-    ],
     path: '/project-center',
   },
 ];
@@ -45,7 +30,7 @@ const fleet = [
 export default function HomePage() {
   return (
     <div className="public-premium-page bg-c2p-bg text-c2p-text">
-      <section className="relative min-h-[92vh] overflow-hidden">
+      <section className="relative min-h-[78vh] overflow-hidden">
         <img
           src={heroImage}
           alt="Centre C2P premium"
@@ -54,7 +39,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.95)_0%,rgba(248,250,252,0.82)_46%,rgba(248,250,252,0.42)_100%)]"></div>
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
-        <div className="relative z-10 mx-auto flex min-h-[92vh] max-w-7xl flex-col justify-end px-5 pb-12 pt-32 sm:px-8 lg:px-10">
+        <div className="relative z-10 mx-auto flex min-h-[78vh] max-w-7xl flex-col justify-end px-5 pb-12 pt-28 sm:px-8 lg:px-10">
           <div className="max-w-5xl">
             <p className="c2p-eyebrow mb-5 tracking-[0.38em]">
               Centre C2P | Services, Formation, Incubation
@@ -85,23 +70,13 @@ export default function HomePage() {
                 Soumettre un projet
               </Link>
             </div>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-[#27346b]">
-              Les plans publics concernent surtout les prestataires, formateurs et porteurs de projet.
-              Les clients et apprenants peuvent entrer sans abonnement mensuel.
-            </p>
-          </div>
-
-          <div className="mt-12 max-w-3xl rounded-3xl border border-white/50 bg-white/72 px-5 py-5 shadow-[0_22px_60px_rgba(15,28,53,0.12)] backdrop-blur-md sm:px-6">
-            <p className="text-sm font-medium leading-7 text-[#0f1c35]">
-              Un seul compte pour accéder aux services, aux formations et à l’accompagnement projet.
-            </p>
           </div>
         </div>
       </section>
 
-      <section className="bg-white px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-10 max-w-3xl">
+      <section className="bg-white px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 max-w-3xl">
             <div>
               <p className="c2p-eyebrow">Modules principaux</p>
               <h2 className="mt-4 text-3xl font-semibold leading-tight text-[#06053a] sm:text-5xl">
@@ -113,34 +88,34 @@ export default function HomePage() {
             </p>
           </div>
 
-            <div className="grid gap-5 lg:grid-cols-3">
-              {fleet.map((item) => (
-                <Link
-                  key={item.title}
-                  to={item.path}
-                  className="group relative min-h-[390px] overflow-hidden rounded-[22px] border border-[#d6dbe1] bg-white shadow-[0_14px_38px_rgba(15,28,53,0.055)]"
-                >
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/20"></div>
-                  <div className="absolute inset-x-0 bottom-0 p-6 lg:p-7">
-                    <p className="inline-flex items-center rounded-full border border-[#d6dbe1] bg-white/86 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#147f7b] shadow-sm backdrop-blur-md">
-                      {item.eyebrow}
-                    </p>
-                    <h3 className="mt-4 text-2xl font-semibold text-[#06053a] sm:text-3xl">{item.title}</h3>
-                    <p className="mt-3 max-w-md text-sm leading-7 text-[#4a5b70]">{item.subtitle}</p>
-                    <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#0f1c35]">
-                      Découvrir <i className="ri-arrow-right-line"></i>
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+          <div className="grid gap-5 lg:grid-cols-3">
+            {fleet.map((item) => (
+              <Link
+                key={item.title}
+                to={item.path}
+                className="group relative min-h-[330px] overflow-hidden rounded-[22px] border border-[#d6dbe1] bg-white shadow-[0_14px_38px_rgba(15,28,53,0.055)]"
+              >
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/20"></div>
+                <div className="absolute inset-x-0 bottom-0 p-6 lg:p-7">
+                  <p className="inline-flex items-center rounded-full border border-[#d6dbe1] bg-white/86 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#147f7b] shadow-sm backdrop-blur-md">
+                    {item.eyebrow}
+                  </p>
+                  <h3 className="mt-4 text-2xl font-semibold text-[#06053a]">{item.title}</h3>
+                  <p className="mt-3 max-w-md text-sm leading-7 text-[#4a5b70]">{item.subtitle}</p>
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#0f1c35]">
+                    Découvrir <i className="ri-arrow-right-line"></i>
+                  </span>
+                </div>
+              </Link>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
       <section className="border-y border-[#e6eaf4] bg-white px-5 py-14 sm:px-8 lg:px-10 lg:py-20">
         <div className="mx-auto max-w-7xl rounded-[24px] bg-[#f3f6ff] px-5 py-8 sm:px-8 sm:py-10 lg:rounded-[28px] lg:px-12">
