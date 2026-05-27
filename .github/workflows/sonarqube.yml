@@ -56,7 +56,7 @@ jobs:
             echo "SonarQube is reachable."
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "SonarQube is not reachable or not serving the expected API; skipping scan for this run."
+            echo "SonarQube is not reachable or not serving the expected API."
           fi
 
       - name: Skip SonarQube scan when secrets are absent
@@ -64,10 +64,11 @@ jobs:
         run: |
           echo "SONAR_TOKEN or SONAR_HOST_URL is not configured; skipping SonarQube scan."
 
-      - name: Skip SonarQube scan when service is unavailable
+      - name: Fail when configured SonarQube is unavailable
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && steps.sonar-health.outputs.available != 'true' }}
         run: |
-          echo "SonarQube is configured but not reachable; skipping SonarQube scan."
+          echo "SonarQube is configured but not reachable; failing instead of producing a false green."
+          exit 1
 
       - name: SonarQube scan
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && steps.sonar-health.outputs.available == 'true' }}
