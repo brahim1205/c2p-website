@@ -21,8 +21,9 @@ services:
     cap_drop:
       - ALL
     tmpfs:
-      - /var/cache/nginx
-      - /var/run
+      - /var/cache/nginx:uid=101,gid=101,mode=0755
+      - /var/run:uid=101,gid=101,mode=0755
+      - /tmp:uid=101,gid=101,mode=1777
 
   frontend:
     build:
@@ -38,8 +39,9 @@ services:
     cap_drop:
       - ALL
     tmpfs:
-      - /var/cache/nginx
-      - /var/run
+      - /var/cache/nginx:uid=101,gid=101,mode=0755
+      - /var/run:uid=101,gid=101,mode=0755
+      - /tmp:uid=101,gid=101,mode=1777
 
   backend:
     build:
@@ -203,6 +205,7 @@ services:
 
   loki:
     image: grafana/loki:3.0.0
+    user: "0:0"
     command:
       - -config.file=/etc/loki/local-config.yaml
     volumes:
