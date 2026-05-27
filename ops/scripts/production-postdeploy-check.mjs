@@ -129,12 +129,13 @@ async function main() {
   const skipUploadMetadataAudit = args.get('skip-upload-metadata-audit') === 'true';
   const skipUploadTempCleanup = args.get('skip-upload-temp-cleanup') === 'true';
   const skipBackupCheck = args.get('skip-backup-check') === 'true';
-  const skipSonarqube = args.get('skip-sonarqube') === 'true';
+  const skipSonarqube = args.get('skip-sonarqube') === 'true' || skipHttp;
 
   const failures = [];
   const backendConfig = fs.existsSync(backendEnv) ? parseEnvFile(backendEnv) : {};
   const baseUrl = trimTrailingSlash(String(
     args.get('base-url')
+      ?? process.env.APP_ORIGINS?.split(',').map((value) => value.trim()).filter(Boolean)[0]
       ?? String(backendConfig.APP_ORIGINS ?? '')
         .split(',')
         .map((value) => value.trim())
