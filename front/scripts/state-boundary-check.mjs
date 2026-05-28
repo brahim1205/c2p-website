@@ -77,7 +77,6 @@ function hasInlineQueryKey(content) {
 
 function main() {
   const files = walkFiles(srcRoot);
-  const directDataAllowed = [];
   const directDataViolations = [];
   const browserStorageAllowed = [];
   const browserStorageViolations = [];
@@ -119,7 +118,7 @@ function main() {
       && browserStorageViolations.length === 0
       && inlineQueryKeyViolations.length === 0,
     directDataAccess: {
-      allowed: directDataAllowed.sort((a, b) => a.file.localeCompare(b.file)),
+      allowed: [],
       violations: directDataViolations.sort((a, b) => a.file.localeCompare(b.file)),
     },
     browserStorage: {
