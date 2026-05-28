@@ -7,8 +7,6 @@ const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '
 const frontRoot = path.join(repoRoot, 'front');
 const srcRoot = path.join(frontRoot, 'src');
 
-const allowedDirectDataFiles = new Map();
-
 const allowedBrowserStorageFiles = new Map([
   ['src/hooks/useAuth.tsx', 'auth-session-ephemeral'],
   [
@@ -90,15 +88,10 @@ function main() {
     const content = fs.readFileSync(file, 'utf8');
 
     if (hasDirectDataUsage(content)) {
-      const reason = allowedDirectDataFiles.get(frontPath);
-      if (reason) {
-        directDataAllowed.push({ file: frontPath, reason });
-      } else {
-        directDataViolations.push({
-          file: frontPath,
-          reason: 'Direct /data access must go through a domain API. The legacy backendClient adapter has been removed.',
-        });
-      }
+      directDataViolations.push({
+        file: frontPath,
+        reason: 'Direct /data access must go through a domain API. The legacy backendClient adapter has been removed.',
+      });
     }
 
     if (hasBrowserStorageUsage(content)) {

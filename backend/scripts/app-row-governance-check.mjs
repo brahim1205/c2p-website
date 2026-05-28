@@ -86,9 +86,15 @@ function extractKnownDataTables(source) {
 }
 
 function extractNormalizedProjectionTables(source) {
-  const match = /private\s+async\s+persistNormalizedProjection[\s\S]*?\n\s+}\n/.exec(source);
-  if (!match) return new Set();
-  return new Set([...match[0].matchAll(/rowsByTable\.([a-z0-9_]+)/g)].map((entry) => entry[1]));
+  const methodName = 'private async persistNormalizedProjection';
+  const start = source.indexOf(methodName);
+  if (start === -1) return new Set();
+
+  const end = source.indexOf('\n  }\n', start);
+  if (end === -1) return new Set();
+
+  const methodSource = source.slice(start, end);
+  return new Set([...methodSource.matchAll(/rowsByTable\.([a-z0-9_]+)/g)].map((entry) => entry[1]));
 }
 
 function sorted(values) {
