@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { usePageMeta } from '@/lib/usePageMeta';
 import { enrollEspaceCourse, fetchEspaceCourses } from '@/lib/espaceNumeriqueApi';
 import {
   normalizeCourseDeliveryMode,
@@ -22,6 +23,13 @@ import {
 } from './espaceNumeriquePageModel';
 
 export default function EspaceNumeriquePage() {
+  usePageMeta({
+    title: 'Espace Numérique C2P | Formation professionnelle continue',
+    description: 'Apprenez à votre rythme, obtenez des certifications reconnues et développez vos compétences avec C2P.',
+    path: '/espace-numerique',
+    image: 'https://c2p.sn/images/home/academy.jpg',
+  });
+
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();

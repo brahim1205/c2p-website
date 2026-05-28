@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchPublicProjectCenterProjects, type PublicProject } from '@/lib/projectCenterApi';
+import { usePageMeta } from '@/lib/usePageMeta';
 import {
   ProjectCenterCategoryBar,
   ProjectCenterFilterBar,
@@ -9,6 +10,13 @@ import {
 import { filterPublicProjects } from './projectCenterPublicModel';
 
 export default function ProjectCenterPage() {
+  usePageMeta({
+    title: 'ProjectCenter C2P | Incubation et accompagnement de projets',
+    description: "De l'idée au lancement, C2P accompagne les porteurs de projet avec des experts, des outils et un réseau de partenaires.",
+    path: '/project-center',
+    image: 'https://c2p.sn/images/home/venture.jpg',
+  });
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

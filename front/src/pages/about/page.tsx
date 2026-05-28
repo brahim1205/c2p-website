@@ -1,3 +1,5 @@
+import { usePageMeta } from '@/lib/usePageMeta';
+
 const pillars = [
   {
     title: 'Services qualifiés',
@@ -65,6 +67,13 @@ const milestones = [
 ];
 
 export default function AboutPage() {
+  usePageMeta({
+    title: 'À propos de C2P | Écosystème professionnel au Sénégal',
+    description: 'C2P réunit services qualifiés, formation continue et incubation pour accompagner les talents et entrepreneurs.',
+    path: '/a-propos',
+    image: 'https://c2p.sn/images/home/global.jpg',
+  });
+
   return (
     <main className="public-premium-page min-h-screen bg-c2p-bg text-c2p-text">
       <section className="relative min-h-[680px] overflow-hidden bg-[#ffffff]">

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '@/lib/usePageMeta';
 
 const heroImage =
   '/images/home/hero.jpg';
@@ -28,6 +29,12 @@ const fleet = [
 ];
 
 export default function HomePage() {
+  usePageMeta({
+    title: 'C2P Sénégal | Services, formation et incubation',
+    description: 'C2P connecte prestataires, apprenants, entrepreneurs et partenaires dans un écosystème numérique unique.',
+    path: '/',
+  });
+
   return (
     <div className="public-premium-page bg-c2p-bg text-c2p-text">
       <section className="relative min-h-[78vh] overflow-hidden">

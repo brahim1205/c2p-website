@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '@/lib/api';
+import { usePageMeta } from '@/lib/usePageMeta';
 
 const sujets = [
   'Question générale',
@@ -52,6 +53,13 @@ function splitFullName(value: string) {
 }
 
 export default function ContactPage() {
+  usePageMeta({
+    title: 'Contact C2P Sénégal | Parler à l’équipe',
+    description: "Contactez C2P pour une demande de service, une formation, un projet d'incubation ou un partenariat.",
+    path: '/contact',
+    image: 'https://c2p.sn/images/home/support.jpg',
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [formState, setFormState] = useState<'idle' | 'success' | 'error'>('idle');
 

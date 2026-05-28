@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchPublicSubscriptionPlans } from '@/lib/publicApi';
+import { usePageMeta } from '@/lib/usePageMeta';
 import {
   groupPlansByRole,
   monetizedRoleContent,
@@ -53,6 +54,13 @@ function getPlanCta(
 }
 
 export default function PricingPage() {
+  usePageMeta({
+    title: 'Tarifs C2P | Abonnements prestataires, formateurs et partenaires',
+    description: 'Comparez les plans C2P pour publier vos services, vendre vos formations, accompagner des projets ou rejoindre le réseau partenaire.',
+    path: '/tarifs',
+    image: 'https://c2p.sn/images/home/precision.jpg',
+  });
+
   const { user, isAuthenticated } = useAuth();
   const [plans, setPlans] = useState<PublicSubscriptionPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);

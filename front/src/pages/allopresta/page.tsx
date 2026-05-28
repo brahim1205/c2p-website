@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePageMeta } from '@/lib/usePageMeta';
 import {
   fetchPublicProviders,
   normalizeViewerAccessTier,
@@ -15,6 +16,13 @@ import {
 } from './AlloPrestaSections';
 
 export default function AlloPrestPage() {
+  usePageMeta({
+    title: 'AlloPresta C2P | Trouver un prestataire professionnel',
+    description: "La marketplace de services professionnels C2P pour trouver le bon prestataire ou proposer vos services en Afrique de l'Ouest.",
+    path: '/allopresta',
+    image: 'https://c2p.sn/images/home/service.jpg',
+  });
+
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
