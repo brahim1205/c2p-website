@@ -16,26 +16,35 @@ function playNotificationSound() {
 
   try {
     const context = new AudioContextCtor();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
     const now = context.currentTime;
+    const notes = [
+      { frequency: 1174.66, start: 0, duration: 0.16 },
+      { frequency: 1567.98, start: 0.13, duration: 0.2 },
+    ];
 
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, now);
-    oscillator.frequency.exponentialRampToValueAtTime(1174.66, now + 0.12);
+    notes.forEach((note) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const startAt = now + note.start;
+      const endAt = startAt + note.duration;
 
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.045, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(note.frequency, startAt);
+      oscillator.frequency.exponentialRampToValueAtTime(note.frequency * 0.92, endAt);
 
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start(now);
-    oscillator.stop(now + 0.3);
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.052, startAt + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
 
-    oscillator.onended = () => {
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(startAt);
+      oscillator.stop(endAt);
+    });
+
+    window.setTimeout(() => {
       void context.close().catch(() => undefined);
-    };
+    }, 450);
   } catch {
     // Ignore autoplay and audio device failures.
   }

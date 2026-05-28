@@ -13,6 +13,7 @@ import {
 } from '../data/data-app-store.js';
 import { sanitizeConversationParticipants } from '../data/data-messaging-policy.js';
 import type { Row } from '../data/mock-store.js';
+import { createAppNotificationRow } from '../notifications/notification-payloads.js';
 
 @Injectable()
 export class MessagingService {
@@ -130,19 +131,25 @@ export class MessagingService {
       created_at: now,
       updated_at: now,
     });
+    const notifications = this.buildMessageNotifications(conversation, message, actor, now);
     const created = appendAppRows('messages', [message]);
+    if (notifications.length > 0) {
+      appendAppRows('notifications', notifications);
+    }
     const updatedConversations = patchAppRows('conversations', (row) => String(row.id) === String(conversation.id), {
       updated_at: now,
     });
     await this.platformPersistenceService.persistRows({
       messages: [message],
       conversations: updatedConversations,
+      ...(notifications.length > 0 ? { notifications } : {}),
     }, {
       actorId: actor.id,
       reason: 'messaging:message:create',
       afterRowsByTable: {
         messages: [message],
         conversations: updatedConversations,
+        ...(notifications.length > 0 ? { notifications } : {}),
       },
     });
     return this.toMessageDto(created[0] ?? message);
@@ -237,6 +244,35 @@ export class MessagingService {
       read: Boolean(message.read),
       attachments: Array.isArray(message.attachments) ? message.attachments : [],
     };
+  }
+
+  private buildMessageNotifications(conversation: Row, message: Row, actor: AuthUser, createdAt: string) {
+    const participants = Array.isArray(conversation.participants)
+      ? Array.from(new Set(conversation.participants.map((participant) => String(participant))))
+      : [];
+    const recipients = participants.filter((participantId) => participantId !== String(actor.id));
+    const senderName = `${actor.firstName} ${actor.lastName}`.trim() || 'C2P';
+    const rawContent = String(message.content ?? '').trim();
+    const preview = rawContent
+      ? rawContent.slice(0, 120)
+      : 'Vous avez reçu une pièce jointe.';
+
+    return recipients.map((recipientId) => createAppNotificationRow({
+      userId: recipientId,
+      title: `Nouveau message de ${senderName}`,
+      message: preview,
+      type: 'message',
+      link: `/dashboard/messages?conversation=${encodeURIComponent(String(conversation.id))}`,
+      createdAt,
+      metadata: {
+        channel: 'messaging',
+        conversation_id: conversation.id,
+        message_id: message.id,
+        sender_id: actor.id,
+        sender_role: actor.role,
+        avatar: actor.avatar ?? null,
+      },
+    }));
   }
 
   private requireObject(payload: unknown): Row {

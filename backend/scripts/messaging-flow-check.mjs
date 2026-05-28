@@ -234,6 +234,23 @@ async function main() {
   assert(providerMessage.response.ok, `expected 200 on formateur send, got ${providerMessage.response.status}`);
   assert(String(providerMessage.payload.senderId) === 'usr-formateur', 'formateur message must keep the sender identity');
 
+  const apprenantNotificationsAfterProviderMessage = await readJson('/notifications/me', {
+    headers: { Cookie: apprenantCookies },
+  });
+  assert(
+    apprenantNotificationsAfterProviderMessage.response.ok,
+    `expected 200 on apprenant notifications after message, got ${apprenantNotificationsAfterProviderMessage.response.status}`,
+  );
+  assert(
+    apprenantNotificationsAfterProviderMessage.payload.some((row) =>
+      String(row.type) === 'message'
+      && String(row.user_id) === 'usr-apprenant'
+      && String(row.metadata?.conversation_id) === String(targetConversation.id)
+      && String(row.metadata?.message_id) === String(providerMessage.payload.id),
+    ),
+    'message delivery must create a message notification for the recipient',
+  );
+
   const markedRead = await readJson(
     `/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/read`,
     {
@@ -274,6 +291,23 @@ async function main() {
   assert(
     formateurMessages.payload.some((row) => String(row.id) === String(learnerMessage.payload.id) && row.content === learnerMessageContent),
     'formateur must receive the learner reply in the same conversation',
+  );
+
+  const formateurNotificationsAfterReply = await readJson('/notifications/me', {
+    headers: { Cookie: formateurCookies },
+  });
+  assert(
+    formateurNotificationsAfterReply.response.ok,
+    `expected 200 on formateur notifications after reply, got ${formateurNotificationsAfterReply.response.status}`,
+  );
+  assert(
+    formateurNotificationsAfterReply.payload.some((row) =>
+      String(row.type) === 'message'
+      && String(row.user_id) === 'usr-formateur'
+      && String(row.metadata?.conversation_id) === String(targetConversation.id)
+      && String(row.metadata?.message_id) === String(learnerMessage.payload.id),
+    ),
+    'message reply must create a message notification for the recipient',
   );
 
   console.log('messaging-flow-check: ok');

@@ -197,22 +197,25 @@ const avatar = (seed: string) => pickSeededImage(seed, LOCAL_AVATAR_POOL);
 const DEFAULT_TEST_PASSWORD_HASH =
   '$argon2id$v=19$m=65536,t=3,p=4$Ib10W7lbOfDuhU5wr72pzw$/dnOjZh0+kI0S2UG5hFu3ygmxjKLo6DDmBQqq0ri84o';
 
+const SEEDED_SUPERADMIN_EMAIL = process.env.C2P_SUPERADMIN_EMAIL?.trim().toLowerCase() || 'superadmin@c2p.sn';
+const SEEDED_SUPERADMIN_PASSWORD_HASH = process.env.C2P_SUPERADMIN_PASSWORD_HASH?.trim() || DEFAULT_TEST_PASSWORD_HASH;
+
 const users: StoredUser[] = [
   {
     id: 'usr-superadmin',
-    email: 'superadmin@c2p.sn',
+    email: SEEDED_SUPERADMIN_EMAIL,
     firstName: 'Super',
     lastName: 'Admin',
     role: 'superadmin',
     status: 'active',
-    passwordHash: DEFAULT_TEST_PASSWORD_HASH,
+    passwordHash: SEEDED_SUPERADMIN_PASSWORD_HASH,
     phone: '+221 77 100 00 01',
     avatar: avatar('superadmin-c2p'),
     bio: 'Super administrateur C2P avec accès aux fonctions sensibles.',
     location: 'Dakar, Senegal',
     is2FAEnabled: false,
     backupCodes: [],
-    passwordHistory: [DEFAULT_TEST_PASSWORD_HASH],
+    passwordHistory: [SEEDED_SUPERADMIN_PASSWORD_HASH],
     failedLoginAttempts: 0,
     lockedUntil: null,
     lastPasswordChangeAt: '2026-01-01T00:00:00.000Z',

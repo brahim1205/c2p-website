@@ -49,6 +49,7 @@
     "db:ledger-immutability:local": "prisma db execute --file prisma/migrations/202605191230_finance_ledger_immutability/migration.sql --schema prisma/schema.prisma",
     "db:uploads-metadata:local": "prisma db execute --file prisma/migrations/202605191315_upload_objects_metadata/migration.sql --schema prisma/schema.prisma",
     "db:webhook-idempotency:local": "prisma db execute --file prisma/migrations/202605191530_webhook_receipt_idempotency_unique/migration.sql --schema prisma/schema.prisma",
+    "auth:superadmin:set": "node scripts/superadmin-credentials.mjs",
     "outbox:process": "NODE_OPTIONS='--experimental-specifier-resolution=node' node --loader ts-node/esm src/outbox/outbox-worker.cli.ts",
     "finance:validate:contract": "NODE_OPTIONS='--experimental-specifier-resolution=node' node --loader ts-node/esm src/payments/finance-capability-contract.cli.ts",
     "finance:validate:domain": "NODE_OPTIONS='--experimental-specifier-resolution=node' node --loader ts-node/esm src/payments/finance-domain-guards.cli.ts",
