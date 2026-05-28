@@ -1,14 +1,18 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/require-permission.decorator.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
+import { OwnerProjectCommandsService } from './owner-project-commands.service.js';
 import { ProjectCenterService } from './project-center.service.js';
 
 @ApiTags('project-center')
 @Controller('project-center')
 export class ProjectCenterController {
-  constructor(private readonly projectCenterService: ProjectCenterService) {}
+  constructor(
+    private readonly projectCenterService: ProjectCenterService,
+    private readonly ownerProjectCommandsService: OwnerProjectCommandsService,
+  ) {}
 
   @Get('projects')
   listProjects(
@@ -58,6 +62,13 @@ export class ProjectCenterController {
   @RequirePermission('data.projects.write')
   updateOwnerProject(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() payload: unknown) {
     return this.projectCenterService.updateOwnerProject(id, payload, request.auth?.user ?? null);
+  }
+
+  @Delete('owner/projects/:id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.projects.write')
+  deleteOwnerProject(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return this.ownerProjectCommandsService.deleteOwnerProject(id, request.auth?.user ?? null);
   }
 
   @Get('owner/funding-rounds')

@@ -2,6 +2,8 @@
 
 Ce document cadre les risques techniques actuels du monorepo C2P et les actions attendues avant d'ajouter de nouveaux flux critiques.
 
+Le plan d'execution detaille est maintenu dans `docs/TECHNICAL_DEBT_BACKLOG.md` et le suivi par chantier dans `docs/TECHNICAL_DEBT_CHANTIERS.md`.
+
 ## Etat d'architecture
 
 - Le backend reste un monolithe modulaire NestJS.
@@ -45,6 +47,7 @@ npm run db:check
 npm run verify
 npm run architecture:check
 npm run data:legacy:inventory
+npm run data:legacy-surface:test
 ```
 
 Reset DB locale apres des scenarios smoke destructifs:

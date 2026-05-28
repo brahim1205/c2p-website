@@ -48,7 +48,10 @@ fi
 mv "$TMP_BACKUP_FILE" "$BACKUP_FILE"
 
 chmod 600 "$BACKUP_FILE"
-sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
+(
+  cd "$BACKUP_DIR"
+  sha256sum "$(basename "$BACKUP_FILE")" > "$(basename "$BACKUP_FILE").sha256"
+)
 chmod 600 "$BACKUP_FILE.sha256"
 
 find "$BACKUP_DIR" -type f -name '*.sql.gz' -mtime +"$BACKUP_RETENTION_DAYS" -delete

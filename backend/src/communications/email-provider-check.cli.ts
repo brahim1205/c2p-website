@@ -86,6 +86,7 @@ function runProductionConfigContract() {
     TRUST_PROXY: 'true',
     COOKIE_DOMAIN: '.c2p.sn',
     PRISMA_CONNECTION_REQUIRED: 'true',
+    DATA_LEGACY_API_MODE: 'read-only',
     METRICS_AUTH_TOKEN: 'production-metrics-token',
     EMAIL_PROVIDER: 'brevo',
     EMAIL_FROM: 'no-reply@c2p.sn',
@@ -116,6 +117,13 @@ function runProductionConfigContract() {
   };
   const invalidR2 = configValidationSchema.safeParse(invalidStorage);
   assert(!invalidR2.success, 'Production config must reject non-R2 upload endpoint.');
+
+  const invalidLegacyMode = {
+    ...validProduction,
+    DATA_LEGACY_API_MODE: 'compat',
+  };
+  const invalidLegacy = configValidationSchema.safeParse(invalidLegacyMode);
+  assert(!invalidLegacy.success, 'Production config must reject DATA_LEGACY_API_MODE=compat.');
 }
 
 async function main() {

@@ -186,7 +186,7 @@ async function main() {
   assert(Array.isArray(afterPurchasedPasses.payload) && afterPurchasedPasses.payload.length > 0, 'visibility pass list must not be empty after purchase');
   assert(String(afterPurchasedPasses.payload[0]?.source_type ?? '') === 'provider_visibility_order', 'latest pass must come from explicit purchase');
 
-  const createdRequest = await readJson('/data/provider_verification_requests', {
+  const createdRequest = await readJson('/marketplace/prestataire/verification-requests', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -207,7 +207,7 @@ async function main() {
     assert(String(createdRequest.payload.user_id) === 'usr-prestataire', 'verification request must belong to prestataire');
   }
 
-  const duplicateRequest = await request('/data/provider_verification_requests', {
+  const duplicateRequest = await request('/marketplace/prestataire/verification-requests', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

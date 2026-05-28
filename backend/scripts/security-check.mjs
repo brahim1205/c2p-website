@@ -196,7 +196,7 @@ async function main() {
       price: 15000,
     }),
   });
-  assert(spoofedClientMutation.status === 401, `expected 401 on spoofed client_id, got ${spoofedClientMutation.status}`);
+  assert(spoofedClientMutation.status === 400, `expected 400 on blocked legacy booking mutation, got ${spoofedClientMutation.status}`);
 
   const invalidResetChallenge = await request('/auth/reset-password', {
     method: 'POST',
@@ -464,7 +464,7 @@ async function main() {
       modules: 1,
     }),
   });
-  assert(spoofedCourseCreation.status === 401, `expected 401 on spoofed instructor_id, got ${spoofedCourseCreation.status}`);
+  assert(spoofedCourseCreation.status === 400, `expected 400 on blocked legacy course mutation, got ${spoofedCourseCreation.status}`);
 
   const { cookieJar: adminCookies } = await loginAs('admin@c2p.sn');
   const adminOverview = await request('/payments/admin/overview', {

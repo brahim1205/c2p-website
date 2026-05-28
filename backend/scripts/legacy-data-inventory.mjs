@@ -99,7 +99,7 @@ const report = {
 
 if (process.argv.includes('--json')) {
   console.log(JSON.stringify(report, null, 2));
-  process.exit(0);
+  process.exit(process.argv.includes('--strict') && remainingMutationSurface.length > 0 ? 1 : 0);
 }
 
 console.log('Legacy /data inventory');
@@ -115,3 +115,8 @@ printList('Sensitive tables still writable through legacy /data in compat mode',
 printList('P2 keep read-only until dedicated public/domain endpoints', report.priorities.keepReadOnlyUntilDedicatedEndpoints);
 printList('Already blocked from generic writes', report.priorities.alreadyCommandOnly);
 printList('Remaining mutation surface if DATA_LEGACY_API_MODE=compat', report.priorities.remainingMutationSurface);
+
+if (process.argv.includes('--strict') && remainingMutationSurface.length > 0) {
+  console.error('\nlegacy-data-inventory: strict mode failed, generic mutation surface must stay empty.');
+  process.exit(1);
+}

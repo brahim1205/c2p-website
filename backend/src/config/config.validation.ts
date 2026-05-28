@@ -179,6 +179,14 @@ export const configValidationSchema = z.object({
       });
     }
 
+    if (config.DATA_LEGACY_API_MODE === 'compat') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['DATA_LEGACY_API_MODE'],
+        message: 'DATA_LEGACY_API_MODE must be read-only or disabled in production.',
+      });
+    }
+
     if (!config.UPLOAD_PUBLIC_BASE_URL) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

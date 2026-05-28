@@ -7,9 +7,7 @@ const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '
 const frontRoot = path.join(repoRoot, 'front');
 const srcRoot = path.join(frontRoot, 'src');
 
-const allowedDirectDataFiles = new Map([
-  ['src/lib/backendClient.ts', 'legacy-data-adapter'],
-]);
+const allowedDirectDataFiles = new Map();
 
 const allowedBrowserStorageFiles = new Map([
   ['src/hooks/useAuth.tsx', 'auth-session-ephemeral'],
@@ -98,7 +96,7 @@ function main() {
       } else {
         directDataViolations.push({
           file: frontPath,
-          reason: 'Direct /data access must go through a domain API or the legacy backendClient adapter.',
+          reason: 'Direct /data access must go through a domain API. The legacy backendClient adapter has been removed.',
         });
       }
     }

@@ -72,5 +72,18 @@ export function applyDataDeleteCascade(table: string, removed: Row[]) {
     appendDeleted(deletedRowIdsByTable, 'quiz_choices', removeByField('quiz_choices', 'question_id', new Set(removedQuestionIds)));
   }
 
+  if (table === 'projects') {
+    const removedProjectIds = new Set(removed.map((row) => String(row.id)));
+    appendDeleted(deletedRowIdsByTable, 'project_milestones', removeByField('project_milestones', 'project_id', removedProjectIds));
+    appendDeleted(deletedRowIdsByTable, 'project_documents', removeByField('project_documents', 'project_id', removedProjectIds));
+    appendDeleted(deletedRowIdsByTable, 'project_history', removeByField('project_history', 'project_id', removedProjectIds));
+    appendDeleted(deletedRowIdsByTable, 'project_partnerships', removeByField('project_partnerships', 'project_id', removedProjectIds));
+    appendDeleted(deletedRowIdsByTable, 'project_tracking', removeByField('project_tracking', 'project_id', removedProjectIds));
+    appendDeleted(deletedRowIdsByTable, 'project_collaborations', removeByField('project_collaborations', 'project_id', removedProjectIds));
+    const removedFundingRoundIds = removeByField('project_funding_rounds', 'project_id', removedProjectIds);
+    appendDeleted(deletedRowIdsByTable, 'project_funding_rounds', removedFundingRoundIds);
+    appendDeleted(deletedRowIdsByTable, 'funding_investors', removeByField('funding_investors', 'funding_round_id', new Set(removedFundingRoundIds)));
+  }
+
   return deletedRowIdsByTable;
 }

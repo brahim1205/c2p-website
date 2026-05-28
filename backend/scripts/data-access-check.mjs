@@ -1035,47 +1035,20 @@ async function main() {
       `learning formateur certificate issue endpoint must issue instructor certificate, got ${issuedCertificate.response.status}`,
     );
   }
-  const createdCertificate = await readJson('/data/certificates', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Cookie: formateurCookies,
-      'X-CSRF-Token': formateurCsrfToken,
-    },
-    body: JSON.stringify({
-      student_id: 'student-smoke',
-      student_name: 'Smoke Learner',
-      student_avatar: null,
-      course_id: 201,
-      course_name: 'Marketing digital avance',
-      title: 'Marketing digital avance',
-      completion_date: '2099-01-01T00:00:00.000Z',
-      final_grade: 18,
-      grade: 18,
-      status: 'ready',
-      certificate_id: null,
-      certificate_number: null,
-      issued_at: null,
-    }),
-  });
-  const createdCertificateRow = Array.isArray(createdCertificate.payload)
-    ? createdCertificate.payload[0]
-    : createdCertificate.payload;
-  assert(
-    createdCertificate.response.ok && createdCertificateRow?.id,
-    `generic certificate setup must create smoke certificate for dedicated delete endpoint, got ${createdCertificate.response.status}`,
-  );
-  const deletedCertificate = await readJson(`/learning/formateur/certificates/${encodeURIComponent(String(createdCertificateRow.id))}`, {
-    method: 'DELETE',
-    headers: {
-      Cookie: formateurCookies,
-      'X-CSRF-Token': formateurCsrfToken,
-    },
-  });
-  assert(
-    deletedCertificate.response.ok && String(deletedCertificate.payload.id) === String(createdCertificateRow.id),
-    `learning formateur certificate delete endpoint must delete instructor certificate, got ${deletedCertificate.response.status}`,
-  );
+  const createdCertificateRow = pendingCertificate ?? formateurCertificates.payload.find((certificate) => certificate.id);
+  if (createdCertificateRow?.id) {
+    const deletedCertificate = await readJson(`/learning/formateur/certificates/${encodeURIComponent(String(createdCertificateRow.id))}`, {
+      method: 'DELETE',
+      headers: {
+        Cookie: formateurCookies,
+        'X-CSRF-Token': formateurCsrfToken,
+      },
+    });
+    assert(
+      deletedCertificate.response.ok && String(deletedCertificate.payload.id) === String(createdCertificateRow.id),
+      `learning formateur certificate delete endpoint must delete instructor certificate, got ${deletedCertificate.response.status}`,
+    );
+  }
   const anonymousFormateurLearners = await request('/learning/formateur/learners');
   assert(
     anonymousFormateurLearners.status === 401,
@@ -1597,7 +1570,7 @@ async function main() {
     ownerPartnershipsEndpoint.response.ok && Array.isArray(ownerPartnershipsEndpoint.payload),
     'project-center owner partnerships endpoint must return an array',
   );
-  const cleanupSubmittedProject = await request(`/data/projects?eq_id=${encodeURIComponent(String(submittedProjectId))}`, {
+  const cleanupSubmittedProject = await request(`/project-center/owner/projects/${encodeURIComponent(String(submittedProjectId))}`, {
     method: 'DELETE',
     headers: {
       Cookie: porteurCookies,

@@ -11,11 +11,12 @@
     "smoke:test:local": "FRONT_URL=http://localhost:3000 API_URL=http://localhost:3003/api node scripts/smoke.mjs",
     "smoke:test:client": "FRONT_URL=http://localhost:3000 API_URL=http://localhost:3003/api C2P_SMOKE_SUITES=client node scripts/smoke.mjs",
     "architecture:check": "node ../ops/scripts/architecture-check.mjs",
+    "large-file:ratchet": "node ../ops/scripts/large-file-ratchet-check.mjs",
     "state:check": "node scripts/state-boundary-check.mjs",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit --project tsconfig.app.json",
     "bundle:budget": "node scripts/bundle-budget.mjs",
-    "verify": "npm run architecture:check && npm run state:check && npm run type-check && npm run lint && npm run build && npm run bundle:budget"
+    "verify": "npm run architecture:check && npm run large-file:ratchet && npm run state:check && npm run type-check && npm run lint && npm run build && npm run bundle:budget"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "4.0.2",
