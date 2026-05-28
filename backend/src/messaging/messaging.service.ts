@@ -252,7 +252,9 @@ export class MessagingService {
       : [];
     const recipients = participants.filter((participantId) => participantId !== String(actor.id));
     const senderName = `${actor.firstName} ${actor.lastName}`.trim() || 'C2P';
-    const rawContent = String(message.content ?? '').trim();
+    const rawContent = typeof message.content === 'string' || typeof message.content === 'number'
+      ? String(message.content).trim()
+      : '';
     const preview = rawContent
       ? rawContent.slice(0, 120)
       : 'Vous avez reçu une pièce jointe.';

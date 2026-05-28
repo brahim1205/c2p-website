@@ -197,8 +197,13 @@ const avatar = (seed: string) => pickSeededImage(seed, LOCAL_AVATAR_POOL);
 const DEFAULT_TEST_PASSWORD_HASH =
   '$argon2id$v=19$m=65536,t=3,p=4$Ib10W7lbOfDuhU5wr72pzw$/dnOjZh0+kI0S2UG5hFu3ygmxjKLo6DDmBQqq0ri84o';
 
-const SEEDED_SUPERADMIN_EMAIL = process.env.C2P_SUPERADMIN_EMAIL?.trim().toLowerCase() || 'superadmin@c2p.sn';
-const SEEDED_SUPERADMIN_PASSWORD_HASH = process.env.C2P_SUPERADMIN_PASSWORD_HASH?.trim() || DEFAULT_TEST_PASSWORD_HASH;
+const readNonEmptyEnv = (name: string, fallback: string) => {
+  const value = process.env[name]?.trim();
+  return value === undefined || value.length === 0 ? fallback : value;
+};
+
+const SEEDED_SUPERADMIN_EMAIL = readNonEmptyEnv('C2P_SUPERADMIN_EMAIL', 'superadmin@c2p.sn').toLowerCase();
+const SEEDED_SUPERADMIN_PASSWORD_HASH = readNonEmptyEnv('C2P_SUPERADMIN_PASSWORD_HASH', DEFAULT_TEST_PASSWORD_HASH);
 
 const users: StoredUser[] = [
   {
