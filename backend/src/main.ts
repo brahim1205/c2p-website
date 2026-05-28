@@ -228,7 +228,7 @@ async function bootstrap() {
     new DocumentBuilder()
       .setTitle('C2P API')
       .setDescription('Documentation OpenAPI des endpoints publics, metier, financiers, monitoring et administration C2P.')
-      .setVersion('1.0.10')
+      .setVersion('2.0.0')
       .addBearerAuth(
         {
           type: 'http',
