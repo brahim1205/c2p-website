@@ -14,6 +14,7 @@ POSTDEPLOY_SKIP_BACKUP_CHECK="${POSTDEPLOY_SKIP_BACKUP_CHECK:-false}"
 POSTDEPLOY_RESTORE_DRILL="${POSTDEPLOY_RESTORE_DRILL:-false}"
 BACKUP_DIR="${BACKUP_DIR:-backups/postgres}"
 ALLOW_DIRTY_DEPLOY_WORKTREE="${ALLOW_DIRTY_DEPLOY_WORKTREE:-false}"
+BACKEND_HEALTH_TIMEOUT_SECONDS="${BACKEND_HEALTH_TIMEOUT_SECONDS:-120}"
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
@@ -42,6 +43,35 @@ compose() {
 
 is_service_running() {
   compose ps --services --filter status=running | grep -qx "$1"
+}
+
+wait_service_healthy() {
+  local service_name="$1"
+  local timeout_seconds="$2"
+  local started_at
+  started_at="$(date +%s)"
+
+  while true; do
+    local container_id
+    container_id="$(compose ps -q "$service_name" 2>/dev/null || true)"
+    if [[ -n "$container_id" ]]; then
+      local health_status
+      local state_status
+      health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$container_id" 2>/dev/null || true)"
+      state_status="$(docker inspect --format '{{.State.Status}}' "$container_id" 2>/dev/null || true)"
+
+      if [[ "$health_status" == "healthy" || ( -z "$health_status" && "$state_status" == "running" ) ]]; then
+        return 0
+      fi
+    fi
+
+    if (( "$(date +%s)" - started_at >= timeout_seconds )); then
+      compose ps "$service_name" || true
+      die "Service $service_name non prêt après ${timeout_seconds}s."
+    fi
+
+    sleep 2
+  done
 }
 
 require_command git
@@ -115,6 +145,9 @@ compose up -d --remove-orphans
 
 log "Etat Docker Compose"
 compose ps
+
+log "Attente santé backend"
+wait_service_healthy backend "$BACKEND_HEALTH_TIMEOUT_SECONDS"
 
 log "Postdeploy"
 postdeploy_args=(
