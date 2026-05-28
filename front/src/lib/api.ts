@@ -44,28 +44,26 @@ function dispatchAuthExpired() {
 }
 
 async function refreshSession() {
-  if (refreshInFlight === null) {
-    refreshInFlight = (async () => {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-
-      if (!response.ok) {
-        dispatchAuthExpired();
-        return false;
-      }
-
-      lastRequestId = response.headers.get('x-request-id');
-      return true;
-    })().finally(() => {
-      refreshInFlight = null;
+  refreshInFlight ??= (async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
     });
-  }
+
+    if (!response.ok) {
+      dispatchAuthExpired();
+      return false;
+    }
+
+    lastRequestId = response.headers.get('x-request-id');
+    return true;
+  })().finally(() => {
+    refreshInFlight = null;
+  });
 
   return refreshInFlight;
 }

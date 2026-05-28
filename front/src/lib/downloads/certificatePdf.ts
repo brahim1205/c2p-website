@@ -1,7 +1,14 @@
 import { buildCertificateVerificationUrl, buildQrPdfRectCommands } from '../certificateVerification';
 
 function sanitizeFilename(filename: string) {
-  return filename.replace(/[^A-Za-z0-9_.-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  const safeCharacters = new Set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-');
+  const normalized = [...filename].reduce((result, character) => {
+    const nextCharacter = safeCharacters.has(character) ? character : '-';
+    return nextCharacter === '-' && result.endsWith('-') ? result : `${result}${nextCharacter}`;
+  }, '');
+  return normalized.split('').filter((character, index, characters) => (
+    character !== '-' || (index > 0 && index < characters.length - 1)
+  )).join('');
 }
 
 function triggerBlobDownload(filename: string, blob: Blob) {

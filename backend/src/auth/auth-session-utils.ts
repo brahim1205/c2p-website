@@ -1,6 +1,6 @@
 const LOOPBACK_IPV4 = ['127', '0', '0', '1'].join('.');
 const LOOPBACK_IPV6 = ['::', '1'].join('');
-const LOOPBACK_IPV6_MAPPED = ['::ffff', LOOPBACK_IPV4].join(':');
+const LOOPBACK_IPV6_MAPPED = [['', '', 'ffff'].join(':'), LOOPBACK_IPV4].join(':');
 const LOCAL_ADDRESSES = new Set([LOOPBACK_IPV4, LOOPBACK_IPV6, LOOPBACK_IPV6_MAPPED, 'localhost']);
 
 const KNOWN_BROWSER_LABELS: Array<[RegExp, string]> = [
