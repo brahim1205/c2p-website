@@ -125,7 +125,7 @@ export const configValidationSchema = z.object({
   if (config.NODE_ENV === 'production') {
     if (config.COOKIE_SECURE !== 'true') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['COOKIE_SECURE'],
         message: 'COOKIE_SECURE must be true in production.',
       });
@@ -133,7 +133,7 @@ export const configValidationSchema = z.object({
 
     if (config.TRUST_PROXY !== 'true') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['TRUST_PROXY'],
         message: 'TRUST_PROXY must be true in production.',
       });
@@ -141,7 +141,7 @@ export const configValidationSchema = z.object({
 
     if (!config.COOKIE_DOMAIN?.trim()) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['COOKIE_DOMAIN'],
         message: 'COOKIE_DOMAIN is required in production.',
       });
@@ -149,7 +149,7 @@ export const configValidationSchema = z.object({
 
     if (origins.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['APP_ORIGINS'],
         message: 'APP_ORIGINS or CORS_ORIGIN is required in production.',
       });
@@ -157,7 +157,7 @@ export const configValidationSchema = z.object({
 
     if (origins.some((origin) => /localhost|127\.0\.0\.1/i.test(origin))) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['APP_ORIGINS'],
         message: 'Production origins must not include localhost or 127.0.0.1.',
       });
@@ -165,7 +165,7 @@ export const configValidationSchema = z.object({
 
     if (config.PRISMA_CONNECTION_REQUIRED !== 'true') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['PRISMA_CONNECTION_REQUIRED'],
         message: 'PRISMA_CONNECTION_REQUIRED must be true in production.',
       });
@@ -173,7 +173,7 @@ export const configValidationSchema = z.object({
 
     if (config.PRISMA_PLATFORM_SEED_ENABLED === 'true') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['PRISMA_PLATFORM_SEED_ENABLED'],
         message: 'PRISMA_PLATFORM_SEED_ENABLED must be false in production.',
       });
@@ -181,7 +181,7 @@ export const configValidationSchema = z.object({
 
     if (config.DATA_LEGACY_API_MODE === 'compat') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['DATA_LEGACY_API_MODE'],
         message: 'DATA_LEGACY_API_MODE must be read-only or disabled in production.',
       });
@@ -189,13 +189,13 @@ export const configValidationSchema = z.object({
 
     if (!config.UPLOAD_PUBLIC_BASE_URL) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['UPLOAD_PUBLIC_BASE_URL'],
         message: 'UPLOAD_PUBLIC_BASE_URL is required in production.',
       });
     } else if (/localhost|127\.0\.0\.1/i.test(config.UPLOAD_PUBLIC_BASE_URL)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['UPLOAD_PUBLIC_BASE_URL'],
         message: 'UPLOAD_PUBLIC_BASE_URL must not include localhost or 127.0.0.1 in production.',
       });
@@ -203,7 +203,7 @@ export const configValidationSchema = z.object({
 
     if (config.EMAIL_PROVIDER !== 'brevo') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['EMAIL_PROVIDER'],
         message: 'EMAIL_PROVIDER must be brevo in production.',
       });
@@ -211,7 +211,7 @@ export const configValidationSchema = z.object({
 
     if (config.UPLOAD_STORAGE_DRIVER !== 's3') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['UPLOAD_STORAGE_DRIVER'],
         message: 'UPLOAD_STORAGE_DRIVER must be s3 in production.',
       });
@@ -219,7 +219,7 @@ export const configValidationSchema = z.object({
 
     if (config.UPLOAD_S3_ENDPOINT && !/\.r2\.cloudflarestorage\.com/i.test(config.UPLOAD_S3_ENDPOINT)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['UPLOAD_S3_ENDPOINT'],
         message: 'UPLOAD_S3_ENDPOINT must target Cloudflare R2 in production.',
       });
@@ -227,7 +227,7 @@ export const configValidationSchema = z.object({
 
     if (config.UPLOAD_S3_REGION !== 'auto') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['UPLOAD_S3_REGION'],
         message: 'UPLOAD_S3_REGION must be auto for Cloudflare R2 in production.',
       });
@@ -238,7 +238,7 @@ export const configValidationSchema = z.object({
     for (const key of ['SMS_SENDER_ID', 'SENDTEXT_BASE_URL', 'SENDTEXT_SEND_PATH', 'SENDTEXT_API_KEY', 'SENDTEXT_API_SECRET'] as const) {
       if (!config[key]?.trim()) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [key],
           message: `${key} is required when SMS_PROVIDER=sendtext.`,
         });
@@ -250,7 +250,7 @@ export const configValidationSchema = z.object({
     for (const key of ['EMAIL_FROM', 'RESEND_API_KEY'] as const) {
       if (!config[key]?.trim()) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [key],
           message: `${key} is required when EMAIL_PROVIDER=resend.`,
         });
@@ -262,7 +262,7 @@ export const configValidationSchema = z.object({
     for (const key of ['EMAIL_FROM', 'BREVO_API_KEY'] as const) {
       if (!config[key]?.trim()) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [key],
           message: `${key} is required when EMAIL_PROVIDER=brevo.`,
         });
@@ -274,7 +274,7 @@ export const configValidationSchema = z.object({
     for (const key of ['DEXPAY_BASE_URL', 'DEXPAY_API_KEY', 'DEXPAY_API_SECRET'] as const) {
       if (!config[key]?.trim()) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [key],
           message: `${key} is required when DEXPAY_ENABLED=true.`,
         });
@@ -284,7 +284,7 @@ export const configValidationSchema = z.object({
 
   if (config.REDIS_DISABLED !== 'true' && !config.REDIS_URL?.trim() && !config.REDIS_HOST?.trim()) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['REDIS_HOST'],
       message: 'REDIS_HOST or REDIS_URL is required when Redis is enabled.',
     });
@@ -294,7 +294,7 @@ export const configValidationSchema = z.object({
     for (const key of ['UPLOAD_S3_ENDPOINT', 'UPLOAD_S3_BUCKET', 'UPLOAD_S3_ACCESS_KEY_ID', 'UPLOAD_S3_SECRET_ACCESS_KEY'] as const) {
       if (!config[key]?.trim()) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [key],
           message: `${key} is required when UPLOAD_STORAGE_DRIVER=s3.`,
         });
@@ -304,7 +304,7 @@ export const configValidationSchema = z.object({
 
   if (config.ENABLE_METRICS === 'true' && !config.METRICS_AUTH_TOKEN?.trim()) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['METRICS_AUTH_TOKEN'],
       message: 'METRICS_AUTH_TOKEN is required when ENABLE_METRICS=true.',
     });
