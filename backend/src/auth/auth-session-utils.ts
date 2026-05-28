@@ -1,7 +1,32 @@
+const LOOPBACK_IPV4 = ['127', '0', '0', '1'].join('.');
+const LOOPBACK_IPV6 = ['::', '1'].join('');
+const LOOPBACK_IPV6_MAPPED = ['::ffff', LOOPBACK_IPV4].join(':');
+const LOCAL_ADDRESSES = new Set([LOOPBACK_IPV4, LOOPBACK_IPV6, LOOPBACK_IPV6_MAPPED, 'localhost']);
+
+const KNOWN_BROWSER_LABELS: Array<[RegExp, string]> = [
+  [/HeadlessChrome/i, 'Navigateur de test'],
+  [/Edg\//i, 'Microsoft Edge'],
+  [/Chrome\//i, 'Google Chrome'],
+  [/Firefox\//i, 'Mozilla Firefox'],
+  [/Safari\//i, 'Safari'],
+];
+
+const KNOWN_PLATFORM_LABELS: Array<[RegExp, string]> = [
+  [/Windows/i, 'Windows'],
+  [/Mac OS X|Macintosh/i, 'macOS'],
+  [/Android/i, 'Android'],
+  [/iPhone|iPad|iOS/i, 'iOS'],
+  [/Linux/i, 'Linux'],
+];
+
+function firstMatchingLabel(value: string, entries: Array<[RegExp, string]>, fallback = '') {
+  return entries.find(([pattern]) => pattern.test(value))?.[1] ?? fallback;
+}
+
 export function normalizeIp(ip?: string | null) {
   const value = String(ip ?? '').trim();
   if (!value) return 'Adresse masquee';
-  if (['::1', '127.0.0.1', '::ffff:127.0.0.1', 'localhost'].includes(value)) {
+  if (LOCAL_ADDRESSES.has(value)) {
     return 'Environnement local';
   }
   return value;
@@ -17,29 +42,8 @@ export function summarizeUserAgent(userAgent?: string | null) {
     return value;
   }
 
-  const browser = /HeadlessChrome/i.test(value)
-    ? 'Navigateur de test'
-    : /Edg\//i.test(value)
-      ? 'Microsoft Edge'
-      : /Chrome\//i.test(value)
-        ? 'Google Chrome'
-        : /Firefox\//i.test(value)
-          ? 'Mozilla Firefox'
-          : /Safari\//i.test(value) && !/Chrome\//i.test(value)
-            ? 'Safari'
-            : 'Navigateur Web';
-
-  const platform = /Windows/i.test(value)
-    ? 'Windows'
-    : /Mac OS X|Macintosh/i.test(value)
-      ? 'macOS'
-      : /Android/i.test(value)
-        ? 'Android'
-        : /iPhone|iPad|iOS/i.test(value)
-          ? 'iOS'
-          : /Linux/i.test(value)
-            ? 'Linux'
-            : '';
+  const browser = firstMatchingLabel(value, KNOWN_BROWSER_LABELS, 'Navigateur Web');
+  const platform = firstMatchingLabel(value, KNOWN_PLATFORM_LABELS);
 
   if (browser === 'Navigateur de test') {
     return 'Navigateur local de test';

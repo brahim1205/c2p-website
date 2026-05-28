@@ -537,8 +537,10 @@ export class AuthService {
     context?: PermissionAuditContext,
   ) {
     const requestedPermissions = Array.isArray(permissions) ? permissions : [permissions];
-    const resolvedPermissions = [...await this.rbacService.getEffectivePermissions(actor)].sort();
-    const resolvedRoles = [...await this.rbacService.getEffectiveRoleIds(actor)].sort();
+    const resolvedPermissions = [...await this.rbacService.getEffectivePermissions(actor)]
+      .sort((left, right) => left.localeCompare(right));
+    const resolvedRoles = [...await this.rbacService.getEffectiveRoleIds(actor)]
+      .sort((left, right) => left.localeCompare(right));
     const granted = requestedPermissions.every((permission) => resolvedPermissions.includes(permission));
 
     if (!granted || this.shouldAuditPermissionDecision(requestedPermissions, context)) {

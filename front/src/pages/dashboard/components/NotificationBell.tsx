@@ -55,7 +55,12 @@ export default function NotificationBell() {
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 bg-black/10 z-30" onClick={() => setIsOpen(false)}></div>
+          <button
+            type="button"
+            aria-label="Fermer les notifications"
+            className="fixed inset-0 bg-black/10 z-30"
+            onClick={() => setIsOpen(false)}
+          ></button>
           <div className="absolute right-0 top-12 w-[min(24rem,calc(100vw-2rem))] max-h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-40 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between mb-3">
@@ -110,9 +115,10 @@ export default function NotificationBell() {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {recent.map((n) => (
-                    <div
+                    <button
+                      type="button"
                       key={n.id}
-                      className={`p-3 hover:bg-gray-50 transition-colors cursor-pointer ${!n.read ? 'bg-teal-50/40' : ''}`}
+                      className={`w-full p-3 text-left hover:bg-gray-50 transition-colors cursor-pointer ${!n.read ? 'bg-teal-50/40' : ''}`}
                       onClick={() => {
                         markAsRead(n.id);
                         setIsOpen(false);
@@ -146,7 +152,7 @@ export default function NotificationBell() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}

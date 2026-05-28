@@ -194,10 +194,12 @@ export default function ApprenantCoursDetailPage() {
         {/* Mobile sidebar overlay */}
         {showMobileSidebar && (
           <div className="fixed inset-0 z-50 flex">
-            <div
+            <button
+              type="button"
+              aria-label="Fermer le sommaire"
               className="absolute inset-0 bg-black/40"
               onClick={() => setShowMobileSidebar(false)}
-            ></div>
+            ></button>
             <div className="relative ml-auto w-full max-w-sm h-full">
               <CourseSidebar
                 showMobile={true}

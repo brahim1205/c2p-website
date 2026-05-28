@@ -4,7 +4,7 @@ type DownloadValue = string | number | boolean | null | undefined;
 type CsvRow = Record<string, DownloadValue>;
 
 function sanitizeFilename(filename: string) {
-  return filename.replace(/[^\w.-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  return filename.replace(/[^A-Za-z0-9_.-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 
 function triggerBlobDownload(filename: string, blob: Blob) {

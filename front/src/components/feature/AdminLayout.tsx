@@ -162,7 +162,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Overlay mobile */}
       {sidebarOpen && (
-        <div
+        <button
+          type="button"
+          aria-label="Fermer le menu"
           className="fixed inset-0 bg-black/40 z-30 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />

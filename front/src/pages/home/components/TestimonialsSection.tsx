@@ -110,9 +110,10 @@ export default function TestimonialsSection() {
           {/* Mini Testimonials */}
           <div className="lg:col-span-2 flex flex-col gap-4 lg:gap-5">
             {others.map((t, i) => (
-              <div
+              <button
+                type="button"
                 key={t.name}
-                className={`bg-white rounded-[20px] p-5 lg:p-6 flex-1 hover:shadow-lg hover:-translate-y-1 transition-all duration-500 cursor-pointer ${
+                className={`bg-white rounded-[20px] p-5 lg:p-6 flex-1 text-left hover:shadow-lg hover:-translate-y-1 transition-all duration-500 cursor-pointer ${
                   activeMini === i ? 'ring-2 ring-[#5fa6f3]/30 shadow-lg' : ''
                 } ${sectionVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'}`}
                 style={{ transitionDelay: `${(i + 1) * 200}ms` }}
@@ -133,7 +134,7 @@ export default function TestimonialsSection() {
                     <div className="text-gray-500 text-xs">{t.role}</div>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

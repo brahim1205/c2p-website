@@ -116,8 +116,9 @@ export default function CourseSidebar({
                         {isCompleted && <i className="ri-check-line text-white text-[10px]"></i>}
                       </button>
 
-                      <div
-                        className="flex-1 min-w-0 cursor-pointer"
+                      <button
+                        type="button"
+                        className="flex-1 min-w-0 cursor-pointer text-left"
                         onClick={() => onSelectLesson(lesson)}
                       >
                         <div className="flex items-center gap-1.5">
@@ -143,7 +144,7 @@ export default function CourseSidebar({
                         <p className="text-[10px] text-gray-400 mt-0.5">
                           {lesson.duration}
                         </p>
-                      </div>
+                      </button>
 
                       <div className="flex items-center gap-0.5 flex-shrink-0">
                         {hasNote && (

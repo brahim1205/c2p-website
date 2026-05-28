@@ -507,24 +507,24 @@ const users: StoredUser[] = [
 ];
 
 const sessions: UserSession[] = [
-  { id: 'sess-admin-1', userId: 'usr-admin', device: 'Chrome sur Windows', location: 'Dakar, Senegal', ip: '196.1.95.123', lastActive: '2026-05-06T11:55:00.000Z', current: true },
-  { id: 'sess-admin-2', userId: 'usr-admin', device: 'Safari sur iPhone 14', location: 'Dakar, Senegal', ip: '196.1.95.124', lastActive: '2026-05-06T09:20:00.000Z', current: false },
-  { id: 'sess-client-1', userId: 'usr-client', device: 'Chrome sur MacOS', location: 'Dakar, Senegal', ip: '154.72.14.56', lastActive: '2026-05-05T18:10:00.000Z', current: true },
-  { id: 'sess-prest-1', userId: 'usr-prestataire', device: 'Chrome sur Android', location: 'Dakar, Senegal', ip: '41.82.123.45', lastActive: '2026-05-05T16:45:00.000Z', current: true },
-  { id: 'sess-parent-1', userId: 'usr-parent', device: 'Safari sur iPhone', location: 'Dakar, Senegal', ip: '154.72.88.41', lastActive: '2026-05-05T12:30:00.000Z', current: true },
-  { id: 'sess-porteur-1', userId: 'usr-porteur', device: 'Firefox sur MacOS', location: 'Dakar, Senegal', ip: '102.16.45.78', lastActive: '2026-05-04T12:00:00.000Z', current: true },
-  { id: 'sess-porteur-2', userId: 'usr-porteur', device: 'Safari sur iPad', location: 'Thies, Senegal', ip: '102.16.45.81', lastActive: '2026-05-03T09:15:00.000Z', current: false },
-  { id: 'sess-partner-1', userId: 'usr-partenaire', device: 'Chrome sur Windows', location: 'Dakar, Senegal', ip: '105.12.88.10', lastActive: '2026-05-05T14:30:00.000Z', current: true },
+  { id: 'sess-admin-1', userId: 'usr-admin', device: 'Chrome sur Windows', location: 'Dakar, Senegal', ip: 'Adresse masquee', lastActive: '2026-05-06T11:55:00.000Z', current: true },
+  { id: 'sess-admin-2', userId: 'usr-admin', device: 'Safari sur iPhone 14', location: 'Dakar, Senegal', ip: 'Adresse masquee', lastActive: '2026-05-06T09:20:00.000Z', current: false },
+  { id: 'sess-client-1', userId: 'usr-client', device: 'Chrome sur MacOS', location: 'Dakar, Senegal', ip: 'Adresse masquee', lastActive: '2026-05-05T18:10:00.000Z', current: true },
+  { id: 'sess-prest-1', userId: 'usr-prestataire', device: 'Chrome sur Android', location: 'Dakar, Senegal', ip: 'Adresse masquee', lastActive: '2026-05-05T16:45:00.000Z', current: true },
+  { id: 'sess-parent-1', userId: 'usr-parent', device: 'Safari sur iPhone', location: 'Dakar, Senegal', ip: 'Adresse masquee', lastActive: '2026-05-05T12:30:00.000Z', current: true },
+  { id: 'sess-porteur-1', userId: 'usr-porteur', device: 'Firefox sur MacOS', location: 'Dakar, Senegal', ip: 'Adresse masquee', lastActive: '2026-05-04T12:00:00.000Z', current: true },
+  { id: 'sess-porteur-2', userId: 'usr-porteur', device: 'Safari sur iPad', location: 'Thies, Senegal', ip: 'Adresse masquee', lastActive: '2026-05-03T09:15:00.000Z', current: false },
+  { id: 'sess-partner-1', userId: 'usr-partenaire', device: 'Chrome sur Windows', location: 'Dakar, Senegal', ip: 'Adresse masquee', lastActive: '2026-05-05T14:30:00.000Z', current: true },
 ];
 
 const auditLogs: AuditLog[] = [
-  { id: 'audit-1', userId: 'usr-admin', action: 'Connexion reussie', timestamp: '2026-05-06T11:55:00.000Z', ip: '196.1.95.123', device: 'Chrome sur Windows', status: 'success' },
-  { id: 'audit-2', userId: 'usr-admin', action: 'Modification du profil', timestamp: '2026-05-05T16:30:00.000Z', ip: '196.1.95.123', device: 'Chrome sur Windows', status: 'success' },
-  { id: 'audit-3', userId: 'usr-admin', action: 'Tentative de connexion echouee', timestamp: '2026-05-04T22:15:00.000Z', ip: '102.16.45.78', device: 'Chrome sur Android', status: 'failed' },
-  { id: 'audit-4', userId: 'usr-porteur', action: 'Connexion reussie', timestamp: '2026-05-05T14:15:00.000Z', ip: '102.16.45.78', device: 'Firefox sur MacOS', status: 'success' },
-  { id: 'audit-5', userId: 'usr-porteur', action: 'Changement de mot de passe', timestamp: '2026-05-01T08:20:00.000Z', ip: '102.16.45.78', device: 'Firefox sur MacOS', status: 'success' },
-  { id: 'audit-6', userId: 'usr-prestataire', action: 'Connexion reussie', timestamp: '2026-05-05T16:45:00.000Z', ip: '41.82.123.45', device: 'Chrome sur Android', status: 'success' },
-  { id: 'audit-7', userId: 'usr-parent', action: 'Connexion reussie', timestamp: '2026-05-05T12:30:00.000Z', ip: '154.72.88.41', device: 'Safari sur iPhone', status: 'success' },
+  { id: 'audit-1', userId: 'usr-admin', action: 'Connexion reussie', timestamp: '2026-05-06T11:55:00.000Z', ip: 'Adresse masquee', device: 'Chrome sur Windows', status: 'success' },
+  { id: 'audit-2', userId: 'usr-admin', action: 'Modification du profil', timestamp: '2026-05-05T16:30:00.000Z', ip: 'Adresse masquee', device: 'Chrome sur Windows', status: 'success' },
+  { id: 'audit-3', userId: 'usr-admin', action: 'Tentative de connexion echouee', timestamp: '2026-05-04T22:15:00.000Z', ip: 'Adresse masquee', device: 'Chrome sur Android', status: 'failed' },
+  { id: 'audit-4', userId: 'usr-porteur', action: 'Connexion reussie', timestamp: '2026-05-05T14:15:00.000Z', ip: 'Adresse masquee', device: 'Firefox sur MacOS', status: 'success' },
+  { id: 'audit-5', userId: 'usr-porteur', action: 'Changement de mot de passe', timestamp: '2026-05-01T08:20:00.000Z', ip: 'Adresse masquee', device: 'Firefox sur MacOS', status: 'success' },
+  { id: 'audit-6', userId: 'usr-prestataire', action: 'Connexion reussie', timestamp: '2026-05-05T16:45:00.000Z', ip: 'Adresse masquee', device: 'Chrome sur Android', status: 'success' },
+  { id: 'audit-7', userId: 'usr-parent', action: 'Connexion reussie', timestamp: '2026-05-05T12:30:00.000Z', ip: 'Adresse masquee', device: 'Safari sur iPhone', status: 'success' },
 ];
 
 function randomCode(prefix: string) {

@@ -44,7 +44,7 @@ function dispatchAuthExpired() {
 }
 
 async function refreshSession() {
-  if (!refreshInFlight) {
+  if (refreshInFlight === null) {
     refreshInFlight = (async () => {
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
@@ -107,7 +107,7 @@ export async function apiRequest<T>(
     }
 
     const inflight = inflightGetRequests.get(cacheKey);
-    if (inflight) {
+    if (inflight !== undefined) {
       return inflight as Promise<T>;
     }
   }

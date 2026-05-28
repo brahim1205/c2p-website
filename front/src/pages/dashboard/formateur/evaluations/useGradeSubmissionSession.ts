@@ -210,7 +210,9 @@ export function useGradeSubmissionSession({
       message: gradeFormMessage,
       isGrading,
       onClose: closeGradeModal,
-      onConfirm: confirmGrade,
+      onConfirm: () => {
+        void confirmGrade();
+      },
       onUseSuggestedGrade: useSuggestedGrade,
       onGradeValueChange: updateGradeValue,
       onFeedbackValueChange: updateFeedbackValue,

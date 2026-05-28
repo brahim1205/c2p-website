@@ -265,11 +265,15 @@ export function useApprenantExamensSession() {
       quizAnswerDrafts,
       answerFileInputRef,
       onClose: resetSubmitState,
-      onSubmit: handleSubmitExam,
+      onSubmit: (event) => {
+        void handleSubmitExam(event);
+      },
       onAnswerTextChange: setAnswerText,
       onAnswerFileChange: handleAnswerFileChange,
       onRemoveAnswerFile: () => setAnswerFile(null),
-      onRetryQuizStructure: () => quizStructureQuery.refetch(),
+      onRetryQuizStructure: () => {
+        void quizStructureQuery.refetch();
+      },
       onQuizChoiceToggle: handleQuizChoiceToggle,
       onQuizOpenAnswerChange: handleQuizOpenAnswerChange,
     }

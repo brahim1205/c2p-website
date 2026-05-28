@@ -84,12 +84,14 @@ export default function AvatarUpload({
 
   return (
     <div className="relative inline-block">
-      <div
+      <button
+        type="button"
         className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center bg-teal-100 text-teal-700 font-bold select-none ${isUploading ? 'opacity-60' : ''} ${editable ? 'cursor-pointer' : 'cursor-default'}`}
         onMouseEnter={() => editable && setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
         onClick={editable ? triggerFileInput : undefined}
-        role={editable ? 'button' : undefined}
+        disabled={!editable}
+        aria-label={editable ? 'Changer la photo de profil' : 'Photo de profil'}
       >
         {preview ? (
           <img
@@ -108,7 +110,7 @@ export default function AvatarUpload({
             </div>
           </div>
         )}
-      </div>
+      </button>
 
       {isUploading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">

@@ -115,7 +115,9 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
 
       {/* Overlay mobile */}
       {sidebarOpen && (
-        <div
+        <button
+          type="button"
+          aria-label="Fermer le menu"
           className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 lg:hidden transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />

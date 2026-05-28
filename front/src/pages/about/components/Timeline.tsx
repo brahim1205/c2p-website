@@ -85,7 +85,7 @@ export default function Timeline() {
               >
                 {/* Left content */}
                 <div className={`lg:w-[calc(50%-40px)] ${isLeft ? 'lg:text-right lg:pr-12' : 'lg:order-3 lg:text-left lg:pl-12'}`}>
-                  <div className={`bg-[#ffffff] rounded-2xl p-5 lg:p-6 border border-gray-100 hover:border-[#5fa6f3]/20 hover:shadow-lg transition-all duration-300 group ${isLeft ? '' : ''}`}>
+                  <div className="bg-[#ffffff] rounded-2xl p-5 lg:p-6 border border-gray-100 hover:border-[#5fa6f3]/20 hover:shadow-lg transition-all duration-300 group">
                     <span className="inline-block text-[#5fa6f3] font-bold text-sm mb-2 bg-[#5fa6f3]/10 px-3 py-1 rounded-full">
                       {m.year}
                     </span>
