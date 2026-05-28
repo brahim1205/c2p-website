@@ -135,8 +135,12 @@ export class DexPayService {
     if (!this.isConfigured()) {
       return [];
     }
-    const response = await this.request<DexPayBank[]>('/banks', { method: 'GET' });
-    return Array.isArray(response.data) ? response.data : [];
+    try {
+      const response = await this.request<DexPayBank[]>('/banks', { method: 'GET' });
+      return Array.isArray(response.data) ? response.data : [];
+    } catch {
+      return [];
+    }
   }
 
   async getOrder(orderId: string) {
