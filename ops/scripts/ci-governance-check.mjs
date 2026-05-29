@@ -241,6 +241,7 @@ function main() {
     'npm run db:ledger-immutability:local',
     'npm run db:seed:local',
     'npm run learning:prisma-consistency:check',
+    'npm run learning:assessments-mutations:check',
     'npm run finance:validate',
     'npm run uploads:validate',
     'npm run email:provider:check',

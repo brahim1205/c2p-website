@@ -97,6 +97,7 @@ Actions realisees:
 - mutations soumission/correction Learning relues depuis la projection Prisma apres persistence quand elle est disponible.
 - mutations certificats formateur relues/verifiees via la projection Prisma apres persistence/delete.
 - mutations examens, questions et choix quiz formateur relues/verifiees via la projection Prisma apres persistence/delete.
+- garde-fou CI `learning:assessments-mutations:check` ajoute pour verrouiller les contrats de readback/assertion Prisma.
 
 Verification cible:
 

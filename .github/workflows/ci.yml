@@ -157,6 +157,10 @@ jobs:
         working-directory: backend
         run: npm run learning:prisma-consistency:check
 
+      - name: Check Learning assessment mutation contracts
+        working-directory: backend
+        run: npm run learning:assessments-mutations:check
+
       - name: Check PostgreSQL connection
         working-directory: backend
         run: npm run db:check
