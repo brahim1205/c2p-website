@@ -3,10 +3,14 @@ import type { Row } from '../data/mock-store.js';
 
 export type ProjectCenterRowsByTable = {
   projects: Row[];
+  project_milestones: Row[];
+  project_documents: Row[];
 };
 
 export type ProjectCenterRowsByTableRemovals = {
   projects: string[];
+  project_milestones: string[];
+  project_documents: string[];
 };
 
 export async function persistProjectCenterProjection(
@@ -14,12 +18,20 @@ export async function persistProjectCenterProjection(
   rowsByTable: ProjectCenterRowsByTable,
 ) {
   await persistProjects(tx, rowsByTable.projects);
+  await persistMilestones(tx, rowsByTable.project_milestones);
+  await persistDocuments(tx, rowsByTable.project_documents);
 }
 
 export async function deleteProjectCenterProjection(
   tx: Prisma.TransactionClient,
   removalsByTable: ProjectCenterRowsByTableRemovals,
 ) {
+  if (removalsByTable.project_documents.length) {
+    await tx.projectCenterDocument.deleteMany({ where: { id: { in: removalsByTable.project_documents } } });
+  }
+  if (removalsByTable.project_milestones.length) {
+    await tx.projectCenterMilestone.deleteMany({ where: { id: { in: removalsByTable.project_milestones } } });
+  }
   if (removalsByTable.projects.length) {
     await tx.projectCenterProject.deleteMany({ where: { id: { in: removalsByTable.projects } } });
   }
@@ -53,6 +65,48 @@ async function persistProjects(tx: Prisma.TransactionClient, rows: Row[]) {
     };
     const { id, createdAt, source: _source, ...update } = data;
     await tx.projectCenterProject.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistMilestones(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.ProjectCenterMilestoneCreateInput = {
+      id: toString(row.id),
+      projectId: toString(row.project_id),
+      title: toString(row.title, 'Jalon'),
+      description: toNullableString(row.description),
+      dueDate: toNullableString(row.due_date),
+      status: toString(row.status, 'pending'),
+      progress: toFloat(row.progress),
+      tasks: row.tasks === undefined ? undefined : toJson(row.tasks),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.updated_at) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.projectCenterMilestone.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistDocuments(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.ProjectCenterDocumentCreateInput = {
+      id: toString(row.id),
+      projectId: toString(row.project_id),
+      name: toString(row.name, 'Document'),
+      docType: toNullableString(row.type),
+      size: toNullableString(row.size),
+      docDate: toNullableString(row.date),
+      category: toNullableString(row.category),
+      url: toNullableString(row.url),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.date) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.date ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.projectCenterDocument.upsert({ where: { id }, create: data, update });
   }
 }
 

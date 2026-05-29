@@ -77,6 +77,8 @@ const allowedDoubleRunProjectionTables = new Set([
   'course_enrollments',
   'lesson_progress',
   'exams',
+  'project_documents',
+  'project_milestones',
   'quiz_questions',
   'quiz_choices',
   'submissions',
