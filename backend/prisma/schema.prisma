@@ -947,6 +947,122 @@ model LearningLessonProgress {
   @@index([source])
 }
 
+model LearningExam {
+  id           String    @id
+  courseId     String
+  courseName   String?
+  instructorId String?
+  title        String
+  examType     String    @default("quiz")
+  examDate     DateTime?
+  participants Int       @default(0)
+  submitted    Int       @default(0)
+  avgGrade     Float?
+  status       String    @default("upcoming")
+  maxGrade     Float     @default(20)
+  instructions String?
+  attachments  Json?
+  metadata     Json?
+  source       String    @default("app_row_migration")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([courseId, status])
+  @@index([instructorId, status])
+  @@index([source])
+}
+
+model LearningQuizQuestion {
+  id           String   @id
+  examId       String
+  courseId     String?
+  instructorId String?
+  prompt       String
+  questionType String   @default("single_choice")
+  points       Int      @default(1)
+  explanation  String?
+  required     Boolean  @default(true)
+  position     Int      @default(0)
+  metadata     Json?
+  source       String   @default("app_row_migration")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([examId, position])
+  @@index([courseId])
+  @@index([source])
+}
+
+model LearningQuizChoice {
+  id           String   @id
+  questionId   String
+  examId       String
+  courseId     String?
+  instructorId String?
+  label        String
+  value        String?
+  isCorrect    Boolean  @default(false)
+  position     Int      @default(0)
+  metadata     Json?
+  source       String   @default("app_row_migration")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([questionId, position])
+  @@index([examId, position])
+  @@index([source])
+}
+
+model LearningSubmission {
+  id            String    @id
+  examId        String
+  courseId      String?
+  studentId     String
+  studentName   String?
+  studentAvatar String?
+  submittedAt   DateTime?
+  grade         Float?
+  feedback      String?
+  status        String    @default("pending")
+  fileName      String?
+  fileUrl       String?
+  answers       Json?
+  gradedAt      DateTime?
+  metadata      Json?
+  source        String    @default("app_row_migration")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([examId, status])
+  @@index([studentId, submittedAt])
+  @@index([source])
+}
+
+model LearningCertificate {
+  id                String    @id
+  studentId         String
+  studentName       String?
+  studentAvatar     String?
+  courseId          String
+  courseName        String?
+  title             String?
+  completionDate    DateTime?
+  finalGrade        Float?
+  grade             Float?
+  status            String    @default("pending")
+  certificateId     String?
+  certificateNumber String?
+  issuedAt          DateTime?
+  metadata          Json?
+  source            String    @default("app_row_migration")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([studentId, status])
+  @@index([courseId, status])
+  @@index([source])
+}
+
 model AppRow {
   key       String   @id
   table     String

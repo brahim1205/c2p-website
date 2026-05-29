@@ -10,6 +10,11 @@ const projections = [
   { appRowTable: 'virtual_classes', model: 'learningVirtualClass' },
   { appRowTable: 'course_enrollments', model: 'learningCourseEnrollment' },
   { appRowTable: 'lesson_progress', model: 'learningLessonProgress' },
+  { appRowTable: 'exams', model: 'learningExam' },
+  { appRowTable: 'quiz_questions', model: 'learningQuizQuestion' },
+  { appRowTable: 'quiz_choices', model: 'learningQuizChoice' },
+  { appRowTable: 'submissions', model: 'learningSubmission' },
+  { appRowTable: 'certificates', model: 'learningCertificate' },
 ];
 
 async function main() {

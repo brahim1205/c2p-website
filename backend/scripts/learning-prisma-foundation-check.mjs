@@ -20,6 +20,13 @@ const progressMigrationPath = path.join(
   '202605291515_learning_progress_foundation',
   'migration.sql',
 );
+const assessmentsMigrationPath = path.join(
+  backendRoot,
+  'prisma',
+  'migrations',
+  '202605291650_learning_assessments_foundation',
+  'migration.sql',
+);
 const migrationPlanPath = path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md');
 const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
 const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-learning-projection.ts');
@@ -45,6 +52,14 @@ const learningProgressModels = [
   'LearningLessonProgress',
 ];
 
+const learningAssessmentModels = [
+  'LearningExam',
+  'LearningQuizQuestion',
+  'LearningQuizChoice',
+  'LearningSubmission',
+  'LearningCertificate',
+];
+
 const requiredIndexes = [
   'LearningCourse_status_category_idx',
   'LearningCourseSection_courseId_status_position_idx',
@@ -61,6 +76,17 @@ const requiredProgressIndexes = [
   'LearningLessonProgress_courseId_status_idx',
 ];
 
+const requiredAssessmentIndexes = [
+  'LearningExam_courseId_status_idx',
+  'LearningExam_instructorId_status_idx',
+  'LearningQuizQuestion_examId_position_idx',
+  'LearningQuizChoice_questionId_position_idx',
+  'LearningSubmission_examId_status_idx',
+  'LearningSubmission_studentId_submittedAt_idx',
+  'LearningCertificate_studentId_status_idx',
+  'LearningCertificate_courseId_status_idx',
+];
+
 function readRequiredFile(filePath) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Fichier manquant: ${path.relative(repoRoot, filePath)}`);
@@ -72,6 +98,7 @@ function main() {
   const schemaSource = readRequiredFile(schemaPath);
   const migrationSource = readRequiredFile(migrationPath);
   const progressMigrationSource = readRequiredFile(progressMigrationPath);
+  const assessmentsMigrationSource = readRequiredFile(assessmentsMigrationPath);
   const migrationPlanSource = readRequiredFile(migrationPlanPath);
   const persistenceSource = readRequiredFile(persistencePath);
   const projectionSource = readRequiredFile(projectionPath);
@@ -101,6 +128,14 @@ function main() {
       failures.push(`Migration SQL Learning progression manquante pour: ${model}`);
     }
   }
+  for (const model of learningAssessmentModels) {
+    if (!new RegExp(`model\\s+${model}\\s+\\{`).test(schemaSource)) {
+      failures.push(`Modele Prisma manquant: ${model}`);
+    }
+    if (!assessmentsMigrationSource.includes(`CREATE TABLE "${model}"`)) {
+      failures.push(`Migration SQL Learning examens/certificats manquante pour: ${model}`);
+    }
+  }
 
   for (const indexName of requiredIndexes) {
     if (!migrationSource.includes(`"${indexName}"`)) {
@@ -110,6 +145,11 @@ function main() {
   for (const indexName of requiredProgressIndexes) {
     if (!progressMigrationSource.includes(`"${indexName}"`)) {
       failures.push(`Index learning progression manquant: ${indexName}`);
+    }
+  }
+  for (const indexName of requiredAssessmentIndexes) {
+    if (!assessmentsMigrationSource.includes(`"${indexName}"`)) {
+      failures.push(`Index learning examens/certificats manquant: ${indexName}`);
     }
   }
 
@@ -122,7 +162,10 @@ function main() {
   if (!migrationPlanSource.includes('202605291515_learning_progress_foundation')) {
     failures.push('Le plan AppRow doit citer la migration learning progress foundation.');
   }
-  for (const table of ['courses', 'course_sections', 'course_lessons', 'course_reviews', 'virtual_classes', 'course_enrollments', 'lesson_progress']) {
+  if (!migrationPlanSource.includes('202605291650_learning_assessments_foundation')) {
+    failures.push('Le plan AppRow doit citer la migration learning assessments foundation.');
+  }
+  for (const table of ['courses', 'course_sections', 'course_lessons', 'course_reviews', 'virtual_classes', 'course_enrollments', 'lesson_progress', 'exams', 'quiz_questions', 'quiz_choices', 'submissions', 'certificates']) {
     if (!persistenceSource.includes(`rowsByTable.${table}`)) {
       failures.push(`Projection double-run absente de PlatformPersistenceService: ${table}`);
     }
@@ -181,9 +224,11 @@ function main() {
     ok: failures.length === 0,
     models: learningModels,
     progressModels: learningProgressModels,
-    requiredIndexes: [...requiredIndexes, ...requiredProgressIndexes],
+    assessmentModels: learningAssessmentModels,
+    requiredIndexes: [...requiredIndexes, ...requiredProgressIndexes, ...requiredAssessmentIndexes],
     migration: path.relative(repoRoot, migrationPath),
     progressMigration: path.relative(repoRoot, progressMigrationPath),
+    assessmentsMigration: path.relative(repoRoot, assessmentsMigrationPath),
     failures,
   };
 

@@ -9,6 +9,11 @@ export type LearningRowsByTable = {
   virtual_classes: Row[];
   course_enrollments: Row[];
   lesson_progress: Row[];
+  exams: Row[];
+  quiz_questions: Row[];
+  quiz_choices: Row[];
+  submissions: Row[];
+  certificates: Row[];
 };
 
 export async function persistLearningProjection(tx: Prisma.TransactionClient, rowsByTable: LearningRowsByTable) {
@@ -19,9 +24,29 @@ export async function persistLearningProjection(tx: Prisma.TransactionClient, ro
   await persistVirtualClasses(tx, rowsByTable.virtual_classes);
   await persistCourseEnrollments(tx, rowsByTable.course_enrollments);
   await persistLessonProgress(tx, rowsByTable.lesson_progress);
+  await persistExams(tx, rowsByTable.exams);
+  await persistQuizQuestions(tx, rowsByTable.quiz_questions);
+  await persistQuizChoices(tx, rowsByTable.quiz_choices);
+  await persistSubmissions(tx, rowsByTable.submissions);
+  await persistCertificates(tx, rowsByTable.certificates);
 }
 
 export async function deleteLearningProjection(tx: Prisma.TransactionClient, removalsByTable: LearningRowsByTableRemovals) {
+  if (removalsByTable.certificates.length) {
+    await tx.learningCertificate.deleteMany({ where: { id: { in: removalsByTable.certificates } } });
+  }
+  if (removalsByTable.submissions.length) {
+    await tx.learningSubmission.deleteMany({ where: { id: { in: removalsByTable.submissions } } });
+  }
+  if (removalsByTable.quiz_choices.length) {
+    await tx.learningQuizChoice.deleteMany({ where: { id: { in: removalsByTable.quiz_choices } } });
+  }
+  if (removalsByTable.quiz_questions.length) {
+    await tx.learningQuizQuestion.deleteMany({ where: { id: { in: removalsByTable.quiz_questions } } });
+  }
+  if (removalsByTable.exams.length) {
+    await tx.learningExam.deleteMany({ where: { id: { in: removalsByTable.exams } } });
+  }
   if (removalsByTable.lesson_progress.length) {
     await tx.learningLessonProgress.deleteMany({ where: { id: { in: removalsByTable.lesson_progress } } });
   }
@@ -53,6 +78,11 @@ type LearningRowsByTableRemovals = {
   virtual_classes: string[];
   course_enrollments: string[];
   lesson_progress: string[];
+  exams: string[];
+  quiz_questions: string[];
+  quiz_choices: string[];
+  submissions: string[];
+  certificates: string[];
 };
 
 async function persistCourses(tx: Prisma.TransactionClient, rows: Row[]) {
@@ -236,12 +266,142 @@ async function persistLessonProgress(tx: Prisma.TransactionClient, rows: Row[]) 
   }
 }
 
+async function persistExams(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.LearningExamCreateInput = {
+      id: toString(row.id),
+      courseId: toString(row.course_id),
+      courseName: toNullableString(row.course_name),
+      instructorId: toNullableString(row.instructor_id),
+      title: toString(row.title, 'Evaluation'),
+      examType: toString(row.type, 'quiz'),
+      examDate: toDate(row.exam_date),
+      participants: toInt(row.participants),
+      submitted: toInt(row.submitted),
+      avgGrade: toNullableFloat(row.avg_grade),
+      status: toString(row.status, 'upcoming'),
+      maxGrade: toFloat(row.max_grade, 20),
+      instructions: toNullableString(row.instructions),
+      attachments: toOptionalJson(row.attachments),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.exam_date) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.created_at ?? row.exam_date) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.learningExam.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistQuizQuestions(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.LearningQuizQuestionCreateInput = {
+      id: toString(row.id),
+      examId: toString(row.exam_id),
+      courseId: toNullableString(row.course_id),
+      instructorId: toNullableString(row.instructor_id),
+      prompt: toString(row.prompt, 'Question'),
+      questionType: toString(row.type, 'single_choice'),
+      points: toInt(row.points, 1),
+      explanation: toNullableString(row.explanation),
+      required: toBool(row.required, true),
+      position: toInt(row.position),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.learningQuizQuestion.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistQuizChoices(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.LearningQuizChoiceCreateInput = {
+      id: toString(row.id),
+      questionId: toString(row.question_id),
+      examId: toString(row.exam_id),
+      courseId: toNullableString(row.course_id),
+      instructorId: toNullableString(row.instructor_id),
+      label: toString(row.label, 'Choix'),
+      value: toNullableString(row.value),
+      isCorrect: toBool(row.is_correct),
+      position: toInt(row.position),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.learningQuizChoice.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistSubmissions(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.LearningSubmissionCreateInput = {
+      id: toString(row.id),
+      examId: toString(row.exam_id),
+      courseId: toNullableString(row.course_id),
+      studentId: toString(row.student_id),
+      studentName: toNullableString(row.student_name),
+      studentAvatar: toNullableString(row.student_avatar),
+      submittedAt: toDate(row.submitted_at),
+      grade: toNullableFloat(row.grade),
+      feedback: toNullableString(row.feedback),
+      status: toString(row.status, 'pending'),
+      fileName: toNullableString(row.file_name),
+      fileUrl: toNullableString(row.file_url),
+      answers: toOptionalJson(row.answers),
+      gradedAt: toDate(row.graded_at),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.submitted_at) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.graded_at ?? row.submitted_at ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.learningSubmission.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistCertificates(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.LearningCertificateCreateInput = {
+      id: toString(row.id),
+      studentId: toString(row.student_id),
+      studentName: toNullableString(row.student_name),
+      studentAvatar: toNullableString(row.student_avatar),
+      courseId: toString(row.course_id),
+      courseName: toNullableString(row.course_name),
+      title: toNullableString(row.title),
+      completionDate: toDate(row.completion_date),
+      finalGrade: toNullableFloat(row.final_grade),
+      grade: toNullableFloat(row.grade),
+      status: toString(row.status, 'pending'),
+      certificateId: toNullableString(row.certificate_id),
+      certificateNumber: toNullableString(row.certificate_number),
+      issuedAt: toDate(row.issued_at),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.issued_at ?? row.completion_date) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.issued_at ?? row.completion_date ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.learningCertificate.upsert({ where: { id }, create: data, update });
+  }
+}
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function toJson(value: unknown) {
   return clone(value) as Prisma.InputJsonValue;
+}
+
+function toOptionalJson(value: unknown) {
+  return value === null || value === undefined ? undefined : toJson(value);
 }
 
 function toString(value: unknown, fallback = '') {

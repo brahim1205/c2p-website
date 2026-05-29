@@ -91,7 +91,9 @@ Etat 2026-05-29:
 - lectures publiques runtime Learning basculees vers `LearningPublicReadService` avec fallback AppRow pour les listes cours, cours formateur, detail cours et detail classe virtuelle;
 - lectures runtime progression apprenant basculees vers `LearningProgressReadService` avec fallback AppRow;
 - ecritures runtime progression encore maintenues sur AppRow avec double-run Prisma;
-- certificats, examens, quiz et soumissions restent le prochain sous-lot Learning.
+- fondation Prisma examens/certificats ajoutee via `backend/prisma/migrations/202605291650_learning_assessments_foundation/migration.sql`;
+- projection double-run ajoutee pour `exams`, `quiz_questions`, `quiz_choices`, `submissions` et `certificates`;
+- lectures/ecritures runtime examens/certificats encore maintenues sur AppRow jusqu'au basculement explicite des readers dedies.
 
 ### Lot 3 - Project Center
 

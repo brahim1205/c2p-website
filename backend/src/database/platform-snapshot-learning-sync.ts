@@ -10,6 +10,11 @@ export type LearningSnapshotSyncSummary = {
   learningVirtualClasses: number;
   learningCourseEnrollments: number;
   learningLessonProgress: number;
+  learningExams: number;
+  learningQuizQuestions: number;
+  learningQuizChoices: number;
+  learningSubmissions: number;
+  learningCertificates: number;
 };
 
 export function buildLearningRows(groupedRows: Partial<Record<string, Row[]>>): LearningRowsByTable {
@@ -21,6 +26,11 @@ export function buildLearningRows(groupedRows: Partial<Record<string, Row[]>>): 
     virtual_classes: groupedRows.virtual_classes ?? [],
     course_enrollments: groupedRows.course_enrollments ?? [],
     lesson_progress: groupedRows.lesson_progress ?? [],
+    exams: groupedRows.exams ?? [],
+    quiz_questions: groupedRows.quiz_questions ?? [],
+    quiz_choices: groupedRows.quiz_choices ?? [],
+    submissions: groupedRows.submissions ?? [],
+    certificates: groupedRows.certificates ?? [],
   };
 }
 
@@ -28,6 +38,11 @@ export async function syncLearningSnapshot(
   tx: Prisma.TransactionClient,
   rowsByTable: LearningRowsByTable,
 ) {
+  await tx.learningCertificate.deleteMany({ where: { source: 'app_row' } });
+  await tx.learningSubmission.deleteMany({ where: { source: 'app_row' } });
+  await tx.learningQuizChoice.deleteMany({ where: { source: 'app_row' } });
+  await tx.learningQuizQuestion.deleteMany({ where: { source: 'app_row' } });
+  await tx.learningExam.deleteMany({ where: { source: 'app_row' } });
   await tx.learningVirtualClass.deleteMany({ where: { source: 'app_row' } });
   await tx.learningLessonProgress.deleteMany({ where: { source: 'app_row' } });
   await tx.learningCourseEnrollment.deleteMany({ where: { source: 'app_row' } });
@@ -47,6 +62,11 @@ export function summarizeLearningRows(rowsByTable: LearningRowsByTable): Learnin
     learningVirtualClasses: rowsByTable.virtual_classes.length,
     learningCourseEnrollments: rowsByTable.course_enrollments.length,
     learningLessonProgress: rowsByTable.lesson_progress.length,
+    learningExams: rowsByTable.exams.length,
+    learningQuizQuestions: rowsByTable.quiz_questions.length,
+    learningQuizChoices: rowsByTable.quiz_choices.length,
+    learningSubmissions: rowsByTable.submissions.length,
+    learningCertificates: rowsByTable.certificates.length,
   };
 }
 
@@ -59,5 +79,10 @@ export function buildEmptyLearningSummary(): LearningSnapshotSyncSummary {
     learningVirtualClasses: 0,
     learningCourseEnrollments: 0,
     learningLessonProgress: 0,
+    learningExams: 0,
+    learningQuizQuestions: 0,
+    learningQuizChoices: 0,
+    learningSubmissions: 0,
+    learningCertificates: 0,
   };
 }

@@ -76,6 +76,11 @@ const allowedDoubleRunProjectionTables = new Set([
   'virtual_classes',
   'course_enrollments',
   'lesson_progress',
+  'exams',
+  'quiz_questions',
+  'quiz_choices',
+  'submissions',
+  'certificates',
 ]);
 
 function extractSetValues(source, setName) {
