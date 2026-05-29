@@ -18,7 +18,6 @@ const trackedLargeFiles = new Map([
   ['backend/src/payments/provider-integration.service.ts', 960],
   ['backend/src/learning/learning-access.service.ts', 895],
   ['backend/src/data/mock-store-seed/learning-catalog.ts', 885],
-  ['backend/src/learning/learning.service.ts', 810],
   ['backend/src/project-center/project-center.service.ts', 780],
   ['backend/src/database/platform-snapshot-sync.service.ts', 760],
   ['backend/src/payments/payment-commands.service.ts', 750],

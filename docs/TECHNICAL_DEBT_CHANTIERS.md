@@ -98,7 +98,7 @@ Actions realisees:
 - mutations certificats formateur relues/verifiees via la projection Prisma apres persistence/delete.
 - mutations examens, questions et choix quiz formateur relues/verifiees via la projection Prisma apres persistence/delete.
 - garde-fou CI `learning:assessments-mutations:check` ajoute pour verrouiller les contrats de readback/assertion Prisma.
-- extraction demarree avec `LearningAssessmentsCommandService` pour isoler les commandes examens/quiz hors du gros `LearningService`.
+- extraction de `LearningAssessmentsCommandService` etendue aux commandes examens, questions et choix quiz hors du gros `LearningService`.
 
 Verification cible:
 
@@ -139,6 +139,7 @@ Actions realisees:
 - blocage de tout nouveau fichier frontend au-dessus de 300 lignes sans classification;
 - plafonds fixes pour les gros fichiers existants, a abaisser apres chaque extraction.
 - extraction de la suppression projet proprietaire dans `owner-project-commands.service.ts` pour garder `project-center.service.ts` sous son plafond.
+- `learning.service.ts` retire du registre des gros fichiers suivis apres extraction des commandes examens/quiz (`589` lignes, sous la limite backend par defaut).
 
 Priorite:
 
@@ -164,7 +165,7 @@ Critere de sortie:
 
 Statut mesure:
 
-- 12 gros fichiers backend suivis avec plafond de ratchet;
+- 11 gros fichiers backend suivis avec plafond de ratchet;
 - aucun nouveau fichier backend au-dessus de 700 lignes sans classification;
 - aucun nouveau fichier frontend au-dessus de 300 lignes sans classification.
 - `project-center.service.ts`: 778 lignes pour un plafond de 780.

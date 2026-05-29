@@ -468,8 +468,8 @@ function main() {
   assertContains(learningService, 'backend/src/learning/learning.service.ts', 'learning:formateur:submission:grade', failures);
   assertContains(learningService, 'backend/src/learning/learning.service.ts', 'sanitizeSubmissionRecord', failures);
   assertContains(learningAssessmentsCommandService, 'backend/src/learning/learning-assessments-command.service.ts', 'sanitizeExamRecord', failures);
-  assertContains(learningService, 'backend/src/learning/learning.service.ts', 'sanitizeQuizQuestionRecord', failures);
-  assertContains(learningService, 'backend/src/learning/learning.service.ts', 'sanitizeQuizChoiceRecord', failures);
+  assertContains(learningAssessmentsCommandService, 'backend/src/learning/learning-assessments-command.service.ts', 'sanitizeQuizQuestionRecord', failures);
+  assertContains(learningAssessmentsCommandService, 'backend/src/learning/learning-assessments-command.service.ts', 'sanitizeQuizChoiceRecord', failures);
   assertContains(learningService, 'backend/src/learning/learning.service.ts', 'filterRowsForActor', failures);
   assertContains(formateurCommunityService, 'backend/src/learning/formateur-community.service.ts', 'learning:formateur:community-comment:moderate', failures);
   assertContains(formateurCommunityService, 'backend/src/learning/formateur-community.service.ts', 'learning:formateur:community-comment:reply', failures);
