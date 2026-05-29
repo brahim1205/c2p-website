@@ -18,7 +18,7 @@ import {
   sanitizeSubmissionUpdateRecord,
 } from '../data/data-learning-sanitizers.js';
 import { toNumber } from '../data/data-normalizers.js';
-import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/data-runtime.js';
+import { ensureConstraints, prepareInsert } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import { LearningAssessmentsCommandService } from './learning-assessments-command.service.js';

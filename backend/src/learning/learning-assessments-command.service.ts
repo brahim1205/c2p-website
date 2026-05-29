@@ -259,10 +259,14 @@ export class LearningAssessmentsCommandService {
     const input = this.requireObject(payload, 'Deplacement invalide.');
     const currentId = input.currentId ?? input.current_id;
     const targetId = input.targetId ?? input.target_id;
-    if (currentId === undefined || currentId === null || targetId === undefined || targetId === null) {
+    if (!this.isScalarId(currentId) || !this.isScalarId(targetId)) {
       throw new BadRequestException('Deplacement invalide.');
     }
     return { currentId: String(currentId), targetId: String(targetId) };
+  }
+
+  private isScalarId(value: unknown): value is string | number | boolean {
+    return ['string', 'number', 'boolean'].includes(typeof value);
   }
 
   private accessibleRows(table: string, user: AuthUser) {
