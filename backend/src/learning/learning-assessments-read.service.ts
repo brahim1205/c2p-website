@@ -131,6 +131,56 @@ export class LearningAssessmentsReadService {
     return allowed ? this.mapCertificate(certificate) : null;
   }
 
+  async getExamById(examId: string, user: AuthUser) {
+    if (!(await this.hasProjection())) return null;
+    const exam = await this.findAccessibleExam(examId, user);
+    return exam ? this.mapExam(exam) : null;
+  }
+
+  async getQuestionById(questionId: string, user: AuthUser) {
+    if (!(await this.hasProjection())) return null;
+    const question = await this.prisma.learningQuizQuestion.findFirst({ where: { source: 'app_row', id: String(questionId) } });
+    if (!question || !(await this.findAccessibleExam(String(question.examId), user))) return null;
+    return this.mapQuestion(question);
+  }
+
+  async getChoiceById(choiceId: string, user: AuthUser) {
+    if (!(await this.hasProjection())) return null;
+    const choice = await this.prisma.learningQuizChoice.findFirst({ where: { source: 'app_row', id: String(choiceId) } });
+    if (!choice || !(await this.findAccessibleExam(String(choice.examId), user))) return null;
+    return this.mapChoice(choice, true);
+  }
+
+  async getQuestionsByIds(questionIds: string[], user: AuthUser) {
+    if (!(await this.hasProjection()) || questionIds.length === 0) return null;
+    const rows = await Promise.all(questionIds.map((id) => this.getQuestionById(id, user)));
+    return rows.every(Boolean) ? rows.filter(Boolean) as Row[] : null;
+  }
+
+  async getChoicesByIds(choiceIds: string[], user: AuthUser) {
+    if (!(await this.hasProjection()) || choiceIds.length === 0) return null;
+    const rows = await Promise.all(choiceIds.map((id) => this.getChoiceById(id, user)));
+    return rows.every(Boolean) ? rows.filter(Boolean) as Row[] : null;
+  }
+
+  async assertExamDeleted(examId: string) {
+    if (!(await this.hasProjection())) return;
+    const count = await this.prisma.learningExam.count({ where: { source: 'app_row', id: String(examId) } });
+    if (count > 0) throw new Error('Projection evaluation incoherente apres suppression.');
+  }
+
+  async assertQuestionDeleted(questionId: string) {
+    if (!(await this.hasProjection())) return;
+    const count = await this.prisma.learningQuizQuestion.count({ where: { source: 'app_row', id: String(questionId) } });
+    if (count > 0) throw new Error('Projection question incoherente apres suppression.');
+  }
+
+  async assertChoiceDeleted(choiceId: string) {
+    if (!(await this.hasProjection())) return;
+    const count = await this.prisma.learningQuizChoice.count({ where: { source: 'app_row', id: String(choiceId) } });
+    if (count > 0) throw new Error('Projection choix incoherente apres suppression.');
+  }
+
   async assertCertificateDeleted(certificateId: string) {
     if (!(await this.hasProjection())) return;
     const count = await this.prisma.learningCertificate.count({ where: { source: 'app_row', id: String(certificateId) } });

@@ -244,6 +244,11 @@ function main() {
   if (!learningAssessmentsReadServiceSource.includes('async getCertificateById') || !learningAssessmentsReadServiceSource.includes('async assertCertificateDeleted') || !formateurLearnersServiceSource.includes('learningAssessmentsReadService.getCertificateById') || !formateurLearnersServiceSource.includes('learningAssessmentsReadService.assertCertificateDeleted')) {
     failures.push('Les mutations certificats Learning doivent relire/verifier la projection Prisma.');
   }
+  for (const assessmentMutationGuard of ['getExamById', 'getQuestionById', 'getChoiceById', 'assertExamDeleted', 'assertQuestionDeleted', 'assertChoiceDeleted']) {
+    if (!learningAssessmentsReadServiceSource.includes(`async ${assessmentMutationGuard}`) || !learningServiceSource.includes(`learningAssessmentsReadService.${assessmentMutationGuard}`)) {
+      failures.push(`Les mutations examens/quiz Learning doivent utiliser le garde-fou Prisma: ${assessmentMutationGuard}.`);
+    }
+  }
   if (!packageJsonSource.includes('learning:prisma-consistency:check')) {
     failures.push('package.json doit exposer learning:prisma-consistency:check.');
   }

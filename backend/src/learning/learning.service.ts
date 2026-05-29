@@ -223,7 +223,7 @@ export class LearningService {
       reason: 'learning:formateur:exam:create',
       afterRowsByTable: { exams: [exam] },
     });
-    return created[0] ?? exam;
+    return await this.learningAssessmentsReadService.getExamById(String(exam.id), actor) ?? created[0] ?? exam;
   }
   async deleteFormateurExam(examId: string, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -238,7 +238,7 @@ export class LearningService {
       reason: 'learning:formateur:exam:delete',
       beforeRowsByTable: { exams: [exam] },
     });
-    return exam;
+    await this.learningAssessmentsReadService.assertExamDeleted(String(exam.id)); return exam;
   }
   async getFormateurQuizStructure(examId: string, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -279,7 +279,7 @@ export class LearningService {
       reason: 'learning:formateur:quiz-question:create',
       afterRowsByTable: rowsToPersist,
     });
-    return createdQuestions[0] ?? question;
+    return await this.learningAssessmentsReadService.getQuestionById(String(question.id), actor) ?? createdQuestions[0] ?? question;
   }
   async updateFormateurQuizQuestion(questionId: string, payload: unknown, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -318,7 +318,7 @@ export class LearningService {
       reason: 'learning:formateur:quiz-question:update:choices-delete',
       beforeRowsByTable,
     });
-    return updatedQuestions[0] ?? sanitized;
+    return await this.learningAssessmentsReadService.getQuestionById(String(question.id), actor) ?? updatedQuestions[0] ?? sanitized;
   }
   async deleteFormateurQuizQuestion(questionId: string, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -332,7 +332,7 @@ export class LearningService {
       reason: 'learning:formateur:quiz-question:delete',
       beforeRowsByTable: { quiz_questions: [question] },
     });
-    return question;
+    await this.learningAssessmentsReadService.assertQuestionDeleted(String(question.id)); return question;
   }
   async reorderFormateurQuizQuestion(examId: string, payload: unknown, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -355,7 +355,7 @@ export class LearningService {
       beforeRowsByTable: { quiz_questions: previous },
       afterRowsByTable: { quiz_questions: updated },
     });
-    return updated;
+    return await this.learningAssessmentsReadService.getQuestionsByIds(updated.map((row) => String(row.id)), actor) ?? updated;
   }
   async createFormateurQuizChoice(examId: string, payload: unknown, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -373,7 +373,7 @@ export class LearningService {
       reason: 'learning:formateur:quiz-choice:create',
       afterRowsByTable: rowsToPersist,
     });
-    return choice;
+    return await this.learningAssessmentsReadService.getChoiceById(String(choice.id), actor) ?? choice;
   }
   async updateFormateurQuizChoice(choiceId: string, payload: unknown, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -391,7 +391,7 @@ export class LearningService {
       beforeRowsByTable: { quiz_choices: [previous] },
       afterRowsByTable: rowsToPersist,
     });
-    return updated[0] ?? sanitized;
+    return await this.learningAssessmentsReadService.getChoiceById(String(choice.id), actor) ?? updated[0] ?? sanitized;
   }
   async deleteFormateurQuizChoice(examId: string, choiceId: string, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -408,7 +408,7 @@ export class LearningService {
       reason: 'learning:formateur:quiz-choice:delete',
       beforeRowsByTable: { quiz_choices: [choice] },
     });
-    return choice;
+    await this.learningAssessmentsReadService.assertChoiceDeleted(String(choice.id)); return choice;
   }
   async reorderFormateurQuizChoice(examId: string, payload: unknown, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -431,7 +431,7 @@ export class LearningService {
       beforeRowsByTable: { quiz_choices: previous },
       afterRowsByTable: { quiz_choices: updated },
     });
-    return updated;
+    return await this.learningAssessmentsReadService.getChoicesByIds(updated.map((row) => String(row.id)), actor) ?? updated;
   }
   async gradeFormateurSubmission(submissionId: string, payload: unknown, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
