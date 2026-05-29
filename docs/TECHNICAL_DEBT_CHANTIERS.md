@@ -99,6 +99,7 @@ Actions realisees:
 - mutations examens, questions et choix quiz formateur relues/verifiees via la projection Prisma apres persistence/delete.
 - garde-fou CI `learning:assessments-mutations:check` ajoute pour verrouiller les contrats de readback/assertion Prisma.
 - extraction de `LearningAssessmentsCommandService` etendue aux commandes examens, questions et choix quiz hors du gros `LearningService`.
+- fondation Project Center ajoutee pour `projects` avec projection double-run Prisma et check de coherence dedie.
 
 Verification cible:
 
@@ -119,7 +120,7 @@ Critere de sortie:
 Statut mesure:
 
 - 60 tables connues par la policy data;
-- 24 tables avec projection normalisee ou auth normalisee;
+- 32 tables avec projection normalisee ou auth normalisee;
 - 44 tables suivies explicitement comme dette `AppRow`;
 - 0 table non classee.
 

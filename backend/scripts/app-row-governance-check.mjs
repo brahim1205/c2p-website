@@ -81,6 +81,7 @@ const allowedDoubleRunProjectionTables = new Set([
   'quiz_choices',
   'submissions',
   'certificates',
+  'projects',
 ]);
 
 function extractSetValues(source, setName) {

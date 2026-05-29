@@ -1063,6 +1063,35 @@ model LearningCertificate {
   @@index([source])
 }
 
+model ProjectCenterProject {
+  id            String   @id
+  ownerId       String?
+  title         String
+  description   String?
+  category      String?
+  sector        String?
+  status        String   @default("draft")
+  phase         String?
+  porteurName   String?
+  funding       Int      @default(0)
+  fundingGoal   Int      @default(0)
+  teamSize      Int      @default(0)
+  progress      Float    @default(0)
+  location      String?
+  impact        String?
+  image         String?
+  lookingFor    Json?
+  nextMilestone String?
+  metadata      Json?
+  source        String   @default("app_row_migration")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, category])
+  @@index([ownerId, status])
+  @@index([source])
+}
+
 model AppRow {
   key       String   @id
   table     String

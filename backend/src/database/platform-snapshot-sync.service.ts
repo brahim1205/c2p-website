@@ -18,6 +18,7 @@ import { PrismaService } from './prisma.service.js';
 import { AuditLogService } from './audit-log.service.js';
 import { buildEmptyLearningSummary, buildLearningRows, summarizeLearningRows, syncLearningSnapshot, type LearningSnapshotSyncSummary } from './platform-snapshot-learning-sync.js';
 import { buildEmptyMarketplaceSummary, buildMarketplaceRows, summarizeMarketplaceRows, syncMarketplaceSnapshot, type MarketplaceSnapshotSyncSummary } from './platform-snapshot-marketplace-sync.js';
+import { buildEmptyProjectCenterSummary, buildProjectCenterRows, summarizeProjectCenterRows, syncProjectCenterSnapshot, type ProjectCenterSnapshotSyncSummary } from './platform-snapshot-project-center-sync.js';
 
 type AppRowTable =
   | 'auth_users'
@@ -27,7 +28,7 @@ type AppRowTable =
   | 'auth_audit_logs'
   | keyof Store;
 
-interface PlatformSyncSummary extends MarketplaceSnapshotSyncSummary, LearningSnapshotSyncSummary {
+interface PlatformSyncSummary extends MarketplaceSnapshotSyncSummary, LearningSnapshotSyncSummary, ProjectCenterSnapshotSyncSummary {
   skipped?: string;
   appRowsSeeded: number;
   users: number;
@@ -100,19 +101,14 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
   }
 
   private async performSync(reason: string): Promise<PlatformSyncSummary> {
-    const appRowsSeeded = this.config.prismaPlatformSeedEnabled
-      ? await this.ensureAppRowsSeeded()
-      : 0;
+    const appRowsSeeded = this.config.prismaPlatformSeedEnabled ? await this.ensureAppRowsSeeded() : 0;
     const groupedRows = await this.loadGroupedRows();
 
     const users = this.mapUsers(groupedRows.auth_users ?? []);
     const sessions = this.mapSessions(groupedRows.auth_sessions ?? []);
     const refreshTokens = this.mapRefreshTokens(groupedRows.auth_refresh_tokens ?? []);
     const pendingChallenges = this.mapPendingChallenges(groupedRows.auth_pending_2fa ?? []);
-    const auditLogs = [
-      ...this.mapAuthAuditLogs(groupedRows.auth_audit_logs ?? []),
-      ...this.mapAdminAuditLogs(groupedRows.admin_audit_logs ?? []),
-    ];
+    const auditLogs = [...this.mapAuthAuditLogs(groupedRows.auth_audit_logs ?? []), ...this.mapAdminAuditLogs(groupedRows.admin_audit_logs ?? [])];
     const wallets = this.mapWallets(groupedRows.wallet_accounts ?? []);
     const walletTransactions = this.mapWalletTransactions(groupedRows.payment_transactions ?? []);
     const subscriptionPlans = this.mapSubscriptionPlans(groupedRows.subscription_plans ?? []);
@@ -123,7 +119,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
     const missions = this.mapMissions(groupedRows.bookings ?? []);
     const invoices = this.mapInvoices(groupedRows.invoices ?? []);
     const commissionEntries = this.mapCommissionEntries(groupedRows.commission_ledger ?? []);
-    const marketplaceRows = buildMarketplaceRows(groupedRows); const learningRows = buildLearningRows(groupedRows);
+    const marketplaceRows = buildMarketplaceRows(groupedRows); const learningRows = buildLearningRows(groupedRows); const projectCenterRows = buildProjectCenterRows(groupedRows);
     await this.prisma.$transaction(async (tx) => {
       await tx.userSessionRecord.deleteMany({ where: { source: 'app_row' } });
       await tx.refreshTokenSessionRecord.deleteMany({ where: { source: 'app_row' } });
@@ -177,7 +173,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
         commissionEntries,
         (batch) => tx.commissionLedgerEntry.createMany({ data: batch, skipDuplicates: true }),
       );
-      await syncMarketplaceSnapshot(tx, marketplaceRows); await syncLearningSnapshot(tx, learningRows);
+      await syncMarketplaceSnapshot(tx, marketplaceRows); await syncLearningSnapshot(tx, learningRows); await syncProjectCenterSnapshot(tx, projectCenterRows);
     }, {
       maxWait: 10_000,
       timeout: 60_000,
@@ -202,6 +198,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
       commissionEntries: commissionEntries.length,
       ...summarizeMarketplaceRows(marketplaceRows),
       ...summarizeLearningRows(learningRows),
+      ...summarizeProjectCenterRows(projectCenterRows),
     } satisfies PlatformSyncSummary;
 
     this.logger.log(`Platform snapshot synchronized (${reason}): ${JSON.stringify(summary)}`);
@@ -241,6 +238,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
       commissionEntries: 0,
       ...buildEmptyMarketplaceSummary(),
       ...buildEmptyLearningSummary(),
+      ...buildEmptyProjectCenterSummary(),
     };
   }
 
