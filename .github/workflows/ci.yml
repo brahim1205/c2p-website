@@ -149,6 +149,10 @@ jobs:
         working-directory: backend
         run: npm run db:seed:local
 
+      - name: Check Marketplace Prisma projection
+        working-directory: backend
+        run: npm run marketplace:prisma-consistency:check
+
       - name: Check PostgreSQL connection
         working-directory: backend
         run: npm run db:check

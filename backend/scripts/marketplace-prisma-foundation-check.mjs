@@ -16,6 +16,10 @@ const migrationPath = path.join(
 const migrationPlanPath = path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md');
 const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
 const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-marketplace-projection.ts');
+const snapshotSyncPath = path.join(backendRoot, 'src', 'database', 'platform-snapshot-sync.service.ts');
+const snapshotMarketplaceSyncPath = path.join(backendRoot, 'src', 'database', 'platform-snapshot-marketplace-sync.ts');
+const consistencyCheckPath = path.join(backendRoot, 'scripts', 'marketplace-prisma-consistency-check.mjs');
+const packageJsonPath = path.join(backendRoot, 'package.json');
 
 const marketplaceModels = [
   'MarketplaceProvider',
@@ -48,6 +52,10 @@ function main() {
   const migrationPlanSource = readRequiredFile(migrationPlanPath);
   const persistenceSource = readRequiredFile(persistencePath);
   const projectionSource = readRequiredFile(projectionPath);
+  const snapshotSyncSource = readRequiredFile(snapshotSyncPath);
+  const snapshotMarketplaceSyncSource = readRequiredFile(snapshotMarketplaceSyncPath);
+  const consistencyCheckSource = readRequiredFile(consistencyCheckPath);
+  const packageJsonSource = readRequiredFile(packageJsonPath);
   const failures = [];
 
   for (const model of marketplaceModels) {
@@ -75,9 +83,24 @@ function main() {
     if (!persistenceSource.includes(`rowsByTable.${table}`)) {
       failures.push(`Projection double-run absente de PlatformPersistenceService: ${table}`);
     }
+    if (!snapshotMarketplaceSyncSource.includes(table)) {
+      failures.push(`Helper backfill Marketplace absent: ${table}`);
+    }
+    if (!consistencyCheckSource.includes(`'${table}'`)) {
+      failures.push(`Check de coherence AppRow/Prisma absent: ${table}`);
+    }
   }
   if (!projectionSource.includes('persistMarketplaceProjection') || !projectionSource.includes('deleteMarketplaceProjection')) {
     failures.push('La projection Marketplace doit exposer persistMarketplaceProjection et deleteMarketplaceProjection.');
+  }
+  if (!snapshotSyncSource.includes('buildMarketplaceRows(groupedRows)') || !snapshotSyncSource.includes('syncMarketplaceSnapshot(tx, marketplaceRows)')) {
+    failures.push('PlatformSnapshotSyncService doit deleguer le backfill Marketplace au helper dedie.');
+  }
+  if (!snapshotMarketplaceSyncSource.includes('persistMarketplaceProjection(tx, rowsByTable)')) {
+    failures.push('Le helper snapshot Marketplace doit utiliser persistMarketplaceProjection.');
+  }
+  if (!packageJsonSource.includes('marketplace:prisma-consistency:check')) {
+    failures.push('package.json doit exposer marketplace:prisma-consistency:check.');
   }
 
   const report = {

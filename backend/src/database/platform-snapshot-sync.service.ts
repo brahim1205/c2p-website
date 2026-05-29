@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { randomUUID } from 'crypto';
 import { ConfigService } from '../config/config.service.js';
 import { createInitialStore, type Row, type Store } from '../data/mock-store.js';
 import {
@@ -17,6 +16,7 @@ import {
 } from '../auth/auth.store.js';
 import { PrismaService } from './prisma.service.js';
 import { AuditLogService } from './audit-log.service.js';
+import { buildEmptyMarketplaceSummary, buildMarketplaceRows, summarizeMarketplaceRows, syncMarketplaceSnapshot, type MarketplaceSnapshotSyncSummary } from './platform-snapshot-marketplace-sync.js';
 
 type AppRowTable =
   | 'auth_users'
@@ -26,7 +26,7 @@ type AppRowTable =
   | 'auth_audit_logs'
   | keyof Store;
 
-interface PlatformSyncSummary {
+interface PlatformSyncSummary extends MarketplaceSnapshotSyncSummary {
   skipped?: string;
   appRowsSeeded: number;
   users: number;
@@ -122,6 +122,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
     const missions = this.mapMissions(groupedRows.bookings ?? []);
     const invoices = this.mapInvoices(groupedRows.invoices ?? []);
     const commissionEntries = this.mapCommissionEntries(groupedRows.commission_ledger ?? []);
+    const marketplaceRows = buildMarketplaceRows(groupedRows);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.userSessionRecord.deleteMany({ where: { source: 'app_row' } });
@@ -176,6 +177,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
         commissionEntries,
         (batch) => tx.commissionLedgerEntry.createMany({ data: batch, skipDuplicates: true }),
       );
+      await syncMarketplaceSnapshot(tx, marketplaceRows);
     }, {
       maxWait: 10_000,
       timeout: 60_000,
@@ -198,6 +200,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
       missions: missions.length,
       invoices: invoices.length,
       commissionEntries: commissionEntries.length,
+      ...summarizeMarketplaceRows(marketplaceRows),
     };
 
     this.logger.log(`Platform snapshot synchronized (${reason}): ${JSON.stringify(summary)}`);
@@ -235,6 +238,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
       missions: 0,
       invoices: 0,
       commissionEntries: 0,
+      ...buildEmptyMarketplaceSummary(),
     };
   }
 
