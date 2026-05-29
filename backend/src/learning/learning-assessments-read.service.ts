@@ -115,6 +115,14 @@ export class LearningAssessmentsReadService {
     };
   }
 
+  async getSubmissionById(submissionId: string, user: AuthUser) {
+    if (!(await this.hasProjection())) return null;
+    const submission = await this.prisma.learningSubmission.findFirst({ where: { source: 'app_row', id: String(submissionId) } });
+    if (!submission) return null;
+    const exam = await this.findAccessibleExam(String(submission.examId), user);
+    return exam ? this.mapSubmission(submission) : null;
+  }
+
   private async hasProjection() {
     return (await this.prisma.learningExam.count({ where: { source: 'app_row' } })) > 0
       || (await this.prisma.learningCertificate.count({ where: { source: 'app_row' } })) > 0;

@@ -233,6 +233,7 @@ function main() {
     'learningAssessmentsReadService.getApprenantCertificates',
     'learningAssessmentsReadService.getQuizStructure',
     'learningAssessmentsReadService.getFormateurEvaluationsSnapshot',
+    'learningAssessmentsReadService.getSubmissionById',
   ]) {
     if (!learningServiceSource.includes(runtimeSwitch)) {
       failures.push(`LearningService doit tenter le reader Prisma avant AppRow: ${runtimeSwitch}.`);

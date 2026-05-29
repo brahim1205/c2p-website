@@ -183,7 +183,7 @@ export class LearningService {
       reason: 'learning:apprenant:exam:submit',
       afterRowsByTable: rowsToPersist,
     });
-    return createdSubmissions[0] ?? submission;
+    return await this.learningAssessmentsReadService.getSubmissionById(String(submission.id), actor) ?? createdSubmissions[0] ?? submission;
   }
   async getFormateurEvaluationsSnapshot(user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
@@ -468,7 +468,7 @@ export class LearningService {
       beforeRowsByTable: { submissions: [previous] },
       afterRowsByTable: rowsToPersist,
     });
-    return updated[0] ?? sanitized;
+    return await this.learningAssessmentsReadService.getSubmissionById(String(submission.id), actor) ?? updated[0] ?? sanitized;
   }
   private requireLearningActor(user: AuthUser | null) {
     if (!user) {
