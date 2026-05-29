@@ -82,7 +82,7 @@ export class MarketplaceService {
     const previous = clone(order);
     const updated = patchAppRows('client_orders', (row) => String(row.id) === String(order.id), { status });
     await this.persist('client_orders', updated, actor, 'marketplace:client:order-status:update', [previous]);
-    return updated[0] ?? { ...order, status };
+    return this.persistedMarketplaceRow('client_orders', updated[0] ?? { ...order, status });
   }
 
   async submitClientReport(payload: unknown, user: AuthUser | null) {
@@ -145,7 +145,7 @@ export class MarketplaceService {
       created_at: new Date().toISOString(),
     });
     await this.persist('provider_reviews', [review], actor, 'marketplace:client:review:create');
-    return review;
+    return this.persistedMarketplaceRow('provider_reviews', review);
   }
 
   async publishClientProviderReview(providerId: string, payload: unknown, user: AuthUser | null) {
@@ -170,7 +170,7 @@ export class MarketplaceService {
       created_at: new Date().toISOString(),
     });
     await this.persist('provider_reviews', [review], actor, 'marketplace:client:provider-review:create');
-    return review;
+    return this.persistedMarketplaceRow('provider_reviews', review);
   }
 
   async listClientProviders(user: AuthUser | null) {
@@ -204,7 +204,7 @@ export class MarketplaceService {
       added_at: new Date().toISOString(),
     }, { ensureUnique: true });
     await this.persist('client_favorites', [favorite], actor, 'marketplace:client:favorite:create');
-    return favorite;
+    return this.persistedMarketplaceRow('client_favorites', favorite);
   }
 
   async removeClientFavorite(favoriteId: string, user: AuthUser | null) {
@@ -289,7 +289,7 @@ export class MarketplaceService {
       requested_at: new Date().toISOString(),
     }, { ensureUnique: true });
     await this.persist('provider_verification_requests', [request], actor, 'marketplace:prestataire:verification-request:create');
-    return request;
+    return this.persistedMarketplaceRow('provider_verification_requests', request);
   }
 
   async listPrestataireBookings(user: AuthUser | null) {
@@ -337,7 +337,7 @@ export class MarketplaceService {
     const previous = clone(review);
     const updated = patchAppRows('provider_reviews', (row) => String(row.id) === String(review.id), { response });
     await this.persist('provider_reviews', updated, actor, 'marketplace:prestataire:review:reply', [previous]);
-    return updated[0] ?? { ...review, response };
+    return this.persistedMarketplaceRow('provider_reviews', updated[0] ?? { ...review, response });
   }
 
   async updatePrestataireReviewHelpful(reviewId: string, payload: unknown, user: AuthUser | null) {
@@ -350,7 +350,7 @@ export class MarketplaceService {
     const previous = clone(review);
     const updated = patchAppRows('provider_reviews', (row) => String(row.id) === String(review.id), { helpful });
     await this.persist('provider_reviews', updated, actor, 'marketplace:prestataire:review:helpful', [previous]);
-    return updated[0] ?? { ...review, helpful };
+    return this.persistedMarketplaceRow('provider_reviews', updated[0] ?? { ...review, helpful });
   }
 
   async listPrestataireServices(user: AuthUser | null) {
@@ -384,7 +384,7 @@ export class MarketplaceService {
       created_at: new Date().toISOString(),
     });
     await this.persist('provider_services', [service], actor, 'marketplace:prestataire:service:create');
-    return service;
+    return this.persistedMarketplaceRow('provider_services', service);
   }
 
   async updatePrestataireService(serviceId: string, payload: unknown, user: AuthUser | null) {
@@ -397,7 +397,7 @@ export class MarketplaceService {
     const patch = this.cleanPatch(input, ['title', 'description', 'price', 'location', 'image', 'category', 'price_type', 'status']);
     const updated = patchAppRows('provider_services', (row) => String(row.id) === String(service.id), patch);
     await this.persist('provider_services', updated, actor, 'marketplace:prestataire:service:update', [previous]);
-    return updated[0] ?? { ...service, ...patch };
+    return this.persistedMarketplaceRow('provider_services', updated[0] ?? { ...service, ...patch });
   }
 
   async updatePrestataireServiceStatus(serviceId: string, payload: unknown, user: AuthUser | null) {
@@ -496,6 +496,29 @@ export class MarketplaceService {
       beforeRowsByTable: beforeRows.length ? { [table]: beforeRows } : undefined,
       afterRowsByTable: { [table]: rows },
     });
+  }
+
+  private async persistedMarketplaceRow(table: string, row: Row) {
+    const id = String(row.id);
+    const prismaRow = await this.readPersistedMarketplaceRow(table, id);
+    return prismaRow ?? row;
+  }
+
+  private readPersistedMarketplaceRow(table: string, id: string) {
+    switch (table) {
+      case 'client_orders':
+        return this.marketplacePrismaReadService.getClientOrder(id);
+      case 'provider_reviews':
+        return this.marketplacePrismaReadService.getProviderReview(id);
+      case 'client_favorites':
+        return this.marketplacePrismaReadService.getClientFavorite(id);
+      case 'provider_services':
+        return this.marketplacePrismaReadService.getProviderService(id);
+      case 'provider_verification_requests':
+        return this.marketplacePrismaReadService.getVerificationRequest(id);
+      default:
+        return Promise.resolve(null);
+    }
   }
 
   private requireRole(user: AuthUser | null, role: string) {

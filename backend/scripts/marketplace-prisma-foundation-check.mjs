@@ -100,13 +100,28 @@ function main() {
   if (!readServiceSource.includes('MarketplacePrismaReadService')) {
     failures.push('Le lecteur Prisma Marketplace doit exister.');
   }
-  for (const method of ['listPublicProviders', 'getPublicProvider', 'getProviderByUserId', 'listProviderReviews', 'listClientFavorites', 'listProviderServices']) {
+  for (const method of [
+    'listPublicProviders',
+    'getPublicProvider',
+    'getProviderByUserId',
+    'listProviderReviews',
+    'listClientFavorites',
+    'listProviderServices',
+    'getClientOrder',
+    'getProviderReview',
+    'getClientFavorite',
+    'getProviderService',
+    'getVerificationRequest',
+  ]) {
     if (!readServiceSource.includes(method)) {
       failures.push(`Lecteur Prisma Marketplace incomplet: ${method}`);
     }
     if (!marketplaceServiceSource.includes(`marketplacePrismaReadService.${method}`)) {
       failures.push(`MarketplaceService doit utiliser le lecteur Prisma: ${method}`);
     }
+  }
+  if (!marketplaceServiceSource.includes('persistedMarketplaceRow')) {
+    failures.push('Les mutations Marketplace doivent relire la projection Prisma apres persistence.');
   }
   if (!snapshotSyncSource.includes('buildMarketplaceRows(groupedRows)') || !snapshotSyncSource.includes('syncMarketplaceSnapshot(tx, marketplaceRows)')) {
     failures.push('PlatformSnapshotSyncService doit deleguer le backfill Marketplace au helper dedie.');

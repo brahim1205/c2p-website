@@ -49,7 +49,7 @@ Etat 2026-05-29:
 - double-run de projection ajoute depuis `PlatformPersistenceService` vers les tables Prisma Marketplace;
 - backfill Marketplace branche sur `PlatformSnapshotSyncService` et controle par `npm run marketplace:prisma-consistency:check` apres le seed CI;
 - lectures runtime Marketplace basculees vers `MarketplacePrismaReadService` avec fallback AppRow;
-- ecritures runtime encore sur `AppRow` jusqu'au basculement explicite des commandes de mutation Marketplace.
+- mutations Marketplace maintenues en compatibilite AppRow, mais relues depuis la projection Prisma apres persistence quand elle est disponible.
 
 ### Lot 2 - Learning
 

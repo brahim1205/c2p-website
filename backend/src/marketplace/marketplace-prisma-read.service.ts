@@ -42,6 +42,13 @@ export class MarketplacePrismaReadService {
     });
   }
 
+  async getProviderReview(id: string) {
+    return this.readOrNull(async () => {
+      const review = await this.prisma.marketplaceProviderReview.findUnique({ where: { id } });
+      return review ? this.reviewToRow(review) : null;
+    });
+  }
+
   async listClientFavorites(clientId: string) {
     return this.readOrNull(async () => {
       const favorites = await this.prisma.marketplaceClientFavorite.findMany({
@@ -50,6 +57,22 @@ export class MarketplacePrismaReadService {
       });
       const providers = await this.providerMap(favorites.map((favorite) => favorite.providerId));
       return favorites.map((favorite) => this.favoriteToRow(favorite, providers.get(favorite.providerId)));
+    });
+  }
+
+  async getClientFavorite(id: string) {
+    return this.readOrNull(async () => {
+      const favorite = await this.prisma.marketplaceClientFavorite.findUnique({ where: { id } });
+      if (!favorite) return null;
+      const provider = await this.prisma.marketplaceProvider.findUnique({ where: { id: favorite.providerId } });
+      return this.favoriteToRow(favorite, provider ? hydrateRow('providers', this.providerToRow(provider)) : undefined);
+    });
+  }
+
+  async getClientOrder(id: string) {
+    return this.readOrNull(async () => {
+      const order = await this.prisma.marketplaceClientOrder.findUnique({ where: { id } });
+      return order ? this.clientOrderToRow(order) : null;
     });
   }
 
@@ -63,12 +86,26 @@ export class MarketplacePrismaReadService {
     });
   }
 
+  async getProviderService(id: string) {
+    return this.readOrNull(async () => {
+      const service = await this.prisma.marketplaceProviderService.findUnique({ where: { id } });
+      return service ? this.serviceToRow(service) : null;
+    });
+  }
+
   async latestVerificationRequestForUser(userId: string) {
     return this.readOrNull(async () => {
       const request = await this.prisma.marketplaceProviderVerificationRequest.findFirst({
         where: { userId },
         orderBy: { requestedAt: 'desc' },
       });
+      return request ? hydrateRow('provider_verification_requests', this.verificationRequestToRow(request)) : null;
+    });
+  }
+
+  async getVerificationRequest(id: string) {
+    return this.readOrNull(async () => {
+      const request = await this.prisma.marketplaceProviderVerificationRequest.findUnique({ where: { id } });
       return request ? hydrateRow('provider_verification_requests', this.verificationRequestToRow(request)) : null;
     });
   }
@@ -154,6 +191,23 @@ export class MarketplacePrismaReadService {
       image: service.image ?? row.image ?? '',
       created_at: this.iso(service.createdAt),
       updated_at: this.iso(service.updatedAt),
+    });
+  }
+
+  private clientOrderToRow(order: Prisma.MarketplaceClientOrderGetPayload<object>): Row {
+    const row = this.metadataRow(order.metadata);
+    return hydrateRow('client_orders', {
+      ...row,
+      id: row.id ?? order.id,
+      client_id: row.client_id ?? order.clientId,
+      provider_id: row.provider_id ?? order.providerId ?? null,
+      service: order.service ?? row.service ?? null,
+      status: order.status,
+      amount: order.amount ?? row.amount ?? null,
+      currency: order.currency ?? row.currency ?? 'FCFA',
+      scheduled_at: order.scheduledAt ? this.iso(order.scheduledAt) : row.scheduled_at ?? null,
+      created_at: this.iso(order.createdAt),
+      updated_at: this.iso(order.updatedAt),
     });
   }
 
