@@ -182,8 +182,8 @@ export class ConfigService {
     return String(this.configService.get('METRICS_AUTH_TOKEN') ?? '');
   }
 
-  get smsProvider(): 'disabled' | 'mock' | 'sendtext' {
-    return (this.configService.get('SMS_PROVIDER') ?? 'mock') as 'disabled' | 'mock' | 'sendtext';
+  get smsProvider(): 'disabled' | 'mock' | 'sendtext' | 'brevo' {
+    return (this.configService.get('SMS_PROVIDER') ?? 'mock') as 'disabled' | 'mock' | 'sendtext' | 'brevo';
   }
 
   get smsSenderId(): string | undefined {

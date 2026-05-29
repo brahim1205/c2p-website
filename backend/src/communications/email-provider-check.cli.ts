@@ -1,6 +1,7 @@
 import { configValidationSchema, validateEnvironmentConfig } from '../config/config.validation.js';
 import { ConfigService } from '../config/config.service.js';
 import { EmailService } from './email.service.js';
+import { SmsService } from './sms.service.js';
 
 type FetchCall = {
   url: string;
@@ -14,6 +15,8 @@ function buildConfig(overrides: Record<string, string>) {
     METRICS_AUTH_TOKEN: 'local-metrics-token',
     EMAIL_PROVIDER: 'brevo',
     EMAIL_FROM: 'no-reply@c2p.sn',
+    SMS_PROVIDER: 'brevo',
+    SMS_SENDER_ID: 'C2P',
     BREVO_API_KEY: 'test-brevo-key',
     BREVO_BASE_URL: 'https://api.brevo.com',
     UPLOAD_STORAGE_DRIVER: 'local-disk',
@@ -77,6 +80,54 @@ async function runBrevoProviderContract() {
   }
 }
 
+async function runBrevoSmsProviderContract() {
+  const calls: FetchCall[] = [];
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (url: URL | RequestInfo, init?: RequestInit) => {
+    calls.push({ url: String(url), init: init ?? {} });
+    return new Response(JSON.stringify({ messageId: 1511882900100020 }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as typeof fetch;
+
+  try {
+    const service = new SmsService(buildConfig({}));
+    const status = service.getStatus();
+    assert(status.provider === 'brevo', 'Expected Brevo SMS provider status.');
+    assert(status.configured === true, 'Expected Brevo SMS provider to be configured.');
+    assert(status.baseUrl === 'https://api.brevo.com', 'Expected Brevo SMS base URL.');
+    assert(status.sendPath === '/v3/transactionalSMS/send', 'Expected Brevo SMS send path.');
+
+    const result = await service.send({
+      phone: '+221 77 123 45 67',
+      message: 'Code C2P: 123456',
+      purpose: 'provider-check',
+      userId: 'user-check-1',
+    });
+
+    assert(result.provider === 'brevo', 'Expected Brevo SMS send result.');
+    assert(result.accepted === true, 'Expected accepted Brevo SMS result.');
+    assert(result.providerMessageId === '1511882900100020', 'Expected Brevo SMS message id extraction.');
+    assert(calls.length === 1, 'Expected one Brevo SMS fetch call.');
+
+    const call = calls[0]!;
+    assert(call.url === 'https://api.brevo.com/v3/transactionalSMS/send', 'Expected Brevo SMS endpoint.');
+    assert(call.init.method === 'POST', 'Expected Brevo SMS POST request.');
+    assert((call.init.headers as Record<string, string>)['api-key'] === 'test-brevo-key', 'Expected Brevo SMS api-key header.');
+
+    const body = JSON.parse(String(call.init.body));
+    assert(body.sender === 'C2P', 'Expected Brevo SMS sender.');
+    assert(body.recipient === '221771234567', 'Expected normalized SMS recipient.');
+    assert(body.content === 'Code C2P: 123456', 'Expected Brevo SMS content.');
+    assert(body.type === 'transactional', 'Expected transactional Brevo SMS type.');
+    assert(body.tag === 'provider-check', 'Expected Brevo SMS tag.');
+    assert(body.unicodeEnabled === true, 'Expected unicode Brevo SMS flag.');
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+}
+
 function runProductionConfigContract() {
   const validProduction = {
     NODE_ENV: 'production',
@@ -90,6 +141,8 @@ function runProductionConfigContract() {
     METRICS_AUTH_TOKEN: 'production-metrics-token',
     EMAIL_PROVIDER: 'brevo',
     EMAIL_FROM: 'no-reply@c2p.sn',
+    SMS_PROVIDER: 'brevo',
+    SMS_SENDER_ID: 'C2P',
     BREVO_API_KEY: 'production-brevo-key',
     BREVO_BASE_URL: 'https://api.brevo.com',
     UPLOAD_STORAGE_DRIVER: 's3',
@@ -110,6 +163,21 @@ function runProductionConfigContract() {
   const invalidEmail = configValidationSchema.safeParse(invalidEmailProvider);
   assert(!invalidEmail.success, 'Production config must reject EMAIL_PROVIDER=mock.');
 
+  const invalidSmsProvider = {
+    ...validProduction,
+    SMS_PROVIDER: 'mock',
+  };
+  const invalidSms = configValidationSchema.safeParse(invalidSmsProvider);
+  assert(!invalidSms.success, 'Production config must reject SMS_PROVIDER=mock.');
+
+  const invalidBrevoSms = {
+    ...validProduction,
+    SMS_PROVIDER: 'brevo',
+    SMS_SENDER_ID: '',
+  };
+  const invalidBrevoSmsConfig = configValidationSchema.safeParse(invalidBrevoSms);
+  assert(!invalidBrevoSmsConfig.success, 'Brevo SMS config must require SMS_SENDER_ID.');
+
   const invalidStorage = {
     ...validProduction,
     UPLOAD_S3_ENDPOINT: ['http', '://minio:9000'].join(''),
@@ -128,11 +196,14 @@ function runProductionConfigContract() {
 
 async function main() {
   await runBrevoProviderContract();
+  await runBrevoSmsProviderContract();
   runProductionConfigContract();
   console.log(JSON.stringify({
     ok: true,
     provider: 'brevo',
+    smsProvider: 'brevo',
     productionEmailProvider: 'brevo',
+    productionSmsProvider: 'brevo',
     productionStorage: 'cloudflare-r2',
   }));
 }

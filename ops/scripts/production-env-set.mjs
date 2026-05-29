@@ -7,9 +7,6 @@ const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '
 
 const EXTERNAL_KEYS = [
   'BREVO_API_KEY',
-  'SENDTEXT_SEND_PATH',
-  'SENDTEXT_API_KEY',
-  'SENDTEXT_API_SECRET',
   'DEXPAY_BASE_URL',
   'DEXPAY_API_KEY',
   'DEXPAY_API_SECRET',
@@ -114,6 +111,7 @@ function main() {
 
   let content = fs.readFileSync(backendEnvPath, 'utf8');
   content = replaceLine(content, 'EMAIL_PROVIDER', 'brevo');
+  content = replaceLine(content, 'SMS_PROVIDER', 'brevo');
   content = replaceLine(content, 'UPLOAD_STORAGE_DRIVER', 's3');
   content = replaceLine(content, 'UPLOAD_S3_REGION', 'auto');
   content = replaceLine(content, 'UPLOAD_S3_FORCE_PATH_STYLE', 'true');

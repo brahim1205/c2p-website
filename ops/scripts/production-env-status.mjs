@@ -39,6 +39,7 @@ function getRequiredBackendExternals(env) {
 
   if (emailProvider === 'resend') required.push(...EXTERNAL_PROVIDER_GROUPS.resend);
   if (emailProvider === 'brevo') required.push(...EXTERNAL_PROVIDER_GROUPS.brevo);
+  if (smsProvider === 'brevo') required.push(...EXTERNAL_PROVIDER_GROUPS.brevo);
   if (smsProvider === 'sendtext') required.push(...EXTERNAL_PROVIDER_GROUPS.sendtext);
   if (dexpayEnabled) required.push(...EXTERNAL_PROVIDER_GROUPS.dexpay);
   if (uploadStorageDriver === 's3') required.push(...EXTERNAL_PROVIDER_GROUPS.cloudflareR2);
@@ -143,6 +144,7 @@ function collectMissingByProvider(env) {
 
   if (emailProvider === 'resend') activeGroups.resend = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.resend);
   if (emailProvider === 'brevo') activeGroups.brevo = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.brevo);
+  if (smsProvider === 'brevo') activeGroups.brevoSms = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.brevo);
   if (smsProvider === 'sendtext') activeGroups.sendtext = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.sendtext);
   if (dexpayEnabled) activeGroups.dexpay = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.dexpay);
   if (uploadStorageDriver === 's3') activeGroups.cloudflareR2 = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.cloudflareR2);
@@ -205,6 +207,7 @@ function main() {
       dataLegacyApiMode: backend.DATA_LEGACY_API_MODE ?? null,
       uploadStorageDriver: backend.UPLOAD_STORAGE_DRIVER ?? null,
       emailProvider: backend.EMAIL_PROVIDER ?? null,
+      smsProvider: backend.SMS_PROVIDER ?? null,
     },
     missingBackendExternalValues: backendMode.exists ? collectMissing(backend, getRequiredBackendExternals(backend)) : [],
     missingBackendExternalValuesByProvider: backendMode.exists

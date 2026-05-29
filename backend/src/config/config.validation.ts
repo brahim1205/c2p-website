@@ -68,7 +68,7 @@ export const configValidationSchema = z.object({
   REDIS_PASSWORD: z.string().optional(),
   REDIS_DB: z.string().default('0'),
   REDIS_TLS: booleanString.default('false'),
-  SMS_PROVIDER: z.enum(['disabled', 'mock', 'sendtext']).default('mock'),
+  SMS_PROVIDER: z.enum(['disabled', 'mock', 'sendtext', 'brevo']).default('mock'),
   SMS_SENDER_ID: z.string().optional(),
   SMS_TEST_RECIPIENT: z.string().optional(),
   SENDTEXT_BASE_URL: optionalUrl,
@@ -209,6 +209,14 @@ export const configValidationSchema = z.object({
       });
     }
 
+    if (config.SMS_PROVIDER !== 'brevo') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMS_PROVIDER'],
+        message: 'SMS_PROVIDER must be brevo in production.',
+      });
+    }
+
     if (config.UPLOAD_STORAGE_DRIVER !== 's3') {
       ctx.addIssue({
         code: 'custom',
@@ -241,6 +249,18 @@ export const configValidationSchema = z.object({
           code: 'custom',
           path: [key],
           message: `${key} is required when SMS_PROVIDER=sendtext.`,
+        });
+      }
+    }
+  }
+
+  if (config.SMS_PROVIDER === 'brevo') {
+    for (const key of ['SMS_SENDER_ID', 'BREVO_API_KEY'] as const) {
+      if (!config[key]?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} is required when SMS_PROVIDER=brevo.`,
         });
       }
     }

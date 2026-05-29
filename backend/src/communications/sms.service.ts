@@ -14,7 +14,7 @@ interface SmsSendPayload {
 }
 
 interface SmsProviderStatus {
-  provider: 'disabled' | 'mock' | 'sendtext';
+  provider: 'disabled' | 'mock' | 'sendtext' | 'brevo';
   configured: boolean;
   baseUrl?: string;
   sendPath?: string;
@@ -22,7 +22,7 @@ interface SmsProviderStatus {
 }
 
 export interface SmsSendResult {
-  provider: 'mock' | 'sendtext';
+  provider: 'mock' | 'sendtext' | 'brevo';
   accepted: boolean;
   providerMessageId?: string | null;
   raw?: unknown;
@@ -35,11 +35,12 @@ export class SmsService {
   constructor(private readonly config: ConfigService) {}
 
   getStatus(): SmsProviderStatus {
+    const isBrevo = this.config.smsProvider === 'brevo';
     return {
       provider: this.config.smsProvider,
       configured: this.isConfigured(),
-      baseUrl: this.config.sendTextBaseUrl,
-      sendPath: this.config.sendTextSendPath,
+      baseUrl: isBrevo ? this.config.brevoBaseUrl : this.config.sendTextBaseUrl,
+      sendPath: isBrevo ? '/v3/transactionalSMS/send' : this.config.sendTextSendPath,
       senderId: this.config.smsSenderId,
     };
   }
@@ -47,6 +48,9 @@ export class SmsService {
   isConfigured() {
     if (this.config.smsProvider === 'disabled') return false;
     if (this.config.smsProvider === 'mock') return true;
+    if (this.config.smsProvider === 'brevo') {
+      return Boolean(this.config.brevoApiKey && this.config.smsSenderId);
+    }
     return Boolean(
       this.config.sendTextBaseUrl
       && this.config.sendTextSendPath
@@ -84,9 +88,17 @@ export class SmsService {
     }
 
     if (!this.isConfigured()) {
-      throw new ServiceUnavailableException('Configuration SendText incomplete.');
+      throw new ServiceUnavailableException('Configuration SMS incomplete.');
     }
 
+    if (this.config.smsProvider === 'brevo') {
+      return this.sendWithBrevo(phone, payload);
+    }
+
+    return this.sendWithSendText(phone, payload);
+  }
+
+  private async sendWithSendText(phone: string, payload: SmsSendPayload): Promise<SmsSendResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.sendTextTimeoutMs);
     const url = `${this.config.sendTextBaseUrl!}${this.config.sendTextSendPath!}`;
@@ -124,6 +136,50 @@ export class SmsService {
         throw error;
       }
       throw new BadGatewayException('Passerelle SMS indisponible.');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private async sendWithBrevo(phone: string, payload: SmsSendPayload): Promise<SmsSendResult> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.config.sendTextTimeoutMs);
+
+    try {
+      const response = await fetch(`${this.config.brevoBaseUrl}/v3/transactionalSMS/send`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'api-key': this.config.brevoApiKey!,
+        },
+        body: JSON.stringify({
+          sender: this.config.smsSenderId,
+          recipient: phone,
+          content: payload.message,
+          type: 'transactional',
+          tag: payload.purpose,
+          unicodeEnabled: true,
+        }),
+      });
+
+      const body = await this.safeJson(response);
+      if (!response.ok) {
+        throw new BadGatewayException('Echec de remise SMS chez Brevo.');
+      }
+
+      return {
+        provider: 'brevo',
+        accepted: true,
+        providerMessageId: this.extractMessageId(body),
+        raw: body,
+      };
+    } catch (error) {
+      if (error instanceof BadGatewayException || error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      throw new BadGatewayException('Passerelle SMS Brevo indisponible.');
     } finally {
       clearTimeout(timeout);
     }
@@ -176,7 +232,8 @@ export class SmsService {
     if (!body || typeof body !== 'object') return null;
     const candidate = body as Record<string, unknown>;
     return String(
-      candidate.message_id
+      candidate.messageId
+      ?? candidate.message_id
       ?? candidate.id
       ?? candidate.uuid
       ?? candidate.reference

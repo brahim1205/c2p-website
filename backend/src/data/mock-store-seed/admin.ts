@@ -296,7 +296,7 @@ export const adminSeed: Store = {
       { id: 2101, name: 'Zoom', icon: 'ri-video-line', description: 'Classes virtuelles et reunions en ligne', status: 'connected', lastSync: '2026-05-05 14:30' },
       { id: 2102, name: 'DexPay', icon: 'ri-secure-payment-line', description: 'Passerelle on-ramp et off-ramp fiat / stablecoin', status: 'connected', lastSync: '2026-05-05 12:15' },
       { id: 2103, name: 'SendGrid', icon: 'ri-mail-send-line', description: 'Emails transactionnels et marketing', status: 'disconnected', lastSync: null },
-      { id: 2104, name: 'SendText', icon: 'ri-message-2-line', description: 'SMS transactionnels et campagnes locales', status: 'connected', lastSync: '2026-05-04 09:20' },
+      { id: 2104, name: 'Brevo SMS', icon: 'ri-message-2-line', description: 'SMS transactionnels Brevo', status: 'connected', lastSync: '2026-05-04 09:20' },
       { id: 2105, name: 'Google Maps', icon: 'ri-map-pin-line', description: 'Geolocalisation et itineraires', status: 'connected', lastSync: '2026-05-03 16:45' },
     ],
 };

@@ -140,6 +140,12 @@ function checkProductionEnvExamples(failures) {
         failures.push(`${repoPath}: ${key} doit etre renseigne quand EMAIL_PROVIDER=brevo.`);
       }
     }
+    if (env.SMS_PROVIDER !== 'brevo') {
+      failures.push(`${repoPath}: SMS_PROVIDER doit etre brevo en production.`);
+    }
+    if (!env.SMS_SENDER_ID) {
+      failures.push(`${repoPath}: SMS_SENDER_ID doit etre renseigne quand SMS_PROVIDER=brevo.`);
+    }
   }
 }
 

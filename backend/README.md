@@ -56,7 +56,8 @@ Variables importantes :
 - `TRUST_PROXY`
 - `PRISMA_CONNECTION_REQUIRED`
 - `REDIS_URL` ou `REDIS_HOST/PORT`
-- `SENDTEXT_*`
+- `SMS_PROVIDER=brevo` avec `BREVO_API_KEY` et `SMS_SENDER_ID`
+- `SENDTEXT_*` si le provider SMS legacy SendText est utilise
 - `DEXPAY_*`
 - `CLOUDINARY_*`
 

@@ -122,6 +122,7 @@ Frontend:
 - `DATA_LEGACY_API_MODE=read-only`.
 - `UPLOAD_STORAGE_DRIVER=s3`.
 - `EMAIL_PROVIDER=brevo`.
+- `SMS_PROVIDER=brevo` cible Brevo SMS via l'API transactionnelle.
 - R2 et Dexpay controles par scripts externes: OK.
 
 ## Roadmap recommandee

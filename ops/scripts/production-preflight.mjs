@@ -248,13 +248,11 @@ function main() {
   const smsProvider = String(backendEnv.SMS_PROVIDER ?? '').trim().toLowerCase();
   if (!smsProvider) {
     fail(failures, 'SMS_PROVIDER manquant.');
-  } else if (smsProvider === 'mock') {
-    fail(failures, 'SMS_PROVIDER ne doit pas être mock en production.');
-  } else if (smsProvider === 'sendtext') {
-    requireNonPlaceholder(backendEnv, 'SENDTEXT_BASE_URL', failures);
-    requireNonPlaceholder(backendEnv, 'SENDTEXT_SEND_PATH', failures);
-    requireNonPlaceholder(backendEnv, 'SENDTEXT_API_KEY', failures);
-    requireNonPlaceholder(backendEnv, 'SENDTEXT_API_SECRET', failures);
+  } else if (smsProvider !== 'brevo') {
+    fail(failures, 'SMS_PROVIDER doit être brevo en production.');
+  } else if (smsProvider === 'brevo') {
+    requireNonPlaceholder(backendEnv, 'SMS_SENDER_ID', failures);
+    requireNonPlaceholder(backendEnv, 'BREVO_API_KEY', failures);
   }
 
   const emailProvider = String(backendEnv.EMAIL_PROVIDER ?? '').trim().toLowerCase();

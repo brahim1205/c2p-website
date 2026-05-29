@@ -903,6 +903,7 @@ function main() {
     [opsProdEnvExamplePath, opsProdEnvExample],
   ]) {
     assertContains(content, filePath, 'EMAIL_PROVIDER=brevo', failures);
+    assertContains(content, filePath, 'SMS_PROVIDER=brevo', failures);
     assertContains(content, filePath, 'DATA_LEGACY_API_MODE=read-only', failures);
     assertContains(content, filePath, 'BREVO_API_KEY=', failures);
     assertContains(content, filePath, 'UPLOAD_S3_ENDPOINT=https://replace-with-cloudflare-account-id.r2.cloudflarestorage.com', failures);
