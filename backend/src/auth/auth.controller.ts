@@ -167,6 +167,11 @@ export class AuthController {
     return this.authService.getPublicInstructorProfile(request, id);
   }
 
+  @Get('profile/:id/export')
+  exportProfileData(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return this.authService.exportPersonalData(request, id);
+  }
+
   @Get('profile/:id')
   getProfile(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
     return this.authService.getProfile(request, id);

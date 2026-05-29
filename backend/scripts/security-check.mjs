@@ -20,6 +20,20 @@ function assertNoSensitiveUserFields(user, context) {
   }
 }
 
+function assertNoSensitiveAuthFieldsDeep(value, context) {
+  if (!value || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertNoSensitiveAuthFieldsDeep(entry, `${context}[${index}]`));
+    return;
+  }
+  for (const field of ['password', 'passwordHash', 'passwordHistory', 'backupCodes', 'tokenHash', 'csrfToken']) {
+    assert(typeof value[field] === 'undefined', `${context} must not expose ${field}`);
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    assertNoSensitiveAuthFieldsDeep(nested, `${context}.${key}`);
+  }
+}
+
 function extractCookies(response) {
   const setCookies = response.headers.getSetCookie?.() || [];
   return setCookies.map((cookie) => cookie.split(';', 1)[0]);
@@ -120,6 +134,22 @@ async function main() {
   assert(selfProfileResponse.ok, `expected 200 on /auth/profile/usr-client, got ${selfProfileResponse.status}`);
   const selfProfilePayload = await selfProfileResponse.json();
   assertNoSensitiveUserFields(selfProfilePayload, 'self profile payload');
+
+  const selfExportResponse = await request('/auth/profile/usr-client/export', {
+    headers: { Cookie: cookieJar },
+  });
+  assert(selfExportResponse.ok, `expected 200 on /auth/profile/usr-client/export, got ${selfExportResponse.status}`);
+  const selfExportPayload = await selfExportResponse.json();
+  assert(selfExportPayload.profile?.id === 'usr-client', 'data export must include the requested profile');
+  assert(Array.isArray(selfExportPayload.security?.sessions), 'data export must include session metadata');
+  assert(Array.isArray(selfExportPayload.security?.auditLogs), 'data export must include audit logs');
+  assertNoSensitiveAuthFieldsDeep(selfExportPayload, 'self data export');
+
+  const { cookieJar: prestataireCookieJar } = await loginAs('prestataire@c2p.sn');
+  const forbiddenExportResponse = await request('/auth/profile/usr-client/export', {
+    headers: { Cookie: prestataireCookieJar },
+  });
+  assert(forbiddenExportResponse.status === 401, `expected 401 on cross-user data export, got ${forbiddenExportResponse.status}`);
 
   const selfEscalationAttempt = await request('/auth/profile/usr-client', {
     method: 'PATCH',

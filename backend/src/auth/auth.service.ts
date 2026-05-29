@@ -1172,6 +1172,44 @@ export class AuthService {
     return editableProfileUser(this.normalizeUser(user));
   }
 
+  async exportPersonalData(request: AuthenticatedRequest, id: string) {
+    this.requireSelfOrAdmin(request, id);
+    const { users, sessions, auditLogs } = await this.loadSnapshot();
+    const user = this.findUserById(id, users);
+    if (!user) {
+      throw new BadRequestException('Utilisateur introuvable.');
+    }
+
+    const normalizedUser = this.normalizeUser(user);
+    return {
+      generatedAt: new Date().toISOString(),
+      subject: {
+        id: normalizedUser.id,
+        role: normalizedUser.role,
+        status: normalizedUser.status,
+      },
+      profile: editableProfileUser(normalizedUser),
+      security: {
+        sessions: this.listSessionsForUser(id, sessions).map((session) => ({
+          id: session.id,
+          device: session.device,
+          location: session.location,
+          ip: session.ip,
+          createdAt: session.createdAt,
+          lastActive: session.lastActive,
+          expiresAt: session.expiresAt,
+          absoluteExpiresAt: session.absoluteExpiresAt,
+          current: session.id === request.auth?.sessionId,
+        })),
+        auditLogs: this.listAuditLogsForUser(id, auditLogs),
+      },
+      retention: {
+        accountDeletion: 'Suppression depuis /auth/profile/:id par le titulaire du compte.',
+        auditLogs: 'Conserves pour securite et obligations operationnelles selon la politique C2P.',
+      },
+    };
+  }
+
   async getPublicInstructorProfile(request: Pick<AuthenticatedRequest, 'auth'> | null, id: string) {
     const users = await this.loadRows<StoredUser>('auth_users');
     const user = this.findUserById(id, users);
