@@ -19,6 +19,9 @@ const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-learn
 const snapshotSyncPath = path.join(backendRoot, 'src', 'database', 'platform-snapshot-sync.service.ts');
 const snapshotLearningSyncPath = path.join(backendRoot, 'src', 'database', 'platform-snapshot-learning-sync.ts');
 const consistencyCheckPath = path.join(backendRoot, 'scripts', 'learning-prisma-consistency-check.mjs');
+const learningModulePath = path.join(backendRoot, 'src', 'learning', 'learning.module.ts');
+const learningAccessServicePath = path.join(backendRoot, 'src', 'learning', 'learning-access.service.ts');
+const learningPublicReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-public-read.service.ts');
 const packageJsonPath = path.join(backendRoot, 'package.json');
 
 const learningModels = [
@@ -53,6 +56,9 @@ function main() {
   const snapshotSyncSource = readRequiredFile(snapshotSyncPath);
   const snapshotLearningSyncSource = readRequiredFile(snapshotLearningSyncPath);
   const consistencyCheckSource = readRequiredFile(consistencyCheckPath);
+  const learningModuleSource = readRequiredFile(learningModulePath);
+  const learningAccessServiceSource = readRequiredFile(learningAccessServicePath);
+  const learningPublicReadServiceSource = readRequiredFile(learningPublicReadServicePath);
   const packageJsonSource = readRequiredFile(packageJsonPath);
   const failures = [];
 
@@ -96,6 +102,28 @@ function main() {
   }
   if (!snapshotLearningSyncSource.includes('persistLearningProjection(tx, rowsByTable)')) {
     failures.push('Le helper snapshot Learning public doit utiliser persistLearningProjection.');
+  }
+  if (!learningModuleSource.includes('LearningPublicReadService')) {
+    failures.push('LearningPublicReadService doit etre fourni par LearningModule.');
+  }
+  for (const method of [
+    'getPublicCourses',
+    'getPublicInstructorCourses',
+    'getPublicCourseDetail',
+    'getPublicVirtualClassDetail',
+  ]) {
+    if (!learningPublicReadServiceSource.includes(`async ${method}`)) {
+      failures.push(`Reader Prisma Learning public incomplet: ${method}`);
+    }
+    if (!learningAccessServiceSource.includes(`learningPublicReadService.${method}`)) {
+      failures.push(`LearningAccessService doit tenter le reader Prisma avant AppRow: ${method}`);
+    }
+  }
+  if (!learningAccessServiceSource.includes('syncAppStoreFromDatabase(this.prisma)')) {
+    failures.push('LearningAccessService doit conserver le fallback AppRow pendant la migration.');
+  }
+  if (!learningPublicReadServiceSource.includes("source: 'app_row'")) {
+    failures.push('Le reader Prisma Learning public doit lire la projection source app_row.');
   }
   if (!packageJsonSource.includes('learning:prisma-consistency:check')) {
     failures.push('package.json doit exposer learning:prisma-consistency:check.');

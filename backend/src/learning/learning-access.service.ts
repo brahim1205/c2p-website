@@ -17,6 +17,7 @@ import { prepareInsert } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import { createAppNotificationRow } from '../notifications/notification-payloads.js';
+import { LearningPublicReadService } from './learning-public-read.service.js';
 
 type ProgressPayload = {
   progress?: unknown;
@@ -26,12 +27,11 @@ type ProgressPayload = {
 
 @Injectable()
 export class LearningAccessService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly platformPersistenceService: PlatformPersistenceService,
-  ) {}
+  constructor(private readonly prisma: PrismaService, private readonly platformPersistenceService: PlatformPersistenceService, private readonly learningPublicReadService: LearningPublicReadService) {}
 
   async getPublicCourses() {
+    const prismaRows = await this.learningPublicReadService.getPublicCourses();
+    if (prismaRows) return prismaRows;
     await syncAppStoreFromDatabase(this.prisma);
     return hydrateRows('courses', store.courses ?? [])
       .filter((course) => String(course.status ?? '').toLowerCase() === 'published')
@@ -44,21 +44,22 @@ export class LearningAccessService {
   }
 
   async getPublicInstructorCourses(instructorId: string) {
+    const prismaRows = await this.learningPublicReadService.getPublicInstructorCourses(instructorId);
+    if (prismaRows) return prismaRows;
     await syncAppStoreFromDatabase(this.prisma);
     return hydrateRows('courses', store.courses ?? [])
-      .filter((course) =>
-        String(course.instructor_id) === String(instructorId)
-        && String(course.status ?? '').toLowerCase() === 'published'
-      )
+      .filter((course) => String(course.instructor_id) === String(instructorId) && String(course.status ?? '').toLowerCase() === 'published')
       .sort((left, right) => this.compareDatesDesc(left.updated_at ?? left.created_at, right.updated_at ?? right.created_at));
   }
 
   async getPublicCourseDetail(courseId: string) {
+    const prismaSnapshot = await this.learningPublicReadService.getPublicCourseDetail(courseId);
+    if (prismaSnapshot) {
+      if (!prismaSnapshot.course) throw new NotFoundException('Formation introuvable.');
+      return prismaSnapshot;
+    }
     await syncAppStoreFromDatabase(this.prisma);
-    const course = hydrateRows('courses', store.courses ?? []).find((row) =>
-      String(row.id) === String(courseId)
-      && String(row.status ?? '').toLowerCase() === 'published'
-    );
+    const course = hydrateRows('courses', store.courses ?? []).find((row) => String(row.id) === String(courseId) && String(row.status ?? '').toLowerCase() === 'published');
     if (!course) {
       throw new NotFoundException('Formation introuvable.');
     }
@@ -72,11 +73,13 @@ export class LearningAccessService {
   }
 
   async getPublicVirtualClassDetail(classId: string) {
+    const prismaSnapshot = await this.learningPublicReadService.getPublicVirtualClassDetail(classId);
+    if (prismaSnapshot) {
+      if (!prismaSnapshot.virtualClass) throw new NotFoundException('Classe virtuelle introuvable.');
+      return prismaSnapshot;
+    }
     await syncAppStoreFromDatabase(this.prisma);
-    const virtualClass = hydrateRows('virtual_classes', store.virtual_classes ?? []).find((row) =>
-      String(row.id) === String(classId)
-      && String(row.status ?? 'scheduled') !== 'archived'
-    );
+    const virtualClass = hydrateRows('virtual_classes', store.virtual_classes ?? []).find((row) => String(row.id) === String(classId) && String(row.status ?? 'scheduled') !== 'archived');
     if (!virtualClass) {
       throw new NotFoundException('Classe virtuelle introuvable.');
     }

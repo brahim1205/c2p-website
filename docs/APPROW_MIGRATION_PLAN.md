@@ -86,7 +86,8 @@ Etat 2026-05-29:
 - fondation Prisma creee pour le catalogue public Learning via `backend/prisma/migrations/202605291345_learning_public_foundation/migration.sql`;
 - projection double-run ajoutee pour `courses`, `course_sections`, `course_lessons`, `course_reviews` et `virtual_classes`;
 - backfill Learning public branche sur `PlatformSnapshotSyncService` et controle par `npm run learning:prisma-consistency:check`;
-- lectures runtime Learning encore sur AppRow jusqu'au basculement explicite du reader Prisma.
+- lectures publiques runtime Learning basculees vers `LearningPublicReadService` avec fallback AppRow pour les listes cours, cours formateur, detail cours et detail classe virtuelle;
+- ecritures et parcours authentifies Learning encore maintenus sur AppRow jusqu'au lot progression/certificats/formateur.
 
 ### Lot 3 - Project Center
 
