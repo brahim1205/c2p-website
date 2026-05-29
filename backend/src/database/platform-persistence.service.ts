@@ -6,6 +6,7 @@ import { AuditLogService } from './audit-log.service.js';
 import type { Row } from '../data/mock-store.js';
 import { normalizeOutboxEventInput } from '../outbox/outbox-contract.js';
 import type { OutboxEventInput } from '../outbox/outbox.types.js';
+import { deleteMarketplaceProjection, persistMarketplaceProjection } from './platform-marketplace-projection.js';
 
 const FINANCIAL_PROJECTION_TABLES = new Set([
   'bookings',
@@ -18,6 +19,15 @@ const FINANCIAL_PROJECTION_TABLES = new Set([
   'escrow_cases',
   'invoices',
   'commission_ledger',
+]);
+
+const MARKETPLACE_PROJECTION_TABLES = new Set([
+  'providers',
+  'provider_services',
+  'provider_reviews',
+  'client_orders',
+  'client_favorites',
+  'provider_verification_requests',
 ]);
 
 type MutationContext = {
@@ -86,6 +96,20 @@ export class PlatformPersistenceService {
         },
       });
     }
+
+    if (changedTables.some((table) => MARKETPLACE_PROJECTION_TABLES.has(table))) {
+      await this.auditLogService.record({
+        scope: 'database',
+        action: 'marketplace_projection_write',
+        userId: context.actorId ?? undefined,
+        targetType: 'tables',
+        targetId: changedTables.join(','),
+        metadata: {
+          reason: context.reason ?? 'unspecified',
+          counts: Object.fromEntries(normalizedEntries.map(([table, rows]) => [table, rows.length])),
+        },
+      });
+    }
   }
 
   async deleteRows(removalsByTable: Record<string, string[]>, context: MutationContext = {}) {
@@ -129,6 +153,20 @@ export class PlatformPersistenceService {
           reason: context.reason ?? 'unspecified',
           counts: Object.fromEntries(normalizedEntries.map(([table, ids]) => [table, ids.length])),
           before: context.beforeRowsByTable ?? {},
+        },
+      });
+    }
+
+    if (changedTables.some((table) => MARKETPLACE_PROJECTION_TABLES.has(table))) {
+      await this.auditLogService.record({
+        scope: 'database',
+        action: 'marketplace_projection_delete',
+        userId: context.actorId ?? undefined,
+        targetType: 'tables',
+        targetId: changedTables.join(','),
+        metadata: {
+          reason: context.reason ?? 'unspecified',
+          counts: Object.fromEntries(normalizedEntries.map(([table, ids]) => [table, ids.length])),
         },
       });
     }
@@ -229,6 +267,14 @@ export class PlatformPersistenceService {
     await this.persistInvoices(tx, rowsByTable.invoices ?? []);
     await this.persistCommissionEntries(tx, rowsByTable.commission_ledger ?? []);
     await this.persistMissions(tx, rowsByTable.bookings ?? []);
+    await persistMarketplaceProjection(tx, {
+      providers: rowsByTable.providers ?? [],
+      provider_services: rowsByTable.provider_services ?? [],
+      provider_reviews: rowsByTable.provider_reviews ?? [],
+      client_orders: rowsByTable.client_orders ?? [],
+      client_favorites: rowsByTable.client_favorites ?? [],
+      provider_verification_requests: rowsByTable.provider_verification_requests ?? [],
+    });
   }
 
   private async deleteNormalizedProjection(tx: Prisma.TransactionClient, removalsByTable: Record<string, string[]>) {
@@ -262,6 +308,14 @@ export class PlatformPersistenceService {
     if (removalsByTable.bookings?.length) {
       await tx.mission.deleteMany({ where: { id: { in: removalsByTable.bookings } } });
     }
+    await deleteMarketplaceProjection(tx, {
+      providers: removalsByTable.providers ?? [],
+      provider_services: removalsByTable.provider_services ?? [],
+      provider_reviews: removalsByTable.provider_reviews ?? [],
+      client_orders: removalsByTable.client_orders ?? [],
+      client_favorites: removalsByTable.client_favorites ?? [],
+      provider_verification_requests: removalsByTable.provider_verification_requests ?? [],
+    });
   }
 
   private async persistOutboxEvents(tx: Prisma.TransactionClient, events: OutboxEventInput[]) {

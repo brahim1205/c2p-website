@@ -46,7 +46,8 @@ Etat 2026-05-29:
 
 - fondation Prisma creee pour les 6 agregats Marketplace via `backend/prisma/migrations/202605290145_marketplace_foundation/migration.sql`;
 - garde-fou `npm run marketplace:prisma-foundation:check` ajoute au `verify` backend;
-- lectures/ecritures runtime encore sur `AppRow` jusqu'au double-run de projection et aux smokes role par role.
+- double-run de projection ajoute depuis `PlatformPersistenceService` vers les tables Prisma Marketplace;
+- lectures/ecritures runtime encore sur `AppRow` jusqu'aux smokes role par role et au basculement explicite des services Marketplace.
 
 ### Lot 2 - Learning
 

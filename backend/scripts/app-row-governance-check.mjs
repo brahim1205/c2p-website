@@ -68,6 +68,15 @@ const normalizedAuthTables = new Set([
   'auth_refresh_tokens',
 ]);
 
+const allowedDoubleRunProjectionTables = new Set([
+  'client_favorites',
+  'client_orders',
+  'provider_reviews',
+  'provider_services',
+  'provider_verification_requests',
+  'providers',
+]);
+
 function extractSetValues(source, setName) {
   const match = new RegExp(`(?:export\\s+)?const\\s+${setName}\\s*=\\s*new Set\\(\\[([\\s\\S]*?)\\]\\);`).exec(source);
   if (!match) return [];
@@ -123,7 +132,12 @@ function main() {
 
   const unclassifiedTables = difference(knownTables, classifiedTables);
   const obsoleteDebtTables = difference(trackedAppRowDebtTables, knownTables);
-  const projectedButStillDebt = sorted([...normalizedProjectionTables].filter((table) => trackedAppRowDebtTables.has(table)));
+  const doubleRunProjectionTables = sorted(
+    [...normalizedProjectionTables].filter((table) => allowedDoubleRunProjectionTables.has(table)),
+  );
+  const projectedButStillDebt = sorted([...normalizedProjectionTables].filter((table) => (
+    trackedAppRowDebtTables.has(table) && !allowedDoubleRunProjectionTables.has(table)
+  )));
   const publicReadDebtTables = sorted([...publicReadTables].filter((table) => trackedAppRowDebtTables.has(table)));
   const failures = [];
 
@@ -147,11 +161,13 @@ function main() {
       normalizedProjectionTables: normalizedProjectionTables.size,
       trackedAppRowDebtTables: trackedAppRowDebtTables.size,
       publicReadDebtTables: publicReadDebtTables.length,
+      doubleRunProjectionTables: doubleRunProjectionTables.length,
       unclassifiedTables: unclassifiedTables.length,
     },
     normalizedProjectionTables: sorted(normalizedProjectionTables),
     trackedAppRowDebtTables: sorted(trackedAppRowDebtTables),
     publicReadDebtTables,
+    doubleRunProjectionTables,
     unclassifiedTables,
     obsoleteDebtTables,
     projectedButStillDebt,

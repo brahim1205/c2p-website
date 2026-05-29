@@ -14,6 +14,8 @@ const migrationPath = path.join(
   'migration.sql',
 );
 const migrationPlanPath = path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md');
+const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
+const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-marketplace-projection.ts');
 
 const marketplaceModels = [
   'MarketplaceProvider',
@@ -44,6 +46,8 @@ function main() {
   const schemaSource = readRequiredFile(schemaPath);
   const migrationSource = readRequiredFile(migrationPath);
   const migrationPlanSource = readRequiredFile(migrationPlanPath);
+  const persistenceSource = readRequiredFile(persistencePath);
+  const projectionSource = readRequiredFile(projectionPath);
   const failures = [];
 
   for (const model of marketplaceModels) {
@@ -66,6 +70,14 @@ function main() {
   }
   if (!migrationPlanSource.includes('202605290145_marketplace_foundation')) {
     failures.push('Le plan AppRow doit citer la migration marketplace foundation.');
+  }
+  for (const table of ['providers', 'provider_services', 'provider_reviews', 'client_orders', 'client_favorites', 'provider_verification_requests']) {
+    if (!persistenceSource.includes(`rowsByTable.${table}`)) {
+      failures.push(`Projection double-run absente de PlatformPersistenceService: ${table}`);
+    }
+  }
+  if (!projectionSource.includes('persistMarketplaceProjection') || !projectionSource.includes('deleteMarketplaceProjection')) {
+    failures.push('La projection Marketplace doit exposer persistMarketplaceProjection et deleteMarketplaceProjection.');
   }
 
   const report = {
