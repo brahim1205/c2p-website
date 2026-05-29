@@ -1,0 +1,119 @@
+#!/usr/bin/env node
+
+import fs from 'node:fs';
+import path from 'node:path';
+
+const backendRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const repoRoot = path.resolve(backendRoot, '..');
+const schemaPath = path.join(backendRoot, 'prisma', 'schema.prisma');
+const migrationPath = path.join(
+  backendRoot,
+  'prisma',
+  'migrations',
+  '202605291345_learning_public_foundation',
+  'migration.sql',
+);
+const migrationPlanPath = path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md');
+const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
+const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-learning-projection.ts');
+const snapshotSyncPath = path.join(backendRoot, 'src', 'database', 'platform-snapshot-sync.service.ts');
+const snapshotLearningSyncPath = path.join(backendRoot, 'src', 'database', 'platform-snapshot-learning-sync.ts');
+const consistencyCheckPath = path.join(backendRoot, 'scripts', 'learning-prisma-consistency-check.mjs');
+const packageJsonPath = path.join(backendRoot, 'package.json');
+
+const learningModels = [
+  'LearningCourse',
+  'LearningCourseSection',
+  'LearningCourseLesson',
+  'LearningCourseReview',
+  'LearningVirtualClass',
+];
+
+const requiredIndexes = [
+  'LearningCourse_status_category_idx',
+  'LearningCourseSection_courseId_status_position_idx',
+  'LearningCourseLesson_courseId_status_position_idx',
+  'LearningCourseReview_courseId_status_createdAt_idx',
+  'LearningVirtualClass_courseId_status_idx',
+];
+
+function readRequiredFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Fichier manquant: ${path.relative(repoRoot, filePath)}`);
+  }
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+function main() {
+  const schemaSource = readRequiredFile(schemaPath);
+  const migrationSource = readRequiredFile(migrationPath);
+  const migrationPlanSource = readRequiredFile(migrationPlanPath);
+  const persistenceSource = readRequiredFile(persistencePath);
+  const projectionSource = readRequiredFile(projectionPath);
+  const snapshotSyncSource = readRequiredFile(snapshotSyncPath);
+  const snapshotLearningSyncSource = readRequiredFile(snapshotLearningSyncPath);
+  const consistencyCheckSource = readRequiredFile(consistencyCheckPath);
+  const packageJsonSource = readRequiredFile(packageJsonPath);
+  const failures = [];
+
+  for (const model of learningModels) {
+    if (!new RegExp(`model\\s+${model}\\s+\\{`).test(schemaSource)) {
+      failures.push(`Modele Prisma manquant: ${model}`);
+    }
+    if (!migrationSource.includes(`CREATE TABLE "${model}"`)) {
+      failures.push(`Migration SQL manquante pour: ${model}`);
+    }
+  }
+
+  for (const indexName of requiredIndexes) {
+    if (!migrationSource.includes(`"${indexName}"`)) {
+      failures.push(`Index learning public manquant: ${indexName}`);
+    }
+  }
+
+  if (!migrationPlanSource.includes('Lot 2 - Learning')) {
+    failures.push('docs/APPROW_MIGRATION_PLAN.md doit documenter le Lot 2 - Learning.');
+  }
+  if (!migrationPlanSource.includes('202605291345_learning_public_foundation')) {
+    failures.push('Le plan AppRow doit citer la migration learning public foundation.');
+  }
+  for (const table of ['courses', 'course_sections', 'course_lessons', 'course_reviews', 'virtual_classes']) {
+    if (!persistenceSource.includes(`rowsByTable.${table}`)) {
+      failures.push(`Projection double-run absente de PlatformPersistenceService: ${table}`);
+    }
+    if (!snapshotLearningSyncSource.includes(table)) {
+      failures.push(`Helper backfill Learning public absent: ${table}`);
+    }
+    if (!consistencyCheckSource.includes(`'${table}'`)) {
+      failures.push(`Check de coherence AppRow/Prisma absent: ${table}`);
+    }
+  }
+  if (!projectionSource.includes('persistLearningProjection') || !projectionSource.includes('deleteLearningProjection')) {
+    failures.push('La projection Learning public doit exposer persistLearningProjection et deleteLearningProjection.');
+  }
+  if (!snapshotSyncSource.includes('buildLearningRows(groupedRows)') || !snapshotSyncSource.includes('syncLearningSnapshot(tx, learningRows)')) {
+    failures.push('PlatformSnapshotSyncService doit deleguer le backfill Learning public au helper dedie.');
+  }
+  if (!snapshotLearningSyncSource.includes('persistLearningProjection(tx, rowsByTable)')) {
+    failures.push('Le helper snapshot Learning public doit utiliser persistLearningProjection.');
+  }
+  if (!packageJsonSource.includes('learning:prisma-consistency:check')) {
+    failures.push('package.json doit exposer learning:prisma-consistency:check.');
+  }
+
+  const report = {
+    ok: failures.length === 0,
+    models: learningModels,
+    requiredIndexes,
+    migration: path.relative(repoRoot, migrationPath),
+    failures,
+  };
+
+  console.log(JSON.stringify(report, null, 2));
+
+  if (failures.length > 0) {
+    process.exit(1);
+  }
+}
+
+main();

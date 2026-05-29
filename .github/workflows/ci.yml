@@ -153,6 +153,10 @@ jobs:
         working-directory: backend
         run: npm run marketplace:prisma-consistency:check
 
+      - name: Check Learning Prisma projection
+        working-directory: backend
+        run: npm run learning:prisma-consistency:check
+
       - name: Check PostgreSQL connection
         working-directory: backend
         run: npm run db:check

@@ -6,6 +6,7 @@ import { AuditLogService } from './audit-log.service.js';
 import type { Row } from '../data/mock-store.js';
 import { normalizeOutboxEventInput } from '../outbox/outbox-contract.js';
 import type { OutboxEventInput } from '../outbox/outbox.types.js';
+import { deleteLearningProjection, persistLearningProjection } from './platform-learning-projection.js';
 import { deleteMarketplaceProjection, persistMarketplaceProjection } from './platform-marketplace-projection.js';
 
 const FINANCIAL_PROJECTION_TABLES = new Set([
@@ -275,6 +276,7 @@ export class PlatformPersistenceService {
       client_favorites: rowsByTable.client_favorites ?? [],
       provider_verification_requests: rowsByTable.provider_verification_requests ?? [],
     });
+    await persistLearningProjection(tx, { courses: rowsByTable.courses ?? [], course_sections: rowsByTable.course_sections ?? [], course_lessons: rowsByTable.course_lessons ?? [], course_reviews: rowsByTable.course_reviews ?? [], virtual_classes: rowsByTable.virtual_classes ?? [] });
   }
 
   private async deleteNormalizedProjection(tx: Prisma.TransactionClient, removalsByTable: Record<string, string[]>) {
@@ -316,6 +318,7 @@ export class PlatformPersistenceService {
       client_favorites: removalsByTable.client_favorites ?? [],
       provider_verification_requests: removalsByTable.provider_verification_requests ?? [],
     });
+    await deleteLearningProjection(tx, { courses: removalsByTable.courses ?? [], course_sections: removalsByTable.course_sections ?? [], course_lessons: removalsByTable.course_lessons ?? [], course_reviews: removalsByTable.course_reviews ?? [], virtual_classes: removalsByTable.virtual_classes ?? [] });
   }
 
   private async persistOutboxEvents(tx: Prisma.TransactionClient, events: OutboxEventInput[]) {

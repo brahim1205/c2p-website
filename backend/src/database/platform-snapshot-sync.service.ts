@@ -16,6 +16,7 @@ import {
 } from '../auth/auth.store.js';
 import { PrismaService } from './prisma.service.js';
 import { AuditLogService } from './audit-log.service.js';
+import { buildEmptyLearningSummary, buildLearningRows, summarizeLearningRows, syncLearningSnapshot, type LearningSnapshotSyncSummary } from './platform-snapshot-learning-sync.js';
 import { buildEmptyMarketplaceSummary, buildMarketplaceRows, summarizeMarketplaceRows, syncMarketplaceSnapshot, type MarketplaceSnapshotSyncSummary } from './platform-snapshot-marketplace-sync.js';
 
 type AppRowTable =
@@ -26,7 +27,7 @@ type AppRowTable =
   | 'auth_audit_logs'
   | keyof Store;
 
-interface PlatformSyncSummary extends MarketplaceSnapshotSyncSummary {
+interface PlatformSyncSummary extends MarketplaceSnapshotSyncSummary, LearningSnapshotSyncSummary {
   skipped?: string;
   appRowsSeeded: number;
   users: number;
@@ -122,8 +123,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
     const missions = this.mapMissions(groupedRows.bookings ?? []);
     const invoices = this.mapInvoices(groupedRows.invoices ?? []);
     const commissionEntries = this.mapCommissionEntries(groupedRows.commission_ledger ?? []);
-    const marketplaceRows = buildMarketplaceRows(groupedRows);
-
+    const marketplaceRows = buildMarketplaceRows(groupedRows); const learningRows = buildLearningRows(groupedRows);
     await this.prisma.$transaction(async (tx) => {
       await tx.userSessionRecord.deleteMany({ where: { source: 'app_row' } });
       await tx.refreshTokenSessionRecord.deleteMany({ where: { source: 'app_row' } });
@@ -177,13 +177,13 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
         commissionEntries,
         (batch) => tx.commissionLedgerEntry.createMany({ data: batch, skipDuplicates: true }),
       );
-      await syncMarketplaceSnapshot(tx, marketplaceRows);
+      await syncMarketplaceSnapshot(tx, marketplaceRows); await syncLearningSnapshot(tx, learningRows);
     }, {
       maxWait: 10_000,
       timeout: 60_000,
     });
 
-    const summary: PlatformSyncSummary = {
+    const summary = {
       appRowsSeeded,
       users: users.length,
       sessions: sessions.length,
@@ -201,7 +201,8 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
       invoices: invoices.length,
       commissionEntries: commissionEntries.length,
       ...summarizeMarketplaceRows(marketplaceRows),
-    };
+      ...summarizeLearningRows(learningRows),
+    } satisfies PlatformSyncSummary;
 
     this.logger.log(`Platform snapshot synchronized (${reason}): ${JSON.stringify(summary)}`);
     await this.auditLogService.record({
@@ -239,6 +240,7 @@ export class PlatformSnapshotSyncService implements OnApplicationBootstrap {
       invoices: 0,
       commissionEntries: 0,
       ...buildEmptyMarketplaceSummary(),
+      ...buildEmptyLearningSummary(),
     };
   }
 

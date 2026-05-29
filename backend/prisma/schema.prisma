@@ -778,6 +778,123 @@ model MarketplaceProviderVerificationRequest {
   @@index([source])
 }
 
+model LearningCourse {
+  id             String   @id
+  title          String
+  category       String?
+  programBranch  String?
+  level          String?
+  description    String?
+  instructorId   String?
+  deliveryMode   String?
+  modules        Int      @default(0)
+  duration       String?
+  price          Int?
+  rating         Float    @default(0)
+  studentsCount  Int      @default(0)
+  completionRate Float    @default(0)
+  revenue        Int      @default(0)
+  thumbnail      String?
+  status         String   @default("draft")
+  metadata       Json?
+  source         String   @default("app_row_migration")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, category])
+  @@index([instructorId, status])
+  @@index([source])
+}
+
+model LearningCourseSection {
+  id           String   @id
+  courseId     String
+  instructorId String?
+  title        String
+  description  String?
+  position     Int      @default(0)
+  status       String   @default("draft")
+  metadata     Json?
+  source       String   @default("app_row_migration")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([courseId, status, position])
+  @@index([instructorId, status])
+  @@index([source])
+}
+
+model LearningCourseLesson {
+  id           String   @id
+  courseId     String
+  sectionId    String?
+  instructorId String?
+  title        String
+  description  String?
+  lessonType   String?
+  position     Int      @default(0)
+  duration     String?
+  isPreview    Boolean  @default(false)
+  status       String   @default("draft")
+  metadata     Json?
+  source       String   @default("app_row_migration")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([courseId, status, position])
+  @@index([sectionId, status, position])
+  @@index([instructorId, status])
+  @@index([source])
+}
+
+model LearningCourseReview {
+  id            String   @id
+  courseId      String
+  studentId     String?
+  studentName   String?
+  studentAvatar String?
+  rating        Int      @default(0)
+  comment       String?
+  status        String   @default("published")
+  metadata      Json?
+  source        String   @default("app_row_migration")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([courseId, status, createdAt])
+  @@index([studentId, createdAt])
+  @@index([source])
+}
+
+model LearningVirtualClass {
+  id               String    @id
+  courseId         String
+  title            String
+  courseName       String?
+  classDate        String?
+  classTime        String?
+  duration         String?
+  studentsCount    Int       @default(0)
+  maxStudents      Int?
+  provider         String?
+  meetingSlug      String?
+  recordingEnabled Boolean   @default(false)
+  recordingStatus  String?
+  status           String    @default("scheduled")
+  recordingUrl     String?
+  roomLink         String?
+  startedAt        DateTime?
+  endedAt          DateTime?
+  metadata         Json?
+  source           String    @default("app_row_migration")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([courseId, status])
+  @@index([classDate, classTime])
+  @@index([source])
+}
+
 model AppRow {
   key       String   @id
   table     String

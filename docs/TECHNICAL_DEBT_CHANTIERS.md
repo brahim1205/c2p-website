@@ -88,6 +88,7 @@ Actions realisees:
 - mutations Marketplace relues depuis la projection Prisma apres persistence quand elle est disponible;
 - check de coherence AppRow/Prisma Marketplace branche dans la CI;
 - tables Marketplace retirees du registre de dette `AppRow` active.
+- fondation Learning public ajoutee pour `courses`, `course_sections`, `course_lessons`, `course_reviews` et `virtual_classes`.
 
 Verification cible:
 
@@ -108,7 +109,7 @@ Critere de sortie:
 Statut mesure:
 
 - 60 tables connues par la policy data;
-- 19 tables avec projection normalisee ou auth normalisee;
+- 24 tables avec projection normalisee ou auth normalisee;
 - 44 tables suivies explicitement comme dette `AppRow`;
 - 0 table non classee.
 

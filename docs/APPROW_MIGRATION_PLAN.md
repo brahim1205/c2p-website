@@ -5,7 +5,7 @@ Objectif: reduire `AppRow` aux donnees historiques non critiques, puis supprimer
 Etat mesure:
 
 - tables connues: 60;
-- tables avec projection normalisee ou auth normalisee: 19;
+- tables avec projection normalisee ou auth normalisee: 24;
 - tables suivies comme dette `AppRow`: 44;
 - surface de mutation generique restante via `/data`: 0.
 
@@ -80,6 +80,13 @@ Critere de sortie:
 - progression et certificats persistants cote serveur;
 - creation/edition cours formateur testee;
 - parcours apprenant cours/examen/certificat couvert.
+
+Etat 2026-05-29:
+
+- fondation Prisma creee pour le catalogue public Learning via `backend/prisma/migrations/202605291345_learning_public_foundation/migration.sql`;
+- projection double-run ajoutee pour `courses`, `course_sections`, `course_lessons`, `course_reviews` et `virtual_classes`;
+- backfill Learning public branche sur `PlatformSnapshotSyncService` et controle par `npm run learning:prisma-consistency:check`;
+- lectures runtime Learning encore sur AppRow jusqu'au basculement explicite du reader Prisma.
 
 ### Lot 3 - Project Center
 
