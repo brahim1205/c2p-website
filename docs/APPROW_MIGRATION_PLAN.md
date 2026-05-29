@@ -98,6 +98,7 @@ Etat 2026-05-29:
 - emissions et suppressions de certificats formateur raccordees au reader Prisma apres persistence/delete;
 - mutations examens, questions et choix quiz formateur relues ou verifiees via Prisma apres persistence/delete;
 - contrat CI `learning:assessments-mutations:check` ajoute pour bloquer toute regression de readback/assertion Prisma sur ces mutations;
+- service de commande `LearningAssessmentsCommandService` introduit pour extraire progressivement les ecritures exams/quiz de `LearningService`;
 - ecritures runtime examens/certificats encore maintenues sur AppRow avec double-run Prisma.
 
 ### Lot 3 - Project Center

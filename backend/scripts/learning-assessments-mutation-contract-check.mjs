@@ -11,6 +11,7 @@ const files = {
   ci: path.join(repoRoot, '.github', 'workflows', 'ci.yml'),
   learningService: path.join(backendRoot, 'src', 'learning', 'learning.service.ts'),
   formateurLearnersService: path.join(backendRoot, 'src', 'learning', 'formateur-learners.service.ts'),
+  assessmentsCommandService: path.join(backendRoot, 'src', 'learning', 'learning-assessments-command.service.ts'),
   assessmentsReadService: path.join(backendRoot, 'src', 'learning', 'learning-assessments-read.service.ts'),
   migrationPlan: path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md'),
 };
@@ -32,6 +33,7 @@ function main() {
   const ciSource = readRequiredFile(files.ci);
   const learningServiceSource = readRequiredFile(files.learningService);
   const formateurLearnersSource = readRequiredFile(files.formateurLearnersService);
+  const commandServiceSource = readRequiredFile(files.assessmentsCommandService);
   const readServiceSource = readRequiredFile(files.assessmentsReadService);
   const migrationPlanSource = readRequiredFile(files.migrationPlan);
   const failures = [];
@@ -74,9 +76,9 @@ function main() {
   ];
 
   for (const [mutationMethod, readbackMethod] of learningMutationContracts) {
-    const body = methodBody(learningServiceSource, mutationMethod);
+    const body = methodBody(commandServiceSource, mutationMethod) || methodBody(learningServiceSource, mutationMethod);
     if (!body) {
-      failures.push(`LearningService doit exposer ${mutationMethod}.`);
+      failures.push(`LearningService ou LearningAssessmentsCommandService doit exposer ${mutationMethod}.`);
     } else if (!body.includes(`learningAssessmentsReadService.${readbackMethod}`)) {
       failures.push(`${mutationMethod} doit utiliser ${readbackMethod} apres persistence/delete.`);
     }

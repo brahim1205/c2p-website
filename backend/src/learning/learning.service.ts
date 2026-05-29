@@ -15,7 +15,6 @@ import {
 import { filterRowsForActor } from '../data/data-actor-scope.js';
 import { applyDataDeleteCascade } from '../data/data-delete-cascade.js';
 import {
-  sanitizeExamRecord,
   sanitizeQuizChoiceRecord,
   sanitizeQuizQuestionRecord,
   sanitizeSubmissionRecord,
@@ -25,11 +24,12 @@ import { toNumber } from '../data/data-normalizers.js';
 import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
+import { LearningAssessmentsCommandService } from './learning-assessments-command.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
 type ProgressPayload = { progress?: unknown; completedLessons?: unknown; completedLessonIds?: unknown };
 @Injectable()
 export class LearningService {
-  constructor(private readonly prisma: PrismaService, private readonly platformPersistenceService: PlatformPersistenceService, private readonly learningAssessmentsReadService: LearningAssessmentsReadService) {}
+  constructor(private readonly prisma: PrismaService, private readonly platformPersistenceService: PlatformPersistenceService, private readonly learningAssessmentsReadService: LearningAssessmentsReadService, private readonly learningAssessmentsCommandService: LearningAssessmentsCommandService) {}
 
   async getApprenantExamsSnapshot(user: AuthUser | null) {
     const actor = this.requireLearningActor(user);
@@ -211,34 +211,10 @@ export class LearningService {
     };
   }
   async createFormateurExam(payload: unknown, user: AuthUser | null) {
-    const actor = this.requireFormateurActor(user);
-    const input = this.requireObject(payload, 'Evaluation invalide.');
-    await syncAppStoreFromDatabase(this.prisma);
-    const sanitized = sanitizeExamRecord(input, actor);
-    ensureConstraints('exams', [sanitized]);
-    const exam = withId(prepareInsert('exams', sanitized));
-    const created = appendAppRows('exams', [exam]);
-    await this.platformPersistenceService.persistRows({ exams: [exam] }, {
-      actorId: actor.id,
-      reason: 'learning:formateur:exam:create',
-      afterRowsByTable: { exams: [exam] },
-    });
-    return await this.learningAssessmentsReadService.getExamById(String(exam.id), actor) ?? created[0] ?? exam;
+    return this.learningAssessmentsCommandService.createFormateurExam(payload, user);
   }
   async deleteFormateurExam(examId: string, user: AuthUser | null) {
-    const actor = this.requireFormateurActor(user);
-    await syncAppStoreFromDatabase(this.prisma);
-    const exam = this.getInstructorExam(examId, actor);
-    const rows = store.exams ?? [];
-    store.exams = rows.filter((row) => String(row.id) !== String(exam.id));
-    const deletedRowIdsByTable = applyDataDeleteCascade('exams', [exam]);
-    recomputeDerivedData();
-    await this.platformPersistenceService.deleteRows(deletedRowIdsByTable, {
-      actorId: actor.id,
-      reason: 'learning:formateur:exam:delete',
-      beforeRowsByTable: { exams: [exam] },
-    });
-    await this.learningAssessmentsReadService.assertExamDeleted(String(exam.id)); return exam;
+    return this.learningAssessmentsCommandService.deleteFormateurExam(examId, user);
   }
   async getFormateurQuizStructure(examId: string, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);

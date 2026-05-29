@@ -6,6 +6,7 @@ import { FormateurCommunityService } from './formateur-community.service.js';
 import { FormateurLearnersService } from './formateur-learners.service.js';
 import { FormateurVirtualClassesService } from './formateur-virtual-classes.service.js';
 import { LearningAccessService } from './learning-access.service.js';
+import { LearningAssessmentsCommandService } from './learning-assessments-command.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
 import { LearningController } from './learning.controller.js';
 import { LearningProgressReadService } from './learning-progress-read.service.js';
@@ -21,6 +22,7 @@ import { LearningService } from './learning.service.js';
     FormateurLearnersService,
     FormateurVirtualClassesService,
     LearningAccessService,
+    LearningAssessmentsCommandService,
     LearningAssessmentsReadService,
     LearningProgressReadService,
     LearningPublicReadService,

@@ -171,6 +171,7 @@ function main() {
   const projectCenterApi = readRepoFile('front/src/lib/projectCenterApi.ts');
   const learningController = readRepoFile('backend/src/learning/learning.controller.ts');
   const learningAccessService = readRepoFile('backend/src/learning/learning-access.service.ts');
+  const learningAssessmentsCommandService = readRepoFile('backend/src/learning/learning-assessments-command.service.ts');
   const learningService = readRepoFile('backend/src/learning/learning.service.ts');
   const formateurCommunityService = readRepoFile('backend/src/learning/formateur-community.service.ts');
   const formateurCourseProgramService = readRepoFile('backend/src/learning/formateur-course-program.service.ts');
@@ -463,10 +464,10 @@ function main() {
   assertContains(learningAccessService, 'backend/src/learning/learning-access.service.ts', 'learning:apprenant:course-review:create', failures);
   assertContains(learningAccessService, 'backend/src/learning/learning-access.service.ts', 'learning:apprenant:lesson-progress:update', failures);
   assertContains(learningAccessService, 'backend/src/learning/learning-access.service.ts', 'learning:apprenant:lesson-comment:create', failures);
-  assertContains(learningService, 'backend/src/learning/learning.service.ts', 'learning:formateur:exam:create', failures);
+  assertContains(learningAssessmentsCommandService, 'backend/src/learning/learning-assessments-command.service.ts', 'learning:formateur:exam:create', failures);
   assertContains(learningService, 'backend/src/learning/learning.service.ts', 'learning:formateur:submission:grade', failures);
   assertContains(learningService, 'backend/src/learning/learning.service.ts', 'sanitizeSubmissionRecord', failures);
-  assertContains(learningService, 'backend/src/learning/learning.service.ts', 'sanitizeExamRecord', failures);
+  assertContains(learningAssessmentsCommandService, 'backend/src/learning/learning-assessments-command.service.ts', 'sanitizeExamRecord', failures);
   assertContains(learningService, 'backend/src/learning/learning.service.ts', 'sanitizeQuizQuestionRecord', failures);
   assertContains(learningService, 'backend/src/learning/learning.service.ts', 'sanitizeQuizChoiceRecord', failures);
   assertContains(learningService, 'backend/src/learning/learning.service.ts', 'filterRowsForActor', failures);

@@ -36,6 +36,7 @@ const consistencyCheckPath = path.join(backendRoot, 'scripts', 'learning-prisma-
 const learningModulePath = path.join(backendRoot, 'src', 'learning', 'learning.module.ts');
 const learningAccessServicePath = path.join(backendRoot, 'src', 'learning', 'learning-access.service.ts');
 const learningAssessmentsReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-assessments-read.service.ts');
+const learningAssessmentsCommandServicePath = path.join(backendRoot, 'src', 'learning', 'learning-assessments-command.service.ts');
 const learningProgressReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-progress-read.service.ts');
 const learningPublicReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-public-read.service.ts');
 const learningServicePath = path.join(backendRoot, 'src', 'learning', 'learning.service.ts');
@@ -111,6 +112,7 @@ function main() {
   const learningModuleSource = readRequiredFile(learningModulePath);
   const learningAccessServiceSource = readRequiredFile(learningAccessServicePath);
   const learningAssessmentsReadServiceSource = readRequiredFile(learningAssessmentsReadServicePath);
+  const learningAssessmentsCommandServiceSource = readRequiredFile(learningAssessmentsCommandServicePath);
   const learningProgressReadServiceSource = readRequiredFile(learningProgressReadServicePath);
   const learningPublicReadServiceSource = readRequiredFile(learningPublicReadServicePath);
   const learningServiceSource = readRequiredFile(learningServicePath);
@@ -200,6 +202,9 @@ function main() {
   if (!learningModuleSource.includes('LearningAssessmentsReadService')) {
     failures.push('LearningAssessmentsReadService doit etre fourni par LearningModule.');
   }
+  if (!learningModuleSource.includes('LearningAssessmentsCommandService')) {
+    failures.push('LearningAssessmentsCommandService doit etre fourni par LearningModule.');
+  }
   for (const method of [
     'getPublicCourses',
     'getPublicInstructorCourses',
@@ -246,6 +251,7 @@ function main() {
   }
   for (const assessmentMutationGuard of ['getExamById', 'getQuestionById', 'getChoiceById', 'assertExamDeleted', 'assertQuestionDeleted', 'assertChoiceDeleted']) {
     if (!learningAssessmentsReadServiceSource.includes(`async ${assessmentMutationGuard}`) || !learningServiceSource.includes(`learningAssessmentsReadService.${assessmentMutationGuard}`)) {
+      if (learningAssessmentsCommandServiceSource.includes(`learningAssessmentsReadService.${assessmentMutationGuard}`)) continue;
       failures.push(`Les mutations examens/quiz Learning doivent utiliser le garde-fou Prisma: ${assessmentMutationGuard}.`);
     }
   }
