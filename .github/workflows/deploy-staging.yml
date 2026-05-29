@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 45
     environment:
       name: staging
-      url: ${{ secrets.STAGING_BASE_URL || 'https://staging.c2p.sn' }}
+      url: https://staging.c2p.sn
     if: >
       github.event_name == 'workflow_dispatch' ||
       (
