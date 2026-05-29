@@ -81,6 +81,12 @@ Regles:
 - ne jamais restaurer directement sur la base production sans fenetre d'intervention;
 - noter la date, le fichier backup et le resultat dans le journal d'exploitation.
 
+Cadence minimale:
+
+- apres chaque changement d'infrastructure Postgres ou backup;
+- au moins une fois par mois;
+- avant de considerer la plateforme conforme SaaS production.
+
 ## Rollback
 
 Declencheurs:
@@ -124,6 +130,35 @@ Verification:
 
 - utilisateur standard recoit `503 MAINTENANCE_MODE`;
 - superadmin conserve l'acces.
+
+## Tests UI critiques
+
+Les parcours UI non destructifs doivent passer avant release:
+
+```bash
+cd front
+npm run smoke:test
+```
+
+Les tests de coherence formulaire-affichage creent puis suppriment des donnees QA admin. En local, ils sont autorises par defaut:
+
+```bash
+cd front
+npm run smoke:test:forms
+```
+
+En production ou staging distant, ils refusent de muter sans opt-in explicite:
+
+```bash
+cd front
+FRONT_URL=https://c2p.sn API_URL=https://c2p.sn/api C2P_E2E_ALLOW_MUTATIONS=true npm run smoke:test:forms
+```
+
+Regles:
+
+- ne pas lancer ces tests pendant une operation de paiement ou d'envoi de campagne reel;
+- verifier que les donnees `QA categorie *` et `QA campagne *` ne restent pas en base;
+- remettre le mode maintenance dans son etat initial si un test prod l'a modifie.
 
 ## Incident provider paiement
 

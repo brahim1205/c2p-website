@@ -120,6 +120,7 @@ jobs:
           node --check ops/scripts/production-readiness-report.mjs
           node --check ops/scripts/production-postdeploy-check.mjs
           node --check front/scripts/state-boundary-check.mjs
+          node --check front/scripts/form-coherence.mjs
 
       - name: Production postdeploy static guard
         working-directory: backend
@@ -278,6 +279,10 @@ jobs:
       - name: Frontend smoke test
         working-directory: front
         run: npm run smoke:test
+
+      - name: Frontend form-display coherence test
+        working-directory: front
+        run: npm run smoke:test:forms
 
       - name: Print service logs on failure
         if: failure()

@@ -114,6 +114,7 @@ const dashboardSuites = {
       '/admin/profile',
       '/admin/messages',
       '/admin/communications',
+      '/admin/settings',
     ],
   },
   superadmin: {

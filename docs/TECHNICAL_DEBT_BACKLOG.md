@@ -1,6 +1,6 @@
 # Backlog dette technique et ameliorations
 
-Ce document regroupe les dettes a traiter avant d'accelerer sur de nouveaux flux critiques. Il complete le registre de risques architecture et sert de plan d'execution. Le suivi d'execution par chantier est maintenu dans `docs/TECHNICAL_DEBT_CHANTIERS.md`.
+Ce document regroupe les dettes a traiter avant d'accelerer sur de nouveaux flux critiques. Il complete le registre de risques architecture et sert de plan d'execution. Le suivi d'execution par chantier est maintenu dans `docs/TECHNICAL_DEBT_CHANTIERS.md`; le plan de sortie `AppRow` est detaille dans `docs/APPROW_MIGRATION_PLAN.md`.
 
 ## Etat actuel
 

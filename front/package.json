@@ -10,6 +10,8 @@
     "smoke:test": "node scripts/smoke.mjs",
     "smoke:test:local": "FRONT_URL=http://localhost:3000 API_URL=http://localhost:3003/api node scripts/smoke.mjs",
     "smoke:test:client": "FRONT_URL=http://localhost:3000 API_URL=http://localhost:3003/api C2P_SMOKE_SUITES=client node scripts/smoke.mjs",
+    "smoke:test:forms": "node scripts/form-coherence.mjs",
+    "smoke:test:forms:local": "FRONT_URL=http://localhost:3000 API_URL=http://localhost:3003/api node scripts/form-coherence.mjs",
     "architecture:check": "node ../ops/scripts/architecture-check.mjs",
     "large-file:ratchet": "node ../ops/scripts/large-file-ratchet-check.mjs",
     "state:check": "node scripts/state-boundary-check.mjs",

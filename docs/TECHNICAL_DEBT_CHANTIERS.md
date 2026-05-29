@@ -158,6 +158,19 @@ Objectif:
 
 - couvrir les parcours qui font perdre de l'argent ou des donnees si casses.
 
+Actions realisees:
+
+- ajout de `front/scripts/form-coherence.mjs`;
+- ajout de `npm run smoke:test:forms`;
+- integration du test coherence formulaire-affichage dans la CI;
+- extension du smoke admin a `/admin/settings`.
+
+Parcours deja couverts:
+
+- dashboards publics et roles applicatifs via `front/scripts/smoke.mjs`;
+- categorie admin: creation, affichage, toggle actif/inactif, suppression;
+- campagne admin planifiee: creation, affichage, date, apercu du contenu, suppression.
+
 Parcours cibles:
 
 - inscription + login + refresh;
@@ -175,17 +188,20 @@ API_URL=http://localhost:3003/api npm run http:checks
 
 cd ../front
 npm run smoke:test:client
+npm run smoke:test:forms
 ```
 
 Critere de sortie:
 
 - un parcours critique casse bloque la release;
 - chaque test couvre au moins un role autorise et un role interdit quand c'est pertinent.
+- les formulaires critiques qui creent une donnee verifient aussi son affichage et son nettoyage.
 
 Statut mesure:
 
 - `API_URL=http://localhost:3003/api npm run http:checks`: OK.
 - `front npm run smoke:test:client`: OK.
+- `front npm run smoke:test:forms`: integre CI, a executer sur la cible de release.
 
 ## Chantier 6 - Runbook production et exercices
 
