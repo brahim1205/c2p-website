@@ -219,7 +219,7 @@ export class LearningPublicReadService {
     const basePrice = requireNumberOrFallback(row.price, 0);
     const promotionPercentage = requireNumberOrFallback(row.promotion_percentage, 0);
     const isFree = parseBoolean(row.is_free, basePrice <= 0);
-    const instructor = findUserById(String(row.instructor_id ?? ''));
+    const instructor = findUserById(trimText(row.instructor_id) ?? '');
     row.instructor_name = row.instructor_name ?? (instructor ? `${instructor.firstName} ${instructor.lastName}`.trim() : null);
     row.is_free = isFree;
     row.access_type = row.access_type ?? (isFree ? 'free' : 'paid');
@@ -263,6 +263,12 @@ export class LearningPublicReadService {
   }
 
   private compareDatesDesc(left: unknown, right: unknown) {
-    return new Date(String(right ?? 0)).getTime() - new Date(String(left ?? 0)).getTime();
+    return this.dateTime(right) - this.dateTime(left);
+  }
+
+  private dateTime(value: unknown) {
+    if (value instanceof Date) return value.getTime();
+    if (typeof value === 'string' || typeof value === 'number') return new Date(value).getTime();
+    return 0;
   }
 }

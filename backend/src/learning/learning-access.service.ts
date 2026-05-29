@@ -12,7 +12,7 @@ import {
   withId,
 } from '../data/data-app-store.js';
 import { filterRowsForActor } from '../data/data-actor-scope.js';
-import { toNumber } from '../data/data-normalizers.js';
+import { toNumber, trimText } from '../data/data-normalizers.js';
 import { prepareInsert } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
@@ -59,7 +59,7 @@ export class LearningAccessService {
       return prismaSnapshot;
     }
     await syncAppStoreFromDatabase(this.prisma);
-    const course = hydrateRows('courses', store.courses ?? []).find((row) => String(row.id) === String(courseId) && String(row.status ?? '').toLowerCase() === 'published');
+    const course = hydrateRows('courses', store.courses ?? []).find((row) => String(row.id) === String(courseId) && (trimText(row.status) ?? '').toLowerCase() === 'published');
     if (!course) {
       throw new NotFoundException('Formation introuvable.');
     }
@@ -79,7 +79,7 @@ export class LearningAccessService {
       return prismaSnapshot;
     }
     await syncAppStoreFromDatabase(this.prisma);
-    const virtualClass = hydrateRows('virtual_classes', store.virtual_classes ?? []).find((row) => String(row.id) === String(classId) && String(row.status ?? 'scheduled') !== 'archived');
+    const virtualClass = hydrateRows('virtual_classes', store.virtual_classes ?? []).find((row) => String(row.id) === String(classId) && (trimText(row.status) ?? 'scheduled') !== 'archived');
     if (!virtualClass) {
       throw new NotFoundException('Classe virtuelle introuvable.');
     }
