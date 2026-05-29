@@ -16,6 +16,8 @@ const migrationPath = path.join(
 const migrationPlanPath = path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md');
 const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
 const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-marketplace-projection.ts');
+const readServicePath = path.join(backendRoot, 'src', 'marketplace', 'marketplace-prisma-read.service.ts');
+const marketplaceServicePath = path.join(backendRoot, 'src', 'marketplace', 'marketplace.service.ts');
 const snapshotSyncPath = path.join(backendRoot, 'src', 'database', 'platform-snapshot-sync.service.ts');
 const snapshotMarketplaceSyncPath = path.join(backendRoot, 'src', 'database', 'platform-snapshot-marketplace-sync.ts');
 const consistencyCheckPath = path.join(backendRoot, 'scripts', 'marketplace-prisma-consistency-check.mjs');
@@ -52,6 +54,8 @@ function main() {
   const migrationPlanSource = readRequiredFile(migrationPlanPath);
   const persistenceSource = readRequiredFile(persistencePath);
   const projectionSource = readRequiredFile(projectionPath);
+  const readServiceSource = readRequiredFile(readServicePath);
+  const marketplaceServiceSource = readRequiredFile(marketplaceServicePath);
   const snapshotSyncSource = readRequiredFile(snapshotSyncPath);
   const snapshotMarketplaceSyncSource = readRequiredFile(snapshotMarketplaceSyncPath);
   const consistencyCheckSource = readRequiredFile(consistencyCheckPath);
@@ -92,6 +96,17 @@ function main() {
   }
   if (!projectionSource.includes('persistMarketplaceProjection') || !projectionSource.includes('deleteMarketplaceProjection')) {
     failures.push('La projection Marketplace doit exposer persistMarketplaceProjection et deleteMarketplaceProjection.');
+  }
+  if (!readServiceSource.includes('MarketplacePrismaReadService')) {
+    failures.push('Le lecteur Prisma Marketplace doit exister.');
+  }
+  for (const method of ['listPublicProviders', 'getPublicProvider', 'getProviderByUserId', 'listProviderReviews', 'listClientFavorites', 'listProviderServices']) {
+    if (!readServiceSource.includes(method)) {
+      failures.push(`Lecteur Prisma Marketplace incomplet: ${method}`);
+    }
+    if (!marketplaceServiceSource.includes(`marketplacePrismaReadService.${method}`)) {
+      failures.push(`MarketplaceService doit utiliser le lecteur Prisma: ${method}`);
+    }
   }
   if (!snapshotSyncSource.includes('buildMarketplaceRows(groupedRows)') || !snapshotSyncSource.includes('syncMarketplaceSnapshot(tx, marketplaceRows)')) {
     failures.push('PlatformSnapshotSyncService doit deleguer le backfill Marketplace au helper dedie.');

@@ -48,7 +48,8 @@ Etat 2026-05-29:
 - garde-fou `npm run marketplace:prisma-foundation:check` ajoute au `verify` backend;
 - double-run de projection ajoute depuis `PlatformPersistenceService` vers les tables Prisma Marketplace;
 - backfill Marketplace branche sur `PlatformSnapshotSyncService` et controle par `npm run marketplace:prisma-consistency:check` apres le seed CI;
-- lectures/ecritures runtime encore sur `AppRow` jusqu'aux smokes role par role et au basculement explicite des services Marketplace.
+- lectures runtime Marketplace basculees vers `MarketplacePrismaReadService` avec fallback AppRow;
+- ecritures runtime encore sur `AppRow` jusqu'au basculement explicite des commandes de mutation Marketplace.
 
 ### Lot 2 - Learning
 

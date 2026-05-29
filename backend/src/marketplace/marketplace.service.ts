@@ -15,34 +15,44 @@ import { filterRowsForActor } from '../data/data-actor-scope.js';
 import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/data-runtime.js';
 import { hydrateRow, hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
+import { MarketplacePrismaReadService } from './marketplace-prisma-read.service.js';
 
 @Injectable()
 export class MarketplaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly marketplacePrismaReadService: MarketplacePrismaReadService,
   ) {}
 
   async listPublicProviders() {
     await syncAppStoreFromDatabase(this.prisma);
+    const prismaProviders = await this.marketplacePrismaReadService.listPublicProviders();
+    if (prismaProviders) return prismaProviders;
     return hydrateRows('providers', store.providers ?? [])
       .sort((left, right) => this.compareNumbersDesc(left.rating, right.rating));
   }
 
   async getPublicProvider(id: string) {
     await syncAppStoreFromDatabase(this.prisma);
+    const prismaProvider = await this.marketplacePrismaReadService.getPublicProvider(id);
+    if (prismaProvider) return prismaProvider;
     const provider = findRow('providers', id);
     return provider ? hydrateRow('providers', provider) : null;
   }
 
   async listPublicProviderReviews(id: string) {
     await syncAppStoreFromDatabase(this.prisma);
+    const prismaReviews = await this.marketplacePrismaReadService.listProviderReviews(id);
+    if (prismaReviews) return prismaReviews;
     const provider = findRow('providers', id);
     return provider ? this.providerRows('provider_reviews', provider) : [];
   }
 
   async getProviderByUserId(userId: string) {
     await syncAppStoreFromDatabase(this.prisma);
+    const prismaProvider = await this.marketplacePrismaReadService.getProviderByUserId(userId);
+    if (prismaProvider) return prismaProvider;
     const provider = (store.providers ?? []).find((row) => String(row.user_id) === String(userId));
     return provider ? hydrateRow('providers', provider) : null;
   }
@@ -166,6 +176,13 @@ export class MarketplaceService {
   async listClientProviders(user: AuthUser | null) {
     const actor = this.requireRole(user, 'client');
     await syncAppStoreFromDatabase(this.prisma);
+    const [prismaProviders, prismaFavorites] = await Promise.all([
+      this.marketplacePrismaReadService.listPublicProviders(),
+      this.marketplacePrismaReadService.listClientFavorites(actor.id),
+    ]);
+    if (prismaProviders && prismaFavorites) {
+      return { providers: prismaProviders, favorites: prismaFavorites };
+    }
     return {
       providers: hydrateRows('providers', store.providers ?? [])
         .sort((left, right) => this.compareNumbersDesc(left.rating, right.rating)),
@@ -240,12 +257,17 @@ export class MarketplaceService {
     if (!provider) {
       return { provider: null, bookings: [], reviews: [], visibilityPass: null, verificationRequest: null };
     }
+    const [prismaProvider, prismaReviews, prismaVerificationRequest] = await Promise.all([
+      this.marketplacePrismaReadService.getProviderByUserId(actor.id),
+      this.marketplacePrismaReadService.listProviderReviews(String(provider.id)),
+      this.marketplacePrismaReadService.latestVerificationRequestForUser(actor.id),
+    ]);
     return {
-      provider: hydrateRow('providers', provider),
+      provider: prismaProvider ?? hydrateRow('providers', provider),
       bookings: this.providerRows('bookings', provider).slice(0, 4),
-      reviews: this.providerRows('provider_reviews', provider).slice(0, 3),
+      reviews: (prismaReviews ?? this.providerRows('provider_reviews', provider)).slice(0, 3),
       visibilityPass: this.latestUserRow('provider_visibility_passes', actor.id, 'issued_at'),
-      verificationRequest: this.latestUserRow('provider_verification_requests', actor.id, 'requested_at'),
+      verificationRequest: prismaVerificationRequest ?? this.latestUserRow('provider_verification_requests', actor.id, 'requested_at'),
     };
   }
 
@@ -300,6 +322,8 @@ export class MarketplaceService {
     const actor = this.requireRole(user, 'prestataire');
     await syncAppStoreFromDatabase(this.prisma);
     const provider = this.providerForUser(actor.id);
+    const prismaReviews = provider ? await this.marketplacePrismaReadService.listProviderReviews(String(provider.id)) : null;
+    if (prismaReviews) return prismaReviews;
     return provider ? this.providerRows('provider_reviews', provider) : [];
   }
 
@@ -333,9 +357,10 @@ export class MarketplaceService {
     const actor = this.requireRole(user, 'prestataire');
     await syncAppStoreFromDatabase(this.prisma);
     const provider = this.providerForUser(actor.id);
+    const prismaServices = provider ? await this.marketplacePrismaReadService.listProviderServices(String(provider.id)) : null;
     return {
       providerId: provider?.id ?? null,
-      services: provider ? this.providerRows('provider_services', provider) : [],
+      services: prismaServices ?? (provider ? this.providerRows('provider_services', provider) : []),
     };
   }
 
