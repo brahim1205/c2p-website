@@ -89,7 +89,8 @@ Etat 2026-05-29:
 - projection double-run ajoutee pour `course_enrollments` et `lesson_progress`;
 - backfill Learning public branche sur `PlatformSnapshotSyncService` et controle par `npm run learning:prisma-consistency:check`;
 - lectures publiques runtime Learning basculees vers `LearningPublicReadService` avec fallback AppRow pour les listes cours, cours formateur, detail cours et detail classe virtuelle;
-- lectures/ecritures runtime progression encore maintenues sur AppRow jusqu'au basculement explicite du reader apprenant Prisma;
+- lectures runtime progression apprenant basculees vers `LearningProgressReadService` avec fallback AppRow;
+- ecritures runtime progression encore maintenues sur AppRow avec double-run Prisma;
 - certificats, examens, quiz et soumissions restent le prochain sous-lot Learning.
 
 ### Lot 3 - Project Center

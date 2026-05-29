@@ -28,6 +28,7 @@ const snapshotLearningSyncPath = path.join(backendRoot, 'src', 'database', 'plat
 const consistencyCheckPath = path.join(backendRoot, 'scripts', 'learning-prisma-consistency-check.mjs');
 const learningModulePath = path.join(backendRoot, 'src', 'learning', 'learning.module.ts');
 const learningAccessServicePath = path.join(backendRoot, 'src', 'learning', 'learning-access.service.ts');
+const learningProgressReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-progress-read.service.ts');
 const learningPublicReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-public-read.service.ts');
 const packageJsonPath = path.join(backendRoot, 'package.json');
 
@@ -79,6 +80,7 @@ function main() {
   const consistencyCheckSource = readRequiredFile(consistencyCheckPath);
   const learningModuleSource = readRequiredFile(learningModulePath);
   const learningAccessServiceSource = readRequiredFile(learningAccessServicePath);
+  const learningProgressReadServiceSource = readRequiredFile(learningProgressReadServicePath);
   const learningPublicReadServiceSource = readRequiredFile(learningPublicReadServicePath);
   const packageJsonSource = readRequiredFile(packageJsonPath);
   const failures = [];
@@ -143,6 +145,9 @@ function main() {
   if (!learningModuleSource.includes('LearningPublicReadService')) {
     failures.push('LearningPublicReadService doit etre fourni par LearningModule.');
   }
+  if (!learningModuleSource.includes('LearningProgressReadService')) {
+    failures.push('LearningProgressReadService doit etre fourni par LearningModule.');
+  }
   for (const method of [
     'getPublicCourses',
     'getPublicInstructorCourses',
@@ -161,6 +166,12 @@ function main() {
   }
   if (!learningPublicReadServiceSource.includes("source: 'app_row'")) {
     failures.push('Le reader Prisma Learning public doit lire la projection source app_row.');
+  }
+  if (!learningProgressReadServiceSource.includes('learningCourseEnrollment') || !learningProgressReadServiceSource.includes('learningLessonProgress')) {
+    failures.push('Le reader Prisma Learning progression doit lire inscriptions et progressions.');
+  }
+  if (!learningAccessServiceSource.includes('learningProgressReadService.getCourseContext')) {
+    failures.push('LearningAccessService doit tenter le reader Prisma progression avant AppRow.');
   }
   if (!packageJsonSource.includes('learning:prisma-consistency:check')) {
     failures.push('package.json doit exposer learning:prisma-consistency:check.');

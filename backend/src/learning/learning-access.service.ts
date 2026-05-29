@@ -17,6 +17,7 @@ import { prepareInsert } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import { createAppNotificationRow } from '../notifications/notification-payloads.js';
+import { LearningProgressReadService } from './learning-progress-read.service.js';
 import { LearningPublicReadService } from './learning-public-read.service.js';
 
 type ProgressPayload = {
@@ -27,7 +28,7 @@ type ProgressPayload = {
 
 @Injectable()
 export class LearningAccessService {
-  constructor(private readonly prisma: PrismaService, private readonly platformPersistenceService: PlatformPersistenceService, private readonly learningPublicReadService: LearningPublicReadService) {}
+  constructor(private readonly prisma: PrismaService, private readonly platformPersistenceService: PlatformPersistenceService, private readonly learningPublicReadService: LearningPublicReadService, private readonly learningProgressReadService: LearningProgressReadService) {}
 
   async getPublicCourses() {
     const prismaRows = await this.learningPublicReadService.getPublicCourses();
@@ -99,7 +100,8 @@ export class LearningAccessService {
     const actor = this.requireLearningActor(user);
     await syncAppStoreFromDatabase(this.prisma);
     const course = this.getAccessibleCourse(courseId, actor);
-    const enrollment = this.getAccessibleEnrollment(courseId, actor);
+    const prismaProgress = await this.learningProgressReadService.getCourseContext(courseId, actor);
+    const enrollment = prismaProgress?.enrollment ?? this.getAccessibleEnrollment(courseId, actor);
     if (!this.canReadCourseDetail(course, enrollment, actor)) {
       throw new NotFoundException('Cours introuvable.');
     }
@@ -115,11 +117,8 @@ export class LearningAccessService {
     const assetsByLesson = this.groupBy(assets, 'lesson_id');
     const lessonsBySection = this.groupBy(lessons, 'section_id');
     const quiz = this.buildCourseQuiz(courseId, actor);
-    const lessonProgressRows = hydrateRows('lesson_progress', this.accessibleRows('lesson_progress', actor))
-      .filter((row) =>
-        String(row.course_id) === String(courseId)
-        && (isAdminRole(actor) || String(row.student_id) === String(actor.id))
-      );
+    const lessonProgressRows = prismaProgress?.lessonProgress ?? hydrateRows('lesson_progress', this.accessibleRows('lesson_progress', actor))
+      .filter((row) => String(row.course_id) === String(courseId) && (isAdminRole(actor) || String(row.student_id) === String(actor.id)));
     const quizAttemptRows = hydrateRows('course_quiz_attempts', this.accessibleRows('course_quiz_attempts', actor))
       .filter((row) =>
         String(row.course_id) === String(courseId)
@@ -246,6 +245,8 @@ export class LearningAccessService {
 
   async getApprenantCourseContext(courseId: string, user: AuthUser | null) {
     const actor = this.requireApprenantReadActor(user);
+    const prismaContext = await this.learningProgressReadService.getCourseContext(courseId, actor);
+    if (prismaContext) return prismaContext;
     await syncAppStoreFromDatabase(this.prisma);
     const enrollment = this.getAccessibleEnrollment(courseId, actor);
     const progress = hydrateRows('lesson_progress', this.accessibleRows('lesson_progress', actor))
