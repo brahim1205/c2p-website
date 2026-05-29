@@ -25,23 +25,19 @@ import { toNumber } from '../data/data-normalizers.js';
 import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
-type ProgressPayload = {
-  progress?: unknown;
-  completedLessons?: unknown;
-  completedLessonIds?: unknown;
-};
+import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
+type ProgressPayload = { progress?: unknown; completedLessons?: unknown; completedLessonIds?: unknown };
 @Injectable()
 export class LearningService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly platformPersistenceService: PlatformPersistenceService,
-  ) {}
+  constructor(private readonly prisma: PrismaService, private readonly platformPersistenceService: PlatformPersistenceService, private readonly learningAssessmentsReadService: LearningAssessmentsReadService) {}
 
   async getApprenantExamsSnapshot(user: AuthUser | null) {
     const actor = this.requireLearningActor(user);
     if (actor.role !== 'apprenant' && !isAdminRole(actor)) {
       throw new ForbiddenException('Seul un apprenant peut consulter ses examens.');
     }
+    const prismaSnapshot = await this.learningAssessmentsReadService.getApprenantExamsSnapshot(actor);
+    if (prismaSnapshot) return prismaSnapshot;
     await syncAppStoreFromDatabase(this.prisma);
     const enrollments = this.accessibleRows('course_enrollments', actor);
     const courseIds = new Set(enrollments.map((enrollment) => String(enrollment.course_id)));
@@ -68,6 +64,8 @@ export class LearningService {
     await syncAppStoreFromDatabase(this.prisma);
     const limit = this.parseOptionalLimit(options.limit);
     const status = this.text(options.status);
+    const prismaRows = await this.learningAssessmentsReadService.getApprenantCertificates(actor, { limit, status });
+    if (prismaRows) return prismaRows;
     let rows = hydrateRows('certificates', this.accessibleRows('certificates', actor))
       .sort((left, right) => this.compareDatesDesc(left.created_at ?? left.issued_at, right.created_at ?? right.issued_at));
     if (status) {
@@ -89,7 +87,7 @@ export class LearningService {
       this.getApprenantEnrollments(actor),
       this.getApprenantCertificates(actor),
     ]);
-    const submissions = hydrateRows('submissions', this.accessibleRows('submissions', actor))
+    const submissions = (await this.learningAssessmentsReadService.getApprenantSubmissions(actor)) ?? hydrateRows('submissions', this.accessibleRows('submissions', actor))
       .sort((left, right) => this.compareDatesDesc(left.submitted_at ?? left.created_at, right.submitted_at ?? right.created_at));
     return { enrollments, certificates, submissions };
   }
@@ -106,7 +104,7 @@ export class LearningService {
     const enrollments = hydrateRows('course_enrollments', this.accessibleRows('course_enrollments', actor))
       .filter((enrollment) => studentIds.has(String(enrollment.student_id)))
       .sort((left, right) => this.compareDatesDesc(left.last_active ?? left.enrolled_at, right.last_active ?? right.enrolled_at));
-    const certificates = hydrateRows('certificates', this.accessibleRows('certificates', actor))
+    const certificates = (await this.learningAssessmentsReadService.getCertificatesForStudents([...studentIds])) ?? hydrateRows('certificates', this.accessibleRows('certificates', actor))
       .filter((certificate) => studentIds.has(String(certificate.student_id)))
       .sort((left, right) => this.compareDatesDesc(left.issued_at ?? left.completion_date, right.issued_at ?? right.completion_date));
     return { links, enrollments, certificates };
@@ -116,6 +114,8 @@ export class LearningService {
     if (actor.role !== 'apprenant' && !isAdminRole(actor)) {
       throw new ForbiddenException('Seul un apprenant peut consulter ce quiz.');
     }
+    const prismaQuiz = await this.learningAssessmentsReadService.getQuizStructure(examId, actor, { includeCorrect: false });
+    if (prismaQuiz) return prismaQuiz;
     await syncAppStoreFromDatabase(this.prisma);
     this.getAccessibleExam(examId, actor);
     const questions = this.accessibleRows('quiz_questions', actor)
@@ -187,6 +187,8 @@ export class LearningService {
   }
   async getFormateurEvaluationsSnapshot(user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
+    const prismaSnapshot = await this.learningAssessmentsReadService.getFormateurEvaluationsSnapshot(actor);
+    if (prismaSnapshot) return prismaSnapshot;
     await syncAppStoreFromDatabase(this.prisma);
     const courses = this.getInstructorCourses(actor)
       .sort((left, right) => this.compareDatesDesc(left.updated_at ?? left.created_at, right.updated_at ?? right.created_at));
@@ -240,6 +242,8 @@ export class LearningService {
   }
   async getFormateurQuizStructure(examId: string, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
+    const prismaQuiz = await this.learningAssessmentsReadService.getQuizStructure(examId, actor, { includeCorrect: true });
+    if (prismaQuiz) return prismaQuiz;
     await syncAppStoreFromDatabase(this.prisma);
     this.getInstructorExam(examId, actor);
     const questions = hydrateRows('quiz_questions', this.accessibleRows('quiz_questions', actor))

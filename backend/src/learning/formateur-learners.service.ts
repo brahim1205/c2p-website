@@ -12,17 +12,21 @@ import { filterRowsForActor } from '../data/data-actor-scope.js';
 import { recomputeDerivedData } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
+import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
 
 @Injectable()
 export class FormateurLearnersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly learningAssessmentsReadService: LearningAssessmentsReadService,
   ) {}
 
   async getCertificates(user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
     await syncAppStoreFromDatabase(this.prisma);
+    const prismaRows = await this.learningAssessmentsReadService.getFormateurCertificates(actor);
+    if (prismaRows) return prismaRows;
     const courseIds = this.instructorCourseIds(actor);
     if (courseIds.size === 0) return [];
     return hydrateRows('certificates', this.accessibleRows('certificates', actor))
@@ -101,6 +105,8 @@ export class FormateurLearnersService {
         ...enrollment,
         courses: coursesById.get(String(enrollment.course_id)) ?? null,
       }));
+    const prismaAssessments = await this.learningAssessmentsReadService.getFormateurLearnerAssessments(studentId, actor);
+    if (prismaAssessments) return { enrollments, ...prismaAssessments };
 
     const exams = hydrateRows('exams', this.accessibleRows('exams', actor))
       .filter((exam) => courseIds.has(String(exam.course_id)));

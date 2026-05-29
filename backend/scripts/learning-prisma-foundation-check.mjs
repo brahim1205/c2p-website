@@ -35,8 +35,10 @@ const snapshotLearningSyncPath = path.join(backendRoot, 'src', 'database', 'plat
 const consistencyCheckPath = path.join(backendRoot, 'scripts', 'learning-prisma-consistency-check.mjs');
 const learningModulePath = path.join(backendRoot, 'src', 'learning', 'learning.module.ts');
 const learningAccessServicePath = path.join(backendRoot, 'src', 'learning', 'learning-access.service.ts');
+const learningAssessmentsReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-assessments-read.service.ts');
 const learningProgressReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-progress-read.service.ts');
 const learningPublicReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-public-read.service.ts');
+const learningServicePath = path.join(backendRoot, 'src', 'learning', 'learning.service.ts');
 const packageJsonPath = path.join(backendRoot, 'package.json');
 
 const learningModels = [
@@ -107,8 +109,10 @@ function main() {
   const consistencyCheckSource = readRequiredFile(consistencyCheckPath);
   const learningModuleSource = readRequiredFile(learningModulePath);
   const learningAccessServiceSource = readRequiredFile(learningAccessServicePath);
+  const learningAssessmentsReadServiceSource = readRequiredFile(learningAssessmentsReadServicePath);
   const learningProgressReadServiceSource = readRequiredFile(learningProgressReadServicePath);
   const learningPublicReadServiceSource = readRequiredFile(learningPublicReadServicePath);
+  const learningServiceSource = readRequiredFile(learningServicePath);
   const packageJsonSource = readRequiredFile(packageJsonPath);
   const failures = [];
 
@@ -191,6 +195,9 @@ function main() {
   if (!learningModuleSource.includes('LearningProgressReadService')) {
     failures.push('LearningProgressReadService doit etre fourni par LearningModule.');
   }
+  if (!learningModuleSource.includes('LearningAssessmentsReadService')) {
+    failures.push('LearningAssessmentsReadService doit etre fourni par LearningModule.');
+  }
   for (const method of [
     'getPublicCourses',
     'getPublicInstructorCourses',
@@ -215,6 +222,21 @@ function main() {
   }
   if (!learningAccessServiceSource.includes('learningProgressReadService.getCourseContext')) {
     failures.push('LearningAccessService doit tenter le reader Prisma progression avant AppRow.');
+  }
+  for (const prismaDelegate of ['learningExam', 'learningQuizQuestion', 'learningQuizChoice', 'learningSubmission', 'learningCertificate']) {
+    if (!learningAssessmentsReadServiceSource.includes(prismaDelegate)) {
+      failures.push(`Le reader Prisma Learning examens/certificats doit lire ${prismaDelegate}.`);
+    }
+  }
+  for (const runtimeSwitch of [
+    'learningAssessmentsReadService.getApprenantExamsSnapshot',
+    'learningAssessmentsReadService.getApprenantCertificates',
+    'learningAssessmentsReadService.getQuizStructure',
+    'learningAssessmentsReadService.getFormateurEvaluationsSnapshot',
+  ]) {
+    if (!learningServiceSource.includes(runtimeSwitch)) {
+      failures.push(`LearningService doit tenter le reader Prisma avant AppRow: ${runtimeSwitch}.`);
+    }
   }
   if (!packageJsonSource.includes('learning:prisma-consistency:check')) {
     failures.push('package.json doit exposer learning:prisma-consistency:check.');

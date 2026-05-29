@@ -93,7 +93,8 @@ Etat 2026-05-29:
 - ecritures runtime progression encore maintenues sur AppRow avec double-run Prisma;
 - fondation Prisma examens/certificats ajoutee via `backend/prisma/migrations/202605291650_learning_assessments_foundation/migration.sql`;
 - projection double-run ajoutee pour `exams`, `quiz_questions`, `quiz_choices`, `submissions` et `certificates`;
-- lectures/ecritures runtime examens/certificats encore maintenues sur AppRow jusqu'au basculement explicite des readers dedies.
+- lectures runtime examens, quiz, soumissions et certificats basculees vers `LearningAssessmentsReadService` avec fallback AppRow;
+- ecritures runtime examens/certificats encore maintenues sur AppRow avec double-run Prisma.
 
 ### Lot 3 - Project Center
 

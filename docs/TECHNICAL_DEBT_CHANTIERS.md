@@ -93,6 +93,7 @@ Actions realisees:
 - fondation Learning progression ajoutee pour `course_enrollments` et `lesson_progress` avec double-run Prisma et check de coherence.
 - lectures progression apprenant basculees vers Prisma via `LearningProgressReadService`, avec fallback AppRow conserve.
 - fondation Learning examens/certificats ajoutee pour `exams`, `quiz_questions`, `quiz_choices`, `submissions` et `certificates` avec double-run Prisma.
+- lectures examens, quiz, soumissions et certificats Learning basculees vers Prisma via `LearningAssessmentsReadService`, avec fallback AppRow conserve.
 
 Verification cible:
 
