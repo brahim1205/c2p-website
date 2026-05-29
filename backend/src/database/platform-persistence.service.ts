@@ -111,6 +111,7 @@ export class PlatformPersistenceService {
         },
       });
     }
+
   }
 
   async deleteRows(removalsByTable: Record<string, string[]>, context: MutationContext = {}) {
@@ -171,6 +172,7 @@ export class PlatformPersistenceService {
         },
       });
     }
+
   }
 
   private clone<T>(value: T): T {
@@ -276,7 +278,7 @@ export class PlatformPersistenceService {
       client_favorites: rowsByTable.client_favorites ?? [],
       provider_verification_requests: rowsByTable.provider_verification_requests ?? [],
     });
-    await persistLearningProjection(tx, { courses: rowsByTable.courses ?? [], course_sections: rowsByTable.course_sections ?? [], course_lessons: rowsByTable.course_lessons ?? [], course_reviews: rowsByTable.course_reviews ?? [], virtual_classes: rowsByTable.virtual_classes ?? [] });
+    await persistLearningProjection(tx, { courses: rowsByTable.courses ?? [], course_sections: rowsByTable.course_sections ?? [], course_lessons: rowsByTable.course_lessons ?? [], course_reviews: rowsByTable.course_reviews ?? [], virtual_classes: rowsByTable.virtual_classes ?? [], course_enrollments: rowsByTable.course_enrollments ?? [], lesson_progress: rowsByTable.lesson_progress ?? [] });
   }
 
   private async deleteNormalizedProjection(tx: Prisma.TransactionClient, removalsByTable: Record<string, string[]>) {
@@ -318,7 +320,7 @@ export class PlatformPersistenceService {
       client_favorites: removalsByTable.client_favorites ?? [],
       provider_verification_requests: removalsByTable.provider_verification_requests ?? [],
     });
-    await deleteLearningProjection(tx, { courses: removalsByTable.courses ?? [], course_sections: removalsByTable.course_sections ?? [], course_lessons: removalsByTable.course_lessons ?? [], course_reviews: removalsByTable.course_reviews ?? [], virtual_classes: removalsByTable.virtual_classes ?? [] });
+    await deleteLearningProjection(tx, { courses: removalsByTable.courses ?? [], course_sections: removalsByTable.course_sections ?? [], course_lessons: removalsByTable.course_lessons ?? [], course_reviews: removalsByTable.course_reviews ?? [], virtual_classes: removalsByTable.virtual_classes ?? [], course_enrollments: removalsByTable.course_enrollments ?? [], lesson_progress: removalsByTable.lesson_progress ?? [] });
   }
 
   private async persistOutboxEvents(tx: Prisma.TransactionClient, events: OutboxEventInput[]) {

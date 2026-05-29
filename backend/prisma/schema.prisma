@@ -895,6 +895,58 @@ model LearningVirtualClass {
   @@index([source])
 }
 
+model LearningCourseEnrollment {
+  id                  String    @id
+  courseId            String
+  courseName          String?
+  courseCategory      String?
+  courseLessonsCount  Int       @default(0)
+  studentId           String
+  studentName         String?
+  studentEmail        String?
+  studentAvatar       String?
+  progress            Float     @default(0)
+  grade               Float?
+  status              String    @default("active")
+  lastActiveAt        DateTime?
+  enrolledAt          DateTime?
+  metadata            Json?
+  source              String    @default("app_row_migration")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([studentId, status])
+  @@index([courseId, status])
+  @@index([source])
+}
+
+model LearningLessonProgress {
+  id                   String    @id
+  courseId             String
+  sectionId            String?
+  lessonId             String
+  studentId            String
+  studentName          String?
+  progress             Float     @default(0)
+  completed            Boolean   @default(false)
+  bookmarked           Boolean   @default(false)
+  note                 String?
+  videoPositionSeconds Int       @default(0)
+  status               String    @default("in_progress")
+  firstViewedAt        DateTime?
+  lastViewedAt         DateTime?
+  completedAt          DateTime?
+  metadata             Json?
+  source               String    @default("app_row_migration")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([studentId, courseId])
+  @@index([lessonId, studentId])
+  @@index([courseId, status])
+  @@index([source])
+}
+
 model AppRow {
   key       String   @id
   table     String

@@ -7,6 +7,8 @@ export type LearningRowsByTable = {
   course_lessons: Row[];
   course_reviews: Row[];
   virtual_classes: Row[];
+  course_enrollments: Row[];
+  lesson_progress: Row[];
 };
 
 export async function persistLearningProjection(tx: Prisma.TransactionClient, rowsByTable: LearningRowsByTable) {
@@ -15,9 +17,17 @@ export async function persistLearningProjection(tx: Prisma.TransactionClient, ro
   await persistCourseLessons(tx, rowsByTable.course_lessons);
   await persistCourseReviews(tx, rowsByTable.course_reviews);
   await persistVirtualClasses(tx, rowsByTable.virtual_classes);
+  await persistCourseEnrollments(tx, rowsByTable.course_enrollments);
+  await persistLessonProgress(tx, rowsByTable.lesson_progress);
 }
 
 export async function deleteLearningProjection(tx: Prisma.TransactionClient, removalsByTable: LearningRowsByTableRemovals) {
+  if (removalsByTable.lesson_progress.length) {
+    await tx.learningLessonProgress.deleteMany({ where: { id: { in: removalsByTable.lesson_progress } } });
+  }
+  if (removalsByTable.course_enrollments.length) {
+    await tx.learningCourseEnrollment.deleteMany({ where: { id: { in: removalsByTable.course_enrollments } } });
+  }
   if (removalsByTable.virtual_classes.length) {
     await tx.learningVirtualClass.deleteMany({ where: { id: { in: removalsByTable.virtual_classes } } });
   }
@@ -41,6 +51,8 @@ type LearningRowsByTableRemovals = {
   course_lessons: string[];
   course_reviews: string[];
   virtual_classes: string[];
+  course_enrollments: string[];
+  lesson_progress: string[];
 };
 
 async function persistCourses(tx: Prisma.TransactionClient, rows: Row[]) {
@@ -169,6 +181,61 @@ async function persistVirtualClasses(tx: Prisma.TransactionClient, rows: Row[]) 
   }
 }
 
+async function persistCourseEnrollments(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.LearningCourseEnrollmentCreateInput = {
+      id: toString(row.id),
+      courseId: toString(row.course_id),
+      courseName: toNullableString(row.course_name),
+      courseCategory: toNullableString(row.course_category),
+      courseLessonsCount: toInt(row.course_lessons_count),
+      studentId: toString(row.student_id),
+      studentName: toNullableString(row.student_name),
+      studentEmail: toNullableString(row.student_email),
+      studentAvatar: toNullableString(row.student_avatar),
+      progress: toFloat(row.progress),
+      grade: toNullableFloat(row.grade),
+      status: toString(row.status, 'active'),
+      lastActiveAt: toDate(row.last_active),
+      enrolledAt: toDate(row.enrolled_at),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.enrolled_at ?? row.updated_at) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.last_active ?? row.enrolled_at ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.learningCourseEnrollment.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistLessonProgress(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.LearningLessonProgressCreateInput = {
+      id: toString(row.id),
+      courseId: toString(row.course_id),
+      sectionId: toNullableString(row.section_id),
+      lessonId: toString(row.lesson_id),
+      studentId: toString(row.student_id),
+      studentName: toNullableString(row.student_name),
+      progress: toFloat(row.progress),
+      completed: toBool(row.completed),
+      bookmarked: toBool(row.bookmarked),
+      note: toNullableString(row.note),
+      videoPositionSeconds: toInt(row.video_position_seconds),
+      status: toString(row.status, 'in_progress'),
+      firstViewedAt: toDate(row.first_viewed_at),
+      lastViewedAt: toDate(row.last_viewed_at),
+      completedAt: toDate(row.completed_at),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.first_viewed_at ?? row.last_viewed_at) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.last_viewed_at ?? row.completed_at ?? row.first_viewed_at ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.learningLessonProgress.upsert({ where: { id }, create: data, update });
+  }
+}
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -211,6 +278,12 @@ function toInt(value: unknown, fallback = 0) {
 function toFloat(value: unknown, fallback = 0) {
   const normalized = Number(value);
   return Number.isFinite(normalized) ? normalized : fallback;
+}
+
+function toNullableFloat(value: unknown) {
+  if (value === null || value === undefined || value === '') return undefined;
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : undefined;
 }
 
 function parseAmount(value: unknown) {

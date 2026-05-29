@@ -8,6 +8,8 @@ const projections = [
   { appRowTable: 'course_lessons', model: 'learningCourseLesson' },
   { appRowTable: 'course_reviews', model: 'learningCourseReview' },
   { appRowTable: 'virtual_classes', model: 'learningVirtualClass' },
+  { appRowTable: 'course_enrollments', model: 'learningCourseEnrollment' },
+  { appRowTable: 'lesson_progress', model: 'learningLessonProgress' },
 ];
 
 async function main() {

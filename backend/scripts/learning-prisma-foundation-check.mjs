@@ -13,6 +13,13 @@ const migrationPath = path.join(
   '202605291345_learning_public_foundation',
   'migration.sql',
 );
+const progressMigrationPath = path.join(
+  backendRoot,
+  'prisma',
+  'migrations',
+  '202605291515_learning_progress_foundation',
+  'migration.sql',
+);
 const migrationPlanPath = path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md');
 const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
 const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-learning-projection.ts');
@@ -32,12 +39,25 @@ const learningModels = [
   'LearningVirtualClass',
 ];
 
+const learningProgressModels = [
+  'LearningCourseEnrollment',
+  'LearningLessonProgress',
+];
+
 const requiredIndexes = [
   'LearningCourse_status_category_idx',
   'LearningCourseSection_courseId_status_position_idx',
   'LearningCourseLesson_courseId_status_position_idx',
   'LearningCourseReview_courseId_status_createdAt_idx',
   'LearningVirtualClass_courseId_status_idx',
+];
+
+const requiredProgressIndexes = [
+  'LearningCourseEnrollment_studentId_status_idx',
+  'LearningCourseEnrollment_courseId_status_idx',
+  'LearningLessonProgress_studentId_courseId_idx',
+  'LearningLessonProgress_lessonId_studentId_idx',
+  'LearningLessonProgress_courseId_status_idx',
 ];
 
 function readRequiredFile(filePath) {
@@ -50,6 +70,7 @@ function readRequiredFile(filePath) {
 function main() {
   const schemaSource = readRequiredFile(schemaPath);
   const migrationSource = readRequiredFile(migrationPath);
+  const progressMigrationSource = readRequiredFile(progressMigrationPath);
   const migrationPlanSource = readRequiredFile(migrationPlanPath);
   const persistenceSource = readRequiredFile(persistencePath);
   const projectionSource = readRequiredFile(projectionPath);
@@ -70,10 +91,23 @@ function main() {
       failures.push(`Migration SQL manquante pour: ${model}`);
     }
   }
+  for (const model of learningProgressModels) {
+    if (!new RegExp(`model\\s+${model}\\s+\\{`).test(schemaSource)) {
+      failures.push(`Modele Prisma manquant: ${model}`);
+    }
+    if (!progressMigrationSource.includes(`CREATE TABLE "${model}"`)) {
+      failures.push(`Migration SQL Learning progression manquante pour: ${model}`);
+    }
+  }
 
   for (const indexName of requiredIndexes) {
     if (!migrationSource.includes(`"${indexName}"`)) {
       failures.push(`Index learning public manquant: ${indexName}`);
+    }
+  }
+  for (const indexName of requiredProgressIndexes) {
+    if (!progressMigrationSource.includes(`"${indexName}"`)) {
+      failures.push(`Index learning progression manquant: ${indexName}`);
     }
   }
 
@@ -83,7 +117,10 @@ function main() {
   if (!migrationPlanSource.includes('202605291345_learning_public_foundation')) {
     failures.push('Le plan AppRow doit citer la migration learning public foundation.');
   }
-  for (const table of ['courses', 'course_sections', 'course_lessons', 'course_reviews', 'virtual_classes']) {
+  if (!migrationPlanSource.includes('202605291515_learning_progress_foundation')) {
+    failures.push('Le plan AppRow doit citer la migration learning progress foundation.');
+  }
+  for (const table of ['courses', 'course_sections', 'course_lessons', 'course_reviews', 'virtual_classes', 'course_enrollments', 'lesson_progress']) {
     if (!persistenceSource.includes(`rowsByTable.${table}`)) {
       failures.push(`Projection double-run absente de PlatformPersistenceService: ${table}`);
     }
@@ -132,8 +169,10 @@ function main() {
   const report = {
     ok: failures.length === 0,
     models: learningModels,
-    requiredIndexes,
+    progressModels: learningProgressModels,
+    requiredIndexes: [...requiredIndexes, ...requiredProgressIndexes],
     migration: path.relative(repoRoot, migrationPath),
+    progressMigration: path.relative(repoRoot, progressMigrationPath),
     failures,
   };
 
