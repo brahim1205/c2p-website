@@ -5,6 +5,7 @@ import path from 'node:path';
 
 const backendRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const policyPath = path.join(backendRoot, 'src', 'data', 'data-access-policy.ts');
+const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
 
 function extractSetValues(source, setName) {
   const match = new RegExp(`(?:export\\s+)?const\\s+${setName}\\s*=\\s*new Set\\(\\[([\\s\\S]*?)\\]\\);`).exec(source);
@@ -26,6 +27,17 @@ function intersection(left, right) {
   return left.filter((value) => rightSet.has(value));
 }
 
+function extractNormalizedProjectionTables(source) {
+  const methodName = 'private async persistNormalizedProjection';
+  const start = source.indexOf(methodName);
+  if (start === -1) return [];
+
+  const end = source.indexOf('\n  }\n', start);
+  if (end === -1) return [];
+
+  return uniqueSorted([...source.slice(start, end).matchAll(/rowsByTable\.([a-z0-9_]+)/g)].map((entry) => entry[1]));
+}
+
 function printList(title, values) {
   console.log(`\n${title} (${values.length})`);
   if (values.length === 0) {
@@ -38,6 +50,7 @@ function printList(title, values) {
 }
 
 const source = fs.readFileSync(policyPath, 'utf8');
+const persistenceSource = fs.readFileSync(persistencePath, 'utf8');
 
 const sets = {
   publicRead: extractSetValues(source, 'PUBLIC_READ_TABLES'),
@@ -56,6 +69,7 @@ const sets = {
 };
 
 const knownTables = uniqueSorted(Object.values(sets).flat());
+const normalizedProjectionTables = extractNormalizedProjectionTables(persistenceSource);
 const sensitiveTables = uniqueSorted([
   ...sets.adminOnly,
   ...sets.finance,
@@ -63,7 +77,8 @@ const sensitiveTables = uniqueSorted([
   ...sets.messaging,
   ...sets.notifications,
 ]);
-const readOnlyPublicTables = uniqueSorted(difference(sets.publicRead, sensitiveTables));
+const normalizedPublicReadTables = uniqueSorted(intersection(sets.publicRead, normalizedProjectionTables));
+const readOnlyPublicTables = uniqueSorted(difference(difference(sets.publicRead, sensitiveTables), normalizedProjectionTables));
 const commandOnlySensitiveTables = uniqueSorted(intersection(sets.commandOnlyWrite, sensitiveTables));
 const remainingMutationSurface = uniqueSorted(difference(knownTables, sets.commandOnlyWrite));
 const remainingSensitiveMutationSurface = uniqueSorted(difference(sensitiveTables, sets.commandOnlyWrite));
@@ -80,6 +95,8 @@ const report = {
     sensitiveTables: sensitiveTables.length,
     remainingMutationSurface: remainingMutationSurface.length,
     remainingSensitiveMutationSurface: remainingSensitiveMutationSurface.length,
+    normalizedProjectionTables: normalizedProjectionTables.length,
+    normalizedPublicReadTables: normalizedPublicReadTables.length,
   },
   sets,
   priorities: {
@@ -90,6 +107,7 @@ const report = {
       ...sets.notifications,
     ]),
     remainingSensitiveMutationSurface,
+    normalizedPublicReadTables,
     keepReadOnlyUntilDedicatedEndpoints: readOnlyPublicTables,
     alreadyCommandOnly: sets.commandOnlyWrite,
     commandOnlySensitiveTables,
@@ -109,9 +127,11 @@ console.log(`Command-only writes: ${report.totals.commandOnlyWrite}`);
 console.log(`Sensitive tables: ${report.totals.sensitiveTables}`);
 console.log(`Sensitive mutation surface: ${report.totals.remainingSensitiveMutationSurface}`);
 console.log(`Remaining generic mutation surface: ${report.totals.remainingMutationSurface}`);
+console.log(`Normalized public reads: ${report.totals.normalizedPublicReadTables}`);
 
 printList('P1 migrate first: sensitive/domain endpoints', report.priorities.migrateFirst);
 printList('Sensitive tables still writable through legacy /data in compat mode', report.priorities.remainingSensitiveMutationSurface);
+printList('Public reads already covered by normalized projections', report.priorities.normalizedPublicReadTables);
 printList('P2 keep read-only until dedicated public/domain endpoints', report.priorities.keepReadOnlyUntilDedicatedEndpoints);
 printList('Already blocked from generic writes', report.priorities.alreadyCommandOnly);
 printList('Remaining mutation surface if DATA_LEGACY_API_MODE=compat', report.priorities.remainingMutationSurface);

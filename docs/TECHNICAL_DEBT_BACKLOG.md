@@ -25,7 +25,7 @@ Ce document regroupe les dettes a traiter avant d'accelerer sur de nouveaux flux
 
 | Sujet | Probleme | Action | Critere de sortie | Verification |
 | --- | --- | --- | --- | --- |
-| `/data` marketplace | `bookings`, `client_orders`, `client_favorites` gardent une surface generique. | Exposer des endpoints `marketplace/*` dedies avec DTO, permissions et tests role. | Tables marketplace retirees des mutations legacy. | `npm run data:legacy:inventory`, `npm run data:access:test`. |
+| Marketplace AppRow | Domaine maintenant couvert par endpoints metier et projection Prisma. | Garder le double-run AppRow/Prisma le temps de la compatibilite, puis supprimer le fallback legacy quand les lots suivants sont stabilises. | Tables Marketplace retirees de la dette AppRow active. | `npm run app-row:governance:check`, `npm run marketplace:prisma-consistency:check`, `npm run data:access:test`. |
 | `/data` learning | Cours, progression, examens, certificats et commentaires restent partiellement generiques. | Migrer vers `learning/*` par cas d'usage: publication, inscription, progression, examen, certificat. | Plus aucune mutation learning via `/data`. | Tests apprenant/formateur + `state:check`. |
 | `/data` project-center | Projets, documents, jalons, financements et collaborations restent generiques. | Ajouter commandes dediees `project-center/*` avec controles par role. | Plus aucune mutation project-center via `/data`. | Checks porteur/partenaire/admin. |
 | Donnees publiques | Les lectures publiques doivent rester sur des endpoints metier dedies. | Garder les pages publiques sur `/public`, `/marketplace`, `/learning` et `/project-center`. | Aucun adaptateur frontend legacy `/data` dans `front/src`. | `front npm run state:check`, smoke public. |

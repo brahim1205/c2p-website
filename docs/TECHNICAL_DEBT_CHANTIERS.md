@@ -66,7 +66,7 @@ Resultat mesure:
 
 ## Chantier 3 - Stabiliser `AppRow` et les projections Prisma
 
-Statut: a faire.
+Statut: en cours.
 
 Objectif:
 
@@ -78,8 +78,16 @@ Actions recommandees:
 
 - inventorier les tables encore uniquement stockees en JSON;
 - garder `npm run app-row:governance:check` dans `backend npm run verify`;
-- prioriser learning, marketplace, project-center;
+- prioriser learning et project-center apres fermeture de la dette active Marketplace;
 - ajouter un check de projection par domaine avant suppression progressive d'`AppRow`.
+
+Actions realisees:
+
+- Lot Marketplace normalise dans Prisma pour `providers`, `provider_services`, `provider_reviews`, `client_orders`, `client_favorites` et `provider_verification_requests`;
+- lectures Marketplace basculees vers `MarketplacePrismaReadService` avec fallback AppRow;
+- mutations Marketplace relues depuis la projection Prisma apres persistence quand elle est disponible;
+- check de coherence AppRow/Prisma Marketplace branche dans la CI;
+- tables Marketplace retirees du registre de dette `AppRow` active.
 
 Verification cible:
 
@@ -100,8 +108,8 @@ Critere de sortie:
 Statut mesure:
 
 - 60 tables connues par la policy data;
-- 13 tables avec projection normalisee ou auth normalisee;
-- 50 tables suivies explicitement comme dette `AppRow`;
+- 19 tables avec projection normalisee ou auth normalisee;
+- 44 tables suivies explicitement comme dette `AppRow`;
 - 0 table non classee.
 
 ## Chantier 4 - Decouper les gros services backend

@@ -5,8 +5,8 @@ Objectif: reduire `AppRow` aux donnees historiques non critiques, puis supprimer
 Etat mesure:
 
 - tables connues: 60;
-- tables avec projection normalisee ou auth normalisee: 13;
-- tables suivies comme dette `AppRow`: 50;
+- tables avec projection normalisee ou auth normalisee: 19;
+- tables suivies comme dette `AppRow`: 44;
 - surface de mutation generique restante via `/data`: 0.
 
 ## Regles de migration
@@ -50,6 +50,7 @@ Etat 2026-05-29:
 - backfill Marketplace branche sur `PlatformSnapshotSyncService` et controle par `npm run marketplace:prisma-consistency:check` apres le seed CI;
 - lectures runtime Marketplace basculees vers `MarketplacePrismaReadService` avec fallback AppRow;
 - mutations Marketplace maintenues en compatibilite AppRow, mais relues depuis la projection Prisma apres persistence quand elle est disponible.
+- les 6 tables Marketplace sont retirees du registre de dette `AppRow` active par `npm run app-row:governance:check`.
 
 ### Lot 2 - Learning
 
