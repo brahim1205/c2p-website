@@ -654,6 +654,130 @@ model UploadObject {
   @@index([resourceType])
 }
 
+model MarketplaceProvider {
+  id          String   @id
+  userId      String?
+  name        String
+  title       String?
+  category    String?
+  location    String?
+  avatar      String?
+  coverImage  String?
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  verified    Boolean  @default(false)
+  active      Boolean  @default(true)
+  services    Json?
+  metadata    Json?
+  source      String   @default("app_row_migration")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([category, active])
+  @@index([verified, active])
+  @@index([source])
+}
+
+model MarketplaceProviderService {
+  id             String   @id
+  providerId     String
+  providerUserId String?
+  title          String
+  description    String?
+  category       String?
+  location       String?
+  price          Int?
+  priceLabel     String?
+  priceType      String?
+  status         String   @default("active")
+  image          String?
+  metadata       Json?
+  source         String   @default("app_row_migration")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([providerId, status])
+  @@index([providerUserId, status])
+  @@index([category, status])
+  @@index([source])
+}
+
+model MarketplaceProviderReview {
+  id         String   @id
+  providerId String
+  clientId   String?
+  clientName String?
+  rating     Int
+  comment    String?
+  service    String?
+  response   String?
+  helpful    Int      @default(0)
+  metadata   Json?
+  source     String   @default("app_row_migration")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([providerId, createdAt])
+  @@index([clientId, createdAt])
+  @@index([rating])
+  @@index([source])
+}
+
+model MarketplaceClientFavorite {
+  id         String   @id
+  clientId   String
+  providerId String
+  metadata   Json?
+  source     String   @default("app_row_migration")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([clientId, providerId])
+  @@index([clientId])
+  @@index([providerId])
+  @@index([source])
+}
+
+model MarketplaceClientOrder {
+  id          String    @id
+  clientId    String
+  providerId  String?
+  service     String?
+  status      String
+  amount      Int?
+  currency    String    @default("FCFA")
+  scheduledAt DateTime?
+  metadata    Json?
+  source      String    @default("app_row_migration")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([clientId, status])
+  @@index([providerId, status])
+  @@index([source])
+}
+
+model MarketplaceProviderVerificationRequest {
+  id             String    @id
+  providerId     String
+  userId         String
+  requestedLevel String?
+  status         String
+  note           String?
+  reviewedBy     String?
+  requestedAt    DateTime?
+  reviewedAt     DateTime?
+  metadata       Json?
+  source         String    @default("app_row_migration")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([providerId, status])
+  @@index([userId, status])
+  @@index([source])
+}
+
 model AppRow {
   key       String   @id
   table     String

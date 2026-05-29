@@ -75,6 +75,18 @@ export function hashAuthToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
+export function isBasicEmail(value: string) {
+  const atIndex = value.indexOf('@');
+  const lastAtIndex = value.lastIndexOf('@');
+  if (atIndex <= 0 || atIndex !== lastAtIndex) return false;
+  const domain = value.slice(atIndex + 1);
+  return domain.includes('.') && !value.includes(' ') && !value.includes('\t') && !value.includes('\n');
+}
+
+export function isSixDigitCode(value: string) {
+  return value.length === 6 && Array.from(value).every((char) => char >= '0' && char <= '9');
+}
+
 export function createAuthId(prefix: string) {
   return `${prefix}-${Date.now()}-${randomUUID()}`;
 }

@@ -62,22 +62,13 @@ import {
   authRowKey,
   createAuthId,
   hashAuthToken,
+  isBasicEmail,
+  isSixDigitCode,
   randomAuthToken,
   randomNumericSecurityCode,
   toPrismaJson,
 } from './auth.service-helpers.js';
-
-function isBasicEmail(value: string) {
-  const atIndex = value.indexOf('@');
-  const lastAtIndex = value.lastIndexOf('@');
-  if (atIndex <= 0 || atIndex !== lastAtIndex) return false;
-  const domain = value.slice(atIndex + 1);
-  return domain.includes('.') && !value.includes(' ') && !value.includes('\t') && !value.includes('\n');
-}
-
-function isSixDigitCode(value: string) {
-  return value.length === 6 && Array.from(value).every((char) => char >= '0' && char <= '9');
-}
+import { buildPersonalDataExport, buildPublicSessions } from './auth-export-utils.js';
 
 @Injectable()
 export class AuthService {
@@ -483,14 +474,6 @@ export class AuthService {
     response.clearCookie(this.config.sessionCookieName, this.clearCookieOptions());
     response.clearCookie(this.config.refreshCookieName, this.clearCookieOptions());
     response.clearCookie(this.config.csrfCookieName, { ...this.clearCookieOptions(), httpOnly: false });
-  }
-
-  private buildPublicSessions(sessions: AccessSession[]): UserSession[] {
-    return sessions.map(({ tokenHash: _tokenHash, csrfToken: _csrfToken, createdAt: _createdAt, expiresAt: _expiresAt, absoluteExpiresAt: _absoluteExpiresAt, revokedAt: _revokedAt, userAgent: _userAgent, ...session }) => ({
-      ...session,
-      device: summarizeUserAgent(session.device),
-      ip: normalizeIp(session.ip),
-    }));
   }
 
   private getActor(request: AuthenticatedRequest) {
@@ -1180,34 +1163,12 @@ export class AuthService {
       throw new BadRequestException('Utilisateur introuvable.');
     }
 
-    const normalizedUser = this.normalizeUser(user);
-    return {
-      generatedAt: new Date().toISOString(),
-      subject: {
-        id: normalizedUser.id,
-        role: normalizedUser.role,
-        status: normalizedUser.status,
-      },
-      profile: editableProfileUser(normalizedUser),
-      security: {
-        sessions: this.listSessionsForUser(id, sessions).map((session) => ({
-          id: session.id,
-          device: session.device,
-          location: session.location,
-          ip: session.ip,
-          createdAt: session.createdAt,
-          lastActive: session.lastActive,
-          expiresAt: session.expiresAt,
-          absoluteExpiresAt: session.absoluteExpiresAt,
-          current: session.id === request.auth?.sessionId,
-        })),
-        auditLogs: this.listAuditLogsForUser(id, auditLogs),
-      },
-      retention: {
-        accountDeletion: 'Suppression depuis /auth/profile/:id par le titulaire du compte.',
-        auditLogs: 'Conserves pour securite et obligations operationnelles selon la politique C2P.',
-      },
-    };
+    return buildPersonalDataExport({
+      user: this.normalizeUser(user),
+      sessions: this.listSessionsForUser(id, sessions),
+      auditLogs: this.listAuditLogsForUser(id, auditLogs),
+      currentSessionId: request.auth?.sessionId,
+    });
   }
 
   async getPublicInstructorProfile(request: Pick<AuthenticatedRequest, 'auth'> | null, id: string) {
@@ -1375,7 +1336,7 @@ export class AuthService {
 
     return {
       user: publicUser(user),
-      sessions: this.buildPublicSessions(this.listSessionsForUser(userId, sessions)),
+      sessions: buildPublicSessions(this.listSessionsForUser(userId, sessions)),
       auditLogs: this.listAuditLogsForUser(userId, auditLogs),
       backupCodes: [],
     };

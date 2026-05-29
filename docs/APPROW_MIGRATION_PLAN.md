@@ -42,6 +42,12 @@ Critere de sortie:
 - `/allopresta` et dashboards client/prestataire passent;
 - `npm run data:legacy:inventory` ne classe plus ces tables en dette active.
 
+Etat 2026-05-29:
+
+- fondation Prisma creee pour les 6 agregats Marketplace via `backend/prisma/migrations/202605290145_marketplace_foundation/migration.sql`;
+- garde-fou `npm run marketplace:prisma-foundation:check` ajoute au `verify` backend;
+- lectures/ecritures runtime encore sur `AppRow` jusqu'au double-run de projection et aux smokes role par role.
+
 ### Lot 2 - Learning
 
 Tables:
