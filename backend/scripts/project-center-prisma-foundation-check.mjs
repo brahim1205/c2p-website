@@ -21,6 +21,13 @@ const detailMigrationPath = path.join(
   '202605292000_project_center_detail_foundation',
   'migration.sql',
 );
+const historyMigrationPath = path.join(
+  backendRoot,
+  'prisma',
+  'migrations',
+  '202605292025_project_center_history_foundation',
+  'migration.sql',
+);
 const migrationPlanPath = path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md');
 const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
 const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-project-center-projection.ts');
@@ -39,6 +46,9 @@ const requiredIndexes = [
   'ProjectCenterDocument_projectId_category_idx',
   'ProjectCenterDocument_projectId_docDate_idx',
   'ProjectCenterDocument_source_idx',
+  'ProjectCenterHistoryEntry_projectId_eventDate_idx',
+  'ProjectCenterHistoryEntry_eventType_idx',
+  'ProjectCenterHistoryEntry_source_idx',
 ];
 
 function readRequiredFile(filePath) {
@@ -50,7 +60,7 @@ function readRequiredFile(filePath) {
 
 function main() {
   const schemaSource = readRequiredFile(schemaPath);
-  const migrationSource = `${readRequiredFile(migrationPath)}\n${readRequiredFile(detailMigrationPath)}`;
+  const migrationSource = `${readRequiredFile(migrationPath)}\n${readRequiredFile(detailMigrationPath)}\n${readRequiredFile(historyMigrationPath)}`;
   const migrationPlanSource = readRequiredFile(migrationPlanPath);
   const persistenceSource = readRequiredFile(persistencePath);
   const projectionSource = readRequiredFile(projectionPath);
@@ -63,7 +73,7 @@ function main() {
   if (!/model\s+ProjectCenterProject\s+\{/.test(schemaSource)) {
     failures.push('Modele Prisma manquant: ProjectCenterProject.');
   }
-  for (const model of ['ProjectCenterMilestone', 'ProjectCenterDocument']) {
+  for (const model of ['ProjectCenterMilestone', 'ProjectCenterDocument', 'ProjectCenterHistoryEntry']) {
     if (!new RegExp(`model\\s+${model}\\s+\\{`).test(schemaSource)) {
       failures.push(`Modele Prisma manquant: ${model}.`);
     }
@@ -76,6 +86,9 @@ function main() {
   }
   if (!migrationSource.includes('CREATE TABLE "ProjectCenterDocument"')) {
     failures.push('Migration SQL manquante pour ProjectCenterDocument.');
+  }
+  if (!migrationSource.includes('CREATE TABLE "ProjectCenterHistoryEntry"')) {
+    failures.push('Migration SQL manquante pour ProjectCenterHistoryEntry.');
   }
   for (const indexName of requiredIndexes) {
     if (!migrationSource.includes(`"${indexName}"`)) {
@@ -91,7 +104,7 @@ function main() {
   if (!persistenceSource.includes('rowsByTable.projects')) {
     failures.push('Projection double-run absente de PlatformPersistenceService: projects.');
   }
-  for (const table of ['project_milestones', 'project_documents']) {
+  for (const table of ['project_milestones', 'project_documents', 'project_history']) {
     if (!persistenceSource.includes(`rowsByTable.${table}`)) {
       failures.push(`Projection double-run absente de PlatformPersistenceService: ${table}.`);
     }
@@ -120,7 +133,7 @@ function main() {
 
   const report = {
     ok: failures.length === 0,
-    models: ['ProjectCenterProject', 'ProjectCenterMilestone', 'ProjectCenterDocument'],
+    models: ['ProjectCenterProject', 'ProjectCenterMilestone', 'ProjectCenterDocument', 'ProjectCenterHistoryEntry'],
     requiredIndexes,
     migration: path.relative(repoRoot, migrationPath),
     failures,

@@ -6,6 +6,7 @@ const projections = [
   { appRowTable: 'projects', model: 'projectCenterProject' },
   { appRowTable: 'project_milestones', model: 'projectCenterMilestone' },
   { appRowTable: 'project_documents', model: 'projectCenterDocument' },
+  { appRowTable: 'project_history', model: 'projectCenterHistoryEntry' },
 ];
 
 async function main() {

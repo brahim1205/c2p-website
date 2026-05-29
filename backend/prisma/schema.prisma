@@ -1130,6 +1130,23 @@ model ProjectCenterDocument {
   @@index([source])
 }
 
+model ProjectCenterHistoryEntry {
+  id        String   @id
+  projectId String
+  eventDate String?
+  actorName String?
+  action    String
+  eventType String?
+  metadata  Json?
+  source    String   @default("app_row_migration")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, eventDate])
+  @@index([eventType])
+  @@index([source])
+}
+
 model AppRow {
   key       String   @id
   table     String

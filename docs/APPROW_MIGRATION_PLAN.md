@@ -5,7 +5,7 @@ Objectif: reduire `AppRow` aux donnees historiques non critiques, puis supprimer
 Etat mesure:
 
 - tables connues: 60;
-- tables avec projection normalisee ou auth normalisee: 34;
+- tables avec projection normalisee ou auth normalisee: 35;
 - tables suivies comme dette `AppRow`: 44;
 - surface de mutation generique restante via `/data`: 0.
 
@@ -129,9 +129,10 @@ Etat 2026-05-29:
 
 - fondation Prisma creee pour `projects` via `backend/prisma/migrations/202605291930_project_center_projects_foundation/migration.sql`;
 - fondation Prisma creee pour `project_milestones` et `project_documents` via `backend/prisma/migrations/202605292000_project_center_detail_foundation/migration.sql`;
-- projection double-run ajoutee pour `projects`, `project_milestones` et `project_documents`;
+- fondation Prisma creee pour `project_history` via `backend/prisma/migrations/202605292025_project_center_history_foundation/migration.sql`;
+- projection double-run ajoutee pour `projects`, `project_milestones`, `project_documents` et `project_history`;
 - backfill Project Center branche sur `PlatformSnapshotSyncService` et controle par `npm run project-center:prisma-consistency:check`;
-- autres tables Project Center encore maintenues dans `AppRow` en attendant les lots history, funding, partnerships et tracking.
+- autres tables Project Center encore maintenues dans `AppRow` en attendant les lots funding, partnerships et tracking.
 
 ### Lot 4 - Messaging et notifications
 

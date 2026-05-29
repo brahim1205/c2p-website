@@ -280,7 +280,7 @@ export class PlatformPersistenceService {
       provider_verification_requests: rowsByTable.provider_verification_requests ?? [],
     });
     await persistLearningProjection(tx, { courses: rowsByTable.courses ?? [], course_sections: rowsByTable.course_sections ?? [], course_lessons: rowsByTable.course_lessons ?? [], course_reviews: rowsByTable.course_reviews ?? [], virtual_classes: rowsByTable.virtual_classes ?? [], course_enrollments: rowsByTable.course_enrollments ?? [], lesson_progress: rowsByTable.lesson_progress ?? [], exams: rowsByTable.exams ?? [], quiz_questions: rowsByTable.quiz_questions ?? [], quiz_choices: rowsByTable.quiz_choices ?? [], submissions: rowsByTable.submissions ?? [], certificates: rowsByTable.certificates ?? [] });
-    await persistProjectCenterProjection(tx, { projects: rowsByTable.projects ?? [], project_milestones: rowsByTable.project_milestones ?? [], project_documents: rowsByTable.project_documents ?? [] });
+    await persistProjectCenterProjection(tx, { projects: rowsByTable.projects ?? [], project_milestones: rowsByTable.project_milestones ?? [], project_documents: rowsByTable.project_documents ?? [], project_history: rowsByTable.project_history ?? [] });
   }
 
   private async deleteNormalizedProjection(tx: Prisma.TransactionClient, removalsByTable: Record<string, string[]>) {
@@ -323,7 +323,7 @@ export class PlatformPersistenceService {
       provider_verification_requests: removalsByTable.provider_verification_requests ?? [],
     });
     await deleteLearningProjection(tx, { courses: removalsByTable.courses ?? [], course_sections: removalsByTable.course_sections ?? [], course_lessons: removalsByTable.course_lessons ?? [], course_reviews: removalsByTable.course_reviews ?? [], virtual_classes: removalsByTable.virtual_classes ?? [], course_enrollments: removalsByTable.course_enrollments ?? [], lesson_progress: removalsByTable.lesson_progress ?? [], exams: removalsByTable.exams ?? [], quiz_questions: removalsByTable.quiz_questions ?? [], quiz_choices: removalsByTable.quiz_choices ?? [], submissions: removalsByTable.submissions ?? [], certificates: removalsByTable.certificates ?? [] });
-    await deleteProjectCenterProjection(tx, { projects: removalsByTable.projects ?? [], project_milestones: removalsByTable.project_milestones ?? [], project_documents: removalsByTable.project_documents ?? [] });
+    await deleteProjectCenterProjection(tx, { projects: removalsByTable.projects ?? [], project_milestones: removalsByTable.project_milestones ?? [], project_documents: removalsByTable.project_documents ?? [], project_history: removalsByTable.project_history ?? [] });
   }
 
   private async persistOutboxEvents(tx: Prisma.TransactionClient, events: OutboxEventInput[]) {

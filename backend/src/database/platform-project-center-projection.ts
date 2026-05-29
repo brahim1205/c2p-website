@@ -5,12 +5,14 @@ export type ProjectCenterRowsByTable = {
   projects: Row[];
   project_milestones: Row[];
   project_documents: Row[];
+  project_history: Row[];
 };
 
 export type ProjectCenterRowsByTableRemovals = {
   projects: string[];
   project_milestones: string[];
   project_documents: string[];
+  project_history: string[];
 };
 
 export async function persistProjectCenterProjection(
@@ -20,6 +22,7 @@ export async function persistProjectCenterProjection(
   await persistProjects(tx, rowsByTable.projects);
   await persistMilestones(tx, rowsByTable.project_milestones);
   await persistDocuments(tx, rowsByTable.project_documents);
+  await persistHistory(tx, rowsByTable.project_history);
 }
 
 export async function deleteProjectCenterProjection(
@@ -28,6 +31,9 @@ export async function deleteProjectCenterProjection(
 ) {
   if (removalsByTable.project_documents.length) {
     await tx.projectCenterDocument.deleteMany({ where: { id: { in: removalsByTable.project_documents } } });
+  }
+  if (removalsByTable.project_history.length) {
+    await tx.projectCenterHistoryEntry.deleteMany({ where: { id: { in: removalsByTable.project_history } } });
   }
   if (removalsByTable.project_milestones.length) {
     await tx.projectCenterMilestone.deleteMany({ where: { id: { in: removalsByTable.project_milestones } } });
@@ -107,6 +113,25 @@ async function persistDocuments(tx: Prisma.TransactionClient, rows: Row[]) {
     };
     const { id, createdAt, source: _source, ...update } = data;
     await tx.projectCenterDocument.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistHistory(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.ProjectCenterHistoryEntryCreateInput = {
+      id: toString(row.id),
+      projectId: toString(row.project_id),
+      eventDate: toNullableString(row.date),
+      actorName: toNullableString(row.user),
+      action: toString(row.action, 'Evenement projet'),
+      eventType: toNullableString(row.type),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.date) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.date ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.projectCenterHistoryEntry.upsert({ where: { id }, create: data, update });
   }
 }
 
