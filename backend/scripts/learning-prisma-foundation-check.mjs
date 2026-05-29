@@ -39,6 +39,7 @@ const learningAssessmentsReadServicePath = path.join(backendRoot, 'src', 'learni
 const learningProgressReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-progress-read.service.ts');
 const learningPublicReadServicePath = path.join(backendRoot, 'src', 'learning', 'learning-public-read.service.ts');
 const learningServicePath = path.join(backendRoot, 'src', 'learning', 'learning.service.ts');
+const formateurLearnersServicePath = path.join(backendRoot, 'src', 'learning', 'formateur-learners.service.ts');
 const packageJsonPath = path.join(backendRoot, 'package.json');
 
 const learningModels = [
@@ -113,6 +114,7 @@ function main() {
   const learningProgressReadServiceSource = readRequiredFile(learningProgressReadServicePath);
   const learningPublicReadServiceSource = readRequiredFile(learningPublicReadServicePath);
   const learningServiceSource = readRequiredFile(learningServicePath);
+  const formateurLearnersServiceSource = readRequiredFile(formateurLearnersServicePath);
   const packageJsonSource = readRequiredFile(packageJsonPath);
   const failures = [];
 
@@ -238,6 +240,9 @@ function main() {
     if (!learningServiceSource.includes(runtimeSwitch)) {
       failures.push(`LearningService doit tenter le reader Prisma avant AppRow: ${runtimeSwitch}.`);
     }
+  }
+  if (!learningAssessmentsReadServiceSource.includes('async getCertificateById') || !learningAssessmentsReadServiceSource.includes('async assertCertificateDeleted') || !formateurLearnersServiceSource.includes('learningAssessmentsReadService.getCertificateById') || !formateurLearnersServiceSource.includes('learningAssessmentsReadService.assertCertificateDeleted')) {
+    failures.push('Les mutations certificats Learning doivent relire/verifier la projection Prisma.');
   }
   if (!packageJsonSource.includes('learning:prisma-consistency:check')) {
     failures.push('package.json doit exposer learning:prisma-consistency:check.');

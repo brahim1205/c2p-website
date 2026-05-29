@@ -123,6 +123,20 @@ export class LearningAssessmentsReadService {
     return exam ? this.mapSubmission(submission) : null;
   }
 
+  async getCertificateById(certificateId: string, user: AuthUser) {
+    if (!(await this.hasProjection())) return null;
+    const certificate = await this.prisma.learningCertificate.findFirst({ where: { source: 'app_row', id: String(certificateId) } });
+    if (!certificate) return null;
+    const allowed = isAdminRole(user) || String(certificate.studentId) === String(user.id) || await this.canAccessCourse(certificate.courseId, user);
+    return allowed ? this.mapCertificate(certificate) : null;
+  }
+
+  async assertCertificateDeleted(certificateId: string) {
+    if (!(await this.hasProjection())) return;
+    const count = await this.prisma.learningCertificate.count({ where: { source: 'app_row', id: String(certificateId) } });
+    if (count > 0) throw new Error('Projection certificat incoherente apres suppression.');
+  }
+
   private async hasProjection() {
     return (await this.prisma.learningExam.count({ where: { source: 'app_row' } })) > 0
       || (await this.prisma.learningCertificate.count({ where: { source: 'app_row' } })) > 0;
@@ -151,6 +165,12 @@ export class LearningAssessmentsReadService {
       where: { source: 'app_row', courseId: String(exam.courseId), studentId: String(user.id) },
     });
     return enrollment ? exam : null;
+  }
+
+  private async canAccessCourse(courseId: string, user: AuthUser) {
+    if (user.role !== 'formateur') return false;
+    const course = await this.prisma.learningCourse.findFirst({ where: { source: 'app_row', id: String(courseId), instructorId: String(user.id) } });
+    return Boolean(course);
   }
 
   private async instructorCourses(user: AuthUser) {

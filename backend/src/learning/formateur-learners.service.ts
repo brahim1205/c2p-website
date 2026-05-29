@@ -53,7 +53,8 @@ export class FormateurLearnersService {
       beforeRowsByTable: { certificates: [previous] },
       afterRowsByTable: { certificates: updated },
     });
-    return { certificateId, issuedAt };
+    const prismaCertificate = await this.learningAssessmentsReadService.getCertificateById(String(certificate.id), actor);
+    return { certificateId, issuedAt, certificate: prismaCertificate ?? updated[0] ?? null };
   }
 
   async deleteCertificate(certId: string, user: AuthUser | null) {
@@ -67,6 +68,7 @@ export class FormateurLearnersService {
       reason: 'learning:formateur:certificate:delete',
       beforeRowsByTable: { certificates: [certificate] },
     });
+    await this.learningAssessmentsReadService.assertCertificateDeleted(String(certificate.id));
     return certificate;
   }
 

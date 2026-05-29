@@ -95,6 +95,7 @@ Actions realisees:
 - fondation Learning examens/certificats ajoutee pour `exams`, `quiz_questions`, `quiz_choices`, `submissions` et `certificates` avec double-run Prisma.
 - lectures examens, quiz, soumissions et certificats Learning basculees vers Prisma via `LearningAssessmentsReadService`, avec fallback AppRow conserve.
 - mutations soumission/correction Learning relues depuis la projection Prisma apres persistence quand elle est disponible.
+- mutations certificats formateur relues/verifiees via la projection Prisma apres persistence/delete.
 
 Verification cible:
 

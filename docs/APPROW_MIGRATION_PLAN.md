@@ -95,6 +95,7 @@ Etat 2026-05-29:
 - projection double-run ajoutee pour `exams`, `quiz_questions`, `quiz_choices`, `submissions` et `certificates`;
 - lectures runtime examens, quiz, soumissions et certificats basculees vers `LearningAssessmentsReadService` avec fallback AppRow;
 - soumissions et corrections d'evaluations relues depuis Prisma apres persistence quand la projection est disponible;
+- emissions et suppressions de certificats formateur raccordees au reader Prisma apres persistence/delete;
 - ecritures runtime examens/certificats encore maintenues sur AppRow avec double-run Prisma.
 
 ### Lot 3 - Project Center
