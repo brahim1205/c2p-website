@@ -169,7 +169,11 @@ function main() {
   const projectCenterDetailPage = readRepoFile('front/src/pages/project-center/projet/page.tsx');
   const projectCenterSubmitPage = readRepoFile('front/src/pages/project-center/soumettre/page.tsx');
   const projectCenterApi = readRepoFile('front/src/lib/projectCenterApi.ts');
-  const learningController = readRepoFile('backend/src/learning/learning.controller.ts');
+  const learningController = [
+    readRepoFile('backend/src/learning/learning.controller.ts'),
+    readRepoFile('backend/src/learning/learning-public.controller.ts'),
+    readRepoFile('backend/src/learning/learning-parent.controller.ts'),
+  ].join('\n');
   const learningAccessService = readRepoFile('backend/src/learning/learning-access.service.ts');
   const learningAssessmentsCommandService = readRepoFile('backend/src/learning/learning-assessments-command.service.ts');
   const learningService = readRepoFile('backend/src/learning/learning.service.ts');

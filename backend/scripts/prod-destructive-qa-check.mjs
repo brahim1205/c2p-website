@@ -1,8 +1,10 @@
+import { randomUUID } from 'node:crypto';
+
 const API_URL = process.env.API_URL || 'http://localhost:3003/api';
 const PASSWORD = process.env.C2P_PASSWORD || ['password', '123'].join('');
 const ADMIN_EMAIL = process.env.C2P_ADMIN_EMAIL || 'admin@c2p.sn';
 const ADMIN_PASSWORD = process.env.C2P_ADMIN_PASSWORD || PASSWORD;
-const QA_PASSWORD = process.env.C2P_QA_PASSWORD || 'Password123!';
+const QA_PASSWORD = process.env.C2P_QA_PASSWORD || `Qa-${randomUUID()}aA1!`;
 const ALLOW_DESTRUCTIVE = process.env.C2P_E2E_ALLOW_DESTRUCTIVE === 'true';
 const apiBaseHref = API_URL.endsWith('/') ? API_URL : `${API_URL}/`;
 const apiBaseUrl = new URL(apiBaseHref);
