@@ -10,7 +10,7 @@ import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service.js';
 import { AuditLogService } from '../database/audit-log.service.js';
 import { ConfigService } from '../config/config.service.js';
-import { SmsService } from '../communications/sms.service.js';
+import { AuthSecurityDeliveryService } from './auth-security-delivery.service.js';
 import { RbacService } from './rbac.service.js';
 import {
   editableProfileUser,
@@ -75,7 +75,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly smsService: SmsService,
+    private readonly securityDeliveryService: AuthSecurityDeliveryService,
     private readonly rbacService: RbacService,
     private readonly auditLogService: AuditLogService,
   ) {}
@@ -97,25 +97,6 @@ export class AuthService {
     } finally {
       release();
     }
-  }
-
-  private async deliverSecurityCode(
-    user: StoredUser,
-    code: string,
-    purpose: 'two-factor' | 'password-reset',
-  ) {
-    if (!user.phone) {
-      throw new BadRequestException('Aucun numero de telephone n est associe a ce compte.');
-    }
-
-    await this.smsService.send({
-      phone: user.phone,
-      message: purpose === 'password-reset'
-        ? `Votre code de reinitialisation C2P est ${code}. Il expire dans 10 minutes.`
-        : `Votre code de verification C2P est ${code}. Il expire dans 10 minutes.`,
-      purpose,
-      userId: user.id,
-    });
   }
 
   private normalizeUser(user: StoredUser): StoredUser {
@@ -903,7 +884,7 @@ export class AuthService {
       const { users, sessions, pendingChallenges, auditLogs } = await this.loadSnapshot();
       const user = this.findUserByEmail(email, users);
 
-      if (user && user.status === 'active' && user.phone) {
+      if (user && user.status === 'active' && (user.phone || user.email)) {
         const latestChallenge = this.listPasswordResetChallenges(user.id, pendingChallenges)[0];
         if (
           latestChallenge
@@ -933,7 +914,7 @@ export class AuthService {
           attempts: 0,
         });
 
-        await this.deliverSecurityCode(user, code, 'password-reset');
+        await this.securityDeliveryService.deliverSecurityCode(user, code, 'password-reset');
         this.appendAuditLog(auditLogs, sessions, user.id, 'Demande de reinitialisation du mot de passe', 'success', {
           ip: meta.ip,
           device: this.ensureDevice(meta),

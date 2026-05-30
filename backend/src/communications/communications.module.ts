@@ -4,13 +4,13 @@ import { DatabaseModule } from '../database/database.module.js';
 import { OutboxModule } from '../outbox/outbox.module.js';
 import { CommunicationsController } from './communications.controller.js';
 import { CommunicationsService } from './communications.service.js';
-import { EmailService } from './email.service.js';
+import { EmailModule } from './email.module.js';
 import { SmsModule } from './sms.module.js';
 
 @Module({
-  imports: [AuthModule, DatabaseModule, SmsModule, forwardRef(() => OutboxModule)],
+  imports: [AuthModule, DatabaseModule, SmsModule, EmailModule, forwardRef(() => OutboxModule)],
   controllers: [CommunicationsController],
-  providers: [CommunicationsService, EmailService],
-  exports: [CommunicationsService, EmailService],
+  providers: [CommunicationsService],
+  exports: [CommunicationsService, EmailModule],
 })
 export class CommunicationsModule {}
