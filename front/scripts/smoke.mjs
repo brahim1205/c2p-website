@@ -312,7 +312,7 @@ async function runRegistrationSmoke(browser, failures) {
 
     await gotoAndCheck(page, '/auth/register', `register:${role}`);
     await page.locator('button').filter({ hasText: title }).first().click();
-    await page.getByRole('button', { name: /Continuer/i }).click();
+    await page.locator('#firstName').waitFor({ state: 'visible' });
 
     await fillById(page, 'firstName', `Smoke${role}`);
     await fillById(page, 'lastName', 'C2P');
