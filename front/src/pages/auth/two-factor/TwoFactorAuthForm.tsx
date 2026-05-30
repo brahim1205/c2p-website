@@ -1,11 +1,7 @@
 import type { FormEvent, KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '@/components/base/BrandLogo';
-
-interface ResetFormState {
-  newPassword: string;
-  confirmPassword: string;
-}
+import { ResetPasswordFields, type ResetFormState } from './ResetPasswordFields';
 
 interface TwoFactorAuthFormProps {
   code: string[];
@@ -154,35 +150,6 @@ function CodeInputs({
           {errorText}
         </p>
       )}
-    </div>
-  );
-}
-
-function ResetPasswordFields({
-  resetForm,
-  onResetFormChange,
-}: Pick<TwoFactorAuthFormProps, 'resetForm' | 'onResetFormChange'>) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">Nouveau mot de passe</label>
-        <input
-          type="password"
-          value={resetForm.newPassword}
-          onChange={(event) => onResetFormChange({ ...resetForm, newPassword: event.target.value })}
-          className="w-full rounded-lg border-2 border-gray-300 px-4 py-3 transition-colors focus:border-teal-500 focus:outline-none"
-          placeholder="Minimum 10 caractères"
-        />
-      </div>
-      <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">Confirmer le mot de passe</label>
-        <input
-          type="password"
-          value={resetForm.confirmPassword}
-          onChange={(event) => onResetFormChange({ ...resetForm, confirmPassword: event.target.value })}
-          className="w-full rounded-lg border-2 border-gray-300 px-4 py-3 transition-colors focus:border-teal-500 focus:outline-none"
-        />
-      </div>
     </div>
   );
 }
