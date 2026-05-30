@@ -77,7 +77,7 @@ export function AlloPrestaAccessBanner({ viewerTier, accessAction }: AlloPrestaA
         </div>
         <Link
           to={accessAction.to}
-          className="inline-flex items-center justify-center rounded-xl bg-[#0f1c35] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#16284a]"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-[#0f1c35] px-4 py-3 text-center text-sm font-medium text-white transition-colors hover:bg-[#16284a] md:w-auto"
         >
           {accessAction.label}
         </Link>

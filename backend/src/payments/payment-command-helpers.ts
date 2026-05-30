@@ -1,13 +1,16 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import type { AuthUser } from '../auth/auth.store.js';
+import type { Row } from '../data/mock-store.js';
 import {
   appendAppRows,
   collectRowsByIds,
   listAppRows,
   mergeRowsToPersist,
   patchAppRows,
+  withId,
 } from '../data/data-app-store.js';
+import { prepareInsert } from '../data/data-runtime.js';
 
 export function cloneValue<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -72,4 +75,39 @@ export function createProviderVisibilityContext() {
     mergeRowsToPersist,
     collectRowsByIds,
   };
+}
+
+export function appendDirectPaymentTransaction(rowsToPersist: Record<string, Row[]>, input: {
+  actorId: string;
+  amount: number;
+  currency?: string | null;
+  method?: string | null;
+  description: string;
+  sourceId: string;
+  operationKind: string;
+  requestId: string;
+}) {
+  const financialOperationId = `finop_${input.operationKind}_${Date.now()}_${commandScopedId('direct', input.actorId, input.requestId)}`;
+  const transaction = withId(prepareInsert('payment_transactions', {
+    id: commandScopedId('TRX', input.actorId, input.requestId),
+    user_id: input.actorId,
+    type: 'payment',
+    amount: input.amount,
+    currency: input.currency ?? 'XAF',
+    method: input.method ?? 'dexpay',
+    status: 'completed',
+    description: input.description,
+    date: new Date().toISOString(),
+    reference: commandScopedId('PAY', input.actorId, input.requestId),
+    financial_operation_id: financialOperationId,
+    metadata: {
+      operation_kind: input.operationKind,
+      source_id: input.sourceId,
+      payment_method: input.method ?? 'dexpay',
+      financial_operation_id: financialOperationId,
+    },
+  }));
+  appendAppRows('payment_transactions', [transaction]);
+  mergeRowsToPersist(rowsToPersist, 'payment_transactions', collectRowsByIds('payment_transactions', [String(transaction.id)]));
+  return { transaction, financialOperationId };
 }

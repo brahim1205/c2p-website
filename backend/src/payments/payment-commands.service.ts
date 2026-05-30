@@ -51,6 +51,7 @@ import {
   syncProviderStateFromSubscription,
 } from '../data/data-provider-visibility.js';
 import {
+  appendDirectPaymentTransaction,
   assertMonetizedRole,
   assertPrestataireRole,
   cloneValue,
@@ -268,41 +269,6 @@ export class PaymentCommandsService {
     };
   }
 
-  private appendDirectPaymentTransaction(rowsToPersist: Record<string, Row[]>, input: {
-    actorId: string;
-    amount: number;
-    currency?: string | null;
-    method?: string | null;
-    description: string;
-    sourceId: string;
-    operationKind: string;
-    requestId: string;
-  }) {
-    const financialOperationId = `finop_${input.operationKind}_${Date.now()}_${commandScopedId('direct', input.actorId, input.requestId)}`;
-    const transaction = withId(prepareInsert('payment_transactions', {
-      id: commandScopedId('TRX', input.actorId, input.requestId),
-      user_id: input.actorId,
-      type: 'payment',
-      amount: input.amount,
-      currency: input.currency ?? 'XAF',
-      method: input.method ?? 'dexpay',
-      status: 'completed',
-      description: input.description,
-      date: new Date().toISOString(),
-      reference: commandScopedId('PAY', input.actorId, input.requestId),
-      financial_operation_id: financialOperationId,
-      metadata: {
-        operation_kind: input.operationKind,
-        source_id: input.sourceId,
-        payment_method: input.method ?? 'dexpay',
-        financial_operation_id: financialOperationId,
-      },
-    }));
-    appendAppRows('payment_transactions', [transaction]);
-    mergeRowsToPersist(rowsToPersist, 'payment_transactions', collectRowsByIds('payment_transactions', [String(transaction.id)]));
-    return { transaction, financialOperationId };
-  }
-
   async activateSubscription(actor: AuthUser, payload: SubscriptionActivateDto, requestId: string) {
     assertMonetizedRole(actor);
     await syncAppStoreFromDatabase(this.prisma, { force: true });
@@ -344,7 +310,7 @@ export class PaymentCommandsService {
         actor.id,
       );
     } else {
-      const operation = this.appendDirectPaymentTransaction(rowsToPersist, {
+      const operation = appendDirectPaymentTransaction(rowsToPersist, {
         actorId: actor.id,
         amount: Number(candidate.amount ?? 0),
         currency: String(candidate.currency ?? 'XAF'),
@@ -434,7 +400,7 @@ export class PaymentCommandsService {
           reason: 'provider_visibility_purchase_command',
           hooks: createWalletMutationHooks(rowsToPersist),
         })
-      : this.appendDirectPaymentTransaction(rowsToPersist, {
+      : appendDirectPaymentTransaction(rowsToPersist, {
           actorId: actor.id,
           amount: Number(product.price ?? 0),
           currency: String(product.currency ?? 'XAF'),

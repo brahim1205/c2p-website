@@ -63,13 +63,13 @@ export default function RegisterDetailsStep({
   onTogglePassword,
 }: RegisterDetailsStepProps) {
   return (
-    <section className="c2p-card mx-auto max-w-4xl rounded-[30px] bg-white/92 p-6 shadow-c2p-lg backdrop-blur sm:p-8">
-      <div className="mb-6 flex items-center justify-between gap-4">
+    <section className="c2p-card mx-auto max-w-4xl rounded-[22px] bg-white/92 p-4 shadow-c2p-lg backdrop-blur sm:rounded-[30px] sm:p-8">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <button onClick={onBack} disabled={isLoading} className="text-sm text-[#5b6778] transition-colors hover:text-[#b68b3f] disabled:opacity-50">
           <i className="ri-arrow-left-line mr-1"></i>
           Retour
         </button>
-        <span className="rounded-full border border-[#d5b46f]/30 bg-[#d5b46f]/10 px-3 py-1 text-xs font-semibold text-[#d5b46f]">
+        <span className="w-fit rounded-full border border-[#d5b46f]/30 bg-[#d5b46f]/10 px-3 py-1 text-xs font-semibold text-[#d5b46f]">
           {selectedUserTypeTitle}
         </span>
       </div>

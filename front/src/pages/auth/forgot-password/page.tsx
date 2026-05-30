@@ -50,14 +50,14 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-4 py-24 text-c2p-text sm:px-6 lg:px-8">
+    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-3 py-8 text-c2p-text sm:px-6 sm:py-16 lg:px-8 lg:py-24">
       <div className="absolute inset-0">
         <img src="/images/home/trust.jpg" alt="" className="h-full w-full object-cover object-center opacity-16" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,241,232,0.97)_0%,rgba(246,241,232,0.90)_48%,rgba(246,241,232,0.78)_100%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(213,180,111,0.16),transparent_28%),radial-gradient(circle_at_82%_62%,rgba(255,255,255,0.28),transparent_28%)]"></div>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-12rem)] max-w-7xl items-center gap-10 lg:grid-cols-[1fr_460px]">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-8 sm:min-h-[calc(100vh-8rem)] lg:min-h-[calc(100vh-12rem)] lg:grid-cols-[1fr_460px] lg:gap-10">
         <section className="hidden max-w-2xl lg:block">
           <p className="mb-5 text-xs font-semibold uppercase tracking-[0.36em] text-[#d5b46f]">Recuperation securisee</p>
           <h1 className="text-5xl font-semibold leading-[0.98] text-[#172033] xl:text-7xl">
@@ -80,8 +80,8 @@ export default function ForgotPasswordPage() {
           </div>
         </section>
 
-        <section className="c2p-card rounded-[30px] bg-white/92 p-6 shadow-c2p-lg backdrop-blur sm:p-8">
-          <div className="mb-8">
+        <section className="c2p-card rounded-[22px] bg-white/92 p-4 shadow-c2p-lg backdrop-blur sm:rounded-[30px] sm:p-8">
+          <div className="mb-6 sm:mb-8">
             <BrandLogo
               to="/"
               className="inline-flex items-center"
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
             <div className="mt-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#d5b46f]/25 bg-[#d5b46f]/10 text-[#d5b46f]">
               <i className="ri-lock-password-line text-2xl"></i>
             </div>
-            <h2 className="mt-5 text-3xl font-semibold text-[#172033]">Mot de passe oublie</h2>
+            <h2 className="mt-5 text-2xl font-semibold text-[#172033] sm:text-3xl">Mot de passe oublie</h2>
             <p className="mt-2 text-sm leading-6 text-[#5b6778]">
               Saisissez l&apos;email associe a votre compte. Si le profil existe, un code SMS sera envoye sur le numero lie au compte.
             </p>

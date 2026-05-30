@@ -49,13 +49,13 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-4 py-24 text-c2p-text sm:px-6 lg:px-8">
+    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-3 py-8 text-c2p-text sm:px-6 sm:py-16 lg:px-8 lg:py-24">
       <div className="absolute inset-0">
         <img src="/images/home/hero.jpg" alt="" className="h-full w-full object-cover object-center opacity-16" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.96)_0%,rgba(247,248,252,0.90)_48%,rgba(247,248,252,0.78)_100%)]"></div>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-12rem)] max-w-7xl items-center gap-10 lg:grid-cols-[1fr_460px]">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-8 sm:min-h-[calc(100vh-8rem)] lg:min-h-[calc(100vh-12rem)] lg:grid-cols-[1fr_460px] lg:gap-10">
         <section className="hidden max-w-2xl lg:block">
           <p className="c2p-eyebrow mb-5">Accès sécurisé</p>
           <h1 className="text-5xl font-semibold leading-[0.98] text-[#06053a] xl:text-7xl">
@@ -87,14 +87,14 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="c2p-panel p-6 sm:p-8">
-          <div className="mb-8">
+        <section className="c2p-panel rounded-[22px] p-4 sm:rounded-[30px] sm:p-8">
+          <div className="mb-6 sm:mb-8">
             <BrandLogo
               to="/"
               className="inline-flex items-center"
               imageClassName="h-12 w-auto object-contain"
             />
-            <h2 className="mt-5 text-3xl font-semibold text-[#06053a]">Connexion</h2>
+            <h2 className="mt-5 text-2xl font-semibold text-[#06053a] sm:text-3xl">Connexion</h2>
             <p className="mt-2 text-sm leading-6 text-[#27346b]">
               Accédez à votre espace C2P selon votre rôle et vos droits. Les tarifs des plans publics restent consultables avant connexion.
             </p>
@@ -120,7 +120,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <label className="flex cursor-pointer items-center">
                 <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="h-4 w-4 cursor-pointer rounded border-[#5fa6f3] bg-white text-[#27346b] focus:ring-[#27346b]" disabled={isLoading} />
                 <span className="ml-2 text-sm text-[#27346b]">Se souvenir de moi</span>

@@ -32,7 +32,7 @@ export function ContactFormPanel({
   onSubmit,
 }: ContactFormPanelProps) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-8 lg:p-10">
       <h3 className="mb-1 text-xl font-semibold text-[#06053a]">Envoyez-nous un message</h3>
       <p className="mb-6 text-sm text-gray-500">Nous vous répondons sous 24h ouvrées.</p>
 
@@ -78,7 +78,7 @@ export function ContactFormPanel({
         <button
           type="submit"
           disabled={state === 'loading'}
-          className="group inline-flex w-full items-center justify-center gap-3 whitespace-nowrap rounded-xl bg-[#06053a] px-6 py-4 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] hover:bg-[#5fa6f3] active:scale-95"
+          className="group inline-flex w-full items-center justify-center gap-3 rounded-xl bg-[#06053a] px-5 py-4 text-sm font-semibold leading-tight text-white transition-all duration-300 hover:scale-[1.02] hover:bg-[#5fa6f3] active:scale-95"
         >
           {state === 'loading' ? (
             <>
@@ -106,7 +106,7 @@ export function ContactCtas() {
     <div className="mt-6 flex flex-col gap-4 sm:flex-row">
       <Link
         to="/a-propos"
-        className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-gray-200 px-5 py-3 text-sm font-medium text-[#06053a] transition-all duration-300 hover:border-[#5fa6f3] hover:bg-[#5fa6f3]/5 hover:text-[#5fa6f3]"
+        className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 px-5 py-3 text-center text-sm font-medium leading-tight text-[#06053a] transition-all duration-300 hover:border-[#5fa6f3] hover:bg-[#5fa6f3]/5 hover:text-[#5fa6f3]"
       >
         <div className="flex h-5 w-5 items-center justify-center">
           <i className="ri-information-line" />
@@ -115,7 +115,7 @@ export function ContactCtas() {
       </Link>
       <Link
         to="/auth/register"
-        className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#5fa6f3]/10 px-5 py-3 text-sm font-medium text-[#5fa6f3] transition-all duration-300 hover:bg-[#5fa6f3]/20"
+        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#5fa6f3]/10 px-5 py-3 text-center text-sm font-medium leading-tight text-[#5fa6f3] transition-all duration-300 hover:bg-[#5fa6f3]/20"
       >
         <div className="flex h-5 w-5 items-center justify-center">
           <i className="ri-user-add-line" />

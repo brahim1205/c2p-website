@@ -28,7 +28,7 @@ export function AlloPrestaResults({
           aria-label="Trier les prestataires"
           value={sortBy}
           onChange={(event) => onSortChange(event.target.value)}
-          className="cursor-pointer rounded-xl border border-[#80bfdf] bg-white px-4 py-2 text-sm text-[#1f2937] outline-none focus:border-[#27346b]"
+          className="w-full cursor-pointer rounded-xl border border-[#80bfdf] bg-white px-4 py-2 text-sm text-[#1f2937] outline-none focus:border-[#27346b] sm:w-auto"
         >
           <option value="rating">Mieux notés</option>
           <option value="price-low">Prix croissant</option>
@@ -69,7 +69,7 @@ function AlloPrestaResultsSkeleton() {
 
 function AlloPrestaNoResults({ onResetFilters }: { onResetFilters: () => void }) {
   return (
-    <div className="rounded-[24px] border border-[#d6dbe1] bg-white p-12 text-center shadow-[0_18px_45px_rgba(12,14,58,0.05)]">
+    <div className="rounded-[24px] border border-[#d6dbe1] bg-white p-6 text-center shadow-[0_18px_45px_rgba(12,14,58,0.05)] sm:p-12">
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#ffffff]">
         <div className="flex h-8 w-8 items-center justify-center">
           <i className="ri-search-line text-2xl text-[#0f1c35]" />
@@ -77,7 +77,7 @@ function AlloPrestaNoResults({ onResetFilters }: { onResetFilters: () => void })
       </div>
       <h3 className="mb-2 text-lg font-semibold text-[#0f1c35]">Aucun prestataire trouvé</h3>
       <p className="mb-4 text-sm text-[#64748b]">Essayez d&apos;ajuster vos filtres pour voir plus de résultats</p>
-      <button type="button" onClick={onResetFilters} className="c2p-btn-accent cursor-pointer whitespace-nowrap px-6 py-2">
+      <button type="button" onClick={onResetFilters} className="c2p-btn-accent w-full cursor-pointer px-6 py-2 sm:w-auto">
         Réinitialiser les filtres
       </button>
     </div>

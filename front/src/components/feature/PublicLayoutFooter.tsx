@@ -57,8 +57,8 @@ export default function PublicLayoutFooter({ onInternalLinkClick }: PublicLayout
   return (
     <footer className="border-t border-[#d6dbe1] bg-[#ffffff] text-[#0f1c35]">
       <div className="border-b border-[#d6dbe1] bg-[radial-gradient(circle_at_15%_0%,rgba(15,28,53,0.08),transparent_34%),radial-gradient(circle_at_85%_100%,rgba(26,154,150,0.10),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,246,244,0.96))]">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-18">
-          <div className="c2p-panel grid items-center gap-10 p-6 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:p-10">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-18">
+          <div className="c2p-panel grid items-center gap-6 p-4 sm:gap-10 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:p-10">
             <div>
               <p className="c2p-eyebrow mb-3">C2P updates</p>
               <h3 className="max-w-xl text-2xl font-semibold leading-tight text-[#0f1c35] sm:text-3xl lg:text-4xl">
@@ -81,8 +81,8 @@ export default function PublicLayoutFooter({ onInternalLinkClick }: PublicLayout
               <label htmlFor="footer-newsletter-email" className="sr-only">
                 Votre adresse email
               </label>
-              <input id="footer-newsletter-email" type="email" name="email" placeholder="Votre adresse email" required className="c2p-input min-h-12 flex-1 rounded-full px-5 py-3.5 text-sm" />
-              <button type="submit" className="c2p-btn-accent flex min-h-12 items-center justify-center gap-2 whitespace-nowrap px-8 py-3.5 active:scale-95">
+              <input id="footer-newsletter-email" type="email" name="email" placeholder="Votre adresse email" required className="c2p-input min-h-12 w-full flex-1 rounded-full px-5 py-3.5 text-sm" />
+              <button type="submit" className="c2p-btn-accent flex min-h-12 w-full items-center justify-center gap-2 px-8 py-3.5 active:scale-95 sm:w-auto">
                 <span>S&apos;inscrire</span>
                 <div className="w-4 h-4 flex items-center justify-center">
                   <i className="ri-arrow-right-line"></i>

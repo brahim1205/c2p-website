@@ -12,7 +12,7 @@ export function DocumentsStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Documents du projet</h2>
+        <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">Documents du projet</h2>
         <p className="text-gray-600">Téléchargez les documents qui appuient votre candidature.</p>
       </div>
 
@@ -34,7 +34,7 @@ export function DocumentsStep({
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-xl p-6">
+      <div className="rounded-xl bg-gradient-to-r from-teal-50 to-blue-50 p-4 sm:p-6">
         <h3 className="font-bold text-gray-900 mb-3">Prochaines étapes</h3>
         <ul className="space-y-2 text-sm text-gray-700">
           {['Examen de votre dossier par notre comité (48h)', 'Entretien avec notre équipe si votre projet est présélectionné', "Décision finale et intégration au programme d'incubation"].map((item) => (

@@ -15,11 +15,11 @@ export function FundingStep({ formData, setFormData, togglePartnerNeed }: Fundin
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Besoins en financement</h2>
+        <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">Besoins en financement</h2>
         <p className="text-gray-600">Indiquez vos besoins financiers pour développer votre projet.</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
         <TextInputField
           label="Montant recherché (FCFA) *"
           min="0"

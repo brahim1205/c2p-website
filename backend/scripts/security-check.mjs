@@ -97,6 +97,26 @@ async function main() {
   });
   assert(forbiddenUsers.status === 401, `expected 401 on /auth/users, got ${forbiddenUsers.status}`);
 
+  const forbiddenLegacyUserRead = await request('/users/usr-admin', {
+    headers: { Cookie: cookieJar },
+  });
+  assert(forbiddenLegacyUserRead.status === 401, `expected 401 on /users/:id, got ${forbiddenLegacyUserRead.status}`);
+
+  const forbiddenLegacyUserCreate = await request('/users', {
+    method: 'POST',
+    headers: {
+      Cookie: cookieJar,
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify({
+      email: `legacy-user-${Date.now()}@c2p.sn`,
+      firstName: 'Legacy',
+      lastName: 'User',
+    }),
+  });
+  assert(forbiddenLegacyUserCreate.status === 401, `expected 401 on POST /users, got ${forbiddenLegacyUserCreate.status}`);
+
   const adminPasswordHijack = await request('/auth/change-password', {
     method: 'POST',
     headers: {

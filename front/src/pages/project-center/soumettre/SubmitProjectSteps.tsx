@@ -44,7 +44,7 @@ function BasicInfoStep({ formData, setFormData }: FormStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Informations de base</h2>
+        <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">Informations de base</h2>
         <p className="text-gray-600">Commencez par nous présenter votre projet en quelques mots.</p>
       </div>
 
@@ -60,7 +60,7 @@ function BasicInfoStep({ formData, setFormData }: FormStepProps) {
         />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Catégorie *</label>
           <select
@@ -123,7 +123,7 @@ function DetailedDescriptionStep({ formData, setFormData }: FormStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Description détaillée</h2>
+        <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">Description détaillée</h2>
         <p className="text-gray-600">Expliquez-nous votre projet en détail.</p>
       </div>
 
@@ -179,11 +179,11 @@ function TeamStep({ formData, setFormData }: FormStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Votre équipe</h2>
+        <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">Votre équipe</h2>
         <p className="text-gray-600">Parlez-nous de vous et de votre équipe.</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
         <TextInputField
           label="Nom du fondateur *"
           placeholder="Votre nom complet"
@@ -201,7 +201,7 @@ function TeamStep({ formData, setFormData }: FormStepProps) {
         />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
         <TextInputField
           label="Téléphone *"
           placeholder="+221 XX XXX XX XX"

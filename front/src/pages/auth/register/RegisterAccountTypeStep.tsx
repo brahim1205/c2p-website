@@ -17,7 +17,6 @@ interface RegisterAccountTypeStepProps {
   isLoadingPlans: boolean;
   selectedRolePlanSummary: SelectedRolePlanSummary | null;
   userType: string | null;
-  onNext: () => void;
   onSelectUserType: (userType: string) => void;
 }
 
@@ -26,17 +25,19 @@ export default function RegisterAccountTypeStep({
   isLoadingPlans,
   selectedRolePlanSummary,
   userType,
-  onNext,
   onSelectUserType,
 }: RegisterAccountTypeStepProps) {
   return (
-    <section className="c2p-card rounded-[30px] bg-white/92 p-6 shadow-c2p-lg backdrop-blur sm:p-8">
-      <div className="mb-8 text-center">
+    <section className="c2p-card rounded-[22px] bg-white/92 p-4 shadow-c2p-lg backdrop-blur sm:rounded-[30px] sm:p-8">
+      <div className="mb-6 text-center sm:mb-8">
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-[#d5b46f]">Votre acces</p>
-        <h2 className="text-2xl font-semibold text-[#172033]">Choisissez votre type de compte</h2>
+        <h2 className="text-xl font-semibold text-[#172033] sm:text-2xl">Choisissez votre type de compte</h2>
         <p className="mt-3 text-sm leading-7 text-[#5b6778]">
           Vous pouvez creer le compte sans payer. Les plans publics concernent surtout les prestataires,
           formateurs et porteurs de projet quand ils veulent activer leurs fonctions premium.
+        </p>
+        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-[#b68b3f]">
+          Touchez une carte pour ouvrir le formulaire
         </p>
       </div>
 
@@ -44,9 +45,11 @@ export default function RegisterAccountTypeStep({
         {userTypes.map((type) => (
           <button
             key={type.id}
+            type="button"
+            aria-pressed={userType === type.id}
             onClick={() => onSelectUserType(type.id)}
             disabled={isLoading}
-            className={`group rounded-[22px] border p-6 text-left transition-all hover:-translate-y-1 ${
+            className={`group rounded-[18px] border p-5 text-left transition-all hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d5b46f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-[22px] sm:p-6 ${
               userType === type.id
                 ? 'border-[#d5b46f] bg-[#d5b46f]/12 shadow-[0_22px_60px_rgba(213,180,111,0.14)]'
                 : 'border-[#eadfce] bg-[#fbf7f1] hover:border-[#d5b46f]/45'
@@ -66,19 +69,6 @@ export default function RegisterAccountTypeStep({
         selectedRolePlanSummary={selectedRolePlanSummary}
         userType={userType}
       />
-
-      <div className="mt-8 flex justify-center">
-        <button onClick={onNext} disabled={!userType || isLoading} className="c2p-btn-accent px-9 py-3.5">
-          {isLoading ? (
-            <span className="flex items-center">
-              <i className="ri-loader-4-line mr-2 animate-spin"></i>
-              Traitement...
-            </span>
-          ) : (
-            'Continuer'
-          )}
-        </button>
-      </div>
     </section>
   );
 }

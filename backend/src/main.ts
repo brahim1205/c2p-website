@@ -14,6 +14,40 @@ import { createRateLimitMiddleware } from './common/http/rate-limit.js';
 import { MonitoringService } from './monitoring/monitoring.service.js';
 import { PrismaService } from './database/prisma.service.js';
 
+const SENSITIVE_QUERY_KEYS = new Set([
+  'api_key',
+  'apikey',
+  'code',
+  'password',
+  'secret',
+  'signature',
+  'token',
+]);
+
+function isSensitiveQueryKey(key: string) {
+  const normalized = key.toLowerCase().replace(/[-_]/g, '');
+  return SENSITIVE_QUERY_KEYS.has(key.toLowerCase())
+    || normalized.includes('apikey')
+    || normalized.includes('password')
+    || normalized.includes('secret')
+    || normalized.includes('signature')
+    || normalized.includes('token');
+}
+
+function redactRequestUrl(value: string) {
+  try {
+    const url = new URL(value, 'http://localhost');
+    for (const key of [...url.searchParams.keys()]) {
+      if (isSensitiveQueryKey(key)) {
+        url.searchParams.set(key, '[redacted]');
+      }
+    }
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return value.split('?')[0] ?? value;
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
@@ -90,7 +124,7 @@ async function bootstrap() {
         ts: new Date().toISOString(),
         requestId,
         method: req.method,
-        path: req.originalUrl,
+        path: redactRequestUrl(req.originalUrl),
         status: res.statusCode,
         durationMs,
         ip: req.ip,

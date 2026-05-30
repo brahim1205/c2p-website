@@ -16,12 +16,12 @@ export function StepNavigation({
   onPrevious,
 }: StepNavigationProps) {
   return (
-    <div className="flex items-center justify-between pt-8 border-t border-gray-200 mt-8">
+    <div className="mt-8 flex flex-col-reverse gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between sm:pt-8">
       <button
         type="button"
         onClick={onPrevious}
         disabled={currentStep === 1}
-        className={`px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+        className={`w-full rounded-lg px-6 py-3 font-semibold transition-colors sm:w-auto ${
           currentStep === 1
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -35,7 +35,7 @@ export function StepNavigation({
         <button
           type="button"
           onClick={onNext}
-          className="px-6 py-3 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap"
+          className="w-full rounded-lg bg-teal-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-teal-600 sm:w-auto"
         >
           Suivant
           <i className="ri-arrow-right-line ml-2"></i>
@@ -44,7 +44,7 @@ export function StepNavigation({
         <button
           type="submit"
           disabled={isSubmitting || !subscriptionAllowed}
-          className="px-8 py-3 bg-gradient-to-r from-teal-500 to-blue-600 text-white rounded-lg font-semibold hover:from-teal-600 hover:to-blue-700 transition-colors whitespace-nowrap disabled:opacity-60"
+          className="w-full rounded-lg bg-gradient-to-r from-teal-500 to-blue-600 px-6 py-3 font-semibold leading-tight text-white transition-colors hover:from-teal-600 hover:to-blue-700 disabled:opacity-60 sm:w-auto sm:px-8"
         >
           <i className="ri-send-plane-line mr-2"></i>
           {isSubmitting ? 'Soumission...' : 'Soumettre mon projet'}
@@ -135,12 +135,12 @@ interface FileDropFieldProps {
 
 export function FileDropField({ accept, icon, label, meta, onChange }: FileDropFieldProps) {
   return (
-    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-teal-500 transition-colors">
+    <div className="rounded-lg border-2 border-dashed border-gray-300 p-4 transition-colors hover:border-teal-500 sm:p-6">
       <label className="cursor-pointer block">
         <div className="flex flex-col items-center">
-          <i className={`${icon} text-4xl text-gray-400 mb-2`}></i>
-          <span className="text-sm font-medium text-gray-700 mb-1">{label}</span>
-          <span className="text-xs text-gray-500">{meta}</span>
+          <i className={`${icon} mb-2 text-3xl text-gray-400 sm:text-4xl`}></i>
+          <span className="mb-1 text-center text-sm font-medium text-gray-700">{label}</span>
+          <span className="text-center text-xs text-gray-500">{meta}</span>
         </div>
         <input
           type="file"

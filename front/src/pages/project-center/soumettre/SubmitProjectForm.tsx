@@ -45,7 +45,7 @@ export default function SubmitProjectForm({
       <SubmissionHeader isDashboardSubmission={isDashboardSubmission} />
       <SubmissionProgress currentStep={currentStep} isDashboardSubmission={isDashboardSubmission} />
 
-      <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="mx-auto max-w-4xl px-3 py-8 sm:px-6 sm:py-12">
         {!isAuthenticated ? (
           <AuthRequiredMessage />
         ) : !hasProjectRole ? (
@@ -55,7 +55,7 @@ export default function SubmitProjectForm({
         )}
 
         {isAuthenticated && hasProjectRole ? (
-          <form onSubmit={onSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <form onSubmit={onSubmit} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-8">
             <StepFields
               currentStep={currentStep}
               formData={formData}

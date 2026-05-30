@@ -21,9 +21,7 @@ import type {
 } from '@/lib/saasApi';
 import type { DexPayCheckoutForm } from './DexPayCheckoutModal';
 import type { PaymentMethodId, Transaction } from './paymentPageModel';
-
 type ToastFn = (title: string, message?: string) => void;
-
 interface UsePaymentActionsParams {
   user: AuthUser | null;
   walletId: string | number | null;
@@ -36,7 +34,6 @@ interface UsePaymentActionsParams {
   success: ToastFn;
   error: ToastFn;
 }
-
 const normalizeTransaction = (rawTransaction: unknown): Transaction => {
   const transaction = rawTransaction as Transaction;
   return {
@@ -44,7 +41,6 @@ const normalizeTransaction = (rawTransaction: unknown): Transaction => {
     lifecycle_status: transaction.lifecycle_status ?? resolvePaymentLifecycleStatus(transaction),
   };
 };
-
 const getRequestErrorMessage = (requestError: unknown, fallback: string) => {
   if (requestError instanceof Error) {
     return requestError.message;
@@ -54,7 +50,6 @@ const getRequestErrorMessage = (requestError: unknown, fallback: string) => {
   }
   return fallback;
 };
-
 export function usePaymentActions({
   user,
   walletId,

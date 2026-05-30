@@ -27,11 +27,11 @@ export default function RegisterPage() {
   const { register, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [step, setStep] = useState(1);
   const requestedRole = searchParams.get('role');
   const requestedPlanId = searchParams.get('plan');
   const requestedPlanName = searchParams.get('planName');
   const initialRole = userTypes.some((type) => type.id === requestedRole) ? requestedRole : null;
+  const [step, setStep] = useState(initialRole ? 2 : 1);
   const [userType, setUserType] = useState<string | null>(initialRole);
   const [subscriptionPlans, setSubscriptionPlans] = useState<PublicSubscriptionPlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
@@ -159,31 +159,27 @@ export default function RegisterPage() {
     setTimeout(() => navigate(target), 1200);
   };
 
-  const handleNext = () => {
-    if (step === 1 && !userType) {
-      error('Type requis', 'Veuillez selectionner un type de compte.');
-      return;
-    }
-    if (step === 1 && userType) {
-      setStep(2);
-    }
+  const handleSelectUserType = (selectedType: string) => {
+    setUserType(selectedType);
+    setStep(2);
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-4 py-24 text-c2p-text sm:px-6 lg:px-8">
+    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-3 py-8 text-c2p-text sm:px-6 sm:py-16 lg:px-8 lg:py-24">
       <div className="absolute inset-0">
         <img src="/images/home/venture.jpg" alt="" className="h-full w-full object-cover object-center opacity-14" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,241,232,0.96)_0%,rgba(246,241,232,0.92)_48%,rgba(246,241,232,0.78)_100%)]"></div>
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="mb-10 text-center">
+        <div className="mb-7 text-center sm:mb-10">
           <BrandLogo
             to="/"
             className="inline-flex items-center justify-center"
             imageClassName="mx-auto h-12 w-auto object-contain"
           />
-          <h1 className="mt-5 text-4xl font-semibold text-[#172033] sm:text-5xl">Creer votre compte</h1>
+          <h1 className="mt-5 text-3xl font-semibold text-[#172033] sm:text-5xl">Creer votre compte</h1>
           <p className="mt-3 text-sm leading-7 text-[#5b6778]">Choisissez votre role et accedez a l ecosysteme C2P.</p>
         </div>
 
@@ -195,8 +191,7 @@ export default function RegisterPage() {
             isLoadingPlans={isLoadingPlans}
             selectedRolePlanSummary={selectedRolePlanSummary}
             userType={userType}
-            onNext={handleNext}
-            onSelectUserType={setUserType}
+            onSelectUserType={handleSelectUserType}
           />
         )}
 

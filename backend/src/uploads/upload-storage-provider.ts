@@ -1,6 +1,6 @@
 import { createHash, createHmac } from 'node:crypto';
 import { copyFile, mkdir, readFile, rename, unlink } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 export type UploadStorageDriver = 'local-disk' | 's3';
 
@@ -50,6 +50,7 @@ export class LocalDiskUploadStorageProvider implements UploadStorageProvider {
     const storageKey = `${input.folder}/${input.filename}`;
     const absoluteFolder = join(this.publicRoot, input.folder);
     const absolutePath = join(absoluteFolder, input.filename);
+    assertPathInsideRoot(this.publicRoot, absolutePath);
 
     await mkdir(absoluteFolder, { recursive: true });
     await this.moveFile(input.sourcePath, absolutePath);
@@ -62,7 +63,9 @@ export class LocalDiskUploadStorageProvider implements UploadStorageProvider {
   }
 
   async deleteObject(storageKey: string) {
-    await unlink(join(this.publicRoot, storageKey)).catch(() => undefined);
+    const absolutePath = join(this.publicRoot, storageKey);
+    assertPathInsideRoot(this.publicRoot, absolutePath);
+    await unlink(absolutePath).catch(() => undefined);
   }
 
   private async moveFile(sourcePath: string, targetPath: string) {
@@ -236,6 +239,14 @@ function normalizeStoragePath(value: string) {
     .map((part) => part.trim())
     .filter(Boolean);
   return parts.join('/');
+}
+
+function assertPathInsideRoot(root: string, candidatePath: string) {
+  const relativePath = relative(resolve(root), resolve(candidatePath));
+  if (relativePath === '') return;
+  if (relativePath === '..' || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath)) {
+    throw new Error('Resolved upload path escapes storage root.');
+  }
 }
 
 function sha256Hex(input: Buffer | string) {
