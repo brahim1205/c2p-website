@@ -85,7 +85,9 @@ function ensureGzip(args, label) {
 
 function ensureSha256sum(args, label) {
   try {
-    execFileSync(sha256sumBin, args, { cwd: repoRoot, stdio: 'pipe', env: toolEnv() });
+    const checksumPath = args[1];
+    const cwd = checksumPath ? path.dirname(checksumPath) : repoRoot;
+    execFileSync(sha256sumBin, args, { cwd, stdio: 'pipe', env: toolEnv() });
   } catch (error) {
     const stderr = error instanceof Error && 'stderr' in error ? String(error.stderr ?? '').trim() : '';
     fail(`${label}: ${stderr || (error instanceof Error ? error.message : String(error))}`);
