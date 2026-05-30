@@ -10,6 +10,7 @@ import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service.js';
 import { AuditLogService } from '../database/audit-log.service.js';
 import { ConfigService } from '../config/config.service.js';
+import { normalizeUserPhoneForStorage } from '../communications/phone-normalization.js';
 import { AuthSecurityDeliveryService } from './auth-security-delivery.service.js';
 import { RbacService } from './rbac.service.js';
 import {
@@ -109,6 +110,15 @@ export class AuthService {
       lastPasswordChangeAt: user.lastPasswordChangeAt ?? null,
       lastLoginAt: user.lastLoginAt ?? null,
     };
+  }
+
+  private normalizePhonePatch(patch: { phone?: string }) {
+    if (patch.phone === undefined) return;
+    const normalizedPhone = normalizeUserPhoneForStorage(patch.phone);
+    if (patch.phone && !normalizedPhone) {
+      throw new BadRequestException('Numero de telephone invalide.');
+    }
+    patch.phone = normalizedPhone;
   }
 
   private normalizeSession(session: UserSession | AccessSession): AccessSession {
@@ -821,6 +831,10 @@ export class AuthService {
       }
 
       await this.validatePasswordPolicy(payload.password, []);
+      const phone = normalizeUserPhoneForStorage(payload.phone);
+      if (payload.phone && !phone) {
+        throw new BadRequestException('Numero de telephone invalide.');
+      }
       const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
       if (this.findUserByEmail(email, users)) {
         throw new ConflictException('Un compte existe deja avec cette adresse email.');
@@ -835,7 +849,7 @@ export class AuthService {
         passwordHistory: [passwordHash],
         firstName: payload.firstName,
         lastName: payload.lastName,
-        phone: payload.phone,
+        phone,
         role: payload.role,
         status: 'active',
         avatar: undefined,
@@ -1082,6 +1096,7 @@ export class AuthService {
           throw new ConflictException('Un compte existe deja avec cette adresse email.');
         }
       }
+      this.normalizePhonePatch(patch);
 
       const roleWillChange = patch.role !== undefined && patch.role !== user.role;
       const statusWillChange = patch.status !== undefined && patch.status !== user.status;
@@ -1207,6 +1222,7 @@ export class AuthService {
           throw new ConflictException('Un compte existe deja avec cette adresse email.');
         }
       }
+      this.normalizePhonePatch(patch);
 
       Object.assign(user, patch);
       this.appendAuditLog(auditLogs, sessions, actor.id, 'Modification du profil', 'success');

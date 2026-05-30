@@ -1,6 +1,7 @@
 import { configValidationSchema, validateEnvironmentConfig } from '../config/config.validation.js';
 import { ConfigService } from '../config/config.service.js';
 import { EmailService } from './email.service.js';
+import { normalizeSmsRecipientPhone, normalizeUserPhoneForStorage } from './phone-normalization.js';
 import { SmsService } from './sms.service.js';
 
 type FetchCall = {
@@ -32,6 +33,14 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+function runPhoneNormalizationContract() {
+  assert(normalizeSmsRecipientPhone('766178284') === '221766178284', 'Expected local Senegal phone normalization.');
+  assert(normalizeSmsRecipientPhone('0766178284') === '221766178284', 'Expected leading-zero Senegal phone normalization.');
+  assert(normalizeSmsRecipientPhone('+221 76 617 82 84') === '221766178284', 'Expected international Senegal phone normalization.');
+  assert(normalizeUserPhoneForStorage('766178284') === '+221766178284', 'Expected canonical stored Senegal phone.');
+  assert(normalizeSmsRecipientPhone('7661768284') === null, 'Expected invalid Senegal phone rejection.');
 }
 
 async function runBrevoProviderContract() {
@@ -195,6 +204,7 @@ function runProductionConfigContract() {
 }
 
 async function main() {
+  runPhoneNormalizationContract();
   await runBrevoProviderContract();
   await runBrevoSmsProviderContract();
   runProductionConfigContract();

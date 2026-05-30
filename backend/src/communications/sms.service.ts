@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '../config/config.service.js';
+import { normalizeSmsRecipientPhone } from './phone-normalization.js';
 
 interface SmsSendPayload {
   phone: string;
@@ -212,13 +213,7 @@ export class SmsService {
   }
 
   private normalizePhone(phone: string) {
-    const digits = phone.replace(/[^\d+]/g, '').trim();
-    if (!digits) return null;
-    if (digits.startsWith('+221')) return `221${digits.slice(4)}`;
-    if (digits.startsWith('00221')) return `221${digits.slice(5)}`;
-    if (digits.startsWith('221')) return digits;
-    if (/^\d{9}$/.test(digits)) return `221${digits}`;
-    return /^\d{12}$/.test(digits) ? digits : null;
+    return normalizeSmsRecipientPhone(phone);
   }
 
   private maskPhone(phone: string) {
