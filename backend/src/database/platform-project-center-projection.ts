@@ -6,6 +6,11 @@ export type ProjectCenterRowsByTable = {
   project_milestones: Row[];
   project_documents: Row[];
   project_history: Row[];
+  project_funding_rounds: Row[];
+  funding_investors: Row[];
+  project_partnerships: Row[];
+  project_tracking: Row[];
+  project_collaborations: Row[];
 };
 
 export type ProjectCenterRowsByTableRemovals = {
@@ -13,6 +18,11 @@ export type ProjectCenterRowsByTableRemovals = {
   project_milestones: string[];
   project_documents: string[];
   project_history: string[];
+  project_funding_rounds: string[];
+  funding_investors: string[];
+  project_partnerships: string[];
+  project_tracking: string[];
+  project_collaborations: string[];
 };
 
 export async function persistProjectCenterProjection(
@@ -23,6 +33,11 @@ export async function persistProjectCenterProjection(
   await persistMilestones(tx, rowsByTable.project_milestones);
   await persistDocuments(tx, rowsByTable.project_documents);
   await persistHistory(tx, rowsByTable.project_history);
+  await persistFundingRounds(tx, rowsByTable.project_funding_rounds);
+  await persistFundingInvestors(tx, rowsByTable.funding_investors);
+  await persistPartnerships(tx, rowsByTable.project_partnerships);
+  await persistTracking(tx, rowsByTable.project_tracking);
+  await persistCollaborations(tx, rowsByTable.project_collaborations);
 }
 
 export async function deleteProjectCenterProjection(
@@ -34,6 +49,21 @@ export async function deleteProjectCenterProjection(
   }
   if (removalsByTable.project_history.length) {
     await tx.projectCenterHistoryEntry.deleteMany({ where: { id: { in: removalsByTable.project_history } } });
+  }
+  if (removalsByTable.funding_investors.length) {
+    await tx.projectCenterFundingInvestor.deleteMany({ where: { id: { in: removalsByTable.funding_investors } } });
+  }
+  if (removalsByTable.project_funding_rounds.length) {
+    await tx.projectCenterFundingRound.deleteMany({ where: { id: { in: removalsByTable.project_funding_rounds } } });
+  }
+  if (removalsByTable.project_collaborations.length) {
+    await tx.projectCenterCollaboration.deleteMany({ where: { id: { in: removalsByTable.project_collaborations } } });
+  }
+  if (removalsByTable.project_tracking.length) {
+    await tx.projectCenterTracking.deleteMany({ where: { id: { in: removalsByTable.project_tracking } } });
+  }
+  if (removalsByTable.project_partnerships.length) {
+    await tx.projectCenterPartnership.deleteMany({ where: { id: { in: removalsByTable.project_partnerships } } });
   }
   if (removalsByTable.project_milestones.length) {
     await tx.projectCenterMilestone.deleteMany({ where: { id: { in: removalsByTable.project_milestones } } });
@@ -135,6 +165,129 @@ async function persistHistory(tx: Prisma.TransactionClient, rows: Row[]) {
   }
 }
 
+async function persistFundingRounds(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.ProjectCenterFundingRoundCreateInput = {
+      id: toString(row.id),
+      projectId: toString(row.project_id),
+      roundType: toNullableString(row.type),
+      targetAmount: toInt(row.target_amount),
+      raisedAmount: toInt(row.raised_amount),
+      deadline: toNullableString(row.deadline),
+      startDate: toNullableString(row.start_date),
+      status: toString(row.status, 'draft'),
+      description: toNullableString(row.description),
+      pitchDeck: toBoolean(row.pitch_deck),
+      businessPlan: toBoolean(row.business_plan),
+      valuation: toInt(row.valuation),
+      revenue: toInt(row.revenue),
+      burnRate: toInt(row.burn_rate),
+      runway: toNullableString(row.runway),
+      nextMilestone: toNullableString(row.next_milestone),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.start_date) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.deadline ?? row.start_date ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.projectCenterFundingRound.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistFundingInvestors(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.ProjectCenterFundingInvestorCreateInput = {
+      id: toString(row.id),
+      fundingRoundId: toString(row.funding_round_id),
+      name: toString(row.name, 'Investisseur'),
+      avatar: toNullableString(row.avatar),
+      investorType: toNullableString(row.type),
+      amount: toInt(row.amount),
+      investorDate: toNullableString(row.date),
+      equity: toNullableString(row.equity),
+      status: toString(row.status, 'pending'),
+      notes: toNullableString(row.notes),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.date) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.date ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.projectCenterFundingInvestor.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistPartnerships(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.ProjectCenterPartnershipCreateInput = {
+      id: toString(row.id),
+      projectId: toString(row.project_id),
+      counterpartUserId: toNullableString(row.counterpart_user_id),
+      name: toString(row.name, 'Partenaire'),
+      role: toNullableString(row.role),
+      partnershipType: toNullableString(row.type),
+      avatar: toNullableString(row.avatar),
+      expertise: row.expertise === undefined ? undefined : toJson(row.expertise),
+      status: toString(row.status, 'pending'),
+      lastActivity: toNullableString(row.last_activity),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.updated_at) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.projectCenterPartnership.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistTracking(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.ProjectCenterTrackingCreateInput = {
+      id: toString(row.id),
+      partnerId: toString(row.partner_id),
+      projectId: toString(row.project_id),
+      partnerType: toNullableString(row.partner_type),
+      investedAmount: toInt(row.invested_amount),
+      roi: toFloat(row.roi),
+      status: toString(row.status, 'pending'),
+      lastUpdate: toDate(row.last_update),
+      nextMilestone: toNullableString(row.next_milestone),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.last_update) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.last_update ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.projectCenterTracking.upsert({ where: { id }, create: data, update });
+  }
+}
+
+async function persistCollaborations(tx: Prisma.TransactionClient, rows: Row[]) {
+  for (const row of rows) {
+    const data: Prisma.ProjectCenterCollaborationCreateInput = {
+      id: toString(row.id),
+      partnerId: toString(row.partner_id),
+      projectId: toString(row.project_id),
+      partnerType: toNullableString(row.partner_type),
+      counterpartName: toNullableString(row.counterpart_name),
+      counterpartRole: toNullableString(row.counterpart_role),
+      collaborationType: toNullableString(row.type),
+      status: toString(row.status, 'pending'),
+      startDate: toNullableString(row.start_date),
+      endDate: toNullableString(row.end_date),
+      value: toInt(row.value),
+      deliverables: row.deliverables === undefined ? undefined : toJson(row.deliverables),
+      meetings: toInt(row.meetings),
+      metadata: toJson(row),
+      source: 'app_row',
+      createdAt: toDate(row.created_at ?? row.start_date) ?? new Date(),
+      updatedAt: toDate(row.updated_at ?? row.end_date ?? row.start_date ?? row.created_at) ?? new Date(),
+    };
+    const { id, createdAt, source: _source, ...update } = data;
+    await tx.projectCenterCollaboration.upsert({ where: { id }, create: data, update });
+  }
+}
+
 function toJson(value: unknown) {
   return value as Prisma.InputJsonValue;
 }
@@ -161,6 +314,15 @@ function toInt(value: unknown, fallback = 0) {
 function toFloat(value: unknown, fallback = 0) {
   const normalized = Number(value);
   return Number.isFinite(normalized) ? normalized : fallback;
+}
+
+function toBoolean(value: unknown, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  const normalized = toString(value).trim().toLowerCase();
+  if (['true', '1', 'yes', 'oui'].includes(normalized)) return true;
+  if (['false', '0', 'no', 'non'].includes(normalized)) return false;
+  return fallback;
 }
 
 function toDate(value: unknown) {

@@ -86,6 +86,7 @@ export default function CourseProgramLessonRow({
             Contenus
           </button>
           <button
+            aria-label={`Monter la leçon ${lesson.title}`}
             title="Monter la leçon"
             onClick={() => onMoveLesson(section.id, lesson.id, 'up')}
             disabled={lessonIndex === 0}
@@ -94,6 +95,7 @@ export default function CourseProgramLessonRow({
             <i className="ri-arrow-up-line"></i>
           </button>
           <button
+            aria-label={`Descendre la leçon ${lesson.title}`}
             title="Descendre la leçon"
             onClick={() => onMoveLesson(section.id, lesson.id, 'down')}
             disabled={lessonIndex === section.lessons.length - 1}
@@ -102,6 +104,7 @@ export default function CourseProgramLessonRow({
             <i className="ri-arrow-down-line"></i>
           </button>
           <button
+            aria-label={`Modifier la leçon ${lesson.title}`}
             title="Modifier la leçon"
             onClick={() => onEditLesson(lesson)}
             className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
@@ -109,6 +112,7 @@ export default function CourseProgramLessonRow({
             <i className="ri-edit-line"></i>
           </button>
           <button
+            aria-label={`Supprimer la leçon ${lesson.title}`}
             title="Supprimer la leçon"
             onClick={() => onDeleteLesson(lesson)}
             className="w-9 h-9 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"

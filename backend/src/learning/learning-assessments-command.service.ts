@@ -69,6 +69,7 @@ export class LearningAssessmentsCommandService {
       appendAppRows('quiz_choices', choices);
       rowsToPersist.quiz_choices = choices;
     }
+    this.includeDerivedExam(rowsToPersist, examId);
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
       reason: 'learning:formateur:quiz-question:create',
@@ -103,6 +104,7 @@ export class LearningAssessmentsCommandService {
       appendAppRows('quiz_choices', choices);
       rowsToPersist.quiz_choices = choices;
     }
+    this.includeDerivedExam(rowsToPersist, String(question.exam_id));
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
       reason: 'learning:formateur:quiz-question:update',
@@ -124,10 +126,20 @@ export class LearningAssessmentsCommandService {
     store.quiz_questions = (store.quiz_questions ?? []).filter((row) => String(row.id) !== String(question.id));
     const deletedRowIdsByTable = applyDataDeleteCascade('quiz_questions', [question]);
     recomputeDerivedData();
+    const derivedExam = this.getDerivedExamRow(question.exam_id);
+    const afterRowsByTable = derivedExam ? { exams: [derivedExam] } : undefined;
+    if (derivedExam) {
+      await this.platformPersistenceService.persistRows({ exams: [derivedExam] }, {
+        actorId: actor.id,
+        reason: 'learning:formateur:quiz-question:delete:exam-derived',
+        afterRowsByTable: { exams: [derivedExam] },
+      });
+    }
     await this.platformPersistenceService.deleteRows(deletedRowIdsByTable, {
       actorId: actor.id,
       reason: 'learning:formateur:quiz-question:delete',
       beforeRowsByTable: { quiz_questions: [question] },
+      afterRowsByTable,
     });
     await this.learningAssessmentsReadService.assertQuestionDeleted(String(question.id));
     return question;
@@ -148,11 +160,13 @@ export class LearningAssessmentsCommandService {
       ...patchAppRows('quiz_questions', (row) => String(row.id) === String(current.id), { position: target.position }),
       ...patchAppRows('quiz_questions', (row) => String(row.id) === String(target.id), { position: current.position }),
     ];
-    await this.platformPersistenceService.persistRows({ quiz_questions: updated }, {
+    const rowsToPersist: Record<string, Row[]> = { quiz_questions: updated };
+    this.includeDerivedExam(rowsToPersist, examId);
+    await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
       reason: 'learning:formateur:quiz-question:reorder',
       beforeRowsByTable: { quiz_questions: previous },
-      afterRowsByTable: { quiz_questions: updated },
+      afterRowsByTable: rowsToPersist,
     });
     return await this.learningAssessmentsReadService.getQuestionsByIds(updated.map((row) => String(row.id)), actor) ?? updated;
   }
@@ -321,5 +335,16 @@ export class LearningAssessmentsCommandService {
       .filter((choice) => allowed.has(String(choice.id)));
     const updated = patchAppRows('quiz_choices', (choice) => allowed.has(String(choice.id)), { is_correct: false });
     return candidates.length > 0 ? { quiz_choices: updated } : {};
+  }
+
+  private includeDerivedExam(rowsToPersist: Record<string, Row[]>, examId: unknown) {
+    const exam = this.getDerivedExamRow(examId);
+    if (!exam) return;
+    rowsToPersist.exams = [exam];
+  }
+
+  private getDerivedExamRow(examId: unknown) {
+    const exam = (store.exams ?? []).find((row) => String(row.id) === String(examId));
+    return exam ? clone(exam) : null;
   }
 }

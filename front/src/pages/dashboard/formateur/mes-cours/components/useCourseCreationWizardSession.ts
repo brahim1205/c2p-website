@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useToast } from '@/hooks/useToast';
 import {
   createFormateurCourseBundle,
@@ -52,16 +52,17 @@ export function useCourseCreationWizardSession({
     selectedLesson,
     uploadedAssetsCount,
   } = derivedState;
+  const handleDraftLoadStart = useCallback(() => {
+    setCourseErrors({});
+    setStepMessage(null);
+  }, []);
 
   const { savingDraftAt } = useCourseWizardDraftSync({
     open,
     userId,
     wizard,
     setWizard,
-    onDraftLoadStart: () => {
-      setCourseErrors({});
-      setStepMessage(null);
-    },
+    onDraftLoadStart: handleDraftLoadStart,
   });
 
   const {

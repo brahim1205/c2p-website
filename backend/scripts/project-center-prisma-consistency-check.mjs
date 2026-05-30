@@ -7,6 +7,11 @@ const projections = [
   { appRowTable: 'project_milestones', model: 'projectCenterMilestone' },
   { appRowTable: 'project_documents', model: 'projectCenterDocument' },
   { appRowTable: 'project_history', model: 'projectCenterHistoryEntry' },
+  { appRowTable: 'project_funding_rounds', model: 'projectCenterFundingRound' },
+  { appRowTable: 'funding_investors', model: 'projectCenterFundingInvestor' },
+  { appRowTable: 'project_partnerships', model: 'projectCenterPartnership' },
+  { appRowTable: 'project_tracking', model: 'projectCenterTracking' },
+  { appRowTable: 'project_collaborations', model: 'projectCenterCollaboration' },
 ];
 
 async function main() {

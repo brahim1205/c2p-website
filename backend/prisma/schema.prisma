@@ -9,69 +9,69 @@ datasource db {
 }
 
 model User {
-  id                  String   @id
-  email               String   @unique
-  firstName           String
-  lastName            String
-  role                String   @default("client")
-  status              String   @default("active")
-  phone               String?
-  avatar              String?
-  bio                 String?
-  location            String?
-  publicTitle         String?
-  website             String?
-  preferredLanguage   String?
-  languages           Json?
-  skills              Json?
-  socialLinks         Json?
-  certifications      Json?
-  portfolioItems      Json?
-  introVideo          String?
-  publicProfileEnabled Boolean @default(false)
-  expertVerified      Boolean  @default(false)
-  paymentSettings     Json?
-  isTwoFactorEnabled  Boolean  @default(false)
-  passwordHash        String?
-  passwordHistory     Json?
-  backupCodes         Json?
-  failedLoginAttempts Int      @default(0)
-  lockedUntil         DateTime?
+  id                   String    @id
+  email                String    @unique
+  firstName            String
+  lastName             String
+  role                 String    @default("client")
+  status               String    @default("active")
+  phone                String?
+  avatar               String?
+  bio                  String?
+  location             String?
+  publicTitle          String?
+  website              String?
+  preferredLanguage    String?
+  languages            Json?
+  skills               Json?
+  socialLinks          Json?
+  certifications       Json?
+  portfolioItems       Json?
+  introVideo           String?
+  publicProfileEnabled Boolean   @default(false)
+  expertVerified       Boolean   @default(false)
+  paymentSettings      Json?
+  isTwoFactorEnabled   Boolean   @default(false)
+  passwordHash         String?
+  passwordHistory      Json?
+  backupCodes          Json?
+  failedLoginAttempts  Int       @default(0)
+  lockedUntil          DateTime?
   lastPasswordChangeAt DateTime?
-  lastLoginAt         DateTime?
-  source              String   @default("native")
-  metadata            Json?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  lastLoginAt          DateTime?
+  source               String    @default("native")
+  metadata             Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([role, status])
   @@index([source])
 }
 
 model UserSessionRecord {
-  id                String   @id
+  id                String    @id
   userId            String
   device            String?
   location          String?
   ip                String?
   lastActive        DateTime?
-  current           Boolean  @default(false)
+  current           Boolean   @default(false)
   tokenHash         String?
   csrfToken         String?
   expiresAt         DateTime?
   absoluteExpiresAt DateTime?
   revokedAt         DateTime?
   userAgent         String?
-  source            String   @default("native")
+  source            String    @default("native")
   metadata          Json?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
   @@index([userId])
   @@index([source])
 }
 
 model RefreshTokenSessionRecord {
-  id           String   @id
+  id           String    @id
   userId       String
   tokenHash    String
   sessionId    String
@@ -80,9 +80,9 @@ model RefreshTokenSessionRecord {
   userAgent    String?
   revokedAt    DateTime?
   replacedById String?
-  source       String   @default("native")
+  source       String    @default("native")
   metadata     Json?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   @@index([userId])
   @@index([sessionId])
@@ -177,30 +177,30 @@ model RbacUserRole {
 }
 
 model OutboxEvent {
-  id                   String   @id
+  id                   String    @id
   eventType            String
-  eventVersion         Int      @default(1)
+  eventVersion         Int       @default(1)
   aggregateType        String?
   aggregateId          String?
   actorId              String?
-  idempotencyKey       String?  @unique
-  dedupeKey            String?  @unique
-  status               String   @default("pending")
-  attemptCount         Int      @default(0)
-  retries              Int      @default(0)
-  maxRetries           Int      @default(5)
-  availableAt          DateTime @default(now())
+  idempotencyKey       String?   @unique
+  dedupeKey            String?   @unique
+  status               String    @default("pending")
+  attemptCount         Int       @default(0)
+  retries              Int       @default(0)
+  maxRetries           Int       @default(5)
+  availableAt          DateTime  @default(now())
   nextRetryAt          DateTime?
-  occurredAt           DateTime @default(now())
+  occurredAt           DateTime  @default(now())
   processedAt          DateTime?
   lastError            String?
   correlationId        String?
   financialOperationId String?
   payload              Json
-  source               String   @default("native")
+  source               String    @default("native")
   metadata             Json?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([status, availableAt])
   @@index([status, nextRetryAt])
@@ -214,10 +214,10 @@ model OutboxEvent {
 }
 
 model FinancialOperation {
-  id             String   @id
+  id             String    @id
   kind           String
   status         String
-  idempotencyKey String   @unique
+  idempotencyKey String    @unique
   actorId        String?
   subjectUserId  String?
   resourceType   String?
@@ -225,8 +225,8 @@ model FinancialOperation {
   amount         Int?
   currency       String?
   metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   completedAt    DateTime?
 
   @@index([kind, status])
@@ -317,24 +317,24 @@ model SubscriptionPlan {
 }
 
 model UserSubscription {
-  id             String   @id
+  id             String    @id
   userId         String
   role           String
   planId         String
   planName       String
   status         String
   amount         Int
-  currency       String   @default("FCFA")
-  commissionRate Float    @default(0)
-  autoRenew      Boolean  @default(false)
+  currency       String    @default("FCFA")
+  commissionRate Float     @default(0)
+  autoRenew      Boolean   @default(false)
   startedAt      DateTime?
   renewsAt       DateTime?
   lastBilledAt   DateTime?
   endedAt        DateTime?
-  source         String   @default("native")
+  source         String    @default("native")
   metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([userId, status])
   @@index([planId])
@@ -359,47 +359,47 @@ model PayoutAccount {
 }
 
 model PayoutRequest {
-  id          String   @id
+  id          String    @id
   userId      String
   amount      Int
-  currency    String   @default("FCFA")
+  currency    String    @default("FCFA")
   method      String
   accountId   String?
   status      String
   note        String?
   requestedAt DateTime?
   processedAt DateTime?
-  source      String   @default("native")
+  source      String    @default("native")
   metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([userId, status])
   @@index([source])
 }
 
 model EscrowCase {
-  id                   String   @id
+  id                   String    @id
   bookingId            String?
   clientId             String?
   providerId           String?
   providerUserId       String?
   requestedProviderId  String?
   service              String?
-  amountTotal          Int      @default(0)
-  currency             String   @default("FCFA")
-  platformFeeAmount    Int      @default(0)
-  providerAmount       Int      @default(0)
+  amountTotal          Int       @default(0)
+  currency             String    @default("FCFA")
+  platformFeeAmount    Int       @default(0)
+  providerAmount       Int       @default(0)
   status               String
   fundedAt             DateTime?
   releasedAt           DateTime?
   refundedAt           DateTime?
   note                 String?
   paymentTransactionId String?
-  source               String   @default("native")
+  source               String    @default("native")
   metadata             Json?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([bookingId])
   @@index([clientId, status])
@@ -408,27 +408,27 @@ model EscrowCase {
 }
 
 model Mission {
-  id                String   @id
-  clientId          String?
-  providerId        String?
+  id                  String    @id
+  clientId            String?
+  providerId          String?
   requestedProviderId String?
-  service           String?
-  category          String?
-  status            String
-  requestChannel    String?
-  assignmentStatus  String?
-  walletFlow        String?
-  scheduledAt       DateTime?
-  completedAt       DateTime?
-  cancelledAt       DateTime?
-  budgetAmount      Int?
-  currency          String?
-  location          String?
-  description       String?
-  source            String   @default("native")
-  metadata          Json?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  service             String?
+  category            String?
+  status              String
+  requestChannel      String?
+  assignmentStatus    String?
+  walletFlow          String?
+  scheduledAt         DateTime?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+  budgetAmount        Int?
+  currency            String?
+  location            String?
+  description         String?
+  source              String    @default("native")
+  metadata            Json?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([clientId, status])
   @@index([providerId, status])
@@ -436,31 +436,31 @@ model Mission {
 }
 
 model Invoice {
-  id          String   @id
+  id          String    @id
   userId      String?
   number      String?
   type        String?
   description String?
-  amount      Int      @default(0)
-  currency    String   @default("FCFA")
+  amount      Int       @default(0)
+  currency    String    @default("FCFA")
   status      String
   issueDate   DateTime?
   dueDate     DateTime?
   paidDate    DateTime?
   recipient   Json?
   items       Json?
-  source      String   @default("native")
+  source      String    @default("native")
   metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([userId, status])
   @@index([source])
 }
 
 model NotificationDelivery {
-  id                String   @id
-  deliveryKey       String   @unique
+  id                String    @id
+  deliveryKey       String    @unique
   outboxEventId     String?
   eventType         String
   channel           String
@@ -474,8 +474,8 @@ model NotificationDelivery {
   failedAt          DateTime?
   error             String?
   metadata          Json?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([outboxEventId])
   @@index([channel, status])
@@ -483,8 +483,8 @@ model NotificationDelivery {
 }
 
 model WebhookDispatchRecord {
-  id             String   @id
-  dispatchKey    String   @unique
+  id             String    @id
+  dispatchKey    String    @unique
   outboxEventId  String?
   eventType      String
   targetUrl      String
@@ -493,13 +493,13 @@ model WebhookDispatchRecord {
   responseStatus Int?
   responseBody   String?
   error          String?
-  attemptCount   Int      @default(1)
+  attemptCount   Int       @default(1)
   dispatchedAt   DateTime?
   deliveredAt    DateTime?
   correlationId  String?
   metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([outboxEventId])
   @@index([status, createdAt])
@@ -507,7 +507,7 @@ model WebhookDispatchRecord {
 }
 
 model PaymentIntent {
-  id                   String   @id
+  id                   String    @id
   actorId              String?
   userId               String?
   provider             String
@@ -515,15 +515,15 @@ model PaymentIntent {
   contextType          String?
   contextId            String?
   amount               Int
-  currency             String   @default("FCFA")
+  currency             String    @default("FCFA")
   status               String
   expiresAt            DateTime?
   confirmedAt          DateTime?
   cancelledAt          DateTime?
   financialOperationId String?
   metadata             Json?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([userId, status])
   @@index([provider, status])
@@ -532,7 +532,7 @@ model PaymentIntent {
 }
 
 model ProviderTransaction {
-  id                String   @id
+  id                String    @id
   paymentIntentId   String?
   provider          String
   providerReference String
@@ -544,8 +544,8 @@ model ProviderTransaction {
   failedAt          DateTime?
   rawPayload        Json?
   metadata          Json?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([provider, providerReference])
   @@index([paymentIntentId])
@@ -553,46 +553,46 @@ model ProviderTransaction {
 }
 
 model WebhookReceipt {
-  id             String   @id
-  provider       String
+  id              String    @id
+  provider        String
   providerEventId String?
-  eventType      String?
-  status         String
-  idempotencyKey String?
-  correlationId  String?
-  receivedAt     DateTime @default(now())
-  processedAt    DateTime?
-  error          String?
-  rawPayload     Json?
-  metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  eventType       String?
+  status          String
+  idempotencyKey  String?
+  correlationId   String?
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+  error           String?
+  rawPayload      Json?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  @@index([provider, status])
   @@unique([provider, providerEventId])
   @@unique([provider, idempotencyKey])
+  @@index([provider, status])
   @@index([providerEventId])
   @@index([correlationId])
 }
 
 model SettlementRecord {
-  id                    String   @id
+  id                    String    @id
   provider              String
   providerSettlementRef String?
   status                String
   amount                Int
-  currency              String   @default("FCFA")
+  currency              String    @default("FCFA")
   settledAt             DateTime?
   metadata              Json?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@index([provider, status])
   @@index([providerSettlementRef])
 }
 
 model ReconciliationJob {
-  id          String   @id
+  id          String    @id
   provider    String
   scope       String?
   status      String
@@ -603,27 +603,27 @@ model ReconciliationJob {
   summary     Json?
   error       String?
   metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([provider, status])
   @@index([windowStart, windowEnd])
 }
 
 model CommissionLedgerEntry {
-  id                String   @id
+  id                String    @id
   sourceType        String?
   sourceId          String?
   userId            String?
   beneficiaryUserId String?
-  amount            Int      @default(0)
-  currency          String   @default("FCFA")
+  amount            Int       @default(0)
+  currency          String    @default("FCFA")
   status            String
   description       String?
   recognizedAt      DateTime?
-  source            String   @default("native")
+  source            String    @default("native")
   metadata          Json?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 
   @@index([sourceType, sourceId])
   @@index([beneficiaryUserId])
@@ -896,24 +896,24 @@ model LearningVirtualClass {
 }
 
 model LearningCourseEnrollment {
-  id                  String    @id
-  courseId            String
-  courseName          String?
-  courseCategory      String?
-  courseLessonsCount  Int       @default(0)
-  studentId           String
-  studentName         String?
-  studentEmail        String?
-  studentAvatar       String?
-  progress            Float     @default(0)
-  grade               Float?
-  status              String    @default("active")
-  lastActiveAt        DateTime?
-  enrolledAt          DateTime?
-  metadata            Json?
-  source              String    @default("app_row_migration")
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String    @id
+  courseId           String
+  courseName         String?
+  courseCategory     String?
+  courseLessonsCount Int       @default(0)
+  studentId          String
+  studentName        String?
+  studentEmail       String?
+  studentAvatar      String?
+  progress           Float     @default(0)
+  grade              Float?
+  status             String    @default("active")
+  lastActiveAt       DateTime?
+  enrolledAt         DateTime?
+  metadata           Json?
+  source             String    @default("app_row_migration")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([studentId, status])
   @@index([courseId, status])
@@ -1144,6 +1144,118 @@ model ProjectCenterHistoryEntry {
 
   @@index([projectId, eventDate])
   @@index([eventType])
+  @@index([source])
+}
+
+model ProjectCenterFundingRound {
+  id            String   @id
+  projectId     String
+  roundType     String?
+  targetAmount  Int      @default(0)
+  raisedAmount  Int      @default(0)
+  deadline      String?
+  startDate     String?
+  status        String   @default("draft")
+  description   String?
+  pitchDeck     Boolean  @default(false)
+  businessPlan  Boolean  @default(false)
+  valuation     Int      @default(0)
+  revenue       Int      @default(0)
+  burnRate      Int      @default(0)
+  runway        String?
+  nextMilestone String?
+  metadata      Json?
+  source        String   @default("app_row_migration")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId, status])
+  @@index([projectId, deadline])
+  @@index([source])
+}
+
+model ProjectCenterFundingInvestor {
+  id             String   @id
+  fundingRoundId String
+  name           String
+  avatar         String?
+  investorType   String?
+  amount         Int      @default(0)
+  investorDate   String?
+  equity         String?
+  status         String   @default("pending")
+  notes          String?
+  metadata       Json?
+  source         String   @default("app_row_migration")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([fundingRoundId, status])
+  @@index([source])
+}
+
+model ProjectCenterPartnership {
+  id                String   @id
+  projectId         String
+  counterpartUserId String?
+  name              String
+  role              String?
+  partnershipType   String?
+  avatar            String?
+  expertise         Json?
+  status            String   @default("pending")
+  lastActivity      String?
+  metadata          Json?
+  source            String   @default("app_row_migration")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([projectId, status])
+  @@index([counterpartUserId])
+  @@index([source])
+}
+
+model ProjectCenterTracking {
+  id             String    @id
+  partnerId      String
+  projectId      String
+  partnerType    String?
+  investedAmount Int       @default(0)
+  roi            Float     @default(0)
+  status         String    @default("pending")
+  lastUpdate     DateTime?
+  nextMilestone  String?
+  metadata       Json?
+  source         String    @default("app_row_migration")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([partnerId, status])
+  @@index([projectId, status])
+  @@index([source])
+}
+
+model ProjectCenterCollaboration {
+  id                String   @id
+  partnerId         String
+  projectId         String
+  partnerType       String?
+  counterpartName   String?
+  counterpartRole   String?
+  collaborationType String?
+  status            String   @default("pending")
+  startDate         String?
+  endDate           String?
+  value             Int      @default(0)
+  deliverables      Json?
+  meetings          Int      @default(0)
+  metadata          Json?
+  source            String   @default("app_row_migration")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([partnerId, status])
+  @@index([projectId, status])
   @@index([source])
 }
 

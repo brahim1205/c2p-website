@@ -182,6 +182,7 @@ function CourseProgramSectionCard({
           </div>
           <div className="flex flex-wrap gap-2">
             <button
+              aria-label={`Monter la section ${section.title}`}
               title="Monter la section"
               onClick={() => onMoveSection(section.id, 'up')}
               disabled={sectionIndex === 0}
@@ -190,6 +191,7 @@ function CourseProgramSectionCard({
               <i className="ri-arrow-up-line"></i>
             </button>
             <button
+              aria-label={`Descendre la section ${section.title}`}
               title="Descendre la section"
               onClick={() => onMoveSection(section.id, 'down')}
               disabled={sectionIndex === groupedSections.length - 1}
@@ -198,6 +200,7 @@ function CourseProgramSectionCard({
               <i className="ri-arrow-down-line"></i>
             </button>
             <button
+              aria-label={`Modifier la section ${section.title}`}
               title="Modifier la section"
               onClick={() => onEditSection(section)}
               className="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
@@ -205,6 +208,7 @@ function CourseProgramSectionCard({
               <i className="ri-edit-line"></i>
             </button>
             <button
+              aria-label={`Supprimer la section ${section.title}`}
               title="Supprimer la section"
               onClick={() => onDeleteSection(section)}
               className="w-9 h-9 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"

@@ -22,26 +22,6 @@ export class LearningController {
     private readonly formateurVirtualClassesService: FormateurVirtualClassesService,
   ) {}
 
-  @Get('public/instructors/:instructorId/courses')
-  getPublicInstructorCourses(@Param('instructorId') instructorId: string) {
-    return this.learningAccessService.getPublicInstructorCourses(instructorId);
-  }
-
-  @Get('public/courses')
-  getPublicCourses() {
-    return this.learningAccessService.getPublicCourses();
-  }
-
-  @Get('public/courses/:courseId')
-  getPublicCourseDetail(@Param('courseId') courseId: string) {
-    return this.learningAccessService.getPublicCourseDetail(courseId);
-  }
-
-  @Get('public/virtual-classes/:classId')
-  getPublicVirtualClassDetail(@Param('classId') classId: string) {
-    return this.learningAccessService.getPublicVirtualClassDetail(classId);
-  }
-
   @Get('apprenant/courses/:courseId')
   @UseGuards(PermissionGuard)
   @RequirePermission('data.learning.read')
@@ -199,13 +179,6 @@ export class LearningController {
     @Param('examId') examId: string,
   ) {
     return this.learningService.getApprenantQuizStructure(examId, request.auth?.user ?? null);
-  }
-
-  @Get('parent/dashboard')
-  @UseGuards(PermissionGuard)
-  @RequirePermission('data.learning.read')
-  getParentDashboardSnapshot(@Req() request: AuthenticatedRequest) {
-    return this.learningService.getParentDashboardSnapshot(request.auth?.user ?? null);
   }
 
   @Post('apprenant/exams/:examId/submissions')

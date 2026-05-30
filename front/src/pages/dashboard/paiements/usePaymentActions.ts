@@ -20,7 +20,7 @@ import type {
   UserSubscription,
 } from '@/lib/saasApi';
 import type { DexPayCheckoutForm } from './DexPayCheckoutModal';
-import type { Transaction } from './paymentPageModel';
+import type { PaymentMethodId, Transaction } from './paymentPageModel';
 
 type ToastFn = (title: string, message?: string) => void;
 
@@ -233,30 +233,36 @@ export function usePaymentActions({
     await syncDexPayTransaction(transactionRow);
   };
 
-  const handleActivatePlan = async (plan: SubscriptionPlan) => {
+  const handleActivatePlan = async (plan: SubscriptionPlan, paymentMethod: PaymentMethodId = 'dexpay') => {
     if (!user?.id) return;
     try {
       await activateSubscriptionPlan({
         plan_id: plan.id,
+        payment_method: paymentMethod,
         auto_renew: true,
         renew_now: Boolean(activeSubscription),
       });
       await refreshPayments();
-      success('Abonnement mis à jour', `Le plan ${plan.name} est désormais pris en compte par C2P.`);
+      success(
+        'Abonnement mis à jour',
+        paymentMethod === 'wallet'
+          ? `Le plan ${plan.name} a été réglé avec votre solde C2P.`
+          : `Le plan ${plan.name} a été réglé directement via ${paymentMethod === 'dexpay' ? 'DexPay' : paymentMethod}.`,
+      );
     } catch (requestError) {
       error('Abonnement impossible', getRequestErrorMessage(requestError, 'Impossible d activer ce plan.'));
     }
   };
 
-  const handlePurchaseVisibilityProduct = async (product: ProviderVisibilityProduct) => {
+  const handlePurchaseVisibilityProduct = async (product: ProviderVisibilityProduct, paymentMethod: PaymentMethodId = 'dexpay') => {
     if (user?.role !== 'prestataire') return;
     setPurchasingVisibilityProductId(product.id);
     try {
-      const result = await purchaseProviderVisibility({ product_id: product.id });
+      const result = await purchaseProviderVisibility({ product_id: product.id, payment_method: paymentMethod });
       await refreshPayments();
       success(
         'Billet activé',
-        `${product.name} est actif${result.pass?.code ? ` avec le code ${result.pass.code}` : ''}.`,
+        `${product.name} est actif${result.pass?.code ? ` avec le code ${result.pass.code}` : ''}. Paiement ${paymentMethod === 'wallet' ? 'par solde C2P' : 'direct'}.`,
       );
     } catch (requestError) {
       error('Achat impossible', getRequestErrorMessage(requestError, 'Impossible d acheter ce billet SenPresta.'));

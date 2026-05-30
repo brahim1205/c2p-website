@@ -56,10 +56,13 @@ export default function VirtualClassesPageShell({ session }: { session: VirtualC
           formMessage={session.editFormMessage}
           instructorCourses={session.instructorCourses}
           isUpdating={session.isUpdating}
+          isReplayUploading={session.isReplayUploading}
+          replayUploadProgress={session.replayUploadProgress}
           onClose={session.closeEditModal}
           onSubmit={session.confirmEdit}
           onUpdateForm={session.updateEditForm}
           onSelectCourse={session.selectEditCourse}
+          onReplayFileChange={session.handleReplayFileChange}
         />
       ) : null}
     </div>

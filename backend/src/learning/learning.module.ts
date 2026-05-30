@@ -9,13 +9,16 @@ import { LearningAccessService } from './learning-access.service.js';
 import { LearningAssessmentsCommandService } from './learning-assessments-command.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
 import { LearningController } from './learning.controller.js';
+import { LearningParentController } from './learning-parent.controller.js';
 import { LearningProgressReadService } from './learning-progress-read.service.js';
+import { LearningPublicController } from './learning-public.controller.js';
+import { LearningPublicFallbackService } from './learning-public-fallback.service.js';
 import { LearningPublicReadService } from './learning-public-read.service.js';
 import { LearningService } from './learning.service.js';
 
 @Module({
   imports: [AuthModule, DatabaseModule],
-  controllers: [LearningController],
+  controllers: [LearningController, LearningParentController, LearningPublicController],
   providers: [
     FormateurCommunityService,
     FormateurCourseProgramService,
@@ -25,6 +28,7 @@ import { LearningService } from './learning.service.js';
     LearningAssessmentsCommandService,
     LearningAssessmentsReadService,
     LearningProgressReadService,
+    LearningPublicFallbackService,
     LearningPublicReadService,
     LearningService,
   ],

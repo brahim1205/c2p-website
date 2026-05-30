@@ -13,6 +13,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { PaymentCommandsService } from './payment-commands.service.js';
 import { FinanceReadService } from './finance-read.service.js';
 import { ProviderIntegrationService } from './provider-integration.service.js';
+import { ProviderIntegrationReadService } from './provider-integration-read.service.js';
 import { FinanceStateMachineService } from './finance-state-machine.service.js';
 import { ProviderRegistryService } from './provider-registry.service.js';
 import {
@@ -64,6 +65,7 @@ export class PaymentsController {
     private readonly paymentCommandsService: PaymentCommandsService,
     private readonly financeReadService: FinanceReadService,
     private readonly providerIntegrationService: ProviderIntegrationService,
+    private readonly providerIntegrationReadService: ProviderIntegrationReadService,
     private readonly financeStateMachineService: FinanceStateMachineService,
   ) {}
 
@@ -528,7 +530,7 @@ export class PaymentsController {
     @Query('limit') limit?: string,
   ) {
     this.getActor(request);
-    return this.providerIntegrationService.listReconciliationJobs(Number(limit ?? 50) || 50);
+    return this.providerIntegrationReadService.listReconciliationJobs(Number(limit ?? 50) || 50);
   }
 
   @Get('admin/providers/dexpay/webhook-receipts')
@@ -540,7 +542,7 @@ export class PaymentsController {
     @Query('status') status?: string,
   ) {
     this.getActor(request);
-    return this.providerIntegrationService.listWebhookReceipts(Number(limit ?? 50) || 50, status?.trim() || undefined);
+    return this.providerIntegrationReadService.listWebhookReceipts(Number(limit ?? 50) || 50, status?.trim() || undefined);
   }
 
   @Get('admin/providers/dexpay/transactions')
@@ -552,7 +554,7 @@ export class PaymentsController {
     @Query('status') status?: string,
   ) {
     this.getActor(request);
-    return this.providerIntegrationService.listProviderTransactions(Number(limit ?? 50) || 50, status?.trim() || undefined);
+    return this.providerIntegrationReadService.listProviderTransactions(Number(limit ?? 50) || 50, status?.trim() || undefined);
   }
 
   @Get('admin/providers/dexpay/transactions/:providerReference/capabilities')
@@ -575,7 +577,7 @@ export class PaymentsController {
     @Query('status') status?: string,
   ) {
     this.getActor(request);
-    return this.providerIntegrationService.listPaymentIntents(Number(limit ?? 50) || 50, status?.trim() || undefined);
+    return this.providerIntegrationReadService.listPaymentIntents(Number(limit ?? 50) || 50, status?.trim() || undefined);
   }
 
   @Get('admin/providers/dexpay/intents/:intentId/capabilities')

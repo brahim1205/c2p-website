@@ -15,6 +15,7 @@ import type {
 } from '@/lib/saasApi';
 import {
   formatAmount,
+  type PaymentMethodId,
   type Transaction,
 } from './paymentPageModel';
 import ProviderCyclePanel from './ProviderCyclePanel';
@@ -59,8 +60,8 @@ interface WalletTabPanelProps {
   getProviderCapabilitySummary: (transaction: Transaction) => string;
   canSyncProvider: (transaction: Transaction) => boolean;
   onSyncDexPayTransaction: (transaction: Transaction) => void;
-  onActivatePlan: (plan: SubscriptionPlan) => void;
-  onPurchaseVisibilityProduct: (product: ProviderVisibilityProduct) => void;
+  onActivatePlan: (plan: SubscriptionPlan, paymentMethod: PaymentMethodId) => void;
+  onPurchaseVisibilityProduct: (product: ProviderVisibilityProduct, paymentMethod: PaymentMethodId) => void;
 }
 
 export default function WalletTabPanel({
@@ -197,6 +198,8 @@ export default function WalletTabPanel({
           selectedPlanUnavailable={selectedPlanUnavailable}
           selectedPlanName={selectedPlanName}
           selectedPlanRole={selectedPlanRole}
+          availableBalance={availableBalance}
+          dexPayAvailable={dexPayAvailable}
           onActivatePlan={onActivatePlan}
         />
       )}
@@ -208,6 +211,8 @@ export default function WalletTabPanel({
           latestOrder={latestProviderVisibilityOrder}
           orders={providerVisibilityOrders}
           purchasingProductId={purchasingVisibilityProductId}
+          availableBalance={availableBalance}
+          dexPayAvailable={dexPayAvailable}
           onPurchaseProduct={onPurchaseVisibilityProduct}
         />
       )}

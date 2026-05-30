@@ -175,7 +175,8 @@ export function sanitizeUserSubscriptionRecord(row: Row, user: AuthUser) {
   normalized.amount = requireNumberOrFallback(plan.price_monthly, 0);
   normalized.commission_rate = requireNumberOrFallback(plan.commission_rate, 0);
   normalized.auto_renew = parseBoolean(normalized.auto_renew, existing ? Boolean(existing.auto_renew) : true);
-  if (requiresCharge && requireNumberOrFallback(normalized.amount, 0) > getWalletAvailableBalance(targetUserId)) {
+  normalized.payment_method = trimText(normalized.payment_method) ?? trimText(existing?.payment_method) ?? 'wallet';
+  if (requiresCharge && normalized.payment_method === 'wallet' && requireNumberOrFallback(normalized.amount, 0) > getWalletAvailableBalance(targetUserId)) {
     throw new BadRequestException('Solde insuffisant pour activer ou renouveler cet abonnement.');
   }
 

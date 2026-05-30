@@ -6,8 +6,11 @@ export default function VirtualClassEditForm({
   errors,
   formMessage,
   instructorCourses,
+  isReplayUploading,
+  replayUploadProgress,
   onUpdateForm,
   onSelectCourse,
+  onReplayFileChange,
 }: VirtualClassEditFormProps) {
   return (
     <>
@@ -134,16 +137,44 @@ export default function VirtualClassEditForm({
           {errors.room_link ? <p className="mt-1 text-xs text-red-600">{errors.room_link}</p> : null}
         </div>
         <div className="dashboard-form-wide">
-          <label className="mb-1 block text-sm font-medium text-gray-700">Lien de replay</label>
-          <input
-            type="url"
-            value={editForm.recording_url || ''}
-            onChange={(event) => onUpdateForm('recording_url', event.target.value)}
-            placeholder="https://.../replay"
-            aria-invalid={Boolean(errors.recording_url)}
-            className={getFieldClass(Boolean(errors.recording_url))}
-          />
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <label className="block text-sm font-medium text-gray-700">Lien de replay</label>
+            <label className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border border-purple-200 px-3 py-1.5 text-xs font-medium text-purple-700 transition-colors hover:bg-purple-50 ${isReplayUploading ? 'pointer-events-none opacity-60' : ''}`}>
+              <i className={`${isReplayUploading ? 'ri-loader-4-line animate-spin' : 'ri-upload-cloud-2-line'} text-sm`} />
+              {isReplayUploading ? `Import ${replayUploadProgress}%` : 'Importer un replay'}
+              <input
+                type="file"
+                accept="video/*"
+                className="hidden"
+                disabled={isReplayUploading}
+                onChange={onReplayFileChange}
+              />
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={editForm.recording_url || ''}
+              onChange={(event) => onUpdateForm('recording_url', event.target.value)}
+              placeholder="https://.../replay"
+              aria-invalid={Boolean(errors.recording_url)}
+              className={getFieldClass(Boolean(errors.recording_url))}
+            />
+            {editForm.recording_url ? (
+              <a
+                href={editForm.recording_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Ouvrir
+              </a>
+            ) : null}
+          </div>
           {errors.recording_url ? <p className="mt-1 text-xs text-red-600">{errors.recording_url}</p> : null}
+          {editForm.status === 'ended' && !editForm.recording_url ? (
+            <p className="mt-1 text-xs text-amber-700">Ajoutez un fichier ou une URL pour rendre le replay disponible aux apprenants.</p>
+          ) : null}
         </div>
         <div className="dashboard-form-wide">
           <label className="mb-1 block text-sm font-medium text-gray-700">Notes formateur</label>

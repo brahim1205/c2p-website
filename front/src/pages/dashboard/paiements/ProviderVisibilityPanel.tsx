@@ -3,7 +3,7 @@ import type {
   ProviderVisibilityPassRecord,
   ProviderVisibilityProduct,
 } from '@/lib/saasApi';
-import { formatAmount, formatDate } from './paymentPageModel';
+import { formatAmount, formatDate, type PaymentMethodId } from './paymentPageModel';
 
 interface ProviderVisibilityPanelProps {
   products: ProviderVisibilityProduct[];
@@ -11,7 +11,9 @@ interface ProviderVisibilityPanelProps {
   latestOrder: ProviderVisibilityOrder | null;
   orders: ProviderVisibilityOrder[];
   purchasingProductId: string | null;
-  onPurchaseProduct: (product: ProviderVisibilityProduct) => void;
+  availableBalance: number;
+  dexPayAvailable: boolean;
+  onPurchaseProduct: (product: ProviderVisibilityProduct, paymentMethod: PaymentMethodId) => void;
 }
 
 export default function ProviderVisibilityPanel({
@@ -20,6 +22,8 @@ export default function ProviderVisibilityPanel({
   latestOrder,
   orders,
   purchasingProductId,
+  availableBalance,
+  dexPayAvailable,
   onPurchaseProduct,
 }: ProviderVisibilityPanelProps) {
   if (products.length === 0) {
@@ -51,6 +55,7 @@ export default function ProviderVisibilityPanel({
         {products.map((product) => {
           const isCurrentTier = activePass?.pass_tier === product.tier;
           const isBusy = purchasingProductId === product.id;
+          const canUseWallet = availableBalance >= Number(product.price ?? 0);
           return (
             <div key={product.id} className={`rounded-2xl border p-5 ${isCurrentTier ? 'border-[#dbad29]/40 bg-[#dbad29]/5' : 'border-gray-200 bg-white'}`}>
               <div className="mb-3 flex items-start justify-between gap-3">
@@ -84,13 +89,22 @@ export default function ProviderVisibilityPanel({
                   <span className="rounded-full bg-gray-100 px-2.5 py-1">Éligible vérification</span>
                 ) : null}
               </div>
-              <button
-                onClick={() => onPurchaseProduct(product)}
-                disabled={isBusy}
-                className="mt-5 w-full rounded-lg bg-[#27346b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1d2854] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isBusy ? 'Achat en cours...' : 'Acheter ce billet'}
-              </button>
+              <div className="mt-5 grid gap-2">
+                <button
+                  onClick={() => onPurchaseProduct(product, dexPayAvailable ? 'dexpay' : 'wave')}
+                  disabled={isBusy}
+                  className="w-full rounded-lg bg-[#27346b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1d2854] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isBusy ? 'Achat en cours...' : 'Payer directement'}
+                </button>
+                <button
+                  onClick={() => onPurchaseProduct(product, 'wallet')}
+                  disabled={isBusy || !canUseWallet}
+                  className="w-full rounded-lg border border-[#27346b]/20 bg-white px-4 py-2 text-sm font-medium text-[#27346b] transition-colors hover:bg-[#f7f8fc] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Utiliser mon solde C2P
+                </button>
+              </div>
             </div>
           );
         })}

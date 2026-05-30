@@ -26,6 +26,7 @@ import {
   type VirtualClassesSnapshot,
 } from './virtualClassesSessionHelpers';
 import { useVirtualClassLifecycleActions } from './useVirtualClassLifecycleActions';
+import { useVirtualClassReplayUpload } from './useVirtualClassReplayUpload';
 
 export function useVirtualClassesPageSession() {
   const { success, error } = useToast();
@@ -93,6 +94,19 @@ export function useVirtualClassesPageSession() {
     setEditFormMessage(null);
   };
 
+  const {
+    handleReplayFileChange,
+    isReplayUploading,
+    replayUploadProgress,
+    resetReplayUpload,
+  } = useVirtualClassReplayUpload({
+    classId: selectedClass?.id,
+    onError: error,
+    onFormMessageChange: setEditFormMessage,
+    onRecordingUrlChange: (url) => updateEditForm('recording_url', url),
+    onSuccess: success,
+  });
+
   const closeCreateModal = () => {
     setShowCreateModal(false);
     setNewClass(DEFAULT_CLASS_FORM);
@@ -106,6 +120,7 @@ export function useVirtualClassesPageSession() {
     setEditForm({});
     setEditErrors({});
     setEditFormMessage(null);
+    resetReplayUpload();
   };
 
   const selectCreateCourse = (courseId: string) => {
@@ -252,39 +267,12 @@ export function useVirtualClassesPageSession() {
   };
 
   return {
-    filter,
-    loading,
-    filteredClasses,
-    classStats,
-    canCreateClass,
-    instructorCourses,
-    subscriptionGate,
-    showCreateModal,
-    newClass,
-    createErrors,
-    createFormMessage,
-    isCreating,
-    showDetailModal,
-    selectedClass,
-    editForm,
-    editErrors,
-    editFormMessage,
-    isUpdating,
-    setFilter,
-    openCreateModal,
-    handleJoin,
-    handleEndClass,
-    handleStartLive,
-    handleCopyRoomLink,
-    handleEditClick,
-    handleDeleteClass,
-    closeCreateModal,
-    handleCreateClass,
-    updateNewClass,
-    selectCreateCourse,
-    closeEditModal,
-    confirmEdit,
-    updateEditForm,
-    selectEditCourse,
+    filter, loading, filteredClasses, classStats, canCreateClass, instructorCourses, subscriptionGate,
+    showCreateModal, newClass, createErrors, createFormMessage, isCreating,
+    showDetailModal, selectedClass, editForm, editErrors, editFormMessage, isUpdating,
+    isReplayUploading, replayUploadProgress, setFilter, openCreateModal,
+    handleJoin, handleEndClass, handleStartLive, handleCopyRoomLink, handleEditClick, handleDeleteClass,
+    closeCreateModal, handleCreateClass, updateNewClass, selectCreateCourse,
+    closeEditModal, confirmEdit, updateEditForm, selectEditCourse, handleReplayFileChange,
   };
 }

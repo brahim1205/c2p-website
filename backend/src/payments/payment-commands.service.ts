@@ -1,5 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { createHash } from 'node:crypto';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth.store.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
@@ -51,6 +50,17 @@ import {
   syncProviderStateFromVisibilityProduct,
   syncProviderStateFromSubscription,
 } from '../data/data-provider-visibility.js';
+import {
+  assertMonetizedRole,
+  assertPrestataireRole,
+  cloneValue,
+  commandScopedId,
+  createProviderVisibilityContext,
+  getLatestSubscription,
+  getWalletRow,
+  trimPayoutMethod,
+  trimSubscriptionStatus,
+} from './payment-command-helpers.js';
 
 @Injectable()
 export class PaymentCommandsService {
@@ -59,58 +69,6 @@ export class PaymentCommandsService {
     private readonly platformPersistenceService: PlatformPersistenceService,
     private readonly walletService: WalletService,
   ) {}
-
-  private clone<T>(value: T): T {
-    return JSON.parse(JSON.stringify(value)) as T;
-  }
-
-  private getWalletRow(userId: string) {
-    return listAppRows('wallet_accounts').find((row) => String(row.user_id) === String(userId)) ?? null;
-  }
-
-  private getLatestSubscription(userId: string) {
-    return [...listAppRows('user_subscriptions')]
-      .filter((row) => String(row.user_id) === String(userId))
-      .sort((left, right) => Date.parse(String(right.updated_at ?? right.created_at ?? '')) - Date.parse(String(left.updated_at ?? left.created_at ?? '')))
-      .find((row) => String(row.status) !== 'cancelled') ?? null;
-  }
-
-  private assertMonetizedRole(actor: AuthUser) {
-    if (!new Set(['prestataire', 'formateur', 'porteur']).has(actor.role)) {
-      throw new UnauthorizedException('Ce role ne peut pas utiliser cette commande.');
-    }
-  }
-
-  private assertPrestataireRole(actor: AuthUser) {
-    if (actor.role !== 'prestataire') {
-      throw new UnauthorizedException('Seuls les prestataires peuvent acheter un billet SenPresta.');
-    }
-  }
-
-  private commandScopedId(prefix: string, actorId: string, requestId: string) {
-    const hash = createHash('sha256')
-      .update(`${prefix}:${actorId}:${requestId}`)
-      .digest('hex')
-      .slice(0, 24);
-    return `${prefix}-${hash}`;
-  }
-
-  private createProviderVisibilityContext() {
-    return {
-      store: {
-        providers: listAppRows('providers'),
-        provider_visibility_passes: listAppRows('provider_visibility_passes'),
-        provider_visibility_products: listAppRows('provider_visibility_products'),
-        provider_visibility_orders: listAppRows('provider_visibility_orders'),
-        subscription_plans: listAppRows('subscription_plans'),
-      },
-      findRow: (table: string, rowId: unknown) => listAppRows(table).find((row) => String(row.id) === String(rowId)),
-      appendAppRows,
-      patchAppRows,
-      mergeRowsToPersist,
-      collectRowsByIds,
-    };
-  }
 
   async topupWallet(actor: AuthUser, payload: WalletTopupDto, requestId: string) {
     await syncAppStoreFromDatabase(this.prisma);
@@ -134,7 +92,7 @@ export class PaymentCommandsService {
     });
 
     return {
-      wallet: this.getWalletRow(actor.id),
+      wallet: getWalletRow(actor.id),
       transaction: operation.transaction,
       financialOperationId: operation.financialOperationId,
     };
@@ -162,7 +120,7 @@ export class PaymentCommandsService {
     });
 
     return {
-      wallet: this.getWalletRow(actor.id),
+      wallet: getWalletRow(actor.id),
       transaction: operation.transaction,
       financialOperationId: operation.financialOperationId,
     };
@@ -240,11 +198,11 @@ export class PaymentCommandsService {
   }
 
   async createPayoutRequest(actor: AuthUser, payload: PayoutRequestCreateDto, requestId: string) {
-    this.assertMonetizedRole(actor);
+    assertMonetizedRole(actor);
     await syncAppStoreFromDatabase(this.prisma);
     const rowsToPersist: Record<string, Row[]> = {};
     const outboxEvents: OutboxEventInput[] = [];
-    const requestScopedId = this.commandScopedId('payoutreq', actor.id, requestId);
+    const requestScopedId = commandScopedId('payoutreq', actor.id, requestId);
     const existingRequest = listAppRows('payout_requests').find(
       (row) => String(row.id) === requestScopedId && String(row.user_id) === String(actor.id),
     );
@@ -310,17 +268,54 @@ export class PaymentCommandsService {
     };
   }
 
+  private appendDirectPaymentTransaction(rowsToPersist: Record<string, Row[]>, input: {
+    actorId: string;
+    amount: number;
+    currency?: string | null;
+    method?: string | null;
+    description: string;
+    sourceId: string;
+    operationKind: string;
+    requestId: string;
+  }) {
+    const financialOperationId = `finop_${input.operationKind}_${Date.now()}_${commandScopedId('direct', input.actorId, input.requestId)}`;
+    const transaction = withId(prepareInsert('payment_transactions', {
+      id: commandScopedId('TRX', input.actorId, input.requestId),
+      user_id: input.actorId,
+      type: 'payment',
+      amount: input.amount,
+      currency: input.currency ?? 'XAF',
+      method: input.method ?? 'dexpay',
+      status: 'completed',
+      description: input.description,
+      date: new Date().toISOString(),
+      reference: commandScopedId('PAY', input.actorId, input.requestId),
+      financial_operation_id: financialOperationId,
+      metadata: {
+        operation_kind: input.operationKind,
+        source_id: input.sourceId,
+        payment_method: input.method ?? 'dexpay',
+        financial_operation_id: financialOperationId,
+      },
+    }));
+    appendAppRows('payment_transactions', [transaction]);
+    mergeRowsToPersist(rowsToPersist, 'payment_transactions', collectRowsByIds('payment_transactions', [String(transaction.id)]));
+    return { transaction, financialOperationId };
+  }
+
   async activateSubscription(actor: AuthUser, payload: SubscriptionActivateDto, requestId: string) {
-    this.assertMonetizedRole(actor);
+    assertMonetizedRole(actor);
     await syncAppStoreFromDatabase(this.prisma, { force: true });
     const rowsToPersist: Record<string, Row[]> = {};
     const outboxEvents: OutboxEventInput[] = [];
-    const previous = this.getLatestSubscription(actor.id);
+    const previous = getLatestSubscription(actor.id);
 
+    const paymentMethod = payload.payment_method ?? 'wallet';
     const candidate = sanitizeUserSubscriptionRecord(withId(prepareInsert('user_subscriptions', {
       id: previous?.id,
       user_id: actor.id,
       plan_id: payload.plan_id,
+      payment_method: paymentMethod,
       status: payload.trial ? 'trialing' : trimSubscriptionStatus(previous?.status),
       auto_renew: payload.trial ? false : (payload.auto_renew ?? true),
       renew_now: payload.renew_now ?? false,
@@ -339,16 +334,35 @@ export class PaymentCommandsService {
 
     mergeRowsToPersist(rowsToPersist, 'user_subscriptions', collectRowsByIds('user_subscriptions', [String(candidate.id)]));
 
-    await applySubscriptionMutationSideEffects(
-      previous ? [this.clone(previous)] : [],
-      [this.clone(candidate)],
-      rowsToPersist,
-      outboxEvents,
-      this.walletService,
-      actor.id,
-    );
+    if (paymentMethod === 'wallet' || String(candidate.status) === 'trialing' || String(candidate.status) === 'cancelled') {
+      await applySubscriptionMutationSideEffects(
+        previous ? [cloneValue(previous)] : [],
+        [cloneValue(candidate)],
+        rowsToPersist,
+        outboxEvents,
+        this.walletService,
+        actor.id,
+      );
+    } else {
+      const operation = this.appendDirectPaymentTransaction(rowsToPersist, {
+        actorId: actor.id,
+        amount: Number(candidate.amount ?? 0),
+        currency: String(candidate.currency ?? 'XAF'),
+        method: paymentMethod,
+        description: `Abonnement ${String(candidate.plan_name ?? 'C2P')}`,
+        sourceId: String(candidate.id),
+        operationKind: 'subscription_direct',
+        requestId,
+      });
+      patchAppRows('user_subscriptions', (row) => String(row.id) === String(candidate.id), {
+        financial_operation_id: operation.financialOperationId,
+        payment_method: paymentMethod,
+        updated_at: new Date().toISOString(),
+      });
+      mergeRowsToPersist(rowsToPersist, 'user_subscriptions', collectRowsByIds('user_subscriptions', [String(candidate.id)]));
+    }
 
-    const visibilityContext = this.createProviderVisibilityContext();
+    const visibilityContext = createProviderVisibilityContext();
     syncProviderStateFromSubscription(candidate, rowsToPersist, visibilityContext);
     issueProviderVisibilityPass(previous, candidate, rowsToPersist, visibilityContext);
 
@@ -364,7 +378,7 @@ export class PaymentCommandsService {
   }
 
   async purchaseProviderVisibility(actor: AuthUser, payload: ProviderVisibilityPurchaseDto, requestId: string) {
-    this.assertPrestataireRole(actor);
+    assertPrestataireRole(actor);
     await syncAppStoreFromDatabase(this.prisma);
 
     const provider = listAppRows('providers').find((row) => String(row.user_id ?? '') === String(actor.id));
@@ -372,7 +386,7 @@ export class PaymentCommandsService {
       throw new BadRequestException('Profil prestataire introuvable.');
     }
 
-    const subscription = this.getLatestSubscription(actor.id);
+    const subscription = getLatestSubscription(actor.id);
     if (!subscription || String(subscription.role ?? '') !== 'prestataire' || String(subscription.status ?? '') !== 'active') {
       throw new BadRequestException('Un abonnement SenPresta complet est requis avant d acheter un billet de visibilite.');
     }
@@ -389,15 +403,16 @@ export class PaymentCommandsService {
 
     const rowsToPersist: Record<string, Row[]> = {};
     const outboxEvents: OutboxEventInput[] = [];
-    const wallet = ensureWalletAccount(actor.id, rowsToPersist);
+    const paymentMethod = payload.payment_method ?? 'wallet';
+    const wallet = paymentMethod === 'wallet' ? ensureWalletAccount(actor.id, rowsToPersist) : null;
     const purchasedAt = new Date().toISOString();
-    const orderId = this.commandScopedId('visorder', actor.id, requestId);
+    const orderId = commandScopedId('visorder', actor.id, requestId);
     const existingOrder = listAppRows('provider_visibility_orders').find(
       (row) => String(row.id) === orderId && String(row.user_id) === String(actor.id),
     );
     if (existingOrder) {
       return {
-        wallet: this.getWalletRow(actor.id),
+        wallet: getWalletRow(actor.id),
         order: existingOrder,
         pass: listAppRows('provider_visibility_passes').find((row) => String(row.order_id ?? '') === orderId) ?? null,
         transaction: listAppRows('payment_transactions').find((row) => String(row.id) === String(existingOrder.transaction_id ?? '')) ?? null,
@@ -405,21 +420,32 @@ export class PaymentCommandsService {
       };
     }
 
-    const charge = await this.walletService.chargeProviderVisibility({
-      wallet,
-      userId: actor.id,
-      amount: Number(product.price ?? 0),
-      productName: String(product.name ?? 'Billet SenPresta'),
-      sourceId: orderId,
-      productId: String(product.id),
-      tier: String(product.tier ?? 'standard'),
-      idempotencyKey: `provider_visibility:${actor.id}:${requestId}`,
-      actorId: actor.id,
-      reason: 'provider_visibility_purchase_command',
-      hooks: createWalletMutationHooks(rowsToPersist),
-    });
+    const charge = paymentMethod === 'wallet'
+      ? await this.walletService.chargeProviderVisibility({
+          wallet: wallet!,
+          userId: actor.id,
+          amount: Number(product.price ?? 0),
+          productName: String(product.name ?? 'Billet SenPresta'),
+          sourceId: orderId,
+          productId: String(product.id),
+          tier: String(product.tier ?? 'standard'),
+          idempotencyKey: `provider_visibility:${actor.id}:${requestId}`,
+          actorId: actor.id,
+          reason: 'provider_visibility_purchase_command',
+          hooks: createWalletMutationHooks(rowsToPersist),
+        })
+      : this.appendDirectPaymentTransaction(rowsToPersist, {
+          actorId: actor.id,
+          amount: Number(product.price ?? 0),
+          currency: String(product.currency ?? 'XAF'),
+          method: paymentMethod,
+          description: `Billet SenPresta - ${String(product.name ?? 'Visibilite')}`,
+          sourceId: orderId,
+          operationKind: 'provider_visibility_direct',
+          requestId,
+        });
 
-    const visibilityContext = this.createProviderVisibilityContext();
+    const visibilityContext = createProviderVisibilityContext();
     syncProviderStateFromVisibilityProduct(actor.id, product, rowsToPersist, visibilityContext);
 
     const createdPass = issueProviderVisibilityPassForProduct({
@@ -449,6 +475,7 @@ export class PaymentCommandsService {
       pass_tier: createdPass.pass_tier,
       pass_label: createdPass.pass_label,
       pass_code: createdPass.code,
+      payment_method: paymentMethod,
       expires_at: createdPass.expires_at,
       source_subscription_id: subscription.id,
     }));
@@ -505,7 +532,7 @@ export class PaymentCommandsService {
     });
 
     return {
-      wallet: this.getWalletRow(actor.id),
+      wallet: getWalletRow(actor.id),
       order: listAppRows('provider_visibility_orders').find((row) => String(row.id) === String(createdOrder.id)) ?? createdOrder,
       pass: listAppRows('provider_visibility_passes').find((row) => String(row.id) === String(createdPass.id)) ?? createdPass,
       transaction: charge.transaction,
@@ -521,7 +548,7 @@ export class PaymentCommandsService {
     }
     assertFinanceTransition('escrow', current.status, status);
 
-    const previous = this.clone(current);
+    const previous = cloneValue(current);
     patchAppRows('escrow_cases', (row) => String(row.id) === String(escrowId), {
       status,
       updated_at: new Date().toISOString(),
@@ -532,7 +559,7 @@ export class PaymentCommandsService {
     }
 
     const rowsToPersist: Record<string, Row[]> = {
-      escrow_cases: [this.clone(updated)],
+      escrow_cases: [cloneValue(updated)],
     };
     const outboxEvents: OutboxEventInput[] = [];
     await applyEscrowUpdateSideEffects([previous], [updated], rowsToPersist, outboxEvents, this.walletService, actor.id);
@@ -561,7 +588,7 @@ export class PaymentCommandsService {
       targetStatus: status,
     });
 
-    const previous = this.clone(current);
+    const previous = cloneValue(current);
     patchAppRows('payout_requests', (row) => String(row.id) === String(requestId), {
       status,
       updated_at: new Date().toISOString(),
@@ -572,7 +599,7 @@ export class PaymentCommandsService {
     }
 
     const rowsToPersist: Record<string, Row[]> = {
-      payout_requests: [this.clone(updated)],
+      payout_requests: [cloneValue(updated)],
     };
     const outboxEvents: OutboxEventInput[] = [];
     await applyPayoutRequestUpdateSideEffects([previous], [updated], rowsToPersist, outboxEvents, this.walletService, actor.id);
@@ -609,7 +636,7 @@ export class PaymentCommandsService {
     });
     assertFinanceTransition('transaction', currentLifecycle, targetLifecycle);
 
-    const previous = this.clone(current);
+    const previous = cloneValue(current);
     patchAppRows('payment_transactions', (row) => String(row.id) === String(transactionId), {
       status: mapLifecycleStatusToTransactionStatus(targetLifecycle),
       updated_at: new Date().toISOString(),
@@ -620,7 +647,7 @@ export class PaymentCommandsService {
     }
 
     const rowsToPersist: Record<string, Row[]> = {
-      payment_transactions: [this.clone(updated)],
+      payment_transactions: [cloneValue(updated)],
     };
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
@@ -662,7 +689,7 @@ export class PaymentCommandsService {
         && existingRefundFinancialOperationId === completedRefundOperation.id
       ) {
         return {
-          wallet: this.getWalletRow(String(original.user_id)),
+          wallet: getWalletRow(String(original.user_id)),
           transaction: existingRefund,
           financialOperationId: completedRefundOperation.id,
         };
@@ -728,19 +755,9 @@ export class PaymentCommandsService {
     });
 
     return {
-      wallet: this.getWalletRow(String(original.user_id)),
+      wallet: getWalletRow(String(original.user_id)),
       transaction: operation.transaction,
       financialOperationId: operation.financialOperationId,
     };
   }
-}
-
-function trimSubscriptionStatus(value: unknown) {
-  const status = String(value ?? '').trim();
-  return new Set(['trialing', 'active', 'past_due', 'expired', 'cancelled']).has(status) ? status : 'active';
-}
-
-function trimPayoutMethod(value: unknown) {
-  const method = String(value ?? '').trim();
-  return method.length > 0 ? method : 'wallet';
 }

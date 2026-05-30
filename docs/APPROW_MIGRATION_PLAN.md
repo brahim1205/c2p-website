@@ -130,9 +130,10 @@ Etat 2026-05-29:
 - fondation Prisma creee pour `projects` via `backend/prisma/migrations/202605291930_project_center_projects_foundation/migration.sql`;
 - fondation Prisma creee pour `project_milestones` et `project_documents` via `backend/prisma/migrations/202605292000_project_center_detail_foundation/migration.sql`;
 - fondation Prisma creee pour `project_history` via `backend/prisma/migrations/202605292025_project_center_history_foundation/migration.sql`;
-- projection double-run ajoutee pour `projects`, `project_milestones`, `project_documents` et `project_history`;
+- fondation Prisma creee pour `project_funding_rounds`, `funding_investors`, `project_partnerships`, `project_tracking` et `project_collaborations` via `backend/prisma/migrations/202605300330_project_center_funding_partnerships_foundation/migration.sql`;
+- projection double-run ajoutee pour `projects`, `project_milestones`, `project_documents`, `project_history`, `project_funding_rounds`, `funding_investors`, `project_partnerships`, `project_tracking` et `project_collaborations`;
 - backfill Project Center branche sur `PlatformSnapshotSyncService` et controle par `npm run project-center:prisma-consistency:check`;
-- autres tables Project Center encore maintenues dans `AppRow` en attendant les lots funding, partnerships et tracking.
+- le lot Project Center restant concerne surtout la bascule runtime des lectures/ecritures depuis les projections Prisma et les E2E porteur/partenaire/admin.
 
 ### Lot 4 - Messaging et notifications
 

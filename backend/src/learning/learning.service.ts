@@ -160,6 +160,7 @@ export class LearningService {
     const rowsToPersist: Record<string, Row[]> = {
       submissions: [submission],
     };
+    this.includeDerivedExam(rowsToPersist, exam.id);
     if (String(submission.status) !== 'graded' && exam.instructor_id) {
       const notification = withId(prepareInsert('notifications', createAppNotificationRow({
         userId: String(exam.instructor_id),
@@ -265,6 +266,7 @@ export class LearningService {
     const sanitized = sanitizeSubmissionUpdateRecord(submission, input, actor);
     const updated = patchAppRows('submissions', (row) => String(row.id) === String(submission.id), sanitized);
     const rowsToPersist: Record<string, Row[]> = { submissions: updated };
+    this.includeDerivedExam(rowsToPersist, submission.exam_id);
     if (submission.student_id) {
       const notification = withId(prepareInsert('notifications', createAppNotificationRow({
         userId: String(submission.student_id),
@@ -369,6 +371,12 @@ export class LearningService {
       }
     }
     return exam;
+  }
+
+  private includeDerivedExam(rowsToPersist: Record<string, Row[]>, examId: unknown) {
+    const exam = (store.exams ?? []).find((row) => String(row.id) === String(examId));
+    if (!exam) return;
+    rowsToPersist.exams = [clone(exam)];
   }
   private canReadCourseDetail(course: Row, enrollment: Row | null, user: AuthUser) {
     if (isAdminRole(user)) return true;

@@ -28,6 +28,13 @@ const historyMigrationPath = path.join(
   '202605292025_project_center_history_foundation',
   'migration.sql',
 );
+const fundingPartnershipsMigrationPath = path.join(
+  backendRoot,
+  'prisma',
+  'migrations',
+  '202605300330_project_center_funding_partnerships_foundation',
+  'migration.sql',
+);
 const migrationPlanPath = path.join(repoRoot, 'docs', 'APPROW_MIGRATION_PLAN.md');
 const persistencePath = path.join(backendRoot, 'src', 'database', 'platform-persistence.service.ts');
 const projectionPath = path.join(backendRoot, 'src', 'database', 'platform-project-center-projection.ts');
@@ -49,6 +56,20 @@ const requiredIndexes = [
   'ProjectCenterHistoryEntry_projectId_eventDate_idx',
   'ProjectCenterHistoryEntry_eventType_idx',
   'ProjectCenterHistoryEntry_source_idx',
+  'ProjectCenterFundingRound_projectId_status_idx',
+  'ProjectCenterFundingRound_projectId_deadline_idx',
+  'ProjectCenterFundingRound_source_idx',
+  'ProjectCenterFundingInvestor_fundingRoundId_status_idx',
+  'ProjectCenterFundingInvestor_source_idx',
+  'ProjectCenterPartnership_projectId_status_idx',
+  'ProjectCenterPartnership_counterpartUserId_idx',
+  'ProjectCenterPartnership_source_idx',
+  'ProjectCenterTracking_partnerId_status_idx',
+  'ProjectCenterTracking_projectId_status_idx',
+  'ProjectCenterTracking_source_idx',
+  'ProjectCenterCollaboration_partnerId_status_idx',
+  'ProjectCenterCollaboration_projectId_status_idx',
+  'ProjectCenterCollaboration_source_idx',
 ];
 
 function readRequiredFile(filePath) {
@@ -60,7 +81,7 @@ function readRequiredFile(filePath) {
 
 function main() {
   const schemaSource = readRequiredFile(schemaPath);
-  const migrationSource = `${readRequiredFile(migrationPath)}\n${readRequiredFile(detailMigrationPath)}\n${readRequiredFile(historyMigrationPath)}`;
+  const migrationSource = `${readRequiredFile(migrationPath)}\n${readRequiredFile(detailMigrationPath)}\n${readRequiredFile(historyMigrationPath)}\n${readRequiredFile(fundingPartnershipsMigrationPath)}`;
   const migrationPlanSource = readRequiredFile(migrationPlanPath);
   const persistenceSource = readRequiredFile(persistencePath);
   const projectionSource = readRequiredFile(projectionPath);
@@ -73,7 +94,16 @@ function main() {
   if (!/model\s+ProjectCenterProject\s+\{/.test(schemaSource)) {
     failures.push('Modele Prisma manquant: ProjectCenterProject.');
   }
-  for (const model of ['ProjectCenterMilestone', 'ProjectCenterDocument', 'ProjectCenterHistoryEntry']) {
+  for (const model of [
+    'ProjectCenterMilestone',
+    'ProjectCenterDocument',
+    'ProjectCenterHistoryEntry',
+    'ProjectCenterFundingRound',
+    'ProjectCenterFundingInvestor',
+    'ProjectCenterPartnership',
+    'ProjectCenterTracking',
+    'ProjectCenterCollaboration',
+  ]) {
     if (!new RegExp(`model\\s+${model}\\s+\\{`).test(schemaSource)) {
       failures.push(`Modele Prisma manquant: ${model}.`);
     }
@@ -90,6 +120,17 @@ function main() {
   if (!migrationSource.includes('CREATE TABLE "ProjectCenterHistoryEntry"')) {
     failures.push('Migration SQL manquante pour ProjectCenterHistoryEntry.');
   }
+  for (const table of [
+    'ProjectCenterFundingRound',
+    'ProjectCenterFundingInvestor',
+    'ProjectCenterPartnership',
+    'ProjectCenterTracking',
+    'ProjectCenterCollaboration',
+  ]) {
+    if (!migrationSource.includes(`CREATE TABLE "${table}"`)) {
+      failures.push(`Migration SQL manquante pour ${table}.`);
+    }
+  }
   for (const indexName of requiredIndexes) {
     if (!migrationSource.includes(`"${indexName}"`)) {
       failures.push(`Index Project Center manquant: ${indexName}`);
@@ -98,13 +139,25 @@ function main() {
   if (!migrationPlanSource.includes('202605291930_project_center_projects_foundation')) {
     failures.push('Le plan AppRow doit citer la migration Project Center projects foundation.');
   }
+  if (!migrationPlanSource.includes('202605300330_project_center_funding_partnerships_foundation')) {
+    failures.push('Le plan AppRow doit citer la migration Project Center funding/partnerships foundation.');
+  }
   if (!persistenceSource.includes('persistProjectCenterProjection') || !persistenceSource.includes('deleteProjectCenterProjection')) {
     failures.push('PlatformPersistenceService doit brancher la projection Project Center.');
   }
   if (!persistenceSource.includes('rowsByTable.projects')) {
     failures.push('Projection double-run absente de PlatformPersistenceService: projects.');
   }
-  for (const table of ['project_milestones', 'project_documents', 'project_history']) {
+  for (const table of [
+    'project_milestones',
+    'project_documents',
+    'project_history',
+    'project_funding_rounds',
+    'funding_investors',
+    'project_partnerships',
+    'project_tracking',
+    'project_collaborations',
+  ]) {
     if (!persistenceSource.includes(`rowsByTable.${table}`)) {
       failures.push(`Projection double-run absente de PlatformPersistenceService: ${table}.`);
     }
@@ -127,13 +180,26 @@ function main() {
   if (!consistencyCheckSource.includes("'projects'") || !consistencyCheckSource.includes('projectCenterProject')) {
     failures.push('Check de coherence Project Center incomplet pour projects.');
   }
+  if (!consistencyCheckSource.includes("'project_funding_rounds'") || !consistencyCheckSource.includes('projectCenterFundingRound')) {
+    failures.push('Check de coherence Project Center incomplet pour project_funding_rounds.');
+  }
   if (!packageJsonSource.includes('project-center:prisma-foundation:check') || !packageJsonSource.includes('project-center:prisma-consistency:check')) {
     failures.push('package.json doit exposer les checks Prisma Project Center.');
   }
 
   const report = {
     ok: failures.length === 0,
-    models: ['ProjectCenterProject', 'ProjectCenterMilestone', 'ProjectCenterDocument', 'ProjectCenterHistoryEntry'],
+    models: [
+      'ProjectCenterProject',
+      'ProjectCenterMilestone',
+      'ProjectCenterDocument',
+      'ProjectCenterHistoryEntry',
+      'ProjectCenterFundingRound',
+      'ProjectCenterFundingInvestor',
+      'ProjectCenterPartnership',
+      'ProjectCenterTracking',
+      'ProjectCenterCollaboration',
+    ],
     requiredIndexes,
     migration: path.relative(repoRoot, migrationPath),
     failures,

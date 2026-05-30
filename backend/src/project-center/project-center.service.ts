@@ -13,10 +13,7 @@ import {
   withId,
 } from '../data/data-app-store.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
-import {
-  ensureConstraints,
-  prepareInsert,
-} from '../data/data-runtime.js';
+import { prepareInsert } from '../data/data-runtime.js';
 import type { Row } from '../data/mock-store.js';
 import {
   parseOwnerFundingRoundCreatePayload,
@@ -29,30 +26,31 @@ import {
 } from './project-center.payloads.js';
 import {
   addDaysIso,
+  appendRows,
+  applyProjectFilters,
+  applyProjectSorting,
   buildPartnerNeeds,
+  buildOwnerProjectDetail,
+  buildProjectDetailForAuthenticatedProject,
   buildProjectDocuments,
-  getFundingProgress,
+  getOpenProjectsForPartners,
+  getOwnerProjects,
+  getPartnerCollaborations,
+  getPartnerTrackedProjects,
+  getRowsForProjectIds,
   mapFundingType,
   normalizeCategory,
-  normalizeFilter,
-  normalizeText,
   parseTeamSize,
+  PROJECT_SUBMISSION_ALLOWED_ROLES,
   publicRows,
+  requireOwnerProject,
+  requireProjectAdminUser,
+  requireProjectOwnerUser,
+  requireProjectPartnerUser,
+  resolvePublicProjectsLimit,
   rowsForProject,
+  type PublicProjectQuery,
 } from './project-center.helpers.js';
-
-type PublicProjectQuery = {
-  category?: string;
-  status?: string;
-  search?: string;
-  sort?: string;
-  limit?: string;
-};
-
-const MAX_PUBLIC_PROJECTS_LIMIT = 100;
-const PROJECT_SUBMISSION_ALLOWED_ROLES = new Set(['porteur', 'admin', 'superadmin']);
-const PROJECT_PARTNER_ALLOWED_ROLES = new Set(['partenaire', 'admin', 'superadmin']);
-const PROJECT_ADMIN_ALLOWED_ROLES = new Set(['admin', 'superadmin']);
 const C2P_SUPPORT_USER_ID = 'usr-admin';
 
 @Injectable()
@@ -66,9 +64,9 @@ export class ProjectCenterService {
     await syncAppStoreFromDatabase(this.prisma);
 
     let rows = publicRows('projects', clone(store.projects ?? []));
-    rows = this.applyFilters(rows, query);
-    rows = this.applySorting(rows, query.sort);
-    return rows.slice(0, this.resolveLimit(query.limit));
+    rows = applyProjectFilters(rows, query);
+    rows = applyProjectSorting(rows, query.sort);
+    return rows.slice(0, resolvePublicProjectsLimit(query.limit));
   }
 
   async getPublicProjectDetail(projectId: string) {
@@ -121,37 +119,37 @@ export class ProjectCenterService {
   }
 
   async listOwnerProjects(user: AuthUser | null) {
-    const owner = this.requireProjectOwnerUser(user);
+    const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    return this.getOwnerProjects(owner.id);
+    return getOwnerProjects(owner.id);
   }
 
   async getOwnerSnapshot(user: AuthUser | null) {
-    const owner = this.requireProjectOwnerUser(user);
+    const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const projects = this.getOwnerProjects(owner.id);
+    const projects = getOwnerProjects(owner.id);
     const projectIds = new Set(projects.map((project) => String(project.id)));
     return {
       projects,
-      partnerships: this.getRowsForProjectIds('project_partnerships', projectIds)
+      partnerships: getRowsForProjectIds('project_partnerships', projectIds)
         .sort((left, right) => compareValues(left.id, right.id)),
-      rounds: this.getRowsForProjectIds('project_funding_rounds', projectIds)
+      rounds: getRowsForProjectIds('project_funding_rounds', projectIds)
         .sort((left, right) => compareValues(right.deadline, left.deadline)),
     };
   }
 
   async getOwnerProjectDetail(projectId: string, user: AuthUser | null) {
-    const owner = this.requireProjectOwnerUser(user);
+    const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const project = this.requireOwnerProject(owner.id, projectId);
-    return this.buildOwnerProjectDetail(project);
+    const project = requireOwnerProject(owner.id, projectId);
+    return buildOwnerProjectDetail(project);
   }
 
   async updateOwnerProject(projectId: string, payload: unknown, user: AuthUser | null) {
-    const owner = this.requireProjectOwnerUser(user);
+    const owner = requireProjectOwnerUser(user);
     const patch = parseOwnerProjectUpdatePayload(payload);
     await syncAppStoreFromDatabase(this.prisma);
-    const previousProject = this.requireOwnerProject(owner.id, projectId);
+    const previousProject = requireOwnerProject(owner.id, projectId);
     const updatedRows = patchAppRows('projects', (row) => String(row.id) === String(previousProject.id), {
       title: patch.title,
       description: patch.description,
@@ -172,21 +170,21 @@ export class ProjectCenterService {
   }
 
   async listOwnerFundingRounds(user: AuthUser | null) {
-    const owner = this.requireProjectOwnerUser(user);
+    const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const projectIds = new Set(this.getOwnerProjects(owner.id).map((project) => String(project.id)));
-    return this.getRowsForProjectIds('project_funding_rounds', projectIds)
+    const projectIds = new Set(getOwnerProjects(owner.id).map((project) => String(project.id)));
+    return getRowsForProjectIds('project_funding_rounds', projectIds)
       .sort((left, right) => compareValues(right.deadline, left.deadline));
   }
 
   async getOwnerFundingRoundDetail(roundId: string, user: AuthUser | null) {
-    const owner = this.requireProjectOwnerUser(user);
+    const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
     const round = (store.project_funding_rounds ?? []).find((row) => String(row.id) === String(roundId)) ?? null;
     if (!round) {
       throw new BadRequestException('FUNDING_ROUND_NOT_FOUND');
     }
-    this.requireOwnerProject(owner.id, String(round.project_id));
+    requireOwnerProject(owner.id, String(round.project_id));
     const investors = clone(store.funding_investors ?? [])
       .filter((row) => String(row.funding_round_id) === String(round.id))
       .sort((left, right) => compareValues(right.date, left.date));
@@ -198,12 +196,12 @@ export class ProjectCenterService {
   }
 
   async createOwnerFundingRound(payload: unknown, user: AuthUser | null) {
-    const owner = this.requireProjectOwnerUser(user);
+    const owner = requireProjectOwnerUser(user);
     const input = parseOwnerFundingRoundCreatePayload(payload);
     await syncAppStoreFromDatabase(this.prisma);
-    const project = this.requireOwnerProject(owner.id, String(input.projectId));
+    const project = requireOwnerProject(owner.id, String(input.projectId));
     const rowsToPersist: Record<string, Row[]> = {};
-    const rounds = this.appendRows('project_funding_rounds', [{
+    const rounds = appendRows('project_funding_rounds', [{
       project_id: project.id,
       project_title: project.title,
       project_name: project.title,
@@ -227,21 +225,21 @@ export class ProjectCenterService {
   }
 
   async listOwnerPartnerships(user: AuthUser | null) {
-    const owner = this.requireProjectOwnerUser(user);
+    const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const projectIds = new Set(this.getOwnerProjects(owner.id).map((project) => String(project.id)));
-    return this.getRowsForProjectIds('project_partnerships', projectIds)
+    const projectIds = new Set(getOwnerProjects(owner.id).map((project) => String(project.id)));
+    return getRowsForProjectIds('project_partnerships', projectIds)
       .sort((left, right) => compareValues(left.id, right.id));
   }
 
   async listPartnerTrackedProjects(user: AuthUser | null) {
-    const partner = this.requireProjectPartnerUser(user);
+    const partner = requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    return this.getPartnerTrackedProjects(partner.id);
+    return getPartnerTrackedProjects(partner.id);
   }
 
   async getAdminDashboardSummary(user: AuthUser | null) {
-    this.requireProjectAdminUser(user);
+    requireProjectAdminUser(user);
     await syncAppStoreFromDatabase(this.prisma);
     return {
       projects: hydrateRows('projects', clone(store.projects ?? []))
@@ -253,40 +251,40 @@ export class ProjectCenterService {
   }
 
   async getPartnerSnapshot(user: AuthUser | null) {
-    const partner = this.requireProjectPartnerUser(user);
+    const partner = requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const trackedProjects = this.getPartnerTrackedProjects(partner.id);
+    const trackedProjects = getPartnerTrackedProjects(partner.id);
     const trackedProjectIds = new Set(trackedProjects.map((tracked) => String(tracked.project_id)));
     return {
       trackedProjects,
-      collaborations: this.getPartnerCollaborations(partner.id),
-      openProjects: this.getOpenProjectsForPartners()
+      collaborations: getPartnerCollaborations(partner.id),
+      openProjects: getOpenProjectsForPartners()
         .filter((project) => !trackedProjectIds.has(String(project.id))),
     };
   }
 
   async getPartnerTrackedProjectDetail(projectId: string, user: AuthUser | null) {
-    const partner = this.requireProjectPartnerUser(user);
+    const partner = requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const tracked = this.getPartnerTrackedProjects(partner.id)
+    const tracked = getPartnerTrackedProjects(partner.id)
       .find((row) => String(row.project_id) === String(projectId)) ?? null;
     if (!tracked) {
       throw new BadRequestException('TRACKED_PROJECT_NOT_FOUND');
     }
     return {
       tracked,
-      detail: this.buildProjectDetailForAuthenticatedProject(projectId),
+      detail: buildProjectDetailForAuthenticatedProject(projectId),
     };
   }
 
   async listPartnerCollaborations(user: AuthUser | null) {
-    const partner = this.requireProjectPartnerUser(user);
+    const partner = requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    return this.getPartnerCollaborations(partner.id);
+    return getPartnerCollaborations(partner.id);
   }
 
   async updatePartnerCollaboration(collaborationId: string, payload: unknown, user: AuthUser | null) {
-    const partner = this.requireProjectPartnerUser(user);
+    const partner = requireProjectPartnerUser(user);
     const patch = parsePartnerCollaborationPatchPayload(payload);
     await syncAppStoreFromDatabase(this.prisma);
     const previousCollaboration = clone(store.project_collaborations ?? [])
@@ -314,11 +312,11 @@ export class ProjectCenterService {
   }
 
   async openPartnerSupportConversation(payload: unknown, user: AuthUser | null) {
-    const partner = this.requireProjectPartnerUser(user);
+    const partner = requireProjectPartnerUser(user);
     const input = parsePartnerSupportConversationPayload(payload);
     await syncAppStoreFromDatabase(this.prisma);
 
-    const tracked = this.getPartnerTrackedProjects(partner.id)
+    const tracked = getPartnerTrackedProjects(partner.id)
       .find((row) => String(row.project_id) === String(input.projectId)) ?? null;
     if (!tracked) {
       throw new BadRequestException('TRACKED_PROJECT_NOT_FOUND');
@@ -336,7 +334,7 @@ export class ProjectCenterService {
     let conversationCreated = false;
 
     if (!existingConversation) {
-      const createdConversation = this.appendRows('conversations', [{
+      const createdConversation = appendRows('conversations', [{
         name: 'Support C2P',
         role: 'Support',
         participants: [partner.id, C2P_SUPPORT_USER_ID],
@@ -363,7 +361,7 @@ export class ProjectCenterService {
     let messageId = existingMessage?.id;
     let messageCreated = false;
     if (!existingMessage) {
-      const createdMessage = this.appendRows('messages', [{
+      const createdMessage = appendRows('messages', [{
         conversation_id: conversationId,
         content,
         sender_id: partner.id,
@@ -403,13 +401,13 @@ export class ProjectCenterService {
   }
 
   async listPartnerOpenProjects(user: AuthUser | null) {
-    this.requireProjectPartnerUser(user);
+    requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    return this.getOpenProjectsForPartners();
+    return getOpenProjectsForPartners();
   }
 
   async expressPartnerInterest(payload: unknown, user: AuthUser | null) {
-    const partner = this.requireProjectPartnerUser(user);
+    const partner = requireProjectPartnerUser(user);
     const input = parsePartnerInterestPayload(payload);
     await syncAppStoreFromDatabase(this.prisma);
     const project = clone(store.projects ?? []).find((row) => String(row.id) === String(input.projectId)) ?? null;
@@ -429,7 +427,7 @@ export class ProjectCenterService {
     let collaborationCreated = false;
 
     if (!existingTracked) {
-      this.appendRows('project_tracking', [{
+      appendRows('project_tracking', [{
         partner_id: partner.id,
         project_id: project.id,
         partner_type: input.partnerType,
@@ -451,7 +449,7 @@ export class ProjectCenterService {
     }
 
     if (!existingCollaboration) {
-      this.appendRows('project_collaborations', [{
+      appendRows('project_collaborations', [{
         partner_id: partner.id,
         project_id: project.id,
         partner_type: input.partnerType,
@@ -511,7 +509,7 @@ export class ProjectCenterService {
     const currentFunding = toNonNegativeNumber(submission.currentFunding);
     const teamSize = parseTeamSize(submission.teamSize);
 
-    const project = this.appendRows('projects', [{
+    const project = appendRows('projects', [{
       id: projectId,
       owner_id: user.id,
       title: submission.projectName,
@@ -544,7 +542,7 @@ export class ProjectCenterService {
 
     const projectIdValue = project.id;
     const dueDate = addDaysIso(now, 7).slice(0, 10);
-    this.appendRows('project_milestones', [{
+    appendRows('project_milestones', [{
       project_id: projectIdValue,
       project_title: project.title,
       title: 'Etude de recevabilite',
@@ -558,7 +556,7 @@ export class ProjectCenterService {
       ],
     }], rowsToPersist);
 
-    this.appendRows('project_history', [{
+    appendRows('project_history', [{
       project_id: projectIdValue,
       project_title: project.title,
       date: nowIso,
@@ -568,7 +566,7 @@ export class ProjectCenterService {
     }], rowsToPersist);
 
     if (fundingGoal > 0) {
-      this.appendRows('project_funding_rounds', [{
+      appendRows('project_funding_rounds', [{
         project_id: projectIdValue,
         project_title: project.title,
         project_name: project.title,
@@ -587,7 +585,7 @@ export class ProjectCenterService {
 
     const documents = buildProjectDocuments(submission, projectIdValue, String(project.title), nowIso);
     if (documents.length > 0) {
-      this.appendRows('project_documents', documents, rowsToPersist);
+      appendRows('project_documents', documents, rowsToPersist);
     }
 
     await this.platformPersistenceService.persistRows(rowsToPersist, {
@@ -608,170 +606,4 @@ export class ProjectCenterService {
     };
   }
 
-  private applyFilters(rows: Row[], query: PublicProjectQuery) {
-    const category = normalizeFilter(query.category);
-    const status = normalizeFilter(query.status);
-    const search = normalizeText(query.search);
-
-    return rows.filter((project) => {
-      if (category && category !== 'all' && String(project.category ?? '') !== category) {
-        return false;
-      }
-
-      if (status && status !== 'all' && !String(project.status ?? '').toLowerCase().includes(status)) {
-        return false;
-      }
-
-      if (!search) {
-        return true;
-      }
-
-      return [
-        project.title,
-        project.porteur_name,
-        project.description,
-        project.category,
-        project.sector,
-      ].some((value) => normalizeText(value).includes(search));
-    });
-  }
-
-  private applySorting(rows: Row[], sort?: string) {
-    const nextRows = [...rows];
-    if (sort === 'funding') {
-      return nextRows.sort((left, right) => compareValues(right.funding, left.funding));
-    }
-    if (sort === 'progress') {
-      return nextRows.sort((left, right) => getFundingProgress(right) - getFundingProgress(left));
-    }
-    return nextRows.sort((left, right) => compareValues(right.created_at, left.created_at));
-  }
-
-  private resolveLimit(rawLimit?: string) {
-    if (!rawLimit) {
-      return MAX_PUBLIC_PROJECTS_LIMIT;
-    }
-
-    const parsed = Number(rawLimit);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return MAX_PUBLIC_PROJECTS_LIMIT;
-    }
-
-    return Math.min(Math.floor(parsed), MAX_PUBLIC_PROJECTS_LIMIT);
-  }
-
-  private appendRows(table: string, rawRows: Row[], rowsToPersist: Record<string, Row[]>) {
-    ensureConstraints(table, rawRows);
-    const rows = rawRows.map((row) => withId(prepareInsert(table, row)));
-    const response = appendAppRows(table, rows);
-    mergeRowsToPersist(rowsToPersist, table, rows);
-    return response;
-  }
-
-  private requireProjectOwnerUser(user: AuthUser | null) {
-    if (!user) {
-      throw new UnauthorizedException('Connexion requise.');
-    }
-    if (!PROJECT_SUBMISSION_ALLOWED_ROLES.has(user.role)) {
-      throw new ForbiddenException('Acces projet refuse.');
-    }
-    return user;
-  }
-
-  private requireProjectPartnerUser(user: AuthUser | null) {
-    if (!user) {
-      throw new UnauthorizedException('Connexion requise.');
-    }
-    if (!PROJECT_PARTNER_ALLOWED_ROLES.has(user.role)) {
-      throw new ForbiddenException('Acces partenaire refuse.');
-    }
-    return user;
-  }
-
-  private requireProjectAdminUser(user: AuthUser | null) {
-    if (!user) {
-      throw new UnauthorizedException('Connexion requise.');
-    }
-    if (!PROJECT_ADMIN_ALLOWED_ROLES.has(user.role)) {
-      throw new ForbiddenException('Acces admin projet refuse.');
-    }
-    return user;
-  }
-
-  private getOwnerProjects(ownerId: string) {
-    return clone(store.projects ?? [])
-      .filter((project) => String(project.owner_id) === String(ownerId))
-      .sort((left, right) => compareValues(right.created_at, left.created_at));
-  }
-
-  private requireOwnerProject(ownerId: string, projectId: string) {
-    const project = this.getOwnerProjects(ownerId).find((row) => String(row.id) === String(projectId)) ?? null;
-    if (!project) {
-      throw new BadRequestException('PROJECT_NOT_FOUND');
-    }
-    return project;
-  }
-
-  private getRowsForProjectIds(table: string, projectIds: Set<string>) {
-    return clone(store[table] ?? []).filter((row) => projectIds.has(String(row.project_id)));
-  }
-
-  private buildOwnerProjectDetail(project: Row) {
-    return {
-      project,
-      milestones: rowsForProject('project_milestones', String(project.id))
-        .sort((left, right) => compareValues(left.due_date, right.due_date)),
-      documents: rowsForProject('project_documents', String(project.id))
-        .sort((left, right) => compareValues(right.date, left.date)),
-      history: rowsForProject('project_history', String(project.id))
-        .sort((left, right) => compareValues(right.date, left.date)),
-      partnerships: rowsForProject('project_partnerships', String(project.id))
-        .sort((left, right) => compareValues(left.id, right.id)),
-      rounds: rowsForProject('project_funding_rounds', String(project.id))
-        .sort((left, right) => compareValues(right.deadline, left.deadline)),
-    };
-  }
-
-  private getPartnerTrackedProjects(partnerId: string) {
-    return hydrateRows(
-      'project_tracking',
-      clone(store.project_tracking ?? []).filter((row) => String(row.partner_id) === String(partnerId)),
-    ).sort((left, right) => compareValues(right.last_update, left.last_update));
-  }
-
-  private getPartnerCollaborations(partnerId: string) {
-    return hydrateRows(
-      'project_collaborations',
-      clone(store.project_collaborations ?? []).filter((row) => String(row.partner_id) === String(partnerId)),
-    ).sort((left, right) => compareValues(right.start_date, left.start_date));
-  }
-
-  private getOpenProjectsForPartners() {
-    return publicRows('projects', clone(store.projects ?? []))
-      .filter((project) => String(project.status ?? '').toLowerCase() !== 'termine')
-      .sort((left, right) => compareValues(right.created_at, left.created_at));
-  }
-
-  private buildProjectDetailForAuthenticatedProject(projectId: string) {
-    const project = hydrateRows(
-      'projects',
-      clone(store.projects ?? []).filter((row) => String(row.id) === String(projectId)),
-    )[0] ?? null;
-    if (!project) {
-      throw new BadRequestException('PROJECT_NOT_FOUND');
-    }
-    return {
-      project,
-      milestones: hydrateRows('project_milestones', rowsForProject('project_milestones', projectId))
-        .sort((left, right) => compareValues(left.due_date, right.due_date)),
-      documents: hydrateRows('project_documents', rowsForProject('project_documents', projectId))
-        .sort((left, right) => compareValues(right.date, left.date)),
-      history: hydrateRows('project_history', rowsForProject('project_history', projectId))
-        .sort((left, right) => compareValues(right.date, left.date)),
-      partnerships: hydrateRows('project_partnerships', rowsForProject('project_partnerships', projectId))
-        .sort((left, right) => compareValues(left.id, right.id)),
-      rounds: hydrateRows('project_funding_rounds', rowsForProject('project_funding_rounds', projectId))
-        .sort((left, right) => compareValues(right.deadline, left.deadline)),
-    };
-  }
 }

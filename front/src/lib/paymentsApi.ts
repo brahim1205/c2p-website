@@ -73,6 +73,7 @@ export interface PayoutRequestCommandPayload {
 
 export interface SubscriptionActivatePayload {
   plan_id: string;
+  payment_method?: WalletCommandPayload['method'];
   auto_renew?: boolean;
   renew_now?: boolean;
   trial?: boolean;
@@ -81,6 +82,7 @@ export interface SubscriptionActivatePayload {
 
 export interface ProviderVisibilityPurchasePayload {
   product_id: string;
+  payment_method?: WalletCommandPayload['method'];
 }
 
 export async function fetchDexPayStatus() {

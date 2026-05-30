@@ -42,6 +42,7 @@ export const payoutRequestCreateSchema = z.object({
 
 export const subscriptionActivateSchema = z.object({
   plan_id: z.string().trim().min(1),
+  payment_method: paymentMethodSchema.default('wallet'),
   auto_renew: z.boolean().optional(),
   renew_now: z.boolean().optional(),
   trial: z.boolean().optional(),
@@ -50,6 +51,7 @@ export const subscriptionActivateSchema = z.object({
 
 export const providerVisibilityPurchaseSchema = z.object({
   product_id: z.string().trim().min(1),
+  payment_method: paymentMethodSchema.default('wallet'),
 });
 
 export const adminEscrowStatusSchema = z.object({

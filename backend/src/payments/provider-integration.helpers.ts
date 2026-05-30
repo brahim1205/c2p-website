@@ -1,4 +1,6 @@
 import type { Prisma } from '@prisma/client';
+import type { Row } from '../data/mock-store.js';
+import type { DexPayOrder } from './dexpay.service.js';
 import type { DexPayWebhookDto } from './dto/dexpay.dto.js';
 
 export function providerJson(value: unknown) {
@@ -64,4 +66,41 @@ export function mapDexPayStatus(status?: string) {
   if (['FAILED', 'ERROR', 'REJECTED', 'EXPIRED'].includes(normalized)) return 'failed';
   if (['CANCELLED', 'CANCELED'].includes(normalized)) return 'cancelled';
   return 'pending';
+}
+
+export function buildDexPayCheckoutTransaction(input: {
+  actorId: string;
+  direction: string;
+  asset?: string;
+  chain?: string;
+  fiatAmount?: number;
+  quote: DexPayOrder;
+  order: DexPayOrder;
+}) {
+  return {
+    id: `trx-dxp-${Date.now()}`,
+    user_id: input.actorId,
+    type: input.direction === 'onramp' ? 'deposit' : 'withdrawal',
+    amount: Number(input.order.fiatAmount ?? input.quote.fiatAmount ?? input.fiatAmount ?? 0),
+    currency: 'XAF',
+    method: 'dexpay',
+    status: mapDexPayStatus(input.order.status),
+    description: input.direction === 'onramp'
+      ? `DexPay on-ramp ${input.asset}/${input.chain}`
+      : `DexPay off-ramp ${input.asset}/${input.chain}`,
+    date: input.order.createdAt ?? new Date().toISOString(),
+    reference: input.order.id,
+    provider: 'dexpay',
+    provider_quote_id: input.quote.id,
+    provider_order_id: input.order.id,
+    provider_status: input.order.status ?? 'PENDING',
+    payment_account: input.order.paymentAccount ?? null,
+    deposit_address: input.order.address ?? null,
+    asset: input.asset,
+    chain: input.chain,
+    direction: input.direction,
+    settled_to_wallet: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  } satisfies Row;
 }

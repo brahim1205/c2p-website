@@ -5,7 +5,9 @@ import { FinanceReadService } from './finance-read.service.js';
 import { PaymentsController } from './payments.controller.js';
 import { DexPayService } from './dexpay.service.js';
 import { PaymentCommandsService } from './payment-commands.service.js';
+import { ProviderArtifactsService } from './provider-artifacts.service.js';
 import { ProviderIntegrationService } from './provider-integration.service.js';
+import { ProviderIntegrationReadService } from './provider-integration-read.service.js';
 import { FinanceStateMachineService } from './finance-state-machine.service.js';
 import { ProviderRegistryService } from './provider-registry.service.js';
 
@@ -17,7 +19,9 @@ import { ProviderRegistryService } from './provider-registry.service.js';
     ProviderRegistryService,
     PaymentCommandsService,
     FinanceReadService,
+    ProviderArtifactsService,
     ProviderIntegrationService,
+    ProviderIntegrationReadService,
     FinanceStateMachineService,
   ],
   exports: [FinanceReadService],

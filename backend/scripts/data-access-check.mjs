@@ -886,6 +886,24 @@ async function main() {
     `learning formateur course bundle endpoint must create instructor course, got ${createdCourseBundle.response.status}`,
   );
   const smokeCourseId = createdCourseBundle.payload.id;
+  const createdCourseProgram = await readJson(`/learning/formateur/courses/${encodeURIComponent(String(smokeCourseId))}/program`, {
+    headers: { Cookie: formateurCookies },
+  });
+  assert(
+    createdCourseProgram.response.ok
+      && String(createdCourseProgram.payload.course.id) === String(smokeCourseId)
+      && createdCourseProgram.payload.sections.some((section) => section.title === 'Chapitre smoke')
+      && createdCourseProgram.payload.lessons.some((lesson) => lesson.title === 'Lecon smoke'),
+    `learning formateur course bundle must be readable with its created program, got ${createdCourseProgram.response.status}`,
+  );
+  const formateurCoursesAfterBundle = await readJson('/learning/formateur/courses', {
+    headers: { Cookie: formateurCookies },
+  });
+  assert(
+    formateurCoursesAfterBundle.response.ok
+      && formateurCoursesAfterBundle.payload.some((course) => String(course.id) === String(smokeCourseId)),
+    'learning formateur courses endpoint must display the created course bundle',
+  );
   const updatedCourse = await readJson(`/learning/formateur/courses/${encodeURIComponent(String(smokeCourseId))}`, {
     method: 'PATCH',
     headers: {
@@ -1152,6 +1170,45 @@ async function main() {
       && String(liveVirtualClass.payload.status) === 'live'
       && liveVirtualClass.payload.started_at,
     `learning formateur virtual class status endpoint must start an instructor class, got ${liveVirtualClass.response.status}`,
+  );
+  const endedVirtualClass = await readJson(`/learning/formateur/virtual-classes/${encodeURIComponent(String(smokeVirtualClassId))}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: formateurCookies,
+      'X-CSRF-Token': formateurCsrfToken,
+    },
+    body: JSON.stringify({ status: 'ended' }),
+  });
+  assert(
+    endedVirtualClass.response.ok
+      && String(endedVirtualClass.payload.status) === 'ended'
+      && endedVirtualClass.payload.ended_at
+      && String(endedVirtualClass.payload.recording_status) === 'processing',
+    `learning formateur virtual class status endpoint must end an instructor class and prepare replay, got ${endedVirtualClass.response.status}`,
+  );
+  const replayUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4';
+  const replayReadyVirtualClass = await readJson(`/learning/formateur/virtual-classes/${encodeURIComponent(String(smokeVirtualClassId))}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: formateurCookies,
+      'X-CSRF-Token': formateurCsrfToken,
+    },
+    body: JSON.stringify({ recording_url: replayUrl }),
+  });
+  assert(
+    replayReadyVirtualClass.response.ok
+      && String(replayReadyVirtualClass.payload.recording_url) === replayUrl
+      && String(replayReadyVirtualClass.payload.recording_status) === 'ready',
+    `learning formateur virtual class replay update must mark replay ready, got ${replayReadyVirtualClass.response.status}`,
+  );
+  const publicReplayVirtualClass = await readJson(`/learning/public/virtual-classes/${encodeURIComponent(String(smokeVirtualClassId))}`);
+  assert(
+    publicReplayVirtualClass.response.ok
+      && String(publicReplayVirtualClass.payload.virtualClass?.recording_url) === replayUrl
+      && String(publicReplayVirtualClass.payload.virtualClass?.recording_status) === 'ready',
+    `public virtual class detail must expose ready replay, got ${publicReplayVirtualClass.response.status}`,
   );
   const deletedVirtualClass = await readJson(`/learning/formateur/virtual-classes/${encodeURIComponent(String(smokeVirtualClassId))}`, {
     method: 'DELETE',

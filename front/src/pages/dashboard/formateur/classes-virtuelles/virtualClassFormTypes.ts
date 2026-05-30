@@ -1,4 +1,5 @@
 import { DEFAULT_CLASS_FORM, type ClassFormErrors, type VirtualClass } from './virtualClassModel';
+import type { ChangeEvent } from 'react';
 
 export type VirtualClassForm = typeof DEFAULT_CLASS_FORM;
 
@@ -21,6 +22,9 @@ export interface VirtualClassEditFormProps {
   errors: ClassFormErrors;
   formMessage: string | null;
   instructorCourses: InstructorCourseOption[];
+  isReplayUploading: boolean;
+  replayUploadProgress: number;
   onUpdateForm: <K extends keyof VirtualClass>(field: K, value: VirtualClass[K] | undefined) => void;
   onSelectCourse: (courseId: string) => void;
+  onReplayFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
 }

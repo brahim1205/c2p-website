@@ -1,5 +1,5 @@
 import type { PayoutAccount, SubscriptionPlan, UserSubscription } from '@/lib/saasApi';
-import { formatAmount } from './paymentPageModel';
+import { formatAmount, type PaymentMethodId } from './paymentPageModel';
 
 interface SubscriptionPlansPanelProps {
   activeSubscription: UserSubscription | null;
@@ -10,7 +10,9 @@ interface SubscriptionPlansPanelProps {
   selectedPlanUnavailable: boolean;
   selectedPlanName: string;
   selectedPlanRole: string;
-  onActivatePlan: (plan: SubscriptionPlan) => void;
+  availableBalance: number;
+  dexPayAvailable: boolean;
+  onActivatePlan: (plan: SubscriptionPlan, paymentMethod: PaymentMethodId) => void;
 }
 
 export default function SubscriptionPlansPanel({
@@ -22,6 +24,8 @@ export default function SubscriptionPlansPanel({
   selectedPlanUnavailable,
   selectedPlanName,
   selectedPlanRole,
+  availableBalance,
+  dexPayAvailable,
   onActivatePlan,
 }: SubscriptionPlansPanelProps) {
   return (
@@ -52,6 +56,7 @@ export default function SubscriptionPlansPanel({
         {plans.map((plan) => {
           const isActive = activeSubscription?.plan_id === plan.id;
           const isSelected = selectedPlanId === String(plan.id);
+          const canUseWallet = availableBalance >= Number(plan.price_monthly ?? 0);
           return (
             <div key={plan.id} className={`rounded-2xl border p-5 ${isActive ? 'border-teal-300 bg-teal-50' : isSelected ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white'}`}>
               <div className="mb-3 flex items-start justify-between gap-3">
@@ -71,12 +76,21 @@ export default function SubscriptionPlansPanel({
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={() => onActivatePlan(plan)}
-                className={`mt-5 w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors ${isActive ? 'border border-teal-200 bg-white text-teal-700 hover:bg-teal-100' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
-              >
-                {isActive ? 'Renouveler ce plan' : 'Activer ce plan'}
-              </button>
+              <div className="mt-5 grid gap-2">
+                <button
+                  onClick={() => onActivatePlan(plan, dexPayAvailable ? 'dexpay' : 'wave')}
+                  className="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+                >
+                  {isActive ? 'Renouveler directement' : 'Payer directement'}
+                </button>
+                <button
+                  onClick={() => onActivatePlan(plan, 'wallet')}
+                  disabled={!canUseWallet}
+                  className="w-full rounded-lg border border-teal-200 bg-white px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Utiliser mon solde C2P
+                </button>
+              </div>
             </div>
           );
         })}

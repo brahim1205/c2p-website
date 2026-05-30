@@ -28,10 +28,10 @@ import type { DexPayOrder } from './dexpay.service.js';
 import type { DexPayReconcileDto, DexPayWebhookDto } from './dto/dexpay.dto.js';
 import {
   mapLifecycleStatusToTransactionStatus,
-  normalizePaymentIntentState,
   resolveMonotonicFinanceTransition,
   resolveProviderLifecycleState,
 } from './finance-domain-guards.js';
+import { ProviderArtifactsService } from './provider-artifacts.service.js';
 import { ProviderRegistryService } from './provider-registry.service.js';
 import {
   createProviderWebhookFingerprint,
@@ -40,6 +40,7 @@ import {
 import { upsertProviderWebhookReceipt } from './provider-webhook-receipt.persistence.js';
 import { flagProviderWebhookReplayMismatch } from './provider-webhook-replay-guard.js';
 import {
+  buildDexPayCheckoutTransaction,
   extractDexPayProviderEventId,
   extractDexPayProviderReference,
   extractDexPayProviderStatus,
@@ -60,6 +61,7 @@ export class ProviderIntegrationService {
     private readonly providerRegistry: ProviderRegistryService,
     private readonly platformPersistenceService: PlatformPersistenceService,
     private readonly auditLogService: AuditLogService,
+    private readonly providerArtifactsService: ProviderArtifactsService,
   ) {}
 
   private getDexPay() {
@@ -69,187 +71,6 @@ export class ProviderIntegrationService {
   private assertDexPayConfigured(action: string) {
     if (!this.getDexPay().isConfigured()) {
       throw new ServiceUnavailableException(`Integration DexPay indisponible pour ${action}.`);
-    }
-  }
-
-  async syncDexPayProviderArtifacts(input: {
-    actorId: string;
-    providerReference: string;
-    transactionId: string;
-    direction: string;
-    amount: number;
-    currency: string;
-    status: string;
-    asset?: string;
-    chain?: string;
-    quote?: unknown;
-    order: unknown;
-    settledToWallet?: boolean;
-  }) {
-    if (!this.prisma.isConnected) {
-      return;
-    }
-
-    const now = new Date();
-    const intentId = `pi-dexpay-${input.providerReference}`;
-    const normalizedDirection = input.direction === 'offramp' ? 'wallet_withdraw' : 'wallet_topup';
-    const metadata = providerJson({
-      asset: input.asset ?? null,
-      chain: input.chain ?? null,
-      direction: input.direction,
-      quote: input.quote ?? null,
-      order: input.order,
-    });
-    const rawPayload = providerJson({ order: input.order, quote: input.quote ?? null });
-    const [currentPaymentIntent, currentProviderTransaction] = await Promise.all([
-      this.prisma.paymentIntent.findUnique({ where: { id: intentId } }),
-      this.prisma.providerTransaction.findUnique({
-        where: {
-          provider_providerReference: {
-            provider: 'dexpay',
-            providerReference: input.providerReference,
-          },
-        },
-      }),
-    ]);
-    const currentProviderMetadata = readProviderRecord(currentProviderTransaction?.metadata) ?? {};
-    const effectiveSettledToWallet = Boolean(currentProviderMetadata.settled_to_wallet) || Boolean(input.settledToWallet);
-    const nextIntentState = normalizePaymentIntentState(input.status);
-    const nextProviderLifecycle = resolveProviderLifecycleState({
-      status: input.status,
-      providerStatus: input.status,
-      settledToWallet: effectiveSettledToWallet,
-    });
-    const intentResolution = resolveMonotonicFinanceTransition(
-      'payment_intent',
-      currentPaymentIntent?.status,
-      nextIntentState,
-    );
-    const providerResolution = resolveMonotonicFinanceTransition(
-      'provider_transaction',
-      currentProviderTransaction
-        ? resolveProviderLifecycleState({
-          status: currentProviderTransaction.providerStatus,
-          providerStatus: currentProviderTransaction.providerStatus,
-          settledToWallet: Boolean(currentProviderMetadata.settled_to_wallet),
-        })
-        : '',
-      nextProviderLifecycle,
-    );
-    const paymentIntentStatus = intentResolution.nextState;
-    const providerTransactionStatus = providerResolution.nextState;
-    const providerMetadata = providerJson({
-      asset: input.asset ?? null,
-      chain: input.chain ?? null,
-      settled_to_wallet: effectiveSettledToWallet,
-      lifecycle_state: providerResolution.nextState,
-      transition_decision: providerResolution.decision,
-      attempted_lifecycle_state: nextProviderLifecycle,
-    });
-    const paymentIntentMetadata = providerJson({
-      asset: input.asset ?? null,
-      chain: input.chain ?? null,
-      direction: input.direction,
-      quote: input.quote ?? null,
-      order: input.order,
-      lifecycle_state: intentResolution.nextState,
-      transition_decision: intentResolution.decision,
-      attempted_lifecycle_state: nextIntentState,
-      settled_to_wallet: effectiveSettledToWallet,
-    });
-
-    await this.prisma.paymentIntent.upsert({
-      where: { id: intentId },
-      update: {
-        actorId: input.actorId,
-        userId: input.actorId,
-        provider: 'dexpay',
-        providerIntentRef: input.providerReference,
-        contextType: normalizedDirection,
-        contextId: input.transactionId,
-        amount: input.amount,
-        currency: input.currency,
-        status: paymentIntentStatus,
-        confirmedAt: paymentIntentStatus === 'confirmed' ? currentPaymentIntent?.confirmedAt ?? now : null,
-        cancelledAt: ['failed', 'cancelled', 'expired'].includes(paymentIntentStatus) ? currentPaymentIntent?.cancelledAt ?? now : null,
-        metadata: paymentIntentMetadata,
-      },
-      create: {
-        id: intentId,
-        actorId: input.actorId,
-        userId: input.actorId,
-        provider: 'dexpay',
-        providerIntentRef: input.providerReference,
-        contextType: normalizedDirection,
-        contextId: input.transactionId,
-        amount: input.amount,
-        currency: input.currency,
-        status: paymentIntentStatus,
-        confirmedAt: paymentIntentStatus === 'confirmed' ? now : undefined,
-        cancelledAt: ['failed', 'cancelled', 'expired'].includes(paymentIntentStatus) ? now : undefined,
-        metadata: paymentIntentMetadata,
-      },
-    });
-
-    await this.prisma.providerTransaction.upsert({
-      where: {
-        provider_providerReference: {
-          provider: 'dexpay',
-          providerReference: input.providerReference,
-        },
-      },
-      update: {
-        paymentIntentId: intentId,
-        providerStatus: providerTransactionStatus,
-        direction: input.direction,
-        amount: input.amount,
-        currency: input.currency,
-        confirmedAt: ['confirmed', 'reconciled'].includes(providerResolution.nextState) ? currentProviderTransaction?.confirmedAt ?? now : null,
-        failedAt: providerResolution.nextState === 'failed' ? currentProviderTransaction?.failedAt ?? now : null,
-        rawPayload,
-        metadata: providerMetadata,
-      },
-      create: {
-        id: `ptx-dexpay-${input.providerReference}`,
-        paymentIntentId: intentId,
-        provider: 'dexpay',
-        providerReference: input.providerReference,
-        providerStatus: providerTransactionStatus,
-        direction: input.direction,
-        amount: input.amount,
-        currency: input.currency,
-        confirmedAt: ['confirmed', 'reconciled'].includes(providerResolution.nextState) ? now : undefined,
-        failedAt: providerResolution.nextState === 'failed' ? now : undefined,
-        rawPayload,
-        metadata: providerMetadata,
-      },
-    });
-
-    if (['confirmed', 'reconciled'].includes(providerResolution.nextState)) {
-      await this.prisma.settlementRecord.upsert({
-        where: {
-          id: `sett-dexpay-${input.providerReference}`,
-        },
-        update: {
-          provider: 'dexpay',
-          providerSettlementRef: input.providerReference,
-          status: 'settled',
-          amount: input.amount,
-          currency: input.currency,
-          settledAt: now,
-          metadata,
-        },
-        create: {
-          id: `sett-dexpay-${input.providerReference}`,
-          provider: 'dexpay',
-          providerSettlementRef: input.providerReference,
-          status: 'settled',
-          amount: input.amount,
-          currency: input.currency,
-          settledAt: now,
-          metadata,
-        },
-      });
     }
   }
 
@@ -263,32 +84,7 @@ export class ProviderIntegrationService {
     order: DexPayOrder;
   }) {
     await syncAppStoreFromDatabase(this.prisma);
-    const transaction = {
-      id: `trx-dxp-${Date.now()}`,
-      user_id: input.actorId,
-      type: input.direction === 'onramp' ? 'deposit' : 'withdrawal',
-      amount: Number(input.order.fiatAmount ?? input.quote.fiatAmount ?? input.fiatAmount ?? 0),
-      currency: 'XAF',
-      method: 'dexpay',
-      status: mapDexPayStatus(input.order.status),
-      description: input.direction === 'onramp'
-        ? `DexPay on-ramp ${input.asset}/${input.chain}`
-        : `DexPay off-ramp ${input.asset}/${input.chain}`,
-      date: input.order.createdAt ?? new Date().toISOString(),
-      reference: input.order.id,
-      provider: 'dexpay',
-      provider_quote_id: input.quote.id,
-      provider_order_id: input.order.id,
-      provider_status: input.order.status ?? 'PENDING',
-      payment_account: input.order.paymentAccount ?? null,
-      deposit_address: input.order.address ?? null,
-      asset: input.asset,
-      chain: input.chain,
-      direction: input.direction,
-      settled_to_wallet: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } satisfies Row;
+    const transaction = buildDexPayCheckoutTransaction(input);
 
     appendAppRows('payment_transactions', [transaction]);
     const rowsToPersist: Record<string, Row[]> = {};
@@ -298,7 +94,7 @@ export class ProviderIntegrationService {
       reason: 'dexpay_checkout_create',
     });
 
-    await this.syncDexPayProviderArtifacts({
+    await this.providerArtifactsService.syncDexPayProviderArtifacts({
       actorId: input.actorId,
       providerReference: input.order.id,
       transactionId: String(transaction.id),
@@ -415,7 +211,7 @@ export class ProviderIntegrationService {
       });
     }
 
-    await this.syncDexPayProviderArtifacts({
+    await this.providerArtifactsService.syncDexPayProviderArtifacts({
       actorId: currentTransaction ? String(currentTransaction.user_id ?? input.actorId) : input.actorId,
       providerReference: order.id,
       transactionId: String(currentTransaction?.id ?? input.transactionId ?? `ext-${order.id}`),
@@ -890,66 +686,6 @@ export class ProviderIntegrationService {
       status: result.status,
       transactionId: result.transaction?.id ?? null,
     };
-  }
-
-  listWebhookReceipts(limit = 50, status?: string) {
-    if (!this.prisma.isConnected) {
-      return Promise.resolve([]);
-    }
-    return this.prisma.webhookReceipt.findMany({
-      where: {
-        provider: 'dexpay',
-        ...(status ? { status } : {}),
-      },
-      orderBy: [{ receivedAt: 'desc' }, { createdAt: 'desc' }],
-      take: Math.min(Math.max(limit, 1), 200),
-    });
-  }
-
-  listReconciliationJobs(limit = 50) {
-    if (!this.prisma.isConnected) {
-      return Promise.resolve([]);
-    }
-    return this.prisma.reconciliationJob.findMany({
-      where: { provider: 'dexpay' },
-      orderBy: [{ createdAt: 'desc' }],
-      take: Math.min(Math.max(limit, 1), 200),
-    });
-  }
-
-  listProviderTransactions(limit = 50, status?: string) {
-    if (!this.prisma.isConnected) {
-      return Promise.resolve([]);
-    }
-    return this.prisma.providerTransaction.findMany({
-      where: {
-        provider: 'dexpay',
-        ...(status ? { providerStatus: status } : {}),
-      },
-      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-      take: Math.min(Math.max(limit, 1), 200),
-    }).then((rows) => rows.map((row) => ({
-      ...row,
-      lifecycleStatus: resolveProviderLifecycleState({
-        status: row.providerStatus,
-        providerStatus: row.providerStatus,
-        settledToWallet: Boolean(readProviderRecord(row.metadata)?.settled_to_wallet),
-      }),
-    })));
-  }
-
-  listPaymentIntents(limit = 50, status?: string) {
-    if (!this.prisma.isConnected) {
-      return Promise.resolve([]);
-    }
-    return this.prisma.paymentIntent.findMany({
-      where: {
-        provider: 'dexpay',
-        ...(status ? { status } : {}),
-      },
-      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
-      take: Math.min(Math.max(limit, 1), 200),
-    });
   }
 
 }

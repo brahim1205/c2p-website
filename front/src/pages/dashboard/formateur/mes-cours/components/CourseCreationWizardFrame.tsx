@@ -164,7 +164,7 @@ export default function CourseCreationWizardFrame({
                 disabled={isSubmitting || pendingUploadsCount > 0}
                 className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                {isSubmitting ? 'Création en cours...' : 'Créer le brouillon'}
+                {isSubmitting ? 'Création en cours...' : 'Créer la formation'}
               </button>
             )}
           </div>

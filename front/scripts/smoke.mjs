@@ -118,7 +118,7 @@ const dashboardSuites = {
     ],
   },
   superadmin: {
-    email: 'superadmin@c2p.sn',
+    email: process.env.C2P_SUPERADMIN_EMAIL ?? 'superadmin@c2p.sn',
     paths: [
       '/superadmin/dashboard',
       '/superadmin/governance',

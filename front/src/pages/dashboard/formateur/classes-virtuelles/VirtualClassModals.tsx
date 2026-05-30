@@ -76,29 +76,37 @@ export function VirtualClassEditModal({
   formMessage,
   instructorCourses,
   isUpdating,
+  isReplayUploading,
+  replayUploadProgress,
   onClose,
   onSubmit,
   onUpdateForm,
   onSelectCourse,
+  onReplayFileChange,
 }: VirtualClassEditModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-6 text-lg font-bold text-gray-900">Modifier la classe</h3>
+        <h3 className="mb-6 text-lg font-bold text-gray-900">
+          {editForm.status === 'ended' ? 'Modifier la classe et le replay' : 'Modifier la classe'}
+        </h3>
         <VirtualClassEditForm
           editForm={editForm}
           errors={errors}
           formMessage={formMessage}
           instructorCourses={instructorCourses}
+          isReplayUploading={isReplayUploading}
+          replayUploadProgress={replayUploadProgress}
           onUpdateForm={onUpdateForm}
           onSelectCourse={onSelectCourse}
+          onReplayFileChange={onReplayFileChange}
         />
         <div className="mt-6">
           <ModalActions
             onClose={onClose}
             onSubmit={onSubmit}
-            disabled={isUpdating}
-            submitLabel={isUpdating ? 'Enregistrement...' : 'Enregistrer'}
+            disabled={isUpdating || isReplayUploading}
+            submitLabel={isReplayUploading ? 'Upload en cours...' : isUpdating ? 'Enregistrement...' : 'Enregistrer'}
           />
         </div>
       </div>
