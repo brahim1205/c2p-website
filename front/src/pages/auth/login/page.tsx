@@ -49,13 +49,13 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-3 py-8 text-c2p-text sm:px-6 sm:py-16 lg:px-8 lg:py-24">
+    <main className="relative h-dvh overflow-hidden bg-c2p-bg px-3 pb-3 pt-20 text-c2p-text sm:px-6 sm:pb-6 lg:px-8">
       <div className="absolute inset-0">
         <img src="/images/home/hero.jpg" alt="" className="h-full w-full object-cover object-center opacity-16" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.96)_0%,rgba(247,248,252,0.90)_48%,rgba(247,248,252,0.78)_100%)]"></div>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-8 sm:min-h-[calc(100vh-8rem)] lg:min-h-[calc(100vh-12rem)] lg:grid-cols-[1fr_460px] lg:gap-10">
+      <div className="relative z-10 mx-auto grid h-full max-w-7xl items-center gap-8 lg:grid-cols-[1fr_460px] lg:gap-10">
         <section className="hidden max-w-2xl lg:block">
           <p className="c2p-eyebrow mb-5">Accès sécurisé</p>
           <h1 className="text-5xl font-semibold leading-[0.98] text-[#06053a] xl:text-7xl">
@@ -87,20 +87,20 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="c2p-panel rounded-[22px] p-4 sm:rounded-[30px] sm:p-8">
-          <div className="mb-6 sm:mb-8">
+        <section className="c2p-panel rounded-[22px] p-4 sm:rounded-[30px] sm:p-7 lg:p-8">
+          <div className="mb-4 sm:mb-6">
             <BrandLogo
               to="/"
               className="inline-flex items-center"
-              imageClassName="h-12 w-auto object-contain"
+              imageClassName="h-9 w-auto object-contain sm:h-12"
             />
-            <h2 className="mt-5 text-2xl font-semibold text-[#06053a] sm:text-3xl">Connexion</h2>
-            <p className="mt-2 text-sm leading-6 text-[#27346b]">
+            <h2 className="mt-3 text-2xl font-semibold text-[#06053a] sm:mt-5 sm:text-3xl">Connexion</h2>
+            <p className="mt-2 hidden text-sm leading-6 text-[#27346b] sm:block">
               Accédez à votre espace C2P selon votre rôle et vos droits. Les tarifs des plans publics restent consultables avant connexion.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <div>
               <label htmlFor="email" className="mb-2 block text-sm font-medium text-[#27346b]">Adresse email</label>
               <div className="relative">
@@ -142,21 +142,21 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-[#27346b]">
+          <p className="mt-4 text-center text-sm text-[#27346b] sm:mt-6">
             Vous n&apos;avez pas de compte ?{' '}
             <Link to="/auth/register" className="c2p-link font-medium">
               Créer un compte
             </Link>
           </p>
 
-          <p className="mt-3 text-center text-sm text-[#5fa6f3]">
+          <p className="mt-3 hidden text-center text-sm text-[#5fa6f3] sm:block">
             Besoin de comparer les plans avant d&apos;entrer ?{' '}
             <Link to="/tarifs" className="c2p-link font-medium">
               Voir les abonnements
             </Link>
           </p>
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center sm:mt-6">
             <Link to="/" className="text-sm text-[#5fa6f3] transition-colors hover:text-[#06053a]">
               <i className="ri-arrow-left-line mr-1"></i>
               Retour à l&apos;accueil
