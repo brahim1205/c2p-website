@@ -148,13 +148,6 @@ export default function LoginPage() {
               Créer un compte
             </Link>
           </p>
-
-          <div className="mt-4 text-center sm:mt-6">
-            <Link to="/" className="text-sm text-[#5fa6f3] transition-colors hover:text-[#06053a]">
-              <i className="ri-arrow-left-line mr-1"></i>
-              Retour à l&apos;accueil
-            </Link>
-          </div>
         </section>
       </div>
     </main>
