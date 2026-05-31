@@ -144,7 +144,10 @@ export default function LoginPage() {
 
           <p className="mt-4 text-center text-sm text-[#27346b] sm:mt-6">
             Vous n&apos;avez pas de compte ?{' '}
-            <Link to="/auth/register" className="c2p-link font-medium">
+            <Link
+              to="/auth/register"
+              className="font-semibold text-[#06053a] underline decoration-[#f9c846] decoration-2 underline-offset-4 transition-colors hover:text-[#0f63c8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#f9c846]"
+            >
               Créer un compte
             </Link>
           </p>
