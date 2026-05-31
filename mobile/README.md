@@ -9,12 +9,21 @@ Objectifs:
 
 ## Configuration API
 
-Par defaut, l'app pointe vers `http://10.0.2.2:3003/api`, utile pour Android Emulator avec le backend local.
+Par defaut:
+
+- Android Emulator: `http://10.0.2.2:3003/api`;
+- iOS Simulator, desktop et Flutter web local: `http://127.0.0.1:3003/api`.
 
 Pour viser la production ou un autre environnement:
 
 ```bash
 flutter run --dart-define=C2P_API_BASE_URL=https://votre-domaine.sn/api
+```
+
+Sur un telephone physique, `127.0.0.1` ou `10.0.2.2` ne pointent pas vers votre ordinateur. Utiliser l'adresse IP locale de la machine qui lance le backend:
+
+```bash
+flutter run --dart-define=C2P_API_BASE_URL=http://192.168.1.20:3003/api
 ```
 
 ## Initialisation native

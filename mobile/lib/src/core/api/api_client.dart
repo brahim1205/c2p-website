@@ -57,7 +57,8 @@ class ApiClient {
     String path, {
     Map<String, Object?>? body,
   }) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl.replaceAll(RegExp(r'/$'), '')}$path');
+    final baseUrl = ApiConfig.baseUrl.replaceAll(RegExp(r'/$'), '');
+    final uri = Uri.parse('$baseUrl$path');
     final cookieHeader = await _sessionStore.readCookieHeader();
     final requestId = await _sessionStore.readRequestId();
     final headers = <String, String>{
@@ -73,7 +74,21 @@ class ApiClient {
     final request = http.Request(method, uri)..headers.addAll(headers);
     if (encodedBody != null) request.body = encodedBody;
 
-    final response = await _httpClient.send(request).timeout(const Duration(seconds: 30));
+    late final http.StreamedResponse response;
+    try {
+      response = await _httpClient.send(request).timeout(const Duration(seconds: 30));
+    } on TimeoutException {
+      throw ApiException(
+        message: 'Connexion impossible a l API ($baseUrl). Verifiez que le backend est lance et que C2P_API_BASE_URL correspond a votre appareil.',
+        statusCode: 408,
+        code: 'REQUEST_TIMEOUT',
+      );
+    } on http.ClientException catch (error) {
+      throw ApiException(
+        message: 'Erreur reseau vers l API ($baseUrl): ${error.message}',
+        code: 'NETWORK_ERROR',
+      );
+    }
 
     final buffered = await http.Response.fromStream(response);
     await _captureSessionHeaders(buffered);
