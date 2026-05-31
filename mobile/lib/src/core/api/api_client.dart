@@ -6,10 +6,11 @@ import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
 import '../storage/session_store.dart';
 import 'api_exception.dart';
+import 'http_client_factory.dart';
 
 class ApiClient {
   ApiClient(this._sessionStore, {http.Client? httpClient})
-      : _httpClient = httpClient ?? http.Client();
+      : _httpClient = httpClient ?? createHttpClient();
 
   final SessionStore _sessionStore;
   final http.Client _httpClient;
