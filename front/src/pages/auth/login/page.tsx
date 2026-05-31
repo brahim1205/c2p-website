@@ -149,13 +149,6 @@ export default function LoginPage() {
             </Link>
           </p>
 
-          <p className="mt-3 hidden text-center text-sm text-[#5fa6f3] sm:block">
-            Besoin de comparer les plans avant d&apos;entrer ?{' '}
-            <Link to="/tarifs" className="c2p-link font-medium">
-              Voir les abonnements
-            </Link>
-          </p>
-
           <div className="mt-4 text-center sm:mt-6">
             <Link to="/" className="text-sm text-[#5fa6f3] transition-colors hover:text-[#06053a]">
               <i className="ri-arrow-left-line mr-1"></i>
