@@ -36,7 +36,7 @@ RUN apk add --no-cache --upgrade \
     libexpat=2.7.5-r0 \
     libpng=1.6.57-r0 \
     libssl3=3.3.7-r0 \
-    libxml2=2.13.9-r0 \
+    libxml2=2.13.9-r1 \
     libxpm=3.5.19-r0 \
     musl=1.2.5-r11 \
     musl-utils=1.2.5-r11 \
