@@ -81,7 +81,7 @@
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.19",
     "@nestjs/platform-express": "^11.1.19",
-    "@nestjs/swagger": "^11.4.3",
+    "@nestjs/swagger": "^11.4.4",
     "@prisma/client": "^5.15.0",
     "argon2": "^0.41.1",
     "cookie-parser": "^1.4.7",
