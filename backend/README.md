@@ -92,7 +92,7 @@ Notes locales :
 - `PRISMA_CONNECTION_REQUIRED=true` force l'application a echouer au demarrage si PostgreSQL est indisponible, au lieu de demarrer en mode degrade.
 - Les scripts `security:test`, `data:access:test`, `messaging:flow:test`, `notifications:flow:test` et `provider:visibility:test` attendent une API HTTP deja lancee, par defaut sur `http://localhost:3003/api`.
 - `db:reset:local` est volontairement destructif et refuse de tourner hors `localhost` ou sans `C2P_CONFIRM_LOCAL_DB_RESET=reset`.
-- `test:premium:grant` active des abonnements premium sur les comptes de test `formateur@c2p.sn`, `prestataire@c2p.sn` et `porteur@c2p.sn` avec le mot de passe `password123`.
+- `test:premium:grant` active des abonnements premium sur les comptes de test `formateur@c2p.sn`, `prestataire@c2p.sn` et `porteur@c2p.sn` avec le mot de passe `password123`. Dans le conteneur production, utiliser `node scripts/grant-test-premium-subscriptions.mjs` car `npm` est retire de l'image runtime.
 
 ## Transition Prisma
 
