@@ -49,7 +49,7 @@ export default function HomePage() {
         <div className="relative z-10 mx-auto flex min-h-[78vh] max-w-7xl flex-col justify-end px-5 pb-12 pt-28 sm:px-8 lg:px-10">
           <div className="max-w-5xl">
             <p className="c2p-eyebrow mb-5 tracking-[0.38em]">
-              Centre C2P | Services, Formation, Incubation
+              CENTRE DE DEVELOPPEMENT ET DE PRESTATIONS PROFESSIONNELS (C2P)
             </p>
             <h1 className="max-w-4xl animate-fade-in-up text-4xl font-semibold leading-[1.02] text-[#06053a] sm:text-5xl lg:text-6xl">
               Osez rêver et devenez autonome.
