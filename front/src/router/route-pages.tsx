@@ -22,6 +22,7 @@ export const LoginPage = lazy(() => import('../pages/auth/login/page'));
 export const RegisterPage = lazy(() => import('../pages/auth/register/page'));
 export const OnboardingClausesPage = lazy(() => import('../pages/auth/onboarding/clauses/page'));
 export const OnboardingSubscriptionPage = lazy(() => import('../pages/auth/onboarding/abonnement/page'));
+export const OnboardingProfilePage = lazy(() => import('../pages/auth/onboarding/profil/page'));
 export const ForgotPasswordPage = lazy(() => import('../pages/auth/forgot-password/page'));
 export const TwoFactorPage = lazy(() => import('../pages/auth/two-factor/page'));
 export const PricingPage = lazy(() => import('../pages/tarifs/page'));

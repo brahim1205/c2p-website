@@ -67,6 +67,7 @@ const publicRoutes: RouteObject[] = [
 const authRoutes: RouteObject[] = [
   authRoute('/auth/login', Pages.LoginPage),
   authRoute('/auth/register', Pages.RegisterPage),
+  onboardingRoute('/auth/onboarding/profil', Pages.OnboardingProfilePage),
   onboardingRoute('/auth/onboarding/clauses', Pages.OnboardingClausesPage),
   onboardingRoute('/auth/onboarding/abonnement', Pages.OnboardingSubscriptionPage),
   authRoute('/forgot-password', Pages.ForgotPasswordPage),

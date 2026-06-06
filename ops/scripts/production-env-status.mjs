@@ -28,6 +28,18 @@ const EXTERNAL_PROVIDER_GROUPS = {
     'UPLOAD_S3_ACCESS_KEY_ID',
     'UPLOAD_S3_SECRET_ACCESS_KEY',
   ],
+  googleOAuth: [
+    'OAUTH_CALLBACK_BASE_URL',
+    'OAUTH_STATE_SECRET',
+    'GOOGLE_OAUTH_CLIENT_ID',
+    'GOOGLE_OAUTH_CLIENT_SECRET',
+  ],
+  facebookOAuth: [
+    'OAUTH_CALLBACK_BASE_URL',
+    'OAUTH_STATE_SECRET',
+    'FACEBOOK_OAUTH_CLIENT_ID',
+    'FACEBOOK_OAUTH_CLIENT_SECRET',
+  ],
 };
 
 function getRequiredBackendExternals(env) {
@@ -43,6 +55,12 @@ function getRequiredBackendExternals(env) {
   if (smsProvider === 'sendtext') required.push(...EXTERNAL_PROVIDER_GROUPS.sendtext);
   if (dexpayEnabled) required.push(...EXTERNAL_PROVIDER_GROUPS.dexpay);
   if (uploadStorageDriver === 's3') required.push(...EXTERNAL_PROVIDER_GROUPS.cloudflareR2);
+  if (String(env.GOOGLE_OAUTH_CLIENT_ID ?? '').trim() || String(env.GOOGLE_OAUTH_CLIENT_SECRET ?? '').trim()) {
+    required.push(...EXTERNAL_PROVIDER_GROUPS.googleOAuth);
+  }
+  if (String(env.FACEBOOK_OAUTH_CLIENT_ID ?? '').trim() || String(env.FACEBOOK_OAUTH_CLIENT_SECRET ?? '').trim()) {
+    required.push(...EXTERNAL_PROVIDER_GROUPS.facebookOAuth);
+  }
 
   return [...new Set(required)];
 }
@@ -148,6 +166,12 @@ function collectMissingByProvider(env) {
   if (smsProvider === 'sendtext') activeGroups.sendtext = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.sendtext);
   if (dexpayEnabled) activeGroups.dexpay = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.dexpay);
   if (uploadStorageDriver === 's3') activeGroups.cloudflareR2 = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.cloudflareR2);
+  if (String(env.GOOGLE_OAUTH_CLIENT_ID ?? '').trim() || String(env.GOOGLE_OAUTH_CLIENT_SECRET ?? '').trim()) {
+    activeGroups.googleOAuth = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.googleOAuth);
+  }
+  if (String(env.FACEBOOK_OAUTH_CLIENT_ID ?? '').trim() || String(env.FACEBOOK_OAUTH_CLIENT_SECRET ?? '').trim()) {
+    activeGroups.facebookOAuth = collectMissing(env, EXTERNAL_PROVIDER_GROUPS.facebookOAuth);
+  }
 
   return activeGroups;
 }

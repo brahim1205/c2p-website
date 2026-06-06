@@ -83,6 +83,12 @@ export const configValidationSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   BREVO_API_KEY: z.string().optional(),
   BREVO_BASE_URL: z.string().url().default('https://api.brevo.com'),
+  OAUTH_CALLBACK_BASE_URL: optionalUrl,
+  OAUTH_STATE_SECRET: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  FACEBOOK_OAUTH_CLIENT_ID: z.string().optional(),
+  FACEBOOK_OAUTH_CLIENT_SECRET: z.string().optional(),
   LIVE_PROVIDER: z.enum(['jitsi', 'custom']).default('jitsi'),
   LIVE_JITSI_BASE_URL: z.string().url().default('https://meet.jit.si'),
   UPLOAD_STORAGE_DRIVER: uploadStorageDriverSchema.default('local-disk'),
@@ -285,6 +291,32 @@ export const configValidationSchema = z.object({
           code: 'custom',
           path: [key],
           message: `${key} is required when EMAIL_PROVIDER=brevo.`,
+        });
+      }
+    }
+  }
+
+  const hasGoogleOAuth = Boolean(config.GOOGLE_OAUTH_CLIENT_ID?.trim() || config.GOOGLE_OAUTH_CLIENT_SECRET?.trim());
+  if (hasGoogleOAuth) {
+    for (const key of ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'OAUTH_STATE_SECRET'] as const) {
+      if (!config[key]?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} is required when Google OAuth is configured.`,
+        });
+      }
+    }
+  }
+
+  const hasFacebookOAuth = Boolean(config.FACEBOOK_OAUTH_CLIENT_ID?.trim() || config.FACEBOOK_OAUTH_CLIENT_SECRET?.trim());
+  if (hasFacebookOAuth) {
+    for (const key of ['FACEBOOK_OAUTH_CLIENT_ID', 'FACEBOOK_OAUTH_CLIENT_SECRET', 'OAUTH_STATE_SECRET'] as const) {
+      if (!config[key]?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} is required when Facebook OAuth is configured.`,
         });
       }
     }

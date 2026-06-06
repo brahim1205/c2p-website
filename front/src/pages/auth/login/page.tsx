@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
 import { isBasicEmail } from '@/lib/emailValidation';
+import { startSocialAuth } from '@/lib/socialAuth';
 
 const inputClass = 'c2p-input block py-3 pl-10 pr-3 text-sm';
 
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const returnTo = typeof location.state?.from === 'string' ? location.state.from : '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,6 +143,31 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-[#d6dbe1]" />
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748b]">ou</span>
+            <span className="h-px flex-1 bg-[#d6dbe1]" />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => startSocialAuth('google', { returnTo })}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#d6dbe1] bg-white px-4 py-3 text-sm font-semibold text-[#0f1c35] transition-colors hover:bg-[#f7f8fc]"
+            >
+              <i className="ri-google-fill text-lg" />
+              Google
+            </button>
+            <button
+              type="button"
+              onClick={() => startSocialAuth('facebook', { returnTo })}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#d6dbe1] bg-white px-4 py-3 text-sm font-semibold text-[#0f1c35] transition-colors hover:bg-[#f7f8fc]"
+            >
+              <i className="ri-facebook-circle-fill text-lg" />
+              Facebook
+            </button>
+          </div>
 
           <p className="mt-4 text-center text-sm text-[#27346b] sm:mt-6">
             Vous n&apos;avez pas de compte ?{' '}

@@ -254,6 +254,36 @@ export class ConfigService {
     return String(this.configService.get('BREVO_BASE_URL') ?? 'https://api.brevo.com').replace(/\/$/, '');
   }
 
+  get oauthCallbackBaseUrl(): string | undefined {
+    const value = this.configService.get('OAUTH_CALLBACK_BASE_URL');
+    return value ? String(value).replace(/\/$/, '') : undefined;
+  }
+
+  get oauthStateSecret(): string | undefined {
+    const value = this.configService.get('OAUTH_STATE_SECRET');
+    return value ? String(value) : undefined;
+  }
+
+  get googleOAuthClientId(): string | undefined {
+    const value = this.configService.get('GOOGLE_OAUTH_CLIENT_ID');
+    return value ? String(value) : undefined;
+  }
+
+  get googleOAuthClientSecret(): string | undefined {
+    const value = this.configService.get('GOOGLE_OAUTH_CLIENT_SECRET');
+    return value ? String(value) : undefined;
+  }
+
+  get facebookOAuthClientId(): string | undefined {
+    const value = this.configService.get('FACEBOOK_OAUTH_CLIENT_ID');
+    return value ? String(value) : undefined;
+  }
+
+  get facebookOAuthClientSecret(): string | undefined {
+    const value = this.configService.get('FACEBOOK_OAUTH_CLIENT_SECRET');
+    return value ? String(value) : undefined;
+  }
+
   get defaultLiveProvider(): 'jitsi' | 'custom' {
     return (this.configService.get('LIVE_PROVIDER') ?? 'jitsi') as 'jitsi' | 'custom';
   }

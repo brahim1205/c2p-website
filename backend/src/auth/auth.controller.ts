@@ -95,6 +95,28 @@ export class AuthController {
     return this.authService.register(payload, request, response);
   }
 
+  @Get('oauth/:provider/start')
+  startOAuth(
+    @Param('provider') provider: string,
+    @Query('role') role: Role | undefined,
+    @Query('returnTo') returnTo: string | undefined,
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ) {
+    return this.authService.startOAuth(provider, { role, returnTo }, request, response);
+  }
+
+  @Get('oauth/:provider/callback')
+  completeOAuth(
+    @Param('provider') provider: string,
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ) {
+    return this.authService.completeOAuth(provider, { code, state }, request, response);
+  }
+
   @Post('forgot-password')
   forgotPassword(@Body() payload: { email?: string }, @Req() request: AuthenticatedRequest) {
     return this.authService.forgotPassword(payload, request);

@@ -11,16 +11,11 @@ import {
   monetizedRoleContent,
   type PublicSubscriptionPlan,
 } from '@/lib/publicSubscriptions';
-import {
-  emptyRoleProfile,
-  roleProfileFields,
-  splitCommaList,
-  userTypes,
-  type RoleProfileData,
-} from './registerModel';
+import { userTypes } from './registerModel';
 import RegisterAccountTypeStep from './RegisterAccountTypeStep';
 import RegisterDetailsStep, { type RegisterFormData } from './RegisterDetailsStep';
 import RegisterStepIndicator from './RegisterStepIndicator';
+import { getProfileOnboardingPath, requiresProfileOnboarding } from '@/lib/profileCompletion';
 
 export default function RegisterPage() {
   const { success, error } = useToast();
@@ -44,11 +39,9 @@ export default function RegisterPage() {
     confirmPassword: '',
     acceptTerms: false,
   });
-  const [roleProfile, setRoleProfile] = useState<RoleProfileData>(emptyRoleProfile);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const selectedUserType = userTypes.find((type) => type.id === userType);
-  const selectedRoleFields = userType ? roleProfileFields[userType] : null;
 
   useEffect(() => {
     let isMounted = true;
@@ -84,6 +77,16 @@ export default function RegisterPage() {
     };
   }, [requestedPlanId, subscriptionPlans, userType]);
 
+  const postProfileTarget = useMemo(() => {
+    if (!userType) return '/dashboard';
+    const dashboardTarget = getDashboardPathForRole(userType);
+    const shouldRedirectToPlanActivation = isMonetizedRole(userType) && requestedPlanId && selectedRolePlanSummary?.selectedPlan?.id === requestedPlanId;
+    if (!isMonetizedRole(userType)) return dashboardTarget;
+    return shouldRedirectToPlanActivation
+      ? `/auth/onboarding/abonnement?next=${encodeURIComponent(dashboardTarget)}&plan=${encodeURIComponent(requestedPlanId)}&planName=${encodeURIComponent(selectedRolePlanSummary?.selectedPlan?.name ?? requestedPlanName ?? '')}&planRole=${encodeURIComponent(userType)}`
+      : `/auth/onboarding/clauses?next=${encodeURIComponent(dashboardTarget)}`;
+  }, [requestedPlanId, requestedPlanName, selectedRolePlanSummary?.selectedPlan?.id, selectedRolePlanSummary?.selectedPlan?.name, userType]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -112,27 +115,6 @@ export default function RegisterPage() {
       return;
     }
 
-    const missingRoleField = selectedRoleFields?.fields.find((field) => field.required && !roleProfile[field.key].trim());
-    if (missingRoleField) {
-      error('Information requise', `Veuillez renseigner : ${missingRoleField.label}.`);
-      return;
-    }
-
-    const activeRoleFieldKeys = new Set(selectedRoleFields?.fields.map((field) => field.key) ?? []);
-    const roleSkills = activeRoleFieldKeys.has('skills') ? splitCommaList(roleProfile.skills) : undefined;
-    const skills = userType === 'partenaire' && roleProfile.partnerType
-      ? [`Partenaire ${roleProfile.partnerType === 'financier' ? 'financier' : 'technique'}`, ...(roleSkills ?? [])]
-      : roleSkills;
-    const profilePayload = {
-      bio: activeRoleFieldKeys.has('bio') ? roleProfile.bio.trim() || undefined : undefined,
-      location: activeRoleFieldKeys.has('location') ? roleProfile.location.trim() || undefined : undefined,
-      publicTitle: activeRoleFieldKeys.has('publicTitle') ? roleProfile.publicTitle.trim() || undefined : undefined,
-      website: activeRoleFieldKeys.has('website') ? roleProfile.website.trim() || undefined : undefined,
-      preferredLanguage: activeRoleFieldKeys.has('preferredLanguage') ? roleProfile.preferredLanguage.trim() || undefined : undefined,
-      skills,
-      publicProfileEnabled: userType === 'prestataire' || userType === 'formateur' || userType === 'porteur' || userType === 'partenaire',
-    };
-
     const result = await register({
       firstName: formData.firstName,
       lastName: formData.lastName,
@@ -140,7 +122,6 @@ export default function RegisterPage() {
       phone: formData.phone,
       password: formData.password,
       role: userType,
-      ...profilePayload,
     });
 
     if (!result.success) {
@@ -150,12 +131,7 @@ export default function RegisterPage() {
 
     success('Compte cree', 'Votre compte a ete cree avec succes. Redirection...');
 
-    const dashboardTarget = getDashboardPathForRole(userType);
-    const shouldRedirectToPlanActivation = isMonetizedRole(userType) && requestedPlanId && selectedRolePlanSummary?.selectedPlan?.id === requestedPlanId;
-    const subscriptionTarget = shouldRedirectToPlanActivation
-      ? `/auth/onboarding/abonnement?next=${encodeURIComponent(dashboardTarget)}&plan=${encodeURIComponent(requestedPlanId)}&planName=${encodeURIComponent(selectedRolePlanSummary?.selectedPlan?.name ?? requestedPlanName ?? '')}&planRole=${encodeURIComponent(userType)}`
-      : `/auth/onboarding/clauses?next=${encodeURIComponent(dashboardTarget)}`;
-    const target = isMonetizedRole(userType) ? subscriptionTarget : dashboardTarget;
+    const target = requiresProfileOnboarding(userType) ? getProfileOnboardingPath(postProfileTarget) : postProfileTarget;
     setTimeout(() => navigate(target), 1200);
   };
 
@@ -199,15 +175,13 @@ export default function RegisterPage() {
           <RegisterDetailsStep
             formData={formData}
             isLoading={isLoading}
-            roleProfile={roleProfile}
-            selectedRoleFields={selectedRoleFields}
             selectedUserTypeTitle={selectedUserType?.title}
+            selectedUserTypeId={userType}
+            socialReturnTo={postProfileTarget}
             showConfirmPassword={showConfirmPassword}
             showPassword={showPassword}
-            userType={userType}
             onBack={() => setStep(1)}
             onFormDataChange={setFormData}
-            onRoleProfileChange={setRoleProfile}
             onSubmit={handleSubmit}
             onToggleConfirmPassword={() => setShowConfirmPassword(!showConfirmPassword)}
             onTogglePassword={() => setShowPassword(!showPassword)}

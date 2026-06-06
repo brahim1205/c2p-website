@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { isUserRole, ROLE_DASHBOARD_PATHS, type UserRole } from '@/lib/roles';
+import { getProfileOnboardingPath, isProfileOnboardingComplete } from '@/lib/profileCompletion';
 
 interface RequireAuthProps {
   children: React.ReactNode;
@@ -21,12 +22,23 @@ export default function RequireAuth({ children, allowedRoles, redirectTo, redire
     // Redirect authenticated users away from auth pages (login, register, 2fa)
     if (redirectAuthenticated && isAuthenticated && user) {
       const userDashboard = isUserRole(user.role) ? ROLE_DASHBOARD_PATHS[user.role] : '/dashboard';
-      navigate(userDashboard, { replace: true });
+      navigate(isProfileOnboardingComplete(user) ? userDashboard : getProfileOnboardingPath(userDashboard), { replace: true });
       return;
     }
 
     if (!isAuthenticated && !redirectAuthenticated) {
       navigate('/auth/login', { state: { from: location.pathname } });
+      return;
+    }
+
+    if (
+      isAuthenticated
+      && user
+      && !redirectAuthenticated
+      && location.pathname !== '/auth/onboarding/profil'
+      && !isProfileOnboardingComplete(user)
+    ) {
+      navigate(getProfileOnboardingPath(location.pathname), { replace: true });
       return;
     }
 

@@ -1,9 +1,6 @@
 import { Link } from 'react-router-dom';
-import {
-  inputClass,
-  type RoleProfileData,
-} from './registerModel';
-import { RoleProfileFields } from './RoleProfileFields';
+import { inputClass, type RoleProfileData } from './registerModel';
+import { startSocialAuth } from '@/lib/socialAuth';
 
 export interface RegisterFormData {
   firstName: string;
@@ -32,15 +29,13 @@ export type RoleFieldConfig = {
 interface RegisterDetailsStepProps {
   formData: RegisterFormData;
   isLoading: boolean;
-  roleProfile: RoleProfileData;
-  selectedRoleFields: RoleFieldConfig | null;
   selectedUserTypeTitle?: string;
+  selectedUserTypeId: string | null;
+  socialReturnTo: string;
   showConfirmPassword: boolean;
   showPassword: boolean;
-  userType: string | null;
   onBack: () => void;
   onFormDataChange: (formData: RegisterFormData) => void;
-  onRoleProfileChange: (roleProfile: RoleProfileData) => void;
   onSubmit: (event: React.FormEvent) => void;
   onToggleConfirmPassword: () => void;
   onTogglePassword: () => void;
@@ -49,15 +44,13 @@ interface RegisterDetailsStepProps {
 export default function RegisterDetailsStep({
   formData,
   isLoading,
-  roleProfile,
-  selectedRoleFields,
   selectedUserTypeTitle,
+  selectedUserTypeId,
+  socialReturnTo,
   showConfirmPassword,
   showPassword,
-  userType,
   onBack,
   onFormDataChange,
-  onRoleProfileChange,
   onSubmit,
   onToggleConfirmPassword,
   onTogglePassword,
@@ -72,6 +65,27 @@ export default function RegisterDetailsStep({
         <span className="w-fit rounded-full border border-[#d5b46f]/30 bg-[#d5b46f]/10 px-3 py-1 text-xs font-semibold text-[#d5b46f]">
           {selectedUserTypeTitle}
         </span>
+      </div>
+
+      <div className="mb-6 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => startSocialAuth('google', { role: selectedUserTypeId, returnTo: socialReturnTo })}
+          disabled={isLoading}
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-4 py-3 text-sm font-semibold text-[#172033] transition-colors hover:bg-[#fbf7f1] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <i className="ri-google-fill text-lg" />
+          Continuer avec Google
+        </button>
+        <button
+          type="button"
+          onClick={() => startSocialAuth('facebook', { role: selectedUserTypeId, returnTo: socialReturnTo })}
+          disabled={isLoading}
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-4 py-3 text-sm font-semibold text-[#172033] transition-colors hover:bg-[#fbf7f1] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <i className="ri-facebook-circle-fill text-lg" />
+          Continuer avec Facebook
+        </button>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-5">
@@ -115,16 +129,9 @@ export default function RegisterDetailsStep({
           />
         </div>
 
-        {selectedRoleFields && selectedRoleFields.fields.length > 0 ? (
-          <RoleProfileFields
-            roleProfile={roleProfile}
-            selectedRoleFields={selectedRoleFields}
-            selectedUserTypeTitle={selectedUserTypeTitle}
-            userType={userType}
-            isLoading={isLoading}
-            onRoleProfileChange={onRoleProfileChange}
-          />
-        ) : null}
+        <div className="rounded-[22px] border border-[#eadfce] bg-[#fbf7f1] px-4 py-4 text-sm leading-6 text-[#5b6778]">
+          Après la création du compte, C2P vous demandera uniquement les informations métier utiles à votre rôle avant d’ouvrir votre espace.
+        </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <PasswordInput
