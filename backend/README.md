@@ -77,6 +77,7 @@ Variables importantes :
 - `npm run prisma:migrate`
 - `npm run prisma:sync:platform`
 - `npm run test:premium:grant`
+- `npm run test:nonpremium:grant`
 
 ## Développement local
 
@@ -92,7 +93,20 @@ Notes locales :
 - `PRISMA_CONNECTION_REQUIRED=true` force l'application a echouer au demarrage si PostgreSQL est indisponible, au lieu de demarrer en mode degrade.
 - Les scripts `security:test`, `data:access:test`, `messaging:flow:test`, `notifications:flow:test` et `provider:visibility:test` attendent une API HTTP deja lancee, par defaut sur `http://localhost:3003/api`.
 - `db:reset:local` est volontairement destructif et refuse de tourner hors `localhost` ou sans `C2P_CONFIRM_LOCAL_DB_RESET=reset`.
-- `test:premium:grant` active des abonnements premium sur les comptes de test `formateur@c2p.sn`, `prestataire@c2p.sn` et `porteur@c2p.sn` avec le mot de passe `password123`. Dans le conteneur production, utiliser `node scripts/grant-test-premium-subscriptions.mjs` car `npm` est retire de l'image runtime.
+- `test:premium:grant` active des abonnements premium sur les comptes de test `formateur@c2p.sn`, `prestataire@c2p.sn` et `porteur@c2p.sn`.
+- `test:nonpremium:grant` cree des comptes actifs sans abonnement: `formateur.nonpremium@c2p.sn`, `prestataire.nonpremium@c2p.sn` et `porteur.nonpremium@c2p.sn`.
+- Tous ces comptes de test utilisent le mot de passe `password123`. Dans le conteneur production, utiliser `node scripts/<nom-du-script>.mjs` car `npm` est retire de l'image runtime.
+
+Comptes de test monetisation:
+
+| Type | Email | Role | Etat |
+| --- | --- | --- | --- |
+| Premium | `formateur@c2p.sn` | formateur | Formateur Premium actif |
+| Premium | `prestataire@c2p.sn` | prestataire | Prestataire Premium actif |
+| Premium | `porteur@c2p.sn` | porteur | Porteur Growth actif |
+| Non premium | `formateur.nonpremium@c2p.sn` | formateur | aucun abonnement |
+| Non premium | `prestataire.nonpremium@c2p.sn` | prestataire | aucun abonnement |
+| Non premium | `porteur.nonpremium@c2p.sn` | porteur | aucun abonnement |
 
 ## Transition Prisma
 

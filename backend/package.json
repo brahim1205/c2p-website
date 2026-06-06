@@ -38,6 +38,7 @@
     "finance:ledger:check": "node scripts/finance-ledger-check.mjs",
     "prod:destructive:qa": "node scripts/prod-destructive-qa-check.mjs",
     "test:premium:grant": "node scripts/grant-test-premium-subscriptions.mjs",
+    "test:nonpremium:grant": "node scripts/grant-test-non-premium-accounts.mjs",
     "seed:data:audit": "node scripts/seed-data-audit.mjs",
     "ci:governance:check": "node ../ops/scripts/ci-governance-check.mjs",
     "production:runtime:check": "node ../ops/scripts/production-runtime-check.mjs",
