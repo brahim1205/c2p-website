@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 interface AlloPrestaHeroProps {
   providersCount: number;
   searchQuery: string;
@@ -36,7 +38,7 @@ export function AlloPrestaHero({
           </div>
 
           <div className="c2p-panel mt-10 max-w-4xl p-3">
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-col gap-3 lg:flex-row">
               <div className="flex min-h-14 flex-1 items-center gap-3 rounded-2xl bg-white/82 px-4">
                 <div className="flex h-6 w-6 items-center justify-center">
                   <i className="ri-search-line text-xl text-[#27346b]" />
@@ -54,10 +56,18 @@ export function AlloPrestaHero({
                 type="button"
                 onClick={onScrollToResults}
                 aria-label="Afficher les prestataires correspondant à la recherche"
-                className="c2p-btn-accent min-h-14 cursor-pointer whitespace-nowrap rounded-2xl px-10 py-4"
+                className="c2p-btn-accent inline-flex min-h-14 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-8 py-4 text-center"
               >
-                Rechercher
+                <i className="ri-search-line text-lg" />
+                Chercher prestataire
               </button>
+              <Link
+                to="/auth/register?role=prestataire"
+                className="c2p-btn-secondary inline-flex min-h-14 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-8 py-4 text-center"
+              >
+                <i className="ri-briefcase-line text-lg" />
+                Devenir prestataire
+              </Link>
             </div>
           </div>
 
