@@ -52,7 +52,7 @@ export default function HomePage() {
               Centre C2P | Services, Formation, Incubation
             </p>
             <h1 className="max-w-4xl animate-fade-in-up text-4xl font-semibold leading-[1.02] text-[#06053a] sm:text-5xl lg:text-6xl">
-              Votre Succès Professionnel Commence Ici
+              Osez rêver et devenez autonome.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-[#27346b] sm:text-lg">
               C2P connecte prestataires, apprenants, entrepreneurs et partenaires dans un écosystème numérique unique — services, formation et incubation de projets, tout en un.
