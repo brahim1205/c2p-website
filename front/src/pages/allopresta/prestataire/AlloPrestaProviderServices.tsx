@@ -16,14 +16,17 @@ export default function AlloPrestaProviderServices({
       <div className="mb-5 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h3 className="text-[#0f1c35] text-xl font-bold sm:text-2xl">Services proposés</h3>
-          <p className="mt-1 text-sm text-[#64748b]">Choisissez un besoin, C2P s’occupe du cadrage et de l’affectation.</p>
+          <p className="mt-1 text-sm text-[#64748b]">Touchez un service pour préremplir la demande. C2P s’occupe du cadrage et de l’affectation.</p>
         </div>
       </div>
       <div className="grid gap-3">
         {visibleServiceOptions.map((service, index) => (
-          <div
+          <button
+            type="button"
             key={index}
-            className="grid gap-4 rounded-xl border border-[#d6dbe1] p-4 transition-all hover:border-[#1a9a96]/45 hover:bg-[#fbfefe] sm:grid-cols-[1fr_auto] sm:items-center"
+            onClick={() => onSelectService(service)}
+            aria-label={`Préremplir la demande avec le service ${service}`}
+            className="grid w-full gap-4 rounded-xl border border-[#d6dbe1] p-4 text-left transition-all hover:border-[#1a9a96]/45 hover:bg-[#fbfefe] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1a9a96] focus-visible:ring-offset-2 sm:grid-cols-[1fr_auto] sm:items-center"
           >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
@@ -39,24 +42,19 @@ export default function AlloPrestaProviderServices({
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:items-end">
+            <div className="flex flex-col gap-2 sm:items-end">
               <div className="text-left sm:text-right">
                 <div className="text-lg font-bold text-[#0f1c35]">
                   {prestataire.price_per_hour.toLocaleString('fr-FR')} FCFA
                 </div>
                 <div className="text-xs text-gray-500">par heure</div>
               </div>
-              <button
-                type="button"
-                onClick={() => onSelectService(service)}
-                aria-label={`Demander à C2P de cadrer le besoin ${service}`}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1a9a96] px-4 py-2.5 text-sm font-semibold leading-tight text-white transition-all hover:bg-[#147f7b] cursor-pointer sm:w-auto"
-              >
-                <i className="ri-send-plane-line text-base"></i>
-                Demander
-              </button>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#147f7b]">
+                Préremplir la demande
+                <i className="ri-arrow-right-line text-sm"></i>
+              </span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>

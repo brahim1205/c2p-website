@@ -1,19 +1,11 @@
-import { Link } from 'react-router-dom';
 import {
   getProviderTierLabel,
   getProviderTierMessage,
 } from '@/lib/providerApi';
 import type { ProviderDetailRecord } from './providerDetailTypes';
 
-interface LockedProfileAction {
-  to: string;
-  label: string;
-}
-
 interface AlloPrestaProviderProfileCardProps {
   displayName: string;
-  isAuthenticated: boolean;
-  lockedProfileAction: LockedProfileAction;
   prestataire: ProviderDetailRecord;
   profileUnlocked: boolean;
   reviewsCount: number;
@@ -22,8 +14,6 @@ interface AlloPrestaProviderProfileCardProps {
 
 export default function AlloPrestaProviderProfileCard({
   displayName,
-  isAuthenticated,
-  lockedProfileAction,
   prestataire,
   profileUnlocked,
   reviewsCount,
@@ -82,18 +72,25 @@ export default function AlloPrestaProviderProfileCard({
               type="button"
               onClick={onOpenReservationFlow}
               aria-label={`Contacter ${displayName} via C2P`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a9a96] px-5 py-3 text-sm font-semibold leading-tight text-white shadow-[0_14px_34px_rgba(26,154,150,0.20)] transition-all hover:bg-[#147f7b] cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a9a96] px-5 py-3 text-sm font-semibold leading-tight text-white shadow-[0_14px_34px_rgba(26,154,150,0.20)] transition-all hover:bg-[#147f7b] cursor-pointer sm:w-fit"
             >
-              <i className="ri-file-list-3-line text-base"></i>
-              {profileUnlocked ? 'Demander une intervention' : 'Déposer une demande'}
+              <i className="ri-shield-check-line text-base"></i>
+              Faire une demande via C2P
             </button>
-            <Link
-              to={isAuthenticated ? '/dashboard/messages?support=1' : '/contact'}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d6dbe1] px-4 py-3 text-sm font-semibold text-[#0f1c35] transition-colors hover:border-[#1a9a96] hover:text-[#1a9a96]"
-            >
-              <i className="ri-customer-service-2-line text-base"></i>
-              Support C2P
-            </Link>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[#64748b]">
+              <span className="inline-flex items-center gap-1.5">
+                <i className="ri-time-line text-[#1a9a96]"></i>
+                Réponse C2P
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <i className="ri-user-search-line text-[#1a9a96]"></i>
+                Besoin qualifié
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <i className="ri-file-shield-2-line text-[#1a9a96]"></i>
+                Mise en relation cadrée
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -109,19 +106,8 @@ export default function AlloPrestaProviderProfileCard({
               <p className="mt-1 text-[#64748b]">{getProviderTierMessage(prestataire.public_profile_level)}</p>
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:min-w-[220px]">
-            <Link
-              to={lockedProfileAction.to}
-              className="inline-flex items-center justify-center rounded-xl bg-[#27346b] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#06053a]"
-            >
-              {lockedProfileAction.label}
-            </Link>
-            <Link
-              to="/tarifs#prestataire-plans"
-              className="inline-flex items-center justify-center rounded-xl border border-[#bfdbfe] bg-white px-4 py-2.5 text-sm font-semibold text-[#27346b] transition-colors hover:border-[#27346b]"
-            >
-              Offres AlloPresta
-            </Link>
+          <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-[#31445f] shadow-sm sm:max-w-[260px]">
+            C2P protège la mise en relation : la demande est d’abord qualifiée, puis orientée vers le bon intervenant selon le niveau d’accès.
           </div>
         </div>
       ) : null}

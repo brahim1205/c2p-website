@@ -44,8 +44,9 @@ export default function AlloPrestaProviderReviews({
           Avis Clients ({reviews.length})
         </h3>
         {profileUnlocked ? (
-          <button type="button" onClick={onStartReview} className="px-4 py-2 bg-[#1a9a96] text-white rounded-lg text-sm font-medium hover:bg-[#147f7b] transition-colors whitespace-nowrap cursor-pointer">
-            <i className="ri-star-line mr-1"></i>Donner mon avis
+          <button type="button" onClick={onStartReview} className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#147f7b] transition-colors hover:text-[#0f6f6b] cursor-pointer">
+            <i className="ri-star-line"></i>
+            Ajouter un retour client
           </button>
         ) : null}
       </div>

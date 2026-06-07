@@ -171,12 +171,6 @@ export default function PrestataireDetailPage() {
   const profileUnlocked = prestataire ? canAccessProviderProfile(viewerTier, prestataire.public_profile_level) : false;
   const displayName = prestataire ? getProviderDisplayName(prestataire, viewerTier) : 'Prestataire C2P';
   const visibleServiceOptions = profileUnlocked ? serviceOptions : serviceOptions.slice(0, 2);
-  const lockedProfileAction = !user
-    ? { to: '/auth/login', label: 'Me connecter à C2P' }
-    : viewerTier === 'subscriber' && prestataire?.public_profile_level === 'verified'
-      ? { to: '/dashboard/messages?support=1', label: 'Demander la vérification' }
-      : { to: '/tarifs#allopresta-visibility', label: 'Voir les niveaux AlloPresta' };
-
   if (loading) {
     return <ProviderLoadingState />;
   }
@@ -201,8 +195,6 @@ export default function PrestataireDetailPage() {
               <div className="lg:col-span-2 space-y-6">
                 <AlloPrestaProviderProfileCard
                   displayName={displayName}
-                  isAuthenticated={Boolean(user)}
-                  lockedProfileAction={lockedProfileAction}
                   prestataire={prestataire}
                   profileUnlocked={profileUnlocked}
                   reviewsCount={reviews.length}
