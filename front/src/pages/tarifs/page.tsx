@@ -58,7 +58,7 @@ export default function PricingPage() {
     title: 'Tarifs C2P | Abonnements prestataires, formateurs et partenaires',
     description: 'Comparez les plans C2P pour publier vos services, vendre vos formations, accompagner des projets ou rejoindre le réseau partenaire.',
     path: '/tarifs',
-    image: 'https://c2p.sn/images/home/precision.jpg',
+    image: 'https://c2p.sn/images/brand/images11.jpeg',
   });
 
   const { user, isAuthenticated } = useAuth();
@@ -97,7 +97,7 @@ export default function PricingPage() {
     <div className="public-premium-page bg-c2p-bg text-c2p-text">
       <section className="relative overflow-hidden bg-[#ffffff] px-5 pb-14 pt-28 sm:px-8 lg:px-10 lg:pb-18 lg:pt-32">
         <img
-          src="/images/home/precision.jpg"
+          src="/images/brand/images11.jpeg"
           alt="Plans d'abonnement C2P"
           className="absolute inset-0 h-full w-full object-cover opacity-[0.36]"
         />

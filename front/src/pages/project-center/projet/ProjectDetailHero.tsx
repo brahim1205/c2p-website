@@ -15,7 +15,7 @@ export default function ProjectDetailHero({ documents, fundingPercent, partnersh
   return (
     <section className="relative overflow-hidden border-b border-[#80bfdf] bg-[#ffffff]">
       <div className="absolute inset-0">
-        <img src={project.image || '/images/home/venture.jpg'} alt={project.title} className="h-full w-full object-cover object-center opacity-22" />
+        <img src={project.image || '/images/brand/image8.jpeg'} alt={project.title} className="h-full w-full object-cover object-center opacity-22" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.95)_0%,rgba(255,255,255,0.82)_50%,rgba(255,255,255,0.56)_100%)]"></div>
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white to-transparent"></div>

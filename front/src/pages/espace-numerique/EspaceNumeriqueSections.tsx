@@ -46,7 +46,7 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
     <section className="relative min-h-[540px] w-full overflow-hidden bg-[#ffffff]">
       <div className="absolute inset-0">
         <img
-          src="/images/home/academy.jpg"
+          src="/images/brand/image3.jpeg"
           alt="Espace Numérique"
           className="h-full w-full object-cover object-center opacity-[0.36]"
         />

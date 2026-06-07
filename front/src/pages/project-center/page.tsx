@@ -14,7 +14,7 @@ export default function ProjectCenterPage() {
     title: 'ProjectCenter C2P | Incubation et accompagnement de projets',
     description: "De l'idée au lancement, C2P accompagne les porteurs de projet avec des experts, des outils et un réseau de partenaires.",
     path: '/project-center',
-    image: 'https://c2p.sn/images/home/venture.jpg',
+    image: 'https://c2p.sn/images/brand/image8.jpeg',
   });
 
   const [selectedCategory, setSelectedCategory] = useState('all');

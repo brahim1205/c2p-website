@@ -71,7 +71,7 @@ export default function AboutPage() {
     title: 'À propos de C2P | Écosystème professionnel au Sénégal',
     description: 'C2P réunit services qualifiés, formation continue et incubation pour accompagner les talents et entrepreneurs.',
     path: '/a-propos',
-    image: 'https://c2p.sn/images/home/global.jpg',
+    image: 'https://c2p.sn/images/brand/images12.jpeg',
   });
 
   return (
@@ -79,7 +79,7 @@ export default function AboutPage() {
       <section className="relative min-h-[680px] overflow-hidden bg-[#ffffff]">
         <div className="absolute inset-0">
           <img
-            src="/images/home/global.jpg"
+            src="/images/brand/images12.jpeg"
             alt="C2P ecosysteme professionnel"
             className="h-full w-full object-cover object-center opacity-[0.36]"
           />
@@ -120,7 +120,7 @@ export default function AboutPage() {
       <section className="px-4 py-20 sm:px-6 lg:px-20 lg:py-28">
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative overflow-hidden rounded-[30px] border border-[#d6dbe1]">
-            <img src="/images/home/trust.jpg" alt="Mission C2P" className="h-[520px] w-full object-cover object-center" />
+            <img src="/images/brand/image7.jpeg" alt="Mission C2P" className="h-[520px] w-full object-cover object-center" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f1c35]/42 to-transparent"></div>
             <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-[#d6dbe1] bg-white/86 p-5 backdrop-blur-sm">
               <div className="text-3xl font-semibold text-[#0f1c35]">98%</div>

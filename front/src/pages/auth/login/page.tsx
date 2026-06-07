@@ -52,7 +52,7 @@ export default function LoginPage() {
   return (
     <main className="relative min-h-dvh overflow-x-hidden bg-c2p-bg px-3 py-5 pt-20 text-c2p-text sm:px-6 sm:py-6 sm:pt-24 lg:h-dvh lg:overflow-hidden lg:px-8">
       <div className="absolute inset-0">
-        <img src="/images/home/hero.jpg" alt="" className="h-full w-full object-cover object-center opacity-16" />
+        <img src="/images/brand/image44" alt="" className="h-full w-full object-cover object-center opacity-16" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.96)_0%,rgba(247,248,252,0.90)_48%,rgba(247,248,252,0.78)_100%)]"></div>
 

@@ -4,15 +4,15 @@ import { AnimatedCounter, FloatingElement } from './HeroAnimatedElements';
 
 const slides = [
   {
-    image: '/images/home/hero.jpg',
+    image: '/images/brand/image44',
     tagline: 'Votre carrière, notre mission'
   },
   {
-    image: '/images/home/global.jpg',
+    image: '/images/brand/images12.jpeg',
     tagline: 'Formations de qualité, résultats concrets'
   },
   {
-    image: '/images/home/venture.jpg',
+    image: '/images/brand/image8.jpeg',
     tagline: "De l'idée à l'entreprise"
   }
 ];

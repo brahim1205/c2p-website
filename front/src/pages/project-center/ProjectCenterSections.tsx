@@ -36,7 +36,7 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
     <section className="relative min-h-[540px] w-full overflow-hidden bg-[#ffffff]">
       <div className="absolute inset-0">
         <img
-          src="/images/home/venture.jpg"
+          src="/images/brand/image8.jpeg"
           alt="ProjectCenter"
           className="h-full w-full object-cover object-center opacity-[0.36]"
         />

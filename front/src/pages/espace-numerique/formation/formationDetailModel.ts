@@ -118,12 +118,12 @@ export function getTypeIcon(type: string | null | undefined) {
 export function getCourseImage(course: Course) {
   if (course.thumbnail) return course.thumbnail;
   const catImages: Record<string, string> = {
-    informatique: '/images/home/precision.jpg',
-    langues: '/images/home/global.jpg',
-    entrepreneuriat: '/images/home/venture.jpg',
-    commerce: '/images/home/service.jpg',
-    communication: '/images/home/academy.jpg',
-    gestion: '/images/home/trust.jpg',
+    informatique: '/images/brand/images11.jpeg',
+    langues: '/images/brand/images12.jpeg',
+    entrepreneuriat: '/images/brand/image8.jpeg',
+    commerce: '/images/brand/image2.jpeg',
+    communication: '/images/brand/image3.jpeg',
+    gestion: '/images/brand/image7.jpeg',
   };
   return catImages[(course.category || '').toLowerCase()] || catImages.informatique;
 }

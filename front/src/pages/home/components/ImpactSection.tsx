@@ -73,7 +73,7 @@ export default function ImpactSection() {
           <div className="w-full lg:w-[40%] relative group">
             <div className="absolute -inset-4 bg-[#5fa6f3]/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <img
-              src="/images/home/global.jpg"
+              src="/images/brand/images12.jpeg"
               alt="Espace C2P"
               className="w-full aspect-square object-cover rounded-2xl relative z-10 group-hover:scale-[1.02] transition-transform duration-500"
             />

@@ -20,7 +20,7 @@ export default function AlloPrestPage() {
     title: 'AlloPresta C2P | Trouver un prestataire professionnel',
     description: "La marketplace de services professionnels C2P pour trouver le bon prestataire ou proposer vos services en Afrique de l'Ouest.",
     path: '/allopresta',
-    image: 'https://c2p.sn/images/home/service.jpg',
+    image: 'https://c2p.sn/images/brand/image2.jpeg',
   });
 
   const { user } = useAuth();

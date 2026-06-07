@@ -11,7 +11,7 @@ export default function Mission() {
           <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}>
             <div className="relative">
               <img
-                src="/images/home/global.jpg"
+                src="/images/brand/images12.jpeg"
                 alt="L'équipe C2P au travail"
                 className="w-full h-[450px] md:h-[550px] object-cover object-top rounded-2xl"
               />

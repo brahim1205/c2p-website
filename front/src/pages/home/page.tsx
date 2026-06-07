@@ -2,28 +2,28 @@ import { Link } from 'react-router-dom';
 import { usePageMeta } from '@/lib/usePageMeta';
 
 const heroImage =
-  '/images/home/hero.jpg';
+  '/images/brand/image44';
 
 const fleet = [
   {
     eyebrow: 'AlloPresta',
     title: 'Prestations Qualifiées',
     subtitle: 'Publiez un besoin, trouvez un professionnel fiable ou proposez vos services dans un cadre simple et sécurisé.',
-    image: '/images/home/service.jpg',
+    image: '/images/brand/image2.jpeg',
     path: '/allopresta',
   },
   {
     eyebrow: 'Espace Numérique',
     title: 'Formations Certifiantes',
     subtitle: 'Des formations en ligne, en présentiel ou hybrides pour apprendre à votre rythme et obtenir des certifications utiles.',
-    image: '/images/home/academy.jpg',
+    image: '/images/brand/image3.jpeg',
     path: '/espace-numerique',
   },
   {
     eyebrow: 'ProjectCenter',
     title: 'Incubation de projets',
     subtitle: 'Un accompagnement complet pour transformer une idée en projet structuré, finançable et prêt à être lancé.',
-    image: '/images/home/venture.jpg',
+    image: '/images/brand/image8.jpeg',
     path: '/project-center',
   },
 ];

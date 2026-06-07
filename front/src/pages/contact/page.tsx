@@ -57,7 +57,7 @@ export default function ContactPage() {
     title: 'Contact C2P Sénégal | Parler à l’équipe',
     description: "Contactez C2P pour une demande de service, une formation, un projet d'incubation ou un partenariat.",
     path: '/contact',
-    image: 'https://c2p.sn/images/home/support.jpg',
+    image: 'https://c2p.sn/images/brand/images10.jpeg',
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -120,7 +120,7 @@ export default function ContactPage() {
       <section className="relative min-h-[520px] overflow-hidden bg-[#ffffff]">
         <div className="absolute inset-0">
           <img
-            src="/images/home/support.jpg"
+            src="/images/brand/images10.jpeg"
             alt="Contact C2P"
             className="h-full w-full object-cover object-center opacity-[0.36]"
           />

@@ -17,7 +17,7 @@ export function AlloPrestaHero({
     <section className="relative min-h-[520px] w-full overflow-hidden bg-[#ffffff]">
       <div className="absolute inset-0">
         <img
-          src="/images/home/service.jpg"
+          src="/images/brand/image2.jpeg"
           alt="AlloPresta"
           className="h-full w-full object-cover object-center opacity-[0.36]"
         />

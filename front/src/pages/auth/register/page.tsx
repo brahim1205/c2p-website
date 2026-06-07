@@ -143,7 +143,7 @@ export default function RegisterPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-3 py-8 text-c2p-text sm:px-6 sm:py-16 lg:px-8 lg:py-24">
       <div className="absolute inset-0">
-        <img src="/images/home/venture.jpg" alt="" className="h-full w-full object-cover object-center opacity-14" />
+        <img src="/images/brand/image8.jpeg" alt="" className="h-full w-full object-cover object-center opacity-14" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,241,232,0.96)_0%,rgba(246,241,232,0.92)_48%,rgba(246,241,232,0.78)_100%)]"></div>
 

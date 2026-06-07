@@ -105,7 +105,7 @@ export default function ServicesSection() {
           >
             <div className="relative overflow-hidden min-h-[440px] lg:min-h-[480px]">
               <img
-                src="/images/home/academy.jpg"
+                src="/images/brand/image3.jpeg"
                 alt="Formation professionnelle"
                 className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700"
               />
@@ -141,7 +141,7 @@ export default function ServicesSection() {
           >
             <div className="relative overflow-hidden min-h-[440px] lg:min-h-[480px]">
               <img
-                src="/images/home/venture.jpg"
+                src="/images/brand/image8.jpeg"
                 alt="Incubation de projets"
                 className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700"
               />

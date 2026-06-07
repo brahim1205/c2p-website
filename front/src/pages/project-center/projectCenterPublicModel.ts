@@ -59,12 +59,12 @@ export function getProjectImage(project: PublicProject) {
   if (project.image) return project.image;
 
   const categoryImages: Record<string, string> = {
-    tech: '/images/home/precision.jpg',
-    agriculture: '/images/home/venture.jpg',
-    education: '/images/home/academy.jpg',
-    sante: '/images/home/support.jpg',
-    commerce: '/images/home/service.jpg',
-    environnement: '/images/home/global.jpg',
+    tech: '/images/brand/images11.jpeg',
+    agriculture: '/images/brand/image8.jpeg',
+    education: '/images/brand/image3.jpeg',
+    sante: '/images/brand/images10.jpeg',
+    commerce: '/images/brand/image2.jpeg',
+    environnement: '/images/brand/images12.jpeg',
   };
 
   return categoryImages[project.category] || categoryImages.tech;

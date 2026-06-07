@@ -27,7 +27,7 @@ export default function EspaceNumeriquePage() {
     title: 'Espace Numérique C2P | Formation professionnelle continue',
     description: 'Apprenez à votre rythme, obtenez des certifications reconnues et développez vos compétences avec C2P.',
     path: '/espace-numerique',
-    image: 'https://c2p.sn/images/home/academy.jpg',
+    image: 'https://c2p.sn/images/brand/image3.jpeg',
   });
 
   const { user } = useAuth();

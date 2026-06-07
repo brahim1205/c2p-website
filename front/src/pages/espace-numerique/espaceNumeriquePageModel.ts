@@ -60,12 +60,12 @@ export function getCategoryLabel(category: string) {
 export function getCourseImage(course: Course) {
   if (course.thumbnail) return course.thumbnail;
   const categoryImages: Record<string, string> = {
-    informatique: '/images/home/academy.jpg',
-    langues: '/images/home/global.jpg',
-    entrepreneuriat: '/images/home/venture.jpg',
-    commerce: '/images/home/service.jpg',
-    communication: '/images/home/precision.jpg',
-    gestion: '/images/home/trust.jpg',
+    informatique: '/images/brand/image3.jpeg',
+    langues: '/images/brand/images12.jpeg',
+    entrepreneuriat: '/images/brand/image8.jpeg',
+    commerce: '/images/brand/image2.jpeg',
+    communication: '/images/brand/images11.jpeg',
+    gestion: '/images/brand/image7.jpeg',
   };
   return categoryImages[(course.category || '').toLowerCase()] || categoryImages.informatique;
 }

@@ -20,7 +20,7 @@ export default function AlloPrestaProviderCard({
     >
       <div className="relative h-40 w-full overflow-hidden sm:h-64">
         <img
-          src={prestataire.image || '/images/home/trust.jpg'}
+          src={prestataire.image || '/images/brand/image7.jpeg'}
           alt={prestataire.name}
           className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
         />

@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-4 py-24 text-c2p-text sm:px-6 lg:px-8">
       <div className="absolute inset-0">
-        <img src="/images/home/hero.jpg" alt="" className="h-full w-full object-cover object-center opacity-14" />
+        <img src="/images/brand/image44" alt="" className="h-full w-full object-cover object-center opacity-14" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,241,232,0.97)_0%,rgba(246,241,232,0.88)_48%,rgba(246,241,232,0.76)_100%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(213,180,111,0.18),transparent_28%),radial-gradient(circle_at_82%_58%,rgba(255,255,255,0.32),transparent_28%)]"></div>

@@ -15,7 +15,7 @@ export default function AboutHero() {
       {/* Background image with overlay */}
       <div className="absolute inset-0">
         <img
-          src="/images/home/hero.jpg"
+          src="/images/brand/image44"
           alt="C2P - Notre vision"
           className="w-full h-full object-cover object-center opacity-40"
         />

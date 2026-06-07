@@ -34,7 +34,7 @@ export interface Certificate {
 
 export function getCourseImage(course: Enrollment['courses']) {
   if (course?.thumbnail) return course.thumbnail;
-  return '/images/home/academy.jpg';
+  return '/images/brand/image3.jpeg';
 }
 
 export function formatLastAccessed(dateStr: string) {

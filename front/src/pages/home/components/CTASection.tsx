@@ -40,7 +40,7 @@ export default function CTASection() {
         style={{ transform: `translate(${mousePos.x}px, ${mousePos.y}px) scale(1.05)` }}
       >
         <img
-          src="/images/home/hero.jpg"
+          src="/images/brand/image44"
           alt="Rejoignez C2P"
           className="w-full h-full object-cover object-center"
         />
