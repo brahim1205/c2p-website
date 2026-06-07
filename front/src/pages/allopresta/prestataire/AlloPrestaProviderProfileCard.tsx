@@ -77,20 +77,6 @@ export default function AlloPrestaProviderProfileCard({
               <i className="ri-shield-check-line text-base"></i>
               Contacter
             </button>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[#64748b]">
-              <span className="inline-flex items-center gap-1.5">
-                <i className="ri-time-line text-[#1a9a96]"></i>
-                Réponse C2P
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <i className="ri-user-search-line text-[#1a9a96]"></i>
-                Besoin qualifié
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <i className="ri-file-shield-2-line text-[#1a9a96]"></i>
-                Mise en relation cadrée
-              </span>
-            </div>
           </div>
         </div>
       </div>

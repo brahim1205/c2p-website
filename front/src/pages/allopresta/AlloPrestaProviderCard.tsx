@@ -89,14 +89,8 @@ export default function AlloPrestaProviderCard({
           ) : null}
         </div>
 
-        <div className="flex items-end justify-between gap-3 border-t border-[#eceff3] pt-3 sm:pt-4">
-          <div>
-            <div className="text-lg font-semibold text-[#0f1c35] sm:text-xl">
-              {prestataire.price_per_hour.toLocaleString('fr-FR')} FCFA
-            </div>
-            <div className="text-xs text-[#94a3b8]">par heure</div>
-          </div>
-          <div className="text-right text-sm font-medium text-[#1a9a96]">
+        <div className="flex items-center justify-end border-t border-[#eceff3] pt-3 sm:pt-4">
+          <div className="text-sm font-medium text-[#1a9a96]">
             Voir le profil
           </div>
         </div>
