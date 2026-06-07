@@ -51,13 +51,13 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative h-dvh overflow-hidden bg-c2p-bg px-3 pb-3 pt-20 text-c2p-text sm:px-6 sm:pb-6 lg:px-8">
+    <main className="relative min-h-dvh overflow-x-hidden bg-c2p-bg px-3 py-5 pt-20 text-c2p-text sm:px-6 sm:py-6 sm:pt-24 lg:h-dvh lg:overflow-hidden lg:px-8">
       <div className="absolute inset-0">
         <img src="/images/home/hero.jpg" alt="" className="h-full w-full object-cover object-center opacity-16" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.96)_0%,rgba(247,248,252,0.90)_48%,rgba(247,248,252,0.78)_100%)]"></div>
 
-      <div className="relative z-10 mx-auto grid h-full max-w-7xl items-center gap-8 lg:grid-cols-[1fr_460px] lg:gap-10">
+      <div className="relative z-10 mx-auto grid min-h-[calc(100dvh-6.25rem)] max-w-7xl items-center gap-6 lg:h-full lg:min-h-0 lg:grid-cols-[1fr_460px] lg:gap-10">
         <section className="hidden max-w-2xl lg:block">
           <p className="c2p-eyebrow mb-5">Accès sécurisé</p>
           <h1 className="text-5xl font-semibold leading-[0.98] text-[#06053a] xl:text-7xl">
@@ -89,17 +89,22 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="c2p-panel rounded-[22px] p-4 sm:rounded-[30px] sm:p-7 lg:p-8">
+        <section className="c2p-panel max-h-none rounded-[22px] p-4 sm:rounded-[30px] sm:p-7 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:p-8 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
           <div className="mb-4 sm:mb-6">
             <BrandLogo
               to="/"
               className="inline-flex items-center"
               imageClassName="h-9 w-auto object-contain sm:h-12"
             />
-            <h2 className="mt-3 text-2xl font-semibold text-[#06053a] sm:mt-5 sm:text-3xl">Connexion</h2>
-            <p className="mt-2 hidden text-sm leading-6 text-[#27346b] sm:block">
-              Accédez à votre espace C2P selon votre rôle et vos droits. Les tarifs des plans publics restent consultables avant connexion.
-            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-2xl font-semibold text-[#06053a] sm:text-3xl">Connexion</h2>
+              <Link
+                to="/auth/register"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#f9c846] px-4 py-2.5 text-sm font-semibold text-[#06053a] shadow-sm transition-colors hover:bg-[#f7bd20] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#f9c846]"
+              >
+                Créer un compte
+              </Link>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
