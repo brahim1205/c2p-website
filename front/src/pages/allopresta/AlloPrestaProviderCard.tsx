@@ -47,9 +47,9 @@ export default function AlloPrestaProviderCard({
               </span>
             </div>
             <h3 className="mb-1 text-base font-semibold text-[#0f1c35] sm:text-lg">
-              {getProviderDisplayName(prestataire, viewerTier)}
+              {prestataire.title}
             </h3>
-            <p className="text-sm text-[#64748b]">{prestataire.title}</p>
+            <p className="text-sm text-[#64748b]">{getProviderDisplayName(prestataire, viewerTier)}</p>
           </div>
         </div>
 
