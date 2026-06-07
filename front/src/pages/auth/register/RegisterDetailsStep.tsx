@@ -120,10 +120,6 @@ export default function RegisterDetailsStep({
           />
         </div>
 
-        <div className="rounded-[22px] border border-[#eadfce] bg-[#fbf7f1] px-4 py-4 text-sm leading-6 text-[#5b6778]">
-          Après la création du compte, C2P vous demandera uniquement les informations métier utiles à votre rôle avant d’ouvrir votre espace.
-        </div>
-
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <PasswordInput
             id="password"
