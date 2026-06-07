@@ -67,7 +67,7 @@ export default function RegisterDetailsStep({
         </span>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2">
+      <div className="mb-6 grid gap-3">
         <button
           type="button"
           onClick={() => startSocialAuth('google', { role: selectedUserTypeId, returnTo: socialReturnTo })}
@@ -76,15 +76,6 @@ export default function RegisterDetailsStep({
         >
           <i className="ri-google-fill text-lg" />
           Continuer avec Google
-        </button>
-        <button
-          type="button"
-          onClick={() => startSocialAuth('facebook', { role: selectedUserTypeId, returnTo: socialReturnTo })}
-          disabled={isLoading}
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-4 py-3 text-sm font-semibold text-[#172033] transition-colors hover:bg-[#fbf7f1] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <i className="ri-facebook-circle-fill text-lg" />
-          Continuer avec Facebook
         </button>
       </div>
 
