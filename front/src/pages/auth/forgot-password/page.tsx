@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { apiRequest, toApiError } from '@/lib/api';
 import { isBasicEmail } from '@/lib/emailValidation';
@@ -82,12 +81,7 @@ export default function ForgotPasswordPage() {
 
         <section className="c2p-card rounded-[22px] bg-white/92 p-4 shadow-c2p-lg backdrop-blur sm:rounded-[30px] sm:p-8">
           <div className="mb-6 sm:mb-8">
-            <BrandLogo
-              to="/"
-              className="inline-flex items-center"
-              imageClassName="h-12 w-auto object-contain"
-            />
-            <div className="mt-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#d5b46f]/25 bg-[#d5b46f]/10 text-[#d5b46f]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#d5b46f]/25 bg-[#d5b46f]/10 text-[#d5b46f]">
               <i className="ri-lock-password-line text-2xl"></i>
             </div>
             <h2 className="mt-5 text-2xl font-semibold text-[#172033] sm:text-3xl">Mot de passe oublie</h2>

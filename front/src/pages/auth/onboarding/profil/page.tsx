@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import BrandLogo from '@/components/base/BrandLogo';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { apiRequest } from '@/lib/api';
@@ -101,8 +100,7 @@ export default function OnboardingProfilePage() {
     <main className="min-h-screen bg-[#f7f8fc] px-4 py-8 text-[#0f1c35] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 text-center">
-          <BrandLogo to="/" className="inline-flex items-center justify-center" imageClassName="h-12 w-auto object-contain" />
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.28em] text-[#1a9a96]">Bienvenue sur C2P</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#1a9a96]">Bienvenue sur C2P</p>
           <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Complétez votre profil professionnel</h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#64748b]">
             Ces informations sont obligatoires pour ouvrir votre espace {selectedUserTypeTitle?.toLowerCase()} et préparer votre visibilité publique.

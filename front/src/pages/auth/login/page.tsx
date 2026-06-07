@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
@@ -91,14 +90,7 @@ export default function LoginPage() {
 
         <section className="c2p-panel max-h-none rounded-[22px] p-4 sm:rounded-[30px] sm:p-7 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:p-8 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
           <div className="mb-4 sm:mb-6">
-            <BrandLogo
-              to="/"
-              className="inline-flex items-center"
-              imageClassName="h-9 w-auto object-contain sm:h-12"
-            />
-            <div className="mt-3 sm:mt-5">
-              <h2 className="text-2xl font-semibold text-[#06053a] sm:text-3xl">Connexion</h2>
-            </div>
+            <h2 className="text-2xl font-semibold text-[#06053a] sm:text-3xl">Connexion</h2>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">

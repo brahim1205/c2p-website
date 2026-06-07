@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import BrandLogo from '@/components/base/BrandLogo';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { isMonetizedRole, monetizedRoleContent } from '@/lib/publicSubscriptions';
@@ -47,10 +46,6 @@ export default function OnboardingClausesPage() {
   return (
     <main className="min-h-screen bg-[#f7f8fc] px-5 py-10 text-[#0f1c35]">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-8 flex justify-center">
-          <BrandLogo to="/" imageClassName="h-12 w-auto object-contain" />
-        </div>
-
         <section className="rounded-[28px] border border-[#d6dbe1] bg-white p-6 shadow-[0_24px_70px_rgba(15,28,53,0.08)] sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#1a9a96]">Avant l abonnement</p>
           <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">Clauses de confidentialité et d usage</h1>

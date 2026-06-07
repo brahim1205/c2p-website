@@ -1,6 +1,5 @@
 import type { FormEvent, KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
-import BrandLogo from '@/components/base/BrandLogo';
 import { ResetPasswordFields, type ResetFormState } from './ResetPasswordFields';
 
 interface TwoFactorAuthFormProps {
@@ -39,8 +38,6 @@ export function TwoFactorAuthForm({
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-blue-50 to-purple-50 p-6">
       <div className="w-full max-w-md">
-        <BrandLogo to="/" className="mb-8 flex items-center justify-center" imageClassName="h-14 w-auto object-contain" />
-
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl">
           <TwoFactorHeader resetEmail={resetEmail} resetMode={resetMode} pendingDevCodePreview={pendingDevCodePreview} />
 

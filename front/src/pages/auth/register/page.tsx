@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import BrandLogo from '@/components/base/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
@@ -150,12 +149,7 @@ export default function RegisterPage() {
 
       <div className="relative z-10 mx-auto max-w-6xl">
         <div className="mb-7 text-center sm:mb-10">
-          <BrandLogo
-            to="/"
-            className="inline-flex items-center justify-center"
-            imageClassName="mx-auto h-12 w-auto object-contain"
-          />
-          <h1 className="mt-5 text-3xl font-semibold text-[#172033] sm:text-5xl">Creer votre compte</h1>
+          <h1 className="text-3xl font-semibold text-[#172033] sm:text-5xl">Creer votre compte</h1>
           <p className="mt-3 text-sm leading-7 text-[#5b6778]">Choisissez votre role et accedez a l ecosysteme C2P.</p>
         </div>
 
