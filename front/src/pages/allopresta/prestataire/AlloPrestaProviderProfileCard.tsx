@@ -75,7 +75,7 @@ export default function AlloPrestaProviderProfileCard({
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a9a96] px-5 py-3 text-sm font-semibold leading-tight text-white shadow-[0_14px_34px_rgba(26,154,150,0.20)] transition-all hover:bg-[#147f7b] cursor-pointer sm:w-fit"
             >
               <i className="ri-shield-check-line text-base"></i>
-              Faire une demande via C2P
+              Contacter
             </button>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[#64748b]">
               <span className="inline-flex items-center gap-1.5">
