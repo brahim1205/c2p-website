@@ -96,14 +96,8 @@ export default function LoginPage() {
               className="inline-flex items-center"
               imageClassName="h-9 w-auto object-contain sm:h-12"
             />
-            <div className="mt-3 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-3 sm:mt-5">
               <h2 className="text-2xl font-semibold text-[#06053a] sm:text-3xl">Connexion</h2>
-              <Link
-                to="/auth/register"
-                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#f9c846] px-4 py-2.5 text-sm font-semibold text-[#06053a] shadow-sm transition-colors hover:bg-[#f7bd20] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#f9c846]"
-              >
-                Créer un compte
-              </Link>
             </div>
           </div>
 
