@@ -20,4 +20,3 @@ certbot reconfigure \
   --run-deploy-hooks
 
 systemctl enable --now certbot.timer
-certbot renew --cert-name c2p.sn --dry-run --no-random-sleep-on-renew
