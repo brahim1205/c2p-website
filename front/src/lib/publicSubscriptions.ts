@@ -7,7 +7,7 @@ export interface PublicSubscriptionPlan {
   slug: string;
   price_monthly: number;
   duration_value?: number;
-  duration_unit?: 'jour' | 'mois' | 'an' | 'ponctuel';
+  duration_unit?: 'jour' | 'mois' | 'an' | 'ponctuel' | 'aucun';
   promotional?: boolean;
   description?: string;
   currency: string;
@@ -87,6 +87,7 @@ export function isMonetizedRole(role: string | null | undefined): role is Moneti
 export function getPlanPeriod(plan: Pick<PublicSubscriptionPlan, 'slug' | 'duration_value' | 'duration_unit'>) {
   const unit = plan.duration_unit ?? (plan.slug.includes('premium') ? 'an' : 'mois');
   const value = plan.duration_value ?? 1;
+  if (unit === 'aucun') return { suffix: '', label: '' };
   if (unit === 'ponctuel') return { suffix: '', label: 'Contribution ponctuelle' };
   const suffix = value === 1 ? `/${unit}` : `/${value} ${unit}`;
   return { suffix, label: `Validité : ${value} ${unit}${value > 1 ? 's' : ''}` };

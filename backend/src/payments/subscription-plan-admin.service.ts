@@ -23,7 +23,7 @@ type PlanPayload = {
 };
 
 const ALLOWED_ROLES = new Set(['prestataire', 'formateur', 'partenaire']);
-const ALLOWED_DURATION_UNITS = new Set(['jour', 'mois', 'an', 'ponctuel']);
+const ALLOWED_DURATION_UNITS = new Set(['jour', 'mois', 'an', 'ponctuel', 'aucun']);
 
 const DEFAULT_PARTNER_PLANS: PlanPayload[] = [
   {
@@ -164,8 +164,10 @@ export class SubscriptionPlanAdminService implements OnModuleInit {
     const slug = this.slugify(String(payload.slug ?? fallback.slug ?? name));
     const price = Number(payload.price_monthly ?? fallback.price_monthly ?? 0);
     const commission = Number(payload.commission_rate ?? fallback.commission_rate ?? 0);
-    const durationValue = Number(payload.duration_value ?? fallback.duration_value ?? 1);
     const durationUnit = String(payload.duration_unit ?? fallback.duration_unit ?? 'mois').trim();
+    const durationValue = durationUnit === 'aucun'
+      ? 1
+      : Number(payload.duration_value ?? fallback.duration_value ?? 1);
     if (!ALLOWED_ROLES.has(role)) throw new BadRequestException('Role de plan invalide.');
     if (!name || !slug) throw new BadRequestException('Nom et identifiant du plan requis.');
     if (!Number.isFinite(price) || price < 0) throw new BadRequestException('Prix invalide.');

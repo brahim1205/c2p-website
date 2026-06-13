@@ -194,9 +194,12 @@ async function gotoAndCheck(page, path, label) {
   } catch {
     // Some pages keep long-polling or preloading assets. DOM readiness is enough for smoke.
   }
-  await page.waitForTimeout(250);
-
-  const bodyText = (await page.locator('body').innerText({ timeout: 8000 })).replace(/\s+/g, ' ').trim();
+  let bodyText = '';
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    bodyText = (await page.locator('body').innerText({ timeout: 8000 })).replace(/\s+/g, ' ').trim();
+    if (bodyText.length >= 40) break;
+    await page.waitForTimeout(250);
+  }
   if (bodyText.length < 40) throw new Error(`${label} ${path}: page trop vide`);
   if (/^(404|Page non trouvée|Page non trouvee|Not Found)\b/i.test(bodyText)) {
     throw new Error(`${label} ${path}: page 404 visible`);
@@ -294,7 +297,11 @@ async function runDashboardSmoke(browser, failures) {
 
     const paths = await resolveDashboardPaths(context, suiteName, suite.paths);
     for (const path of paths) {
-      await gotoAndCheck(page, path, suiteName);
+      try {
+        await gotoAndCheck(page, path, suiteName);
+      } catch (error) {
+        failures.push(`[${suiteName}] ${path}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
 
     await context.close();

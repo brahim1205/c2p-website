@@ -66,7 +66,7 @@ export interface SubscriptionPlan {
   slug: string;
   price_monthly: number;
   duration_value?: number;
-  duration_unit?: 'jour' | 'mois' | 'an' | 'ponctuel';
+  duration_unit?: 'jour' | 'mois' | 'an' | 'ponctuel' | 'aucun';
   promotional?: boolean;
   description?: string;
   currency: string;

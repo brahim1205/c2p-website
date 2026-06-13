@@ -25,7 +25,7 @@ export interface SubscriptionGateDecision {
   recommendedPlanName: string | null;
 }
 
-const SUPPORTED_SUBSCRIPTION_ROLES = new Set<UserRole>(['prestataire', 'formateur', 'porteur']);
+const SUPPORTED_SUBSCRIPTION_ROLES = new Set<UserRole>(['prestataire', 'formateur']);
 
 function getRecommendedPlan(plans: SubscriptionPlan[]) {
   if (plans.length === 0) {

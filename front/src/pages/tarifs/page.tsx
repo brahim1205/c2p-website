@@ -250,9 +250,11 @@ export default function PricingPage() {
                                     {formatCurrencyLabel(plan.currency)}{period.suffix}
                                   </span>
                                 </div>
-                                <p className="mt-2 text-sm font-medium text-[#1a9a96]">
-                                  {period.label}{plan.promotional ? ' · Tarif promotionnel' : ''}
-                                </p>
+                                {period.label || plan.promotional ? (
+                                  <p className="mt-2 text-sm font-medium text-[#1a9a96]">
+                                    {[period.label, plan.promotional ? 'Tarif promotionnel' : ''].filter(Boolean).join(' · ')}
+                                  </p>
+                                ) : null}
                                 <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">
                                   {plan.description || content.summary}
                                 </p>

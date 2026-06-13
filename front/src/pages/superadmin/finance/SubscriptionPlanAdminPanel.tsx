@@ -93,7 +93,21 @@ export default function SubscriptionPlanAdminPanel() {
       await load();
     } catch (deactivateError) {
       console.error(deactivateError);
-      error('Erreur', 'Impossible de désactiver le tarif.');
+      error('Erreur', deactivateError instanceof Error ? deactivateError.message : 'Impossible de désactiver le tarif.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reactivate = async (plan: SubscriptionPlan) => {
+    setBusy(true);
+    try {
+      await updateAdminSubscriptionPlan(plan.id, { active: true });
+      success('Tarif réactivé', plan.name);
+      await load();
+    } catch (reactivateError) {
+      console.error(reactivateError);
+      error('Erreur', reactivateError instanceof Error ? reactivateError.message : 'Impossible de réactiver le tarif.');
     } finally {
       setBusy(false);
     }
@@ -118,12 +132,21 @@ export default function SubscriptionPlanAdminPanel() {
         <input value={form.name ?? ''} onChange={(event) => field('name', event.target.value)} placeholder="Nom du plan" className="rounded-xl border border-gray-300 px-3 py-2" />
         <input type="number" min="0" value={form.price_monthly ?? 0} onChange={(event) => field('price_monthly', Number(event.target.value))} placeholder="Prix FCFA" className="rounded-xl border border-gray-300 px-3 py-2" />
         <input type="number" min="0" max="100" value={form.commission_rate ?? 0} onChange={(event) => field('commission_rate', Number(event.target.value))} placeholder="Commission %" className="rounded-xl border border-gray-300 px-3 py-2" />
-        <input type="number" min="1" value={form.duration_value ?? 1} onChange={(event) => field('duration_value', Number(event.target.value))} className="rounded-xl border border-gray-300 px-3 py-2" />
+        <input
+          type="number"
+          min="1"
+          disabled={form.duration_unit === 'aucun'}
+          value={form.duration_value ?? 1}
+          onChange={(event) => field('duration_value', Number(event.target.value))}
+          aria-label="Durée du tarif"
+          className="rounded-xl border border-gray-300 px-3 py-2 disabled:bg-gray-100 disabled:text-gray-400"
+        />
         <select value={form.duration_unit ?? 'mois'} onChange={(event) => field('duration_unit', event.target.value)} className="rounded-xl border border-gray-300 px-3 py-2">
           <option value="jour">Jour</option>
           <option value="mois">Mois</option>
           <option value="an">An</option>
           <option value="ponctuel">Ponctuel</option>
+          <option value="aucun">Aucun suffixe</option>
         </select>
         <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm">
           <input type="checkbox" checked={Boolean(form.promotional)} onChange={(event) => field('promotional', event.target.checked)} />
@@ -155,13 +178,19 @@ export default function SubscriptionPlanAdminPanel() {
                 <p className="text-xs font-medium uppercase text-gray-500">{plan.role}</p>
                 <h3 className="mt-1 font-bold text-gray-900">{plan.name}</h3>
                 <p className="mt-2 text-xl font-bold text-teal-700">{new Intl.NumberFormat('fr-SN').format(plan.price_monthly)} FCFA</p>
-                <p className="text-xs text-gray-500">{plan.duration_value ?? 1} {plan.duration_unit ?? 'mois'} · {plan.active ? 'Actif' : 'Désactivé'}</p>
+                <p className="text-xs text-gray-500">
+                  {plan.duration_unit === 'aucun' ? 'Montant seul' : `${plan.duration_value ?? 1} ${plan.duration_unit ?? 'mois'}`} · {plan.active ? 'Actif' : 'Désactivé'}
+                </p>
               </div>
               {plan.promotional ? <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">Promo</span> : null}
             </div>
             <div className="mt-4 flex gap-2">
               <button type="button" disabled={busy} onClick={() => edit(plan)} className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-700">Modifier</button>
-              {plan.active ? <button type="button" disabled={busy} onClick={() => void deactivate(plan)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700">Désactiver</button> : null}
+              {plan.active ? (
+                <button type="button" disabled={busy} onClick={() => void deactivate(plan)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700">Désactiver</button>
+              ) : (
+                <button type="button" disabled={busy} onClick={() => void reactivate(plan)} className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-medium text-emerald-700">Réactiver</button>
+              )}
             </div>
           </article>
         ))}
