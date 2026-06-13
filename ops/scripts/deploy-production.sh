@@ -4,6 +4,7 @@ set -Eeuo pipefail
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.production.yml}"
 COMPOSE_ENV_FILE="${COMPOSE_ENV_FILE:-ops/env/compose.production.env}"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-ops/env/backend.production.env}"
+METRICS_SECRET_FILE="${METRICS_SECRET_FILE:-ops/monitoring/prometheus/secrets/metrics-token}"
 DEPLOY_REF="${1:-${C2P_DEPLOY_REF:-}}"
 DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-/tmp/c2p-production-deploy.lock}"
 POSTDEPLOY_BASE_URL="${POSTDEPLOY_BASE_URL:-}"
@@ -80,6 +81,12 @@ require_command node
 require_file "$COMPOSE_FILE"
 require_file "$COMPOSE_ENV_FILE"
 require_file "$BACKEND_ENV_FILE"
+require_file "$METRICS_SECRET_FILE"
+
+if [[ "$EUID" -eq 0 ]]; then
+  chown 65534:65534 "$METRICS_SECRET_FILE"
+  chmod 0600 "$METRICS_SECRET_FILE"
+fi
 
 exec 9>"$DEPLOY_LOCK_FILE"
 if ! flock -n 9; then
