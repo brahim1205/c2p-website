@@ -29,7 +29,7 @@ import {
 } from './finance-read.mappers.js';
 
 type FinanceActor = { id: string; role: string };
-const PUBLIC_PLAN_ROLE_VALUES = ['prestataire', 'formateur', 'porteur'] as const;
+const PUBLIC_PLAN_ROLE_VALUES = ['prestataire', 'formateur', 'partenaire'] as const;
 type PublicPlanRole = typeof PUBLIC_PLAN_ROLE_VALUES[number];
 
 @Injectable()

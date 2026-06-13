@@ -12,6 +12,7 @@ import {
   type DexPayWebhookReceipt,
 } from '@/lib/adminApi';
 import { fetchDexPayStatus, type DexPayStatus } from '@/lib/paymentsApi';
+import SubscriptionPlanAdminPanel from './SubscriptionPlanAdminPanel';
 
 function statusTone(status?: string | null) {
   const normalized = String(status ?? '').toLowerCase();
@@ -87,7 +88,7 @@ export default function SuperAdminFinancePage() {
   return (
     <AdminLayout>
       <div className="mx-auto max-w-7xl space-y-6">
-        <Breadcrumb items={[{ label: 'Superadmin', path: '/superadmin/dashboard' }, { label: 'Finance provider' }]} />
+        <Breadcrumb items={[{ label: 'Superadmin', path: '/superadmin/dashboard' }, { label: 'Finance et tarifs' }]} />
 
         <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -103,6 +104,8 @@ export default function SuperAdminFinancePage() {
             </button>
           </div>
         </section>
+
+        <SubscriptionPlanAdminPanel />
 
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.75fr)]">
           <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">

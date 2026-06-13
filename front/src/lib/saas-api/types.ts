@@ -65,6 +65,10 @@ export interface SubscriptionPlan {
   name: string;
   slug: string;
   price_monthly: number;
+  duration_value?: number;
+  duration_unit?: 'jour' | 'mois' | 'an' | 'ponctuel';
+  promotional?: boolean;
+  description?: string;
   currency: string;
   commission_rate: number;
   priority_matching?: string | null;

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
 import { DatabaseModule } from '../database/database.module.js';
 import { FinanceReadService } from './finance-read.service.js';
+import { SubscriptionPlanAdminService } from './subscription-plan-admin.service.js';
 import { PaymentsController } from './payments.controller.js';
 import { DexPayService } from './dexpay.service.js';
 import { PaymentCommandsService } from './payment-commands.service.js';
@@ -19,6 +20,7 @@ import { ProviderRegistryService } from './provider-registry.service.js';
     ProviderRegistryService,
     PaymentCommandsService,
     FinanceReadService,
+    SubscriptionPlanAdminService,
     ProviderArtifactsService,
     ProviderIntegrationService,
     ProviderIntegrationReadService,

@@ -10,7 +10,6 @@ import {
   type MonetizedRole,
   type PublicSubscriptionPlan,
 } from '@/lib/publicSubscriptions';
-import PartnerPricingSection from './PartnerPricingSection';
 
 function formatAmountOnly(amount: number) {
   return new Intl.NumberFormat('fr-SN').format(amount);
@@ -251,9 +250,11 @@ export default function PricingPage() {
                                     {formatCurrencyLabel(plan.currency)}{period.suffix}
                                   </span>
                                 </div>
-                                <p className="mt-2 text-sm font-medium text-[#1a9a96]">{period.label} · Tarif promotionnel</p>
+                                <p className="mt-2 text-sm font-medium text-[#1a9a96]">
+                                  {period.label}{plan.promotional ? ' · Tarif promotionnel' : ''}
+                                </p>
                                 <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">
-                                  {content.summary}
+                                  {plan.description || content.summary}
                                 </p>
 
                                 <ul className="mt-7 space-y-4 text-sm leading-6 text-[#0f1c35]">
@@ -288,7 +289,6 @@ export default function PricingPage() {
                   </section>
                 );
               })}
-              <PartnerPricingSection />
             </div>
           )}
         </div>

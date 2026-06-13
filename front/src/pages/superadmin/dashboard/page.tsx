@@ -33,8 +33,8 @@ const quickLinks = [
     icon: 'ri-loop-left-line',
   },
   {
-    title: 'Finance provider',
-    description: 'DexPay, webhooks, réconciliation et transactions provider.',
+    title: 'Finance et tarifs',
+    description: 'Plans, abonnements, DexPay, webhooks et réconciliation.',
     path: '/superadmin/finance',
     icon: 'ri-bank-card-line',
   },

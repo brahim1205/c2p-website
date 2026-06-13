@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Delete,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -25,6 +27,7 @@ import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/require-permission.decorator.js';
 import { operatorActionSchema, type OperatorActionDto } from '../common/dto/operator-action.dto.js';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe.js';
+import { SubscriptionPlanAdminService } from './subscription-plan-admin.service.js';
 import {
   dexpayCheckoutSchema,
   dexpayReconcileSchema,
@@ -58,7 +61,7 @@ import {
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
-  private static readonly SUBSCRIPTION_PLAN_ROLES = new Set(['prestataire', 'formateur', 'porteur']);
+  private static readonly SUBSCRIPTION_PLAN_ROLES = new Set(['prestataire', 'formateur', 'partenaire']);
 
   constructor(
     private readonly providerRegistry: ProviderRegistryService,
@@ -67,6 +70,7 @@ export class PaymentsController {
     private readonly providerIntegrationService: ProviderIntegrationService,
     private readonly providerIntegrationReadService: ProviderIntegrationReadService,
     private readonly financeStateMachineService: FinanceStateMachineService,
+    private readonly subscriptionPlanAdminService: SubscriptionPlanAdminService,
   ) {}
 
   @Get('dexpay/status')
@@ -121,6 +125,39 @@ export class PaymentsController {
   ) {
     const actor = this.getActor(request);
     return this.financeReadService.getSubscriptionPlans(this.resolveSubscriptionPlanRole(role, actor.role));
+  }
+
+  @Get('admin/subscription-plans')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('superadmin.sensitive.write')
+  listAdminSubscriptionPlans(@Req() request: AuthenticatedRequest) {
+    this.getActor(request);
+    return this.subscriptionPlanAdminService.listAll();
+  }
+
+  @Post('admin/subscription-plans')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('superadmin.sensitive.write')
+  createSubscriptionPlan(@Req() request: AuthenticatedRequest, @Body() payload: Record<string, unknown>) {
+    return this.subscriptionPlanAdminService.create(payload, this.getActor(request));
+  }
+
+  @Patch('admin/subscription-plans/:id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('superadmin.sensitive.write')
+  updateSubscriptionPlan(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() payload: Record<string, unknown>,
+  ) {
+    return this.subscriptionPlanAdminService.update(id, payload, this.getActor(request));
+  }
+
+  @Delete('admin/subscription-plans/:id')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('superadmin.sensitive.write')
+  removeSubscriptionPlan(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return this.subscriptionPlanAdminService.remove(id, this.getActor(request));
   }
 
   @Get('provider-visibility/products')

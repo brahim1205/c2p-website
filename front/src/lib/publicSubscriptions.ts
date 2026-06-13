@@ -1,4 +1,4 @@
-export type MonetizedRole = 'prestataire' | 'formateur';
+export type MonetizedRole = 'prestataire' | 'formateur' | 'partenaire';
 
 export interface PublicSubscriptionPlan {
   id: string;
@@ -6,6 +6,10 @@ export interface PublicSubscriptionPlan {
   name: string;
   slug: string;
   price_monthly: number;
+  duration_value?: number;
+  duration_unit?: 'jour' | 'mois' | 'an' | 'ponctuel';
+  promotional?: boolean;
+  description?: string;
   currency: string;
   commission_rate: number;
   priority_matching: string | null;
@@ -43,6 +47,14 @@ export const monetizedRoleContent: Record<
     unlocks: ['Publication des cours', 'Classes virtuelles', 'Evaluations et analytics'],
     gateLabel: 'Un plan actif est requis pour publier vos formations et piloter vos cohortes.',
   },
+  partenaire: {
+    label: 'Partenaires',
+    shortLabel: 'Partenaire',
+    summary: 'Contribuer techniquement ou financièrement aux projets accompagnés par C2P.',
+    purpose: 'Les offres partenaires couvrent la vérification Pro et les niveaux de contribution au financement solidaire.',
+    unlocks: ['Partenariat technique gratuit', 'Statut Pro vérifié', 'Badges financiers solidaires'],
+    gateLabel: 'Le partenaire choisit son statut selon son niveau d’engagement.',
+  },
 };
 
 export const publicAccessRoles = [
@@ -69,13 +81,15 @@ export const publicAccessRoles = [
 ] as const;
 
 export function isMonetizedRole(role: string | null | undefined): role is MonetizedRole {
-  return role === 'prestataire' || role === 'formateur';
+  return role === 'prestataire' || role === 'formateur' || role === 'partenaire';
 }
 
-export function getPlanPeriod(plan: Pick<PublicSubscriptionPlan, 'slug'>) {
-  return plan.slug.includes('premium')
-    ? { suffix: '/an', label: 'Validité : 1 an' }
-    : { suffix: '/mois', label: 'Validité : 1 mois' };
+export function getPlanPeriod(plan: Pick<PublicSubscriptionPlan, 'slug' | 'duration_value' | 'duration_unit'>) {
+  const unit = plan.duration_unit ?? (plan.slug.includes('premium') ? 'an' : 'mois');
+  const value = plan.duration_value ?? 1;
+  if (unit === 'ponctuel') return { suffix: '', label: 'Contribution ponctuelle' };
+  const suffix = value === 1 ? `/${unit}` : `/${value} ${unit}`;
+  return { suffix, label: `Validité : ${value} ${unit}${value > 1 ? 's' : ''}` };
 }
 
 export function formatPlanPrice(amount: number, currency = 'XAF', suffix = '/mois') {
@@ -93,6 +107,7 @@ export function groupPlansByRole(plans: PublicSubscriptionPlan[]) {
     {
       prestataire: [],
       formateur: [],
+      partenaire: [],
     },
   );
 }
