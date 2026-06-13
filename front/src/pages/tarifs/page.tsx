@@ -195,26 +195,28 @@ export default function PricingPage() {
                       </div>
                     ) : (
                       <div className="grid gap-8 lg:grid-cols-3">
-                        <article className="relative flex min-h-[480px] flex-col justify-between rounded-[22px] border border-[#d6dbe1] bg-white px-7 py-8 shadow-[0_18px_46px_rgba(15,28,53,0.06)] sm:px-8">
-                          <div>
-                            <p className="text-xl font-semibold text-[#0f1c35]">Essentiel</p>
-                            <div className="mt-3">
-                              <span className="block text-5xl font-semibold tracking-tight text-[#0f1c35]">Gratuit</span>
+                        {role !== 'partenaire' ? (
+                          <article className="relative flex min-h-[480px] flex-col justify-between rounded-[22px] border border-[#d6dbe1] bg-white px-7 py-8 shadow-[0_18px_46px_rgba(15,28,53,0.06)] sm:px-8">
+                            <div>
+                              <p className="text-xl font-semibold text-[#0f1c35]">Essentiel</p>
+                              <div className="mt-3">
+                                <span className="block text-5xl font-semibold tracking-tight text-[#0f1c35]">Gratuit</span>
+                              </div>
+                              <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">
+                                Démarrez votre parcours sur C2P sans frais.
+                              </p>
+                              <ul className="mt-7 space-y-4 text-sm leading-6 text-[#0f1c35]">
+                                <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Accès au compte de base</span></li>
+                                <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Préparer votre profil public</span></li>
+                                <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Explorer les services et formations</span></li>
+                                <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Passer au premium quand vous êtes prêt</span></li>
+                              </ul>
                             </div>
-                            <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">
-                              Démarrez votre parcours sur C2P sans frais.
-                            </p>
-                            <ul className="mt-7 space-y-4 text-sm leading-6 text-[#0f1c35]">
-                              <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Accès au compte de base</span></li>
-                              <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Préparer votre profil public</span></li>
-                              <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Explorer les services et formations</span></li>
-                              <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Passer au premium quand vous êtes prêt</span></li>
-                            </ul>
-                          </div>
-                          <Link to={`/auth/register?role=${role}`} className="mt-8 inline-flex w-full items-center justify-center rounded-xl border border-[#d6dbe1] bg-white px-5 py-4 text-base font-semibold text-[#0f1c35] transition-colors hover:border-[#1a9a96]">
-                            Créer un compte
-                          </Link>
-                        </article>
+                            <Link to={`/auth/register?role=${role}`} className="mt-8 inline-flex w-full items-center justify-center rounded-xl border border-[#d6dbe1] bg-white px-5 py-4 text-base font-semibold text-[#0f1c35] transition-colors hover:border-[#1a9a96]">
+                              Créer un compte
+                            </Link>
+                          </article>
+                        ) : null}
                         {visibleRolePlans.map((plan, index) => {
                           const isPopular = index === 0;
                           const isBestValue = index === 1;
