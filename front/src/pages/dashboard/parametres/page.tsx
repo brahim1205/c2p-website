@@ -9,12 +9,14 @@ import {
   changeAccountPassword,
   deleteAccount,
   fetchProfile,
+  switchAccountActivity,
   updateProfile,
 } from '@/lib/accountApi';
 import { queryKeys } from '@/lib/queryKeys';
-import type { UserPreferences } from '@/lib/roles';
+import { ROLE_DASHBOARD_PATHS, type UserPreferences, type UserRole } from '@/lib/roles';
 import {
   AccountSettingsPanel,
+  ActivitiesPanel,
   PreferencesPanel,
   SecurityPanel,
 } from './ParametresFormPanels';
@@ -49,6 +51,7 @@ export default function ParametresPage() {
   const [deleting, setDeleting] = useState(false);
   const [preferences, setPreferences] = useState<Required<UserPreferences>>(() => normalizePreferences(user?.userPreferences));
   const [savingPreferences, setSavingPreferences] = useState(false);
+  const [switchingActivity, setSwitchingActivity] = useState(false);
   const [accountForm, setAccountForm] = useState<AccountSettingsForm>({
     firstName: user?.firstName ?? '',
     lastName: user?.lastName ?? '',
@@ -184,6 +187,23 @@ export default function ParametresPage() {
     }
   };
 
+  const handleSwitchActivity = async (role: UserRole) => {
+    if (!user || switchingActivity) return;
+    setSwitchingActivity(true);
+    try {
+      const updated = await switchAccountActivity(role);
+      updateUser(updated);
+      queryClient.setQueryData(profileQueryKey, updated);
+      success('Activité activée', `Votre espace ${role} est maintenant actif.`);
+      navigate(ROLE_DASHBOARD_PATHS[role]);
+    } catch (err) {
+      console.error(err);
+      error('Erreur', err instanceof Error ? err.message : 'Impossible de changer d activité.');
+    } finally {
+      setSwitchingActivity(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Paramètres' }]} />
@@ -202,6 +222,9 @@ export default function ParametresPage() {
               onChange={setAccountForm}
               onSave={handleSaveAccount}
             />
+          )}
+          {activeTab === 'activities' && user && (
+            <ActivitiesPanel user={user} switching={switchingActivity} onSwitch={handleSwitchActivity} />
           )}
           {activeTab === 'preferences' && (
             <PreferencesPanel

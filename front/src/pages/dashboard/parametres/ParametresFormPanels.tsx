@@ -1,4 +1,4 @@
-import type { UserPreferences } from '@/lib/roles';
+import { ROLE_LABELS, type AuthUser, type UserPreferences, type UserRole } from '@/lib/roles';
 import type { AccountSettingsForm, PasswordSettingsForm } from './parametresModel';
 
 type BooleanPreferenceKey = 'emailNotifications' | 'productUpdates' | 'compactMode';
@@ -20,6 +20,61 @@ const preferenceToggles: Array<{ key: BooleanPreferenceKey; label: string; descr
     description: 'Réduire certains espacements sur les pages de gestion.',
   },
 ];
+
+const activityRoles: UserRole[] = ['client', 'prestataire', 'apprenant', 'formateur', 'porteur', 'partenaire'];
+
+export function ActivitiesPanel({
+  user,
+  switching,
+  onSwitch,
+}: {
+  user: AuthUser;
+  switching: boolean;
+  onSwitch: (role: UserRole) => void;
+}) {
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold text-gray-900">Évoluer entre les activités C2P</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Votre compte reste unique. Activez l’espace correspondant à l’étape actuelle de votre parcours d’autonomisation.
+        </p>
+      </div>
+      <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        Les couples client/prestataire, apprenant/formateur et porteur/partenaire ne peuvent pas être actifs simultanément.
+        Le passage vers l’activité opposée remplace automatiquement l’ancienne.
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {activityRoles.map((role) => {
+          const active = user.role === role;
+          const alreadyAdded = user.roles?.includes(role);
+          return (
+            <button
+              key={role}
+              type="button"
+              disabled={active || switching}
+              onClick={() => onSwitch(role)}
+              className={`rounded-xl border p-4 text-left transition ${
+                active
+                  ? 'border-teal-500 bg-teal-50'
+                  : 'border-gray-200 bg-white hover:border-teal-300 hover:bg-teal-50/40'
+              } disabled:cursor-default`}
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="font-semibold text-gray-900">{ROLE_LABELS[role]}</span>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  active ? 'bg-teal-600 text-white' : alreadyAdded ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-700'
+                }`}>
+                  {active ? 'Espace actif' : alreadyAdded ? 'Déjà ajouté' : 'Disponible'}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function AccountSettingsPanel({
   accountForm,

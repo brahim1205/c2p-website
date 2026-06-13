@@ -227,6 +227,11 @@ function ProjectCard({ project }: { project: PublicProject }) {
         <div className="absolute right-3 top-3 rounded-full bg-[#0f1c35] px-2.5 py-1 text-[11px] font-semibold text-white sm:right-4 sm:top-4 sm:px-3 sm:text-xs">
           {project.status}
         </div>
+        {project.project_tier ? (
+          <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase text-[#1a9a96]">
+            {project.project_tier === 'nano_bronze' ? 'Nano / Bronze' : project.project_tier}
+          </div>
+        ) : null}
       </div>
 
       <div className="p-4 sm:p-5">
@@ -252,6 +257,7 @@ function ProjectCard({ project }: { project: PublicProject }) {
           <span>{project.mentors} mentor{project.mentors > 1 ? 's' : ''}</span>
           <span className="mx-2">•</span>
           <span>Phase : {project.phase}</span>
+          {project.duration_months ? <span>· {project.duration_months} mois</span> : null}
         </div>
 
         <div className="mb-3 sm:mb-4">

@@ -47,6 +47,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   role: UserRole;
+  roles?: UserRole[];
   phone?: string;
   avatar?: string;
   bio?: string;

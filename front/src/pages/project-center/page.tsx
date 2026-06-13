@@ -7,6 +7,7 @@ import {
   ProjectCenterGrid,
   ProjectCenterHero,
 } from './ProjectCenterSections';
+import ProjectCenterFundingModel from './ProjectCenterFundingModel';
 import { filterPublicProjects } from './projectCenterPublicModel';
 
 export default function ProjectCenterPage() {
@@ -68,6 +69,7 @@ export default function ProjectCenterPage() {
   return (
     <div className="public-premium-page min-h-screen bg-c2p-bg text-c2p-text">
       <ProjectCenterHero searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <ProjectCenterFundingModel />
       <ProjectCenterCategoryBar selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
       <ProjectCenterFilterBar
         projectCount={filteredProjects.length}

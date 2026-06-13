@@ -1,4 +1,4 @@
-export type MonetizedRole = 'prestataire' | 'formateur' | 'porteur';
+export type MonetizedRole = 'prestataire' | 'formateur';
 
 export interface PublicSubscriptionPlan {
   id: string;
@@ -43,14 +43,6 @@ export const monetizedRoleContent: Record<
     unlocks: ['Publication des cours', 'Classes virtuelles', 'Evaluations et analytics'],
     gateLabel: 'Un plan actif est requis pour publier vos formations et piloter vos cohortes.',
   },
-  porteur: {
-    label: 'Porteurs de projet',
-    shortLabel: 'Porteur',
-    summary: 'Soumettre un projet, suivre ses jalons et ouvrir des parcours de financement.',
-    purpose: 'L abonnement sert a activer la gestion de projet, le mentorat et les parcours d incubation.',
-    unlocks: ['Depot du projet', 'Suivi des jalons', 'Financement et incubation selon plan'],
-    gateLabel: 'Un plan actif est requis pour soumettre et faire avancer un projet.',
-  },
 };
 
 export const publicAccessRoles = [
@@ -70,32 +62,37 @@ export const publicAccessRoles = [
     description: 'Pas de plan public dedie pour l instant. Le suivi parent se rattache au dossier apprenant pilote par C2P.',
   },
   {
-    role: 'partenaire',
-    label: 'Partenaires',
-    description: 'Pas de plan self-service public pour l instant. L activation se fait avec l equipe C2P selon le cadre du partenariat.',
+    role: 'porteur',
+    label: 'Porteurs de projet',
+    description: 'La soumission et le classement d’un projet dans Project’Center sont gratuits.',
   },
 ] as const;
 
 export function isMonetizedRole(role: string | null | undefined): role is MonetizedRole {
-  return role === 'prestataire' || role === 'formateur' || role === 'porteur';
+  return role === 'prestataire' || role === 'formateur';
 }
 
-export function formatPlanPrice(amount: number, currency = 'XAF') {
+export function getPlanPeriod(plan: Pick<PublicSubscriptionPlan, 'slug'>) {
+  return plan.slug.includes('premium')
+    ? { suffix: '/an', label: 'Validité : 1 an' }
+    : { suffix: '/mois', label: 'Validité : 1 mois' };
+}
+
+export function formatPlanPrice(amount: number, currency = 'XAF', suffix = '/mois') {
   const formattedAmount = new Intl.NumberFormat('fr-SN').format(amount);
   const currencyLabel = currency === 'XAF' ? 'FCFA' : currency;
-  return `${formattedAmount} ${currencyLabel}/mois`;
+  return `${formattedAmount} ${currencyLabel}${suffix}`;
 }
 
 export function groupPlansByRole(plans: PublicSubscriptionPlan[]) {
   return plans.reduce<Record<MonetizedRole, PublicSubscriptionPlan[]>>(
     (accumulator, plan) => {
-      accumulator[plan.role].push(plan);
+      if (plan.role in accumulator) accumulator[plan.role].push(plan);
       return accumulator;
     },
     {
       prestataire: [],
       formateur: [],
-      porteur: [],
     },
   );
 }

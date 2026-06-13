@@ -103,6 +103,20 @@ export function resolveSubscriptionGate(input: {
   plans: SubscriptionPlan[];
 }) : SubscriptionGateDecision {
   const role = input.role ?? null;
+  if (input.action === 'project_submit') {
+    return {
+      required: false,
+      allowed: true,
+      role,
+      action: input.action,
+      reason: 'not_applicable',
+      title: 'Soumission gratuite',
+      message: 'Aucun abonnement n’est requis pour déposer un projet.',
+      ctaLabel: '',
+      recommendedPlanId: null,
+      recommendedPlanName: null,
+    };
+  }
   const activeSubscription = getActiveSubscription(input.subscriptions);
   const latestSubscription = input.subscriptions[0] ?? null;
   const recommendedPlan = getRecommendedPlan(input.plans);

@@ -16,7 +16,7 @@ export function SubmissionHeader({ isDashboardSubmission }: { isDashboardSubmiss
           Soumettez votre projet
         </h1>
         <p className="mx-auto max-w-2xl text-base leading-7 text-gray-600 sm:text-lg">
-          Remplissez ce formulaire pour soumettre votre projet à notre programme d'incubation. Notre équipe l'examinera et vous contactera sous 48h.
+          La soumission est gratuite. Remplissez ce formulaire pour classer votre projet et demander son étude par notre centre d’incubation.
         </p>
       </div>
     </div>
@@ -76,22 +76,6 @@ export function AuthRequiredMessage() {
         </Link>
         <Link to="/auth/register?role=porteur" className="c2p-btn-secondary w-full px-6 py-3 sm:w-auto">
           Créer un compte porteur
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-export function UnauthorizedRoleMessage() {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm sm:p-8">
-      <h2 className="text-2xl font-bold text-gray-900">Compte non autorisé</h2>
-      <p className="mt-3 text-gray-600">
-        La soumission de projet est réservée aux comptes porteur ou admin.
-      </p>
-      <div className="mt-6">
-        <Link to="/project-center" className="c2p-btn-secondary w-full px-6 py-3 sm:w-auto">
-          Retour à ProjectCenter
         </Link>
       </div>
     </div>

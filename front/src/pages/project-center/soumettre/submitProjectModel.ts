@@ -33,6 +33,7 @@ export const INITIAL_SUBMIT_PROJECT_FORM: SubmitProjectFormData = {
   founderPhone: '',
   founderBio: '',
   teamSize: '',
+  projectDurationMonths: '',
   fundingGoal: '',
   fundingType: '',
   currentFunding: '',

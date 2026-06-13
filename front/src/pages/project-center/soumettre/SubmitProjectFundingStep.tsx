@@ -30,6 +30,16 @@ export function FundingStep({ formData, setFormData, togglePartnerNeed }: Fundin
           onChange={(value) => setFormData({ ...formData, fundingGoal: value })}
         />
 
+        <TextInputField
+          label="Durée prévisionnelle (mois) *"
+          min="1"
+          placeholder="Ex: 12"
+          required
+          type="number"
+          value={formData.projectDurationMonths}
+          onChange={(value) => setFormData({ ...formData, projectDurationMonths: value })}
+        />
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Type de financement *</label>
           <select
@@ -45,6 +55,11 @@ export function FundingStep({ formData, setFormData, togglePartnerNeed }: Fundin
             <option value="mixte">Mixte</option>
           </select>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+        Classement automatique : Nano / Bronze jusqu’à 1 000 000 FCFA et 12 mois maximum,
+        Argent de plus de 1 000 000 à 2 500 000 FCFA, puis Or au-delà.
       </div>
 
       <TextInputField

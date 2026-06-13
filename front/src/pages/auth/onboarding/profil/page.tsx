@@ -15,9 +15,15 @@ import { RoleProfileFields } from '../../register/RoleProfileFields';
 
 function inferPartnerType(skills: string[] = []) {
   const joined = skills.join(' ').toLowerCase();
+  if (joined.includes('financier') && joined.includes('technique')) return 'technique_financier';
   if (joined.includes('financier')) return 'financier';
   if (joined.includes('technique')) return 'technique';
   return '';
+}
+
+function inferPartnerBadge(skills: string[] = []) {
+  const joined = skills.join(' ').toLowerCase();
+  return ['nianthio', 'djambars', 'ndanane'].find((badge) => joined.includes(badge)) ?? '';
 }
 
 function buildInitialProfile(user: AuthUser): RoleProfileData {
@@ -32,6 +38,7 @@ function buildInitialProfile(user: AuthUser): RoleProfileData {
     website: user.website ?? '',
     preferredLanguage: user.preferredLanguage ?? '',
     partnerType: user.role === 'partenaire' ? inferPartnerType(user.skills) : '',
+    partnerBadge: user.role === 'partenaire' ? inferPartnerBadge(user.skills) : '',
   };
 }
 
@@ -68,8 +75,17 @@ export default function OnboardingProfilePage() {
     }
 
     const roleSkills = splitCommaList(roleProfile.skills);
-    const skills = user.role === 'partenaire' && roleProfile.partnerType
-      ? [`Partenaire ${roleProfile.partnerType === 'financier' ? 'financier' : 'technique'}`, ...roleSkills]
+    const partnerTypeSkills = roleProfile.partnerType === 'technique_financier'
+      ? ['Partenaire technique', 'Partenaire financier']
+      : roleProfile.partnerType
+        ? [`Partenaire ${roleProfile.partnerType}`]
+        : [];
+    const skills = user.role === 'partenaire'
+      ? [
+          ...partnerTypeSkills,
+          ...(roleProfile.partnerBadge ? [`Badge partenaire ${roleProfile.partnerBadge}`] : []),
+          ...roleSkills,
+        ]
       : roleSkills;
 
     setSubmitting(true);

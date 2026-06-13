@@ -41,6 +41,7 @@ import {
   mapFundingType,
   normalizeCategory,
   parseTeamSize,
+  resolveProjectTier,
   PROJECT_SUBMISSION_ALLOWED_ROLES,
   publicRows,
   requireOwnerProject,
@@ -508,6 +509,8 @@ export class ProjectCenterService {
     const fundingGoal = toNonNegativeNumber(submission.fundingGoal);
     const currentFunding = toNonNegativeNumber(submission.currentFunding);
     const teamSize = parseTeamSize(submission.teamSize);
+    const durationMonths = Number(submission.projectDurationMonths);
+    const projectTier = resolveProjectTier(fundingGoal, durationMonths);
 
     const project = appendRows('projects', [{
       id: projectId,
@@ -529,6 +532,8 @@ export class ProjectCenterService {
       competition: submission.competition,
       funding: currentFunding,
       funding_goal: fundingGoal,
+      project_tier: projectTier,
+      duration_months: durationMonths,
       team_size: teamSize,
       mentors: 0,
       progress: 12,

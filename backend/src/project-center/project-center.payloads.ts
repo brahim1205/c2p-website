@@ -16,6 +16,7 @@ export type ProjectSubmissionPayload = {
   founderPhone: string;
   founderBio: string;
   teamSize: string;
+  projectDurationMonths: string | number;
   fundingGoal: string | number;
   fundingType: string;
   currentFunding?: string | number;
@@ -79,6 +80,7 @@ export function parseProjectSubmissionPayload(payload: unknown): ProjectSubmissi
     'founderPhone',
     'founderBio',
     'teamSize',
+    'projectDurationMonths',
     'fundingGoal',
     'fundingType',
     'useOfFunds',
@@ -106,6 +108,7 @@ export function parseProjectSubmissionPayload(payload: unknown): ProjectSubmissi
     founderPhone: trimText(row.founderPhone),
     founderBio: trimText(row.founderBio),
     teamSize: trimText(row.teamSize),
+    projectDurationMonths: row.projectDurationMonths ?? 0,
     fundingGoal: row.fundingGoal ?? 0,
     fundingType: trimText(row.fundingType),
     currentFunding: row.currentFunding ?? 0,

@@ -8,11 +8,12 @@ import { EmailModule } from '../communications/email.module.js';
 import { SmsModule } from '../communications/sms.module.js';
 import { PermissionGuard } from './permission.guard.js';
 import { RbacService } from './rbac.service.js';
+import { AuthActivityService } from './auth-activity.service.js';
 
 @Module({
   imports: [DatabaseModule, SmsModule, EmailModule],
   controllers: [AuthController],
-  providers: [AuthService, AuthOAuthService, AuthSecurityDeliveryService, RbacService, PermissionGuard],
+  providers: [AuthService, AuthActivityService, AuthOAuthService, AuthSecurityDeliveryService, RbacService, PermissionGuard],
   exports: [AuthService, RbacService, PermissionGuard],
 })
 export class AuthModule {}

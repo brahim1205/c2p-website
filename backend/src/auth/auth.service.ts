@@ -81,6 +81,7 @@ import {
   withoutPasswordResetChallenges,
 } from './auth.service-helpers.js';
 import { buildPersonalDataExport, buildPublicSessions } from './auth-export-utils.js';
+import { enrichUserWithEffectiveRoles } from './auth-activity.service.js';
 
 @Injectable()
 export class AuthService {
@@ -554,7 +555,7 @@ export class AuthService {
     }
 
     request.auth = {
-      user: publicUser(snapshot.user),
+      user: await enrichUserWithEffectiveRoles(this.rbacService, publicUser(snapshot.user)),
       sessionId: snapshot.session.id,
       csrfToken: snapshot.session.csrfToken,
     };
@@ -563,6 +564,7 @@ export class AuthService {
   async getCurrentUser(request: AuthenticatedRequest) {
     return request.auth?.user ?? null;
   }
+
 
   async acceptMonetizedClauses(request: AuthenticatedRequest) {
     return this.runSerializedMutation(async () => {
@@ -1148,7 +1150,7 @@ export class AuthService {
     if (!user) {
       throw new BadRequestException('Utilisateur introuvable.');
     }
-    return editableProfileUser(normalizeStoredUser(user));
+    return enrichUserWithEffectiveRoles(this.rbacService, editableProfileUser(normalizeStoredUser(user)));
   }
 
   async exportPersonalData(request: AuthenticatedRequest, id: string) {

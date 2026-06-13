@@ -18,11 +18,15 @@ import type { AuthUser, CertificationItem, PaymentSettings, PortfolioItem, Role,
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { PermissionGuard } from './permission.guard.js';
 import { RequirePermission } from './require-permission.decorator.js';
+import { AuthActivityService } from './auth-activity.service.js';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly authActivityService: AuthActivityService,
+  ) {}
 
   @Post('login')
   login(
@@ -69,6 +73,14 @@ export class AuthController {
   @Get('me')
   me(@Req() request: AuthenticatedRequest) {
     return this.authService.getCurrentUser(request);
+  }
+
+  @Patch('activity')
+  switchActivity(
+    @Req() request: AuthenticatedRequest,
+    @Body() payload: { role?: Role },
+  ) {
+    return this.authActivityService.switchActivity(request, payload.role);
   }
 
   @Post('register')

@@ -5,10 +5,12 @@ import { fetchPublicSubscriptionPlans } from '@/lib/publicApi';
 import { usePageMeta } from '@/lib/usePageMeta';
 import {
   groupPlansByRole,
+  getPlanPeriod,
   monetizedRoleContent,
   type MonetizedRole,
   type PublicSubscriptionPlan,
 } from '@/lib/publicSubscriptions';
+import PartnerPricingSection from './PartnerPricingSection';
 
 function formatAmountOnly(amount: number) {
   return new Intl.NumberFormat('fr-SN').format(amount);
@@ -148,6 +150,10 @@ export default function PricingPage() {
               Chaque rôle peut démarrer gratuitement. Les plans payants débloquent les actions de publication, de gestion avancée et de visibilité.
             </p>
           </div>
+          <div className="mb-10 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900">
+            Offre promotionnelle en cours, sans période d’essai. Les plans Pro sont valables 1 mois et les plans Premium 1 an.
+            Les tarifs pourront évoluer après la phase de promotion.
+          </div>
 
           {errorMessage ? (
             <div className="rounded-[24px] border border-red-200 bg-red-50 px-6 py-5 text-sm text-red-700">
@@ -214,6 +220,7 @@ export default function PricingPage() {
                           const isPopular = index === 0;
                           const isBestValue = index === 1;
                           const cta = getPlanCta(plan, isAuthenticated, user?.role);
+                          const period = getPlanPeriod(plan);
                           return (
                             <article
                               key={plan.id}
@@ -241,9 +248,10 @@ export default function PricingPage() {
                                     {formatAmountOnly(plan.price_monthly)}
                                   </span>
                                   <span className="pb-2 text-base text-[#64748b]">
-                                    {formatCurrencyLabel(plan.currency)}/mois
+                                    {formatCurrencyLabel(plan.currency)}{period.suffix}
                                   </span>
                                 </div>
+                                <p className="mt-2 text-sm font-medium text-[#1a9a96]">{period.label} · Tarif promotionnel</p>
                                 <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">
                                   {content.summary}
                                 </p>
@@ -280,6 +288,7 @@ export default function PricingPage() {
                   </section>
                 );
               })}
+              <PartnerPricingSection />
             </div>
           )}
         </div>

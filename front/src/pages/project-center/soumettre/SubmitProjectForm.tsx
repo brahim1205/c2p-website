@@ -6,7 +6,6 @@ import {
   AuthRequiredMessage,
   SubmissionHeader,
   SubmissionProgress,
-  UnauthorizedRoleMessage,
 } from './SubmitProjectShell';
 import { StepFields } from './SubmitProjectSteps';
 import type { SubmitProjectFormData } from './submitProjectModel';
@@ -29,7 +28,7 @@ interface SubmitProjectFormProps {
 export default function SubmitProjectForm({
   currentStep,
   formData,
-  hasProjectRole,
+  hasProjectRole: _hasProjectRole,
   isAuthenticated,
   isDashboardSubmission,
   isSubmitting,
@@ -48,13 +47,11 @@ export default function SubmitProjectForm({
       <div className="mx-auto max-w-4xl px-3 py-8 sm:px-6 sm:py-12">
         {!isAuthenticated ? (
           <AuthRequiredMessage />
-        ) : !hasProjectRole ? (
-          <UnauthorizedRoleMessage />
         ) : (
           <SubscriptionRequiredBanner gate={subscriptionGate} />
         )}
 
-        {isAuthenticated && hasProjectRole ? (
+        {isAuthenticated ? (
           <form onSubmit={onSubmit} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-8">
             <StepFields
               currentStep={currentStep}

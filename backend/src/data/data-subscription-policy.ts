@@ -22,13 +22,6 @@ const SUBSCRIPTION_REQUIRED_WRITE_TABLES: Record<string, ReadonlySet<string>> = 
     'quiz_choices',
     'course_faq_items',
   ]),
-  porteur: new Set([
-    'projects',
-    'project_milestones',
-    'project_documents',
-    'project_history',
-    'project_funding_rounds',
-  ]),
 };
 
 export function assertSubscriptionRequiredForWrite(
@@ -64,7 +57,7 @@ export function assertSubscriptionRequiredForWrite(
     ? 'publier ou gérer vos services'
     : user.role === 'formateur'
       ? 'gérer vos formations et classes'
-      : 'gérer vos projets et levées';
+      : 'gérer vos activités';
 
   throw new ForbiddenException(
     defaultPlan

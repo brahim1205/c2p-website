@@ -23,6 +23,8 @@ export interface PublicProject {
   last_update?: string | null;
   funding: number;
   funding_goal: number;
+  project_tier?: 'nano_bronze' | 'argent' | 'or';
+  duration_months?: number;
   team_size: number;
   mentors: number;
   progress?: number;
@@ -83,6 +85,7 @@ export interface ProjectSubmissionPayload {
   founderPhone: string;
   founderBio: string;
   teamSize: string;
+  projectDurationMonths: string;
   fundingGoal: string;
   fundingType: string;
   currentFunding: string;

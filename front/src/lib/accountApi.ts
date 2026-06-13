@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import type { AuthUser } from './roles';
+import type { AuthUser, UserRole } from './roles';
 
 export interface DirectoryUser {
   id: string;
@@ -80,6 +80,13 @@ export async function updateProfile(
   return apiRequest<AuthUser>(`/auth/profile/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function switchAccountActivity(role: UserRole) {
+  return apiRequest<AuthUser>('/auth/activity', {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
   });
 }
 

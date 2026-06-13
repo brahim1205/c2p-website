@@ -8,6 +8,7 @@ export type RoleProfileData = {
   website: string;
   preferredLanguage: string;
   partnerType: string;
+  partnerBadge: string;
 };
 
 type RoleProfileField = {
@@ -84,7 +85,21 @@ export const roleProfileFields: Record<string, { title: string; description: str
         options: [
           { value: 'technique', label: 'Partenaire technique' },
           { value: 'financier', label: 'Partenaire financier' },
+          { value: 'technique_financier', label: 'Partenaire technique et financier' },
         ],
+      },
+      {
+        key: 'partnerBadge',
+        label: 'Badge financier souhaité',
+        placeholder: 'Facultatif pour un partenaire technique',
+        type: 'select',
+        options: [
+          { value: '', label: 'Aucun badge financier' },
+          { value: 'nianthio', label: 'Nianthio — 2 500 FCFA' },
+          { value: 'djambars', label: 'Djambars — 5 000 FCFA' },
+          { value: 'ndanane', label: 'Ndanane — 10 000 FCFA' },
+        ],
+        hint: 'Contribution non remboursable servant de caution solidaire et au fonctionnement du centre.',
       },
       { key: 'publicTitle', label: 'Organisation ou fonction', placeholder: 'Ex: Mentor produit, partenaire financier', required: true },
       { key: 'skills', label: 'Expertises', placeholder: 'Financement, mentorat, technique, distribution', required: true, hint: 'Separez les expertises par des virgules.' },
@@ -102,6 +117,7 @@ export const emptyRoleProfile: RoleProfileData = {
   website: '',
   preferredLanguage: '',
   partnerType: '',
+  partnerBadge: '',
 };
 
 export const inlineRoleProfileSections = new Set(['client', 'apprenant', 'porteur']);

@@ -232,6 +232,18 @@ export function parseTeamSize(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+export function resolveProjectTier(fundingGoal: number, durationMonths: number) {
+  if (!Number.isFinite(durationMonths) || durationMonths <= 0) {
+    throw new BadRequestException('La duree du projet doit etre positive.');
+  }
+  if (fundingGoal <= 1_000_000) {
+    if (durationMonths > 12) throw new BadRequestException('Un projet Nano / Bronze est limite a 12 mois.');
+    return 'nano_bronze';
+  }
+  if (fundingGoal <= 2_500_000) return 'argent';
+  return 'or';
+}
+
 export function buildPartnerNeeds(partnerNeeds: string[] = [], fundingType: string) {
   return [
     ...partnerNeeds,

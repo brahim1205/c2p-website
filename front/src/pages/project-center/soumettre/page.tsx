@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/pages/dashboard/components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { submitProjectCenterProject } from '@/lib/projectCenterApi';
+import { switchAccountActivity } from '@/lib/accountApi';
 import { useAuth } from '@/hooks/useAuth';
-import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
 import SubmitProjectForm from './SubmitProjectForm';
 import {
@@ -18,12 +18,22 @@ export default function SubmitProjectPage() {
   const location = useLocation();
   const { user } = useAuth();
   const { success, error } = useToast();
-  const { gateFor } = useSubscriptionAccess(user);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<SubmitProjectFormData>(INITIAL_SUBMIT_PROJECT_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pageTopRef = useRef<HTMLDivElement | null>(null);
-  const subscriptionGate = gateFor('project_submit');
+  const subscriptionGate = {
+    required: false,
+    allowed: true,
+    role: user?.role ?? null,
+    action: 'project_submit' as const,
+    reason: 'not_applicable' as const,
+    title: 'Soumission gratuite',
+    message: 'Aucun abonnement n’est requis pour déposer un projet.',
+    ctaLabel: '',
+    recommendedPlanId: null,
+    recommendedPlanName: null,
+  };
   const isAuthenticated = Boolean(user?.id);
   const hasProjectRole = user?.role === 'porteur' || user?.role === 'admin';
   const isDashboardSubmission = location.pathname.startsWith('/dashboard/');
@@ -64,20 +74,12 @@ export default function SubmitProjectPage() {
       navigate('/auth/login', { state: { from: '/project-center/soumettre' } });
       return;
     }
-    if (!hasProjectRole) {
-      error('Compte inadapté', 'La soumission de projet est réservée aux comptes porteur et admin.');
-      return;
-    }
-    if (!subscriptionGate.allowed) {
-      error(subscriptionGate.title, subscriptionGate.message);
-      return;
-    }
-
     setIsSubmitting(true);
     try {
+      const submittingUser = hasProjectRole ? user : await switchAccountActivity('porteur');
       await submitProjectCenterProject(formData);
-      success('Projet soumis', 'Votre dossier a ete cree dans ProjectCenter.');
-      navigate(user.role === 'porteur' ? '/dashboard/porteur/mes-projets' : '/project-center');
+      success('Projet soumis gratuitement', 'Votre dossier a été créé et classé dans Project’Center.');
+      navigate(submittingUser.role === 'porteur' ? '/dashboard/porteur/mes-projets' : '/project-center');
     } catch (err) {
       console.error(err);
       error('Erreur', err instanceof Error ? err.message : 'Le projet n a pas pu etre soumis.');
