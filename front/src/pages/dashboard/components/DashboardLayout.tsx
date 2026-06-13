@@ -41,8 +41,8 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
   const activeNavPath = getActiveNavPath(location.pathname, navItems);
   const navGapClass = getNavGapClass(navItems.length);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 

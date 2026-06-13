@@ -207,7 +207,7 @@ export class DexPayService {
   verifyWebhookSignature(rawBody: Buffer | undefined, signature: string | undefined) {
     const secret = this.config.dexPayWebhookSecret;
     if (!secret) {
-      return { valid: true, reason: 'skipped_no_secret' as const };
+      return { valid: false, reason: 'missing_secret' as const };
     }
     if (!rawBody?.length || !signature?.trim()) {
       return { valid: false, reason: 'missing_signature' as const };

@@ -53,8 +53,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   });
   const { refetch: refetchSupportUnread } = supportUnreadQuery;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 

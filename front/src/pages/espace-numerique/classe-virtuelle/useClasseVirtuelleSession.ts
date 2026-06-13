@@ -80,7 +80,7 @@ export function useClasseVirtuelleSession() {
         return;
       }
       try {
-        const snapshot = await fetchEspaceVirtualClass(id);
+        const snapshot = await fetchEspaceVirtualClass(id, Boolean(user?.id));
         const vData = snapshot.virtualClass;
         setVclass(vData as VirtualClass);
 

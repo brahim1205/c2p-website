@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { apiRequest, toApiError } from '@/lib/api';
+import { apiRequest, clearApiSessionCache, toApiError } from '@/lib/api';
+import { queryClient } from '@/lib/queryClient';
 import { isUserRole, ROLE_DASHBOARD_PATHS, type AuthUser, type UserRole } from '@/lib/roles';
 
 export interface RegisterData {
@@ -105,6 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleExpired = () => {
+      void queryClient.cancelQueries();
+      queryClient.clear();
+      clearApiSessionCache();
       setUser(null);
       setPendingTwoFactor(null);
       persistPendingTwoFactor(null);
@@ -215,6 +219,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore logout transport errors
     } finally {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      clearApiSessionCache();
       setUser(null);
       setPendingTwoFactor(null);
       persistPendingTwoFactor(null);

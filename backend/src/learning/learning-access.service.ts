@@ -79,10 +79,11 @@ export class LearningAccessService {
     if (!course) {
       throw new NotFoundException('Formation introuvable.');
     }
+    const lessons = this.learningPublicFallbackService.getCourseLessons(courseId);
     return {
       course,
-      sections: this.learningPublicFallbackService.getCourseSections(courseId),
-      lessons: this.learningPublicFallbackService.getCourseLessons(courseId),
+      sections: this.learningPublicFallbackService.getVisibleCourseSections(courseId, lessons),
+      lessons,
       reviews: this.learningPublicFallbackService.getCourseReviews(courseId),
       virtualClasses: this.learningPublicFallbackService.getCourseVirtualClasses(courseId),
     };
@@ -100,12 +101,42 @@ export class LearningAccessService {
       throw new NotFoundException('Classe virtuelle introuvable.');
     }
     const courseId = String(virtualClass.course_id ?? '');
-    const course = courseId ? this.learningPublicFallbackService.findCourse(courseId) : null;
+    const course = courseId ? this.learningPublicFallbackService.findPublishedCourse(courseId) : null;
+    const lessons = courseId ? this.learningPublicFallbackService.getCourseLessons(courseId) : [];
     return {
       virtualClass,
       course,
-      sections: courseId ? this.learningPublicFallbackService.getCourseSections(courseId) : [],
-      lessons: courseId ? this.learningPublicFallbackService.getCourseLessons(courseId) : [],
+      sections: courseId ? this.learningPublicFallbackService.getVisibleCourseSections(courseId, lessons) : [],
+      lessons,
+    };
+  }
+
+  async getAuthorizedVirtualClassDetail(classId: string, user: AuthUser | null) {
+    const actor = requireLearningActor(user);
+    await syncAppStoreFromDatabase(this.prisma);
+    const virtualClass = hydrateRows('virtual_classes', store.virtual_classes ?? [])
+      .find((row) => String(row.id) === String(classId) && String(row.status ?? 'scheduled') !== 'archived');
+    if (!virtualClass) {
+      throw new NotFoundException('Classe virtuelle introuvable.');
+    }
+
+    const courseId = String(virtualClass.course_id ?? '');
+    const course = getAccessibleCourse(courseId, actor);
+    const enrollment = getAccessibleEnrollment(courseId, actor);
+    if (!canReadCourseDetail(course, enrollment, actor)) {
+      throw new ForbiddenException('Acces a la classe virtuelle refuse.');
+    }
+
+    return {
+      virtualClass,
+      course,
+      sections: this.learningPublicFallbackService.getCourseSections(courseId),
+      lessons: hydrateRows('course_lessons', store.course_lessons ?? [])
+        .filter((lesson) =>
+          String(lesson.course_id) === courseId
+          && String(lesson.status ?? 'published') !== 'archived'
+        )
+        .sort((left, right) => position(left) - position(right)),
     };
   }
 

@@ -323,7 +323,7 @@ export const configValidationSchema = z.object({
   }
 
   if (config.DEXPAY_ENABLED === 'true') {
-    for (const key of ['DEXPAY_BASE_URL', 'DEXPAY_API_KEY', 'DEXPAY_API_SECRET'] as const) {
+    for (const key of ['DEXPAY_BASE_URL', 'DEXPAY_API_KEY', 'DEXPAY_API_SECRET', 'DEXPAY_WEBHOOK_SECRET'] as const) {
       if (!config[key]?.trim()) {
         ctx.addIssue({
           code: 'custom',

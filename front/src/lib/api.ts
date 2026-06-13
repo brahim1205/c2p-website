@@ -40,7 +40,14 @@ function isAuthRefreshCandidate(path: string) {
 }
 
 function dispatchAuthExpired() {
+  clearApiSessionCache();
   window.dispatchEvent(new CustomEvent('c2p:auth-expired'));
+}
+
+export function clearApiSessionCache() {
+  responseCache.clear();
+  inflightGetRequests.clear();
+  lastRequestId = null;
 }
 
 async function refreshSession() {

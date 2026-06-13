@@ -1206,9 +1206,20 @@ async function main() {
   const publicReplayVirtualClass = await readJson(`/learning/public/virtual-classes/${encodeURIComponent(String(smokeVirtualClassId))}`);
   assert(
     publicReplayVirtualClass.response.ok
-      && String(publicReplayVirtualClass.payload.virtualClass?.recording_url) === replayUrl
-      && String(publicReplayVirtualClass.payload.virtualClass?.recording_status) === 'ready',
-    `public virtual class detail must expose ready replay, got ${publicReplayVirtualClass.response.status}`,
+      && !publicReplayVirtualClass.payload.virtualClass?.recording_url
+      && !publicReplayVirtualClass.payload.virtualClass?.room_link
+      && !publicReplayVirtualClass.payload.virtualClass?.meeting_slug
+      && (publicReplayVirtualClass.payload.lessons ?? []).every((lesson) => Boolean(lesson.is_preview)),
+    `public virtual class detail must hide protected links and non-preview lessons, got ${publicReplayVirtualClass.response.status}`,
+  );
+  const authorizedReplayVirtualClass = await readJson(`/learning/virtual-classes/${encodeURIComponent(String(smokeVirtualClassId))}`, {
+    headers: { Cookie: formateurCookies },
+  });
+  assert(
+    authorizedReplayVirtualClass.response.ok
+      && String(authorizedReplayVirtualClass.payload.virtualClass?.recording_url) === replayUrl
+      && String(authorizedReplayVirtualClass.payload.virtualClass?.recording_status) === 'ready',
+    `authorized virtual class detail must expose ready replay, got ${authorizedReplayVirtualClass.response.status}`,
   );
   const deletedVirtualClass = await readJson(`/learning/formateur/virtual-classes/${encodeURIComponent(String(smokeVirtualClassId))}`, {
     method: 'DELETE',

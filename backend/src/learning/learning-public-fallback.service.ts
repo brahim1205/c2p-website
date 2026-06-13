@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { toNumber, trimText } from '../data/data-normalizers.js';
+import { parseBoolean, toNumber, trimText } from '../data/data-normalizers.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import { store } from '../data/data-app-store.js';
 import type { Row } from '../data/mock-store.js';
@@ -29,8 +29,10 @@ export class LearningPublicFallbackService {
   }
 
   findVisibleVirtualClass(classId: string) {
-    return hydrateRows('virtual_classes', store.virtual_classes ?? [])
-      .find((row) => String(row.id) === String(classId) && (trimText(row.status) ?? 'scheduled') !== 'archived');
+    const row = hydrateRows('virtual_classes', store.virtual_classes ?? [])
+      .find((candidate) => String(candidate.id) === String(classId) && (trimText(candidate.status) ?? 'scheduled') !== 'archived');
+    if (!row || !this.findPublishedCourse(String(row.course_id ?? ''))) return null;
+    return this.toPublicVirtualClass(row);
   }
 
   findCourse(courseId: string) {
@@ -50,6 +52,7 @@ export class LearningPublicFallbackService {
     return hydrateRows('course_lessons', store.course_lessons ?? [])
       .filter((lesson) =>
         String(lesson.course_id) === String(courseId)
+        && parseBoolean(lesson.is_preview, false)
         && String(lesson.status ?? 'published') !== 'archived'
       )
       .sort((left, right) => position(left) - position(right));
@@ -70,7 +73,21 @@ export class LearningPublicFallbackService {
         String(virtualClass.course_id) === String(courseId)
         && String(virtualClass.status ?? 'scheduled') !== 'archived'
       )
+      .map((row) => this.toPublicVirtualClass(row))
       .sort((left, right) => compareDatesDesc(left.class_date ?? left.created_at, right.class_date ?? right.created_at));
+  }
+
+  getVisibleCourseSections(courseId: string, lessons: Row[]) {
+    const sectionIds = new Set(lessons.map((lesson) => String(lesson.section_id ?? '')));
+    return this.getCourseSections(courseId).filter((section) => sectionIds.has(String(section.id)));
+  }
+
+  private toPublicVirtualClass(row: Row) {
+    const sanitized = { ...row };
+    delete sanitized.meeting_slug;
+    delete sanitized.room_link;
+    delete sanitized.recording_url;
+    return sanitized;
   }
 }
 

@@ -144,13 +144,25 @@ export async function publishEspaceCourseReview(courseId: string | number, paylo
   });
 }
 
-export async function fetchEspaceVirtualClass(classId: string | number) {
-  return apiRequest<{
+export async function fetchEspaceVirtualClass(classId: string | number, authenticated = false) {
+  const path = `/learning/${authenticated ? '' : 'public/'}virtual-classes/${encodeURIComponent(String(classId))}`;
+  const request = () => apiRequest<{
     virtualClass: EspaceVirtualClass;
     course: EspaceCourse | null;
     sections: EspaceCourseSection[];
     lessons: EspaceCourseLesson[];
-  }>(`/learning/public/virtual-classes/${encodeURIComponent(String(classId))}`);
+  }>(path);
+
+  try {
+    return await request();
+  } catch (error) {
+    if (!authenticated || !error || typeof error !== 'object' || !('status' in error) || error.status !== 403) {
+      throw error;
+    }
+    return apiRequest<Awaited<ReturnType<typeof request>>>(
+      `/learning/public/virtual-classes/${encodeURIComponent(String(classId))}`,
+    );
+  }
 }
 
 export async function updateEspaceLessonProgress(

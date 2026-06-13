@@ -63,12 +63,22 @@ import {
   SELF_PROFILE_PATCH_KEYS,
   authRowKey,
   createAuthId,
+  ensureAuthDevice,
+  findStoredUserByEmail,
+  findStoredUserById,
+  getPasswordResetChallenges,
   hashAuthToken,
   isBasicEmail,
   isSixDigitCode,
+  listAccessSessionsForUser,
+  listNormalizedAuditLogsForUser,
+  normalizeAccessSession,
+  normalizeStoredUser,
+  pickStoredUserPatch,
   randomAuthToken,
   randomNumericSecurityCode,
   toPrismaJson,
+  withoutPasswordResetChallenges,
 } from './auth.service-helpers.js';
 import { buildPersonalDataExport, buildPublicSessions } from './auth-export-utils.js';
 
@@ -102,18 +112,6 @@ export class AuthService {
     }
   }
 
-  private normalizeUser(user: StoredUser): StoredUser {
-    return {
-      ...user,
-      passwordHistory: [...(user.passwordHistory ?? [])],
-      backupCodes: [...(user.backupCodes ?? [])],
-      failedLoginAttempts: user.failedLoginAttempts ?? 0,
-      lockedUntil: user.lockedUntil ?? null,
-      lastPasswordChangeAt: user.lastPasswordChangeAt ?? null,
-      lastLoginAt: user.lastLoginAt ?? null,
-    };
-  }
-
   private normalizePhonePatch(patch: { phone?: string }) {
     if (patch.phone === undefined) return;
     const normalizedPhone = normalizeUserPhoneForStorage(patch.phone);
@@ -121,31 +119,6 @@ export class AuthService {
       throw new BadRequestException('Numero de telephone invalide.');
     }
     patch.phone = normalizedPhone;
-  }
-
-  private normalizeSession(session: UserSession | AccessSession): AccessSession {
-    const now = new Date().toISOString();
-    const base = session as Partial<AccessSession>;
-    return {
-      id: session.id,
-      userId: session.userId,
-      device: summarizeUserAgent(session.device),
-      location: session.location,
-      ip: normalizeIp(session.ip),
-      lastActive: session.lastActive,
-      current: session.current,
-      tokenHash: base.tokenHash ?? '',
-      csrfToken: base.csrfToken ?? '',
-      createdAt: base.createdAt ?? now,
-      expiresAt: base.expiresAt ?? addMinutes(now, this.config.accessTokenTtlMinutes),
-      absoluteExpiresAt: base.absoluteExpiresAt ?? addHours(now, this.config.sessionAbsoluteTimeoutHours),
-      revokedAt: base.revokedAt ?? null,
-      userAgent: base.userAgent ?? 'unknown',
-    };
-  }
-
-  private ensureDevice(meta: RequestMeta) {
-    return meta.userAgent || 'Navigateur Web';
   }
 
   private ensureLocation() {
@@ -218,8 +191,12 @@ export class AuthService {
       this.loadRows<AuditLog>('auth_audit_logs'),
     ]);
 
-    const users = rawUsers.map((user) => this.normalizeUser(user));
-    const sessions = rawSessions.map((session) => this.normalizeSession(session));
+    const users = rawUsers.map((user) => normalizeStoredUser(user));
+    const sessions = rawSessions.map((session) => normalizeAccessSession(
+      session,
+      this.config.accessTokenTtlMinutes,
+      this.config.sessionAbsoluteTimeoutHours,
+    ));
     const now = Date.now();
 
     return {
@@ -251,60 +228,6 @@ export class AuthService {
     await this.saveRows('auth_audit_logs', auditLogs);
   }
 
-  private pickUserPatch(
-    payload: Record<string, unknown>,
-    keys: readonly (keyof Omit<
-      StoredUser,
-      'id' | 'password' | 'passwordHash' | 'passwordHistory' | 'backupCodes' | 'createdAt'
-    >)[],
-  ) {
-    const patch: Partial<Omit<StoredUser, 'id' | 'password' | 'passwordHash' | 'passwordHistory' | 'backupCodes' | 'createdAt'>> = {};
-    for (const key of keys) {
-      if (key in payload) {
-        patch[key] = payload[key] as never;
-      }
-    }
-    return patch;
-  }
-
-  private findUserByEmail(email: string, users: StoredUser[]) {
-    return users.find((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
-  }
-
-  private findUserById(id: string, users: StoredUser[]) {
-    return users.find((candidate) => candidate.id === id);
-  }
-
-  private listPasswordResetChallenges(userId: string, pendingChallenges: PendingTwoFactorChallenge[]) {
-    return pendingChallenges
-      .filter((candidate) => candidate.userId === userId && (candidate.purpose ?? 'login-2fa') === 'password-reset')
-      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
-  }
-
-  private removePasswordResetChallenges(userId: string, pendingChallenges: PendingTwoFactorChallenge[]) {
-    return pendingChallenges.filter((candidate) => !(
-      candidate.userId === userId
-      && (candidate.purpose ?? 'login-2fa') === 'password-reset'
-    ));
-  }
-
-  private listSessionsForUser(userId: string, sessions: AccessSession[]) {
-    return sessions
-      .filter((session) => session.userId === userId && !session.revokedAt)
-      .sort((left, right) => Date.parse(right.lastActive) - Date.parse(left.lastActive));
-  }
-
-  private listAuditLogsForUser(userId: string, auditLogs: AuditLog[]) {
-    return auditLogs
-      .filter((entry) => entry.userId === userId)
-      .map((entry) => ({
-        ...entry,
-        device: summarizeUserAgent(entry.device),
-        ip: normalizeIp(entry.ip),
-      }))
-      .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp));
-  }
-
   private appendAuditLog(
     auditLogs: AuditLog[],
     sessions: AccessSession[],
@@ -313,7 +236,7 @@ export class AuthService {
     status: AuditStatus,
     overrides: Partial<Omit<AuditLog, 'id' | 'userId' | 'action' | 'status'>> = {},
   ) {
-    const latestSession = this.listSessionsForUser(userId, sessions)[0];
+    const latestSession = listAccessSessionsForUser(userId, sessions)[0];
     auditLogs.unshift({
       id: createAuthId('audit'),
       userId,
@@ -388,7 +311,7 @@ export class AuthService {
     const session: AccessSession = {
       id: sessionId,
       userId: user.id,
-      device: this.ensureDevice(meta),
+      device: ensureAuthDevice(meta.userAgent),
       location: this.ensureLocation(),
       ip: meta.ip,
       lastActive: now,
@@ -617,7 +540,7 @@ export class AuthService {
     if (isExpired(session.expiresAt) || isExpired(session.absoluteExpiresAt)) {
       return null;
     }
-    const user = this.findUserById(session.userId, users);
+    const user = findStoredUserById(session.userId, users);
     if (!user) return null;
     return { user, session, sessions, users };
   }
@@ -645,7 +568,7 @@ export class AuthService {
     return this.runSerializedMutation(async () => {
       const actor = this.getActor(request);
       const { users, sessions, auditLogs } = await this.loadSnapshot();
-      const user = this.findUserById(actor.id, users);
+      const user = findStoredUserById(actor.id, users);
       if (!user) {
         throw new BadRequestException('Utilisateur introuvable.');
       }
@@ -682,7 +605,7 @@ export class AuthService {
       const { provider, state, profile } = await this.oauthService.complete(rawProvider, payload, request);
       const meta = this.getRequestMeta(request);
       const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-      let user = this.findUserByEmail(profile.email, users);
+      let user = findStoredUserByEmail(profile.email, users);
 
       if (user) {
         if (!user.avatar && profile.avatar) user.avatar = profile.avatar;
@@ -720,7 +643,7 @@ export class AuthService {
       const issued = this.issueSession(user, sessions, refreshTokens, meta);
       this.appendAuditLog(auditLogs, sessions, user.id, `Connexion ${provider}`, 'success', {
         ip: meta.ip,
-        device: this.ensureDevice(meta),
+        device: ensureAuthDevice(meta.userAgent),
       });
 
       await Promise.all([
@@ -744,7 +667,7 @@ export class AuthService {
       const password = payload.password ?? '';
       const meta = this.getRequestMeta(request);
       const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-      const user = email ? this.findUserByEmail(email, users) : undefined;
+      const user = email ? findStoredUserByEmail(email, users) : undefined;
 
       if (!user) {
         throw new UnauthorizedException('Adresse email ou mot de passe incorrect.');
@@ -753,7 +676,7 @@ export class AuthService {
       if (user.lockedUntil && !isExpired(user.lockedUntil)) {
         this.appendAuditLog(auditLogs, sessions, user.id, 'Tentative de connexion sur compte verrouille', 'failed', {
           ip: meta.ip,
-          device: this.ensureDevice(meta),
+          device: ensureAuthDevice(meta.userAgent),
         });
         await this.saveAuditLogs(auditLogs);
         throw new UnauthorizedException('Compte temporairement verrouille. Reessayez plus tard.');
@@ -767,7 +690,7 @@ export class AuthService {
         }
         this.appendAuditLog(auditLogs, sessions, user.id, 'Tentative de connexion echouee', 'failed', {
           ip: meta.ip,
-          device: this.ensureDevice(meta),
+          device: ensureAuthDevice(meta.userAgent),
         });
         await Promise.all([this.saveUsers(users), this.saveAuditLogs(auditLogs)]);
         throw new UnauthorizedException('Adresse email ou mot de passe incorrect.');
@@ -782,7 +705,7 @@ export class AuthService {
       const issued = this.issueSession(user, sessions, refreshTokens, meta);
       this.appendAuditLog(auditLogs, sessions, user.id, 'Connexion reussie', 'success', {
         ip: meta.ip,
-        device: this.ensureDevice(meta),
+        device: ensureAuthDevice(meta.userAgent),
       });
 
       await Promise.all([
@@ -831,7 +754,7 @@ export class AuthService {
         throw new UnauthorizedException('Session expiree.');
       }
 
-      const user = this.findUserById(refreshRow.userId, users);
+      const user = findStoredUserById(refreshRow.userId, users);
       if (!user) {
         throw new UnauthorizedException('Session expiree.');
       }
@@ -843,7 +766,7 @@ export class AuthService {
 
       this.appendAuditLog(auditLogs, sessions, user.id, 'Rotation de session', 'success', {
         ip: meta.ip,
-        device: this.ensureDevice(meta),
+        device: ensureAuthDevice(meta.userAgent),
       });
 
       await Promise.all([
@@ -913,7 +836,7 @@ export class AuthService {
         throw new BadRequestException('Numero de telephone invalide.');
       }
       const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-      if (this.findUserByEmail(email, users)) {
+      if (findStoredUserByEmail(email, users)) {
         throw new ConflictException('Un compte existe deja avec cette adresse email.');
       }
 
@@ -949,7 +872,7 @@ export class AuthService {
       const issued = this.issueSession(user, sessions, refreshTokens, meta);
       this.appendAuditLog(auditLogs, sessions, user.id, 'Inscription du compte', 'success', {
         ip: meta.ip,
-        device: this.ensureDevice(meta),
+        device: ensureAuthDevice(meta.userAgent),
       });
 
       await Promise.all([
@@ -973,17 +896,17 @@ export class AuthService {
 
       const meta = this.getRequestMeta(request);
       const { users, sessions, pendingChallenges, auditLogs } = await this.loadSnapshot();
-      const user = this.findUserByEmail(email, users);
+      const user = findStoredUserByEmail(email, users);
 
       if (user && user.status === 'active' && (user.phone || user.email)) {
-        const latestChallenge = this.listPasswordResetChallenges(user.id, pendingChallenges)[0];
+        const latestChallenge = getPasswordResetChallenges(user.id, pendingChallenges)[0];
         if (
           latestChallenge
           && (Date.now() - Date.parse(latestChallenge.createdAt)) < PASSWORD_RESET_COOLDOWN_SECONDS * 1000
         ) {
           this.appendAuditLog(auditLogs, sessions, user.id, 'Demande de reinitialisation du mot de passe ignoree (cooldown)', 'failed', {
             ip: meta.ip,
-            device: this.ensureDevice(meta),
+            device: ensureAuthDevice(meta.userAgent),
           });
           await this.saveAuditLogs(auditLogs);
           return {
@@ -993,7 +916,7 @@ export class AuthService {
 
         const code = process.env.NODE_ENV === 'production' ? randomNumericSecurityCode() : '123456';
         const createdAt = new Date().toISOString();
-        const remainingChallenges = this.removePasswordResetChallenges(user.id, pendingChallenges);
+        const remainingChallenges = withoutPasswordResetChallenges(user.id, pendingChallenges);
 
         remainingChallenges.unshift({
           id: createAuthId('pwd-reset'),
@@ -1008,7 +931,7 @@ export class AuthService {
         await this.securityDeliveryService.deliverSecurityCode(user, code, 'password-reset');
         this.appendAuditLog(auditLogs, sessions, user.id, 'Demande de reinitialisation du mot de passe', 'success', {
           ip: meta.ip,
-          device: this.ensureDevice(meta),
+          device: ensureAuthDevice(meta.userAgent),
         });
 
         await Promise.all([
@@ -1041,12 +964,12 @@ export class AuthService {
 
       const meta = this.getRequestMeta(request);
       const { users, sessions, refreshTokens, pendingChallenges, auditLogs } = await this.loadSnapshot();
-      const user = this.findUserByEmail(email, users);
+      const user = findStoredUserByEmail(email, users);
       if (!user) {
         throw new UnauthorizedException('Code de verification invalide.');
       }
 
-      const challenge = this.listPasswordResetChallenges(user.id, pendingChallenges)[0];
+      const challenge = getPasswordResetChallenges(user.id, pendingChallenges)[0];
 
       if (!challenge || isExpired(challenge.expiresAt)) {
         throw new UnauthorizedException('Code de verification expire.');
@@ -1058,11 +981,11 @@ export class AuthService {
         const shouldInvalidateChallenge = !codeMatches && challenge.attempts >= PASSWORD_RESET_MAX_ATTEMPTS;
         this.appendAuditLog(auditLogs, sessions, user.id, 'Echec de reinitialisation du mot de passe', 'failed', {
           ip: meta.ip,
-          device: this.ensureDevice(meta),
+          device: ensureAuthDevice(meta.userAgent),
         });
         if (shouldInvalidateChallenge) {
           await Promise.all([
-            this.savePendingChallenges(this.removePasswordResetChallenges(user.id, pendingChallenges)),
+            this.savePendingChallenges(withoutPasswordResetChallenges(user.id, pendingChallenges)),
             this.saveAuditLogs(auditLogs),
           ]);
         } else {
@@ -1088,11 +1011,11 @@ export class AuthService {
         await this.revokeSessionChain(session.id, sessions, refreshTokens);
       }
 
-      const remainingChallenges = this.removePasswordResetChallenges(user.id, pendingChallenges);
+      const remainingChallenges = withoutPasswordResetChallenges(user.id, pendingChallenges);
 
       this.appendAuditLog(auditLogs, sessions, user.id, 'Reinitialisation du mot de passe', 'success', {
         ip: meta.ip,
-        device: this.ensureDevice(meta),
+        device: ensureAuthDevice(meta.userAgent),
       });
 
       await Promise.all([
@@ -1112,7 +1035,7 @@ export class AuthService {
 
   async listAllUsers() {
     const users = await this.loadRows<StoredUser>('auth_users');
-    return users.map((user) => publicUser(this.normalizeUser(user)));
+    return users.map((user) => publicUser(normalizeStoredUser(user)));
   }
 
   async getUsers(request: AuthenticatedRequest) {
@@ -1124,7 +1047,7 @@ export class AuthService {
     this.getActor(request);
     const users = await this.loadRows<StoredUser>('auth_users');
     return users
-      .map((user) => directoryUser(this.normalizeUser(user)))
+      .map((user) => directoryUser(normalizeStoredUser(user)))
       .filter((user) => user.status !== 'suspended');
   }
 
@@ -1160,15 +1083,15 @@ export class AuthService {
     return this.runSerializedMutation(async () => {
       const actor = await this.requirePermission(request, 'users.manage');
       const { users, sessions, auditLogs } = await this.loadSnapshot();
-      const user = this.findUserById(id, users);
+      const user = findStoredUserById(id, users);
       if (!user) {
         throw new BadRequestException('Utilisateur introuvable.');
       }
 
-      const patch = this.pickUserPatch(payload as Record<string, unknown>, MANAGED_USER_PATCH_KEYS);
+      const patch = pickStoredUserPatch(payload as Record<string, unknown>, MANAGED_USER_PATCH_KEYS);
       if (patch.email) {
         patch.email = patch.email.trim().toLowerCase();
-        const existing = this.findUserByEmail(patch.email, users);
+        const existing = findStoredUserByEmail(patch.email, users);
         if (existing && existing.id !== id) {
           throw new ConflictException('Un compte existe deja avec cette adresse email.');
         }
@@ -1221,38 +1144,38 @@ export class AuthService {
   async getProfile(request: AuthenticatedRequest, id: string) {
     this.requireSelfOrAdmin(request, id);
     const users = await this.loadRows<StoredUser>('auth_users');
-    const user = this.findUserById(id, users);
+    const user = findStoredUserById(id, users);
     if (!user) {
       throw new BadRequestException('Utilisateur introuvable.');
     }
-    return editableProfileUser(this.normalizeUser(user));
+    return editableProfileUser(normalizeStoredUser(user));
   }
 
   async exportPersonalData(request: AuthenticatedRequest, id: string) {
     this.requireSelfOrAdmin(request, id);
     const { users, sessions, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserById(id, users);
+    const user = findStoredUserById(id, users);
     if (!user) {
       throw new BadRequestException('Utilisateur introuvable.');
     }
 
     return buildPersonalDataExport({
-      user: this.normalizeUser(user),
-      sessions: this.listSessionsForUser(id, sessions),
-      auditLogs: this.listAuditLogsForUser(id, auditLogs),
+      user: normalizeStoredUser(user),
+      sessions: listAccessSessionsForUser(id, sessions),
+      auditLogs: listNormalizedAuditLogsForUser(id, auditLogs),
       currentSessionId: request.auth?.sessionId,
     });
   }
 
   async getPublicInstructorProfile(request: Pick<AuthenticatedRequest, 'auth'> | null, id: string) {
     const users = await this.loadRows<StoredUser>('auth_users');
-    const user = this.findUserById(id, users);
+    const user = findStoredUserById(id, users);
     const actor = request?.auth?.user;
     const canPreviewUnpublished = Boolean(actor && (actor.id === id || isAdminRole(actor)));
     if (!user || user.role !== 'formateur' || (!user.publicProfileEnabled && !canPreviewUnpublished)) {
       throw new BadRequestException('Profil formateur introuvable.');
     }
-    return publicInstructorProfile(this.normalizeUser(user));
+    return publicInstructorProfile(normalizeStoredUser(user));
   }
 
   async updateProfile(
@@ -1286,15 +1209,15 @@ export class AuthService {
     return this.runSerializedMutation(async () => {
       const actor = this.requireSelfOrAdmin(request, id);
       const { users, sessions, auditLogs } = await this.loadSnapshot();
-      const user = this.findUserById(id, users);
+      const user = findStoredUserById(id, users);
       if (!user) {
         throw new BadRequestException('Utilisateur introuvable.');
       }
 
-      const patch = this.pickUserPatch(payload as Record<string, unknown>, SELF_PROFILE_PATCH_KEYS);
+      const patch = pickStoredUserPatch(payload as Record<string, unknown>, SELF_PROFILE_PATCH_KEYS);
       if (patch.email) {
         patch.email = patch.email.trim().toLowerCase();
-        const existing = this.findUserByEmail(patch.email, users);
+        const existing = findStoredUserByEmail(patch.email, users);
         if (existing && existing.id !== id) {
           throw new ConflictException('Un compte existe deja avec cette adresse email.');
         }
@@ -1317,7 +1240,7 @@ export class AuthService {
     return this.runSerializedMutation(async () => {
       this.requireSelf(request, id);
       const { users, sessions, refreshTokens, pendingChallenges, auditLogs } = await this.loadSnapshot();
-      const user = this.findUserById(id, users);
+      const user = findStoredUserById(id, users);
       if (!user) {
         throw new BadRequestException('Utilisateur introuvable.');
       }
@@ -1360,7 +1283,7 @@ export class AuthService {
       }
 
       const { users, sessions, refreshTokens, auditLogs } = await this.loadSnapshot();
-      const user = this.findUserById(payload.userId, users);
+      const user = findStoredUserById(payload.userId, users);
       if (!user) {
         throw new BadRequestException('Utilisateur introuvable.');
       }
@@ -1403,15 +1326,15 @@ export class AuthService {
   async getSecurity(request: AuthenticatedRequest, userId: string): Promise<SecurityPayload> {
     this.requireSelfOrAdmin(request, userId);
     const { users, sessions, auditLogs } = await this.loadSnapshot();
-    const user = this.findUserById(userId, users);
+    const user = findStoredUserById(userId, users);
     if (!user) {
       throw new BadRequestException('Utilisateur introuvable.');
     }
 
     return {
       user: publicUser(user),
-      sessions: buildPublicSessions(this.listSessionsForUser(userId, sessions)),
-      auditLogs: this.listAuditLogsForUser(userId, auditLogs),
+      sessions: buildPublicSessions(listAccessSessionsForUser(userId, sessions)),
+      auditLogs: listNormalizedAuditLogsForUser(userId, auditLogs),
       backupCodes: [],
     };
   }

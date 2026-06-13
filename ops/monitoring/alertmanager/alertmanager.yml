@@ -7,3 +7,10 @@ route:
 
 receivers:
   - name: default
+    webhook_configs:
+      - url: http://backend:3000/api/monitoring/alertmanager
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/alertmanager/secrets/metrics-token

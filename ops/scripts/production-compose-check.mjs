@@ -73,6 +73,9 @@ function assertBackendUploadStorage(composeFile) {
   if (!backendBlock.includes('/usr/src/app/storage/uploads/_tmp')) {
     fail('Le backend doit exposer /usr/src/app/storage/uploads/_tmp en tmpfs pour les fichiers temporaires.');
   }
+  if (!backendBlock.includes('/usr/src/app/storage/uploads/_tmp:uid=1000,gid=1000,mode=1770')) {
+    fail('Le tmpfs des uploads temporaires doit appartenir a l UID/GID 1000 avec le mode 1770.');
+  }
 }
 
 function assertProductionServiceHardening(composeFile) {

@@ -32,6 +32,16 @@ export class LearningController {
     return this.learningAccessService.getApprenantCourseDetail(courseId, request.auth?.user ?? null);
   }
 
+  @Get('virtual-classes/:classId')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.learning.read')
+  getAuthorizedVirtualClass(
+    @Req() request: AuthenticatedRequest,
+    @Param('classId') classId: string,
+  ) {
+    return this.learningAccessService.getAuthorizedVirtualClassDetail(classId, request.auth?.user ?? null);
+  }
+
   @Get('apprenant/courses/:courseId/context')
   @UseGuards(PermissionGuard)
   @RequirePermission('data.learning.read')

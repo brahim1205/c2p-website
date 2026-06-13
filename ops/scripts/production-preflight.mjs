@@ -317,6 +317,8 @@ function main() {
     'ops/scripts/postgres-restore.sh',
     'ops/scripts/postgres-backup-check.mjs',
     'ops/scripts/install-postgres-backup-cron.sh',
+    'ops/scripts/deploy-certbot-certificate.sh',
+    'ops/scripts/install-certbot-webroot-renewal.sh',
   ]) {
     const fullPath = path.join(repoRoot, scriptPath);
     if (!fs.existsSync(fullPath)) {

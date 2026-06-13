@@ -68,40 +68,49 @@ export class LearningPublicReadService {
       where: { id: String(courseId), source: 'app_row', status: 'published' },
     });
     if (!course) return { course: null, sections: [], lessons: [], reviews: [], virtualClasses: [] };
-    const [sections, lessons, reviews, virtualClasses] = await Promise.all([
+    const [allSections, allLessons, reviews, virtualClasses] = await Promise.all([
       this.prisma.learningCourseSection.findMany({ where: { source: 'app_row', courseId: String(courseId), NOT: { status: 'archived' } } }),
-      this.prisma.learningCourseLesson.findMany({ where: { source: 'app_row', courseId: String(courseId), NOT: { status: 'archived' } } }),
+      this.prisma.learningCourseLesson.findMany({ where: { source: 'app_row', courseId: String(courseId), isPreview: true, NOT: { status: 'archived' } } }),
       this.prisma.learningCourseReview.findMany({ where: { source: 'app_row', courseId: String(courseId), status: 'published' } }),
       this.prisma.learningVirtualClass.findMany({ where: { source: 'app_row', courseId: String(courseId), NOT: { status: 'archived' } } }),
     ]);
-    const mappedCourse = this.mapCourse(course, sections, lessons, reviews);
+    const visibleSectionIds = new Set(allLessons.map((lesson) => String(lesson.sectionId ?? '')));
+    const sections = allSections.filter((section) => visibleSectionIds.has(String(section.id)));
+    const mappedCourse = this.mapCourse(course, sections, allLessons, reviews);
     return {
       course: mappedCourse,
-      sections: sections.map((section) => this.mapSection(section, mappedCourse, lessons)).sort((left, right) => this.position(left) - this.position(right)),
-      lessons: lessons.map((lesson) => this.mapLesson(lesson, mappedCourse, sections)).sort((left, right) => this.position(left) - this.position(right)),
+      sections: sections.map((section) => this.mapSection(section, mappedCourse, allLessons)).sort((left, right) => this.position(left) - this.position(right)),
+      lessons: allLessons.map((lesson) => this.mapLesson(lesson, mappedCourse, sections)).sort((left, right) => this.position(left) - this.position(right)),
       reviews: reviews.map((review) => this.mapReview(review, mappedCourse)).sort((left, right) => this.compareDatesDesc(left.created_at, right.created_at)),
-      virtualClasses: virtualClasses.map((row) => this.mapVirtualClass(row, mappedCourse)).sort((left, right) => this.compareDatesDesc(left.class_date ?? left.created_at, right.class_date ?? right.created_at)),
+      virtualClasses: virtualClasses.map((row) => this.mapPublicVirtualClass(row, mappedCourse)).sort((left, right) => this.compareDatesDesc(left.class_date ?? left.created_at, right.class_date ?? right.created_at)),
     };
   }
 
   async getPublicVirtualClassDetail(classId: string): Promise<VirtualClassDetail | null> {
     if (!(await this.hasProjection())) return null;
     const virtualClass = await this.prisma.learningVirtualClass.findFirst({
-      where: { id: String(classId), source: 'app_row', NOT: { status: 'archived' } },
+      where: {
+        id: String(classId),
+        source: 'app_row',
+        NOT: { status: 'archived' },
+      },
     });
     if (!virtualClass) return { virtualClass: null, course: null, sections: [], lessons: [] };
     const courseId = String(virtualClass.courseId);
     const [course, sections, lessons] = await Promise.all([
-      this.prisma.learningCourse.findFirst({ where: { id: courseId, source: 'app_row' } }),
+      this.prisma.learningCourse.findFirst({ where: { id: courseId, source: 'app_row', status: 'published' } }),
       this.prisma.learningCourseSection.findMany({ where: { source: 'app_row', courseId, NOT: { status: 'archived' } } }),
-      this.prisma.learningCourseLesson.findMany({ where: { source: 'app_row', courseId, NOT: { status: 'archived' } } }),
+      this.prisma.learningCourseLesson.findMany({ where: { source: 'app_row', courseId, isPreview: true, NOT: { status: 'archived' } } }),
     ]);
-    const mappedCourse = course ? this.mapCourse(course, sections, lessons, []) : null;
+    if (!course) return { virtualClass: null, course: null, sections: [], lessons: [] };
+    const visibleSectionIds = new Set(lessons.map((lesson) => String(lesson.sectionId ?? '')));
+    const visibleSections = sections.filter((section) => visibleSectionIds.has(String(section.id)));
+    const mappedCourse = this.mapCourse(course, visibleSections, lessons, []);
     return {
-      virtualClass: this.mapVirtualClass(virtualClass, mappedCourse),
+      virtualClass: this.mapPublicVirtualClass(virtualClass, mappedCourse),
       course: mappedCourse,
-      sections: mappedCourse ? sections.map((row) => this.mapSection(row, mappedCourse, lessons)).sort((left, right) => this.position(left) - this.position(right)) : [],
-      lessons: mappedCourse ? lessons.map((row) => this.mapLesson(row, mappedCourse, sections)).sort((left, right) => this.position(left) - this.position(right)) : [],
+      sections: visibleSections.map((row) => this.mapSection(row, mappedCourse, lessons)).sort((left, right) => this.position(left) - this.position(right)),
+      lessons: lessons.map((row) => this.mapLesson(row, mappedCourse, visibleSections)).sort((left, right) => this.position(left) - this.position(right)),
     };
   }
 
@@ -212,6 +221,14 @@ export class LearningPublicReadService {
     row.ended_at = this.iso(row.ended_at, virtualClass.endedAt);
     row.created_at = this.iso(row.created_at, virtualClass.createdAt);
     row.updated_at = this.iso(row.updated_at, virtualClass.updatedAt);
+    return row;
+  }
+
+  private mapPublicVirtualClass(virtualClass: LearningVirtualClass, course: Row | null) {
+    const row = this.mapVirtualClass(virtualClass, course);
+    delete row.meeting_slug;
+    delete row.room_link;
+    delete row.recording_url;
     return row;
   }
 

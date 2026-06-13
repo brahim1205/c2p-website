@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Header, NotFoundException, Post, Req, UnauthorizedException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { timingSafeEqual } from 'node:crypto';
+import { AlertmanagerNotificationService } from './alertmanager-notification.service.js';
 import { MonitoringService } from './monitoring.service.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { ConfigService } from '../config/config.service.js';
@@ -11,6 +12,7 @@ export class MonitoringController {
   constructor(
     private readonly monitoringService: MonitoringService,
     private readonly configService: ConfigService,
+    private readonly alertmanagerNotificationService: AlertmanagerNotificationService,
   ) {}
 
   private hasValidMetricsToken(request: AuthenticatedRequest) {
@@ -45,6 +47,18 @@ export class MonitoringController {
       throw new UnauthorizedException('Acces refuse.');
     }
     return this.monitoringService.getMetrics();
+  }
+
+  @Post('monitoring/alertmanager')
+  async alertmanager(
+    @Req() request: AuthenticatedRequest,
+    @Body() payload: unknown,
+  ) {
+    if (!this.hasValidMetricsToken(request)) {
+      throw new UnauthorizedException('Acces refuse.');
+    }
+    await this.alertmanagerNotificationService.notify(payload);
+    return { success: true };
   }
 
   @Post('monitoring/frontend-errors')

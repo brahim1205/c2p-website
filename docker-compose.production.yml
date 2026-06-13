@@ -12,6 +12,7 @@ services:
       - ./ops/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ops/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./ops/nginx/certs:/etc/nginx/certs:ro
+      - ./ops/certbot/www:/var/www/certbot:ro
     networks:
       - edge
       - app
@@ -74,7 +75,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp
-      - /usr/src/app/storage/uploads/_tmp
+      - /usr/src/app/storage/uploads/_tmp:uid=1000,gid=1000,mode=1770
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -173,6 +174,7 @@ services:
       - "--storage.path=/alertmanager"
     volumes:
       - ./ops/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./ops/monitoring/prometheus/secrets:/etc/alertmanager/secrets:ro
       - alertmanager-data:/alertmanager
     restart: unless-stopped
     expose:
