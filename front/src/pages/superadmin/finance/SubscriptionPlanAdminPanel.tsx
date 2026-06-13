@@ -24,6 +24,14 @@ const emptyPlan: Partial<SubscriptionPlan> = {
   active: true,
 };
 
+function getErrorMessage(cause: unknown, fallback: string) {
+  if (cause instanceof Error) return cause.message;
+  if (cause && typeof cause === 'object' && 'message' in cause && typeof cause.message === 'string') {
+    return cause.message;
+  }
+  return fallback;
+}
+
 export default function SubscriptionPlanAdminPanel() {
   const { success, error } = useToast();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -79,7 +87,7 @@ export default function SubscriptionPlanAdminPanel() {
       await load();
     } catch (saveError) {
       console.error(saveError);
-      error('Erreur', saveError instanceof Error ? saveError.message : 'Impossible d enregistrer le tarif.');
+      error('Erreur', getErrorMessage(saveError, 'Impossible d enregistrer le tarif.'));
     } finally {
       setBusy(false);
     }
@@ -93,7 +101,7 @@ export default function SubscriptionPlanAdminPanel() {
       await load();
     } catch (deactivateError) {
       console.error(deactivateError);
-      error('Erreur', deactivateError instanceof Error ? deactivateError.message : 'Impossible de désactiver le tarif.');
+      error('Erreur', getErrorMessage(deactivateError, 'Impossible de désactiver le tarif.'));
     } finally {
       setBusy(false);
     }
@@ -107,7 +115,7 @@ export default function SubscriptionPlanAdminPanel() {
       await load();
     } catch (reactivateError) {
       console.error(reactivateError);
-      error('Erreur', reactivateError instanceof Error ? reactivateError.message : 'Impossible de réactiver le tarif.');
+      error('Erreur', getErrorMessage(reactivateError, 'Impossible de réactiver le tarif.'));
     } finally {
       setBusy(false);
     }
@@ -127,6 +135,7 @@ export default function SubscriptionPlanAdminPanel() {
         <select value={form.role} onChange={(event) => field('role', event.target.value)} className="rounded-xl border border-gray-300 px-3 py-2">
           <option value="prestataire">Prestataire</option>
           <option value="formateur">Formateur</option>
+          <option value="porteur">Porteur de projet</option>
           <option value="partenaire">Partenaire</option>
         </select>
         <input value={form.name ?? ''} onChange={(event) => field('name', event.target.value)} placeholder="Nom du plan" className="rounded-xl border border-gray-300 px-3 py-2" />

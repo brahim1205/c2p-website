@@ -22,7 +22,7 @@ type PlanPayload = {
   active?: boolean;
 };
 
-const ALLOWED_ROLES = new Set(['prestataire', 'formateur', 'partenaire']);
+const ALLOWED_ROLES = new Set(['prestataire', 'formateur', 'porteur', 'partenaire']);
 const ALLOWED_DURATION_UNITS = new Set(['jour', 'mois', 'an', 'ponctuel', 'aucun']);
 
 const DEFAULT_PARTNER_PLANS: PlanPayload[] = [
@@ -161,7 +161,9 @@ export class SubscriptionPlanAdminService implements OnModuleInit {
   private normalize(payload: PlanPayload, fallback: Record<string, unknown> = {}) {
     const role = String(payload.role ?? fallback.role ?? '').trim();
     const name = String(payload.name ?? fallback.name ?? '').trim();
-    const slug = this.slugify(String(payload.slug ?? fallback.slug ?? name));
+    const requestedSlug = String(payload.slug ?? '').trim();
+    const fallbackSlug = String(fallback.slug ?? '').trim();
+    const slug = this.slugify(requestedSlug || fallbackSlug || name);
     const price = Number(payload.price_monthly ?? fallback.price_monthly ?? 0);
     const commission = Number(payload.commission_rate ?? fallback.commission_rate ?? 0);
     const durationUnit = String(payload.duration_unit ?? fallback.duration_unit ?? 'mois').trim();
