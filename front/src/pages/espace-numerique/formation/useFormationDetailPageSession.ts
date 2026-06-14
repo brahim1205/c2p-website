@@ -41,8 +41,11 @@ export function useFormationDetailPageSession() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
-    const courseId = Number(id);
-    if (!courseId) return;
+    const courseId = String(id ?? '').trim();
+    if (!courseId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       setLoading(true);

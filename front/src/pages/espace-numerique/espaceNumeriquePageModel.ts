@@ -3,7 +3,7 @@ import {
 } from '@/lib/courseBranch';
 
 export interface Course {
-  id: number;
+  id: string | number;
   title: string;
   category: string;
   description: string | null;

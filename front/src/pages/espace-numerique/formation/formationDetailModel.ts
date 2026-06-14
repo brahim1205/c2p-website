@@ -1,5 +1,5 @@
 export interface Course {
-  id: number;
+  id: string | number;
   title: string;
   category: string;
   description: string | null;
@@ -26,15 +26,15 @@ export interface Course {
 }
 
 export interface CourseSection {
-  id: number;
+  id: string | number;
   title: string;
   description: string | null;
   position: number | null;
 }
 
 export interface CourseLesson {
-  id: number;
-  section_id: number | null;
+  id: string | number;
+  section_id: string | number | null;
   title: string;
   description: string | null;
   type: string | null;
@@ -44,14 +44,14 @@ export interface CourseLesson {
 }
 
 export interface EnrollmentRecord {
-  id: number;
+  id: string | number;
   progress?: number;
   status?: string;
 }
 
 export interface CourseReview {
   id: string | number;
-  course_id: number;
+  course_id: string | number;
   student_id: string;
   student_name: string;
   student_avatar?: string | null;
@@ -63,13 +63,13 @@ export interface CourseReview {
 
 export interface LessonProgressRecord {
   id: string | number;
-  lesson_id: number;
+  lesson_id: string | number;
   progress: number;
   completed: boolean;
 }
 
 export interface RelatedVirtualClass {
-  id: number;
+  id: string | number;
   title: string;
   class_date: string;
   class_time: string;

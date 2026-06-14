@@ -1,7 +1,7 @@
 import { apiRequest } from './api';
 
 export interface EspaceCourse {
-  id: number;
+  id: string | number;
   title: string;
   category: string;
   description: string | null;
@@ -29,15 +29,15 @@ export interface EspaceCourse {
 }
 
 export interface EspaceCourseSection {
-  id: number;
+  id: string | number;
   title: string;
   description: string | null;
   position: number | null;
 }
 
 export interface EspaceCourseLesson {
-  id: number;
-  section_id: number | null;
+  id: string | number;
+  section_id: string | number | null;
   title: string;
   description: string | null;
   type: string | null;
@@ -48,7 +48,7 @@ export interface EspaceCourseLesson {
 
 export interface EspaceCourseReview {
   id: string | number;
-  course_id: number;
+  course_id: string | number;
   student_id: string;
   student_name: string;
   student_avatar?: string | null;
@@ -59,9 +59,9 @@ export interface EspaceCourseReview {
 }
 
 export interface EspaceVirtualClass {
-  id: number;
+  id: string | number;
   title: string;
-  course_id: number;
+  course_id: string | number;
   course_name: string;
   class_date: string;
   class_time: string;
@@ -77,8 +77,8 @@ export interface EspaceVirtualClass {
 }
 
 export interface EspaceEnrollment {
-  id: number;
-  course_id: number;
+  id: string | number;
+  course_id: string | number;
   student_name?: string;
   student_email?: string | null;
   progress?: number;
