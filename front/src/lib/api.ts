@@ -5,6 +5,8 @@ let lastRequestId: string | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
 const responseCache = new Map<string, { expiresAt: number; data: unknown }>();
 const inflightGetRequests = new Map<string, Promise<unknown>>();
+const LEGACY_UPLOAD_ORIGIN = 'https://cdn.c2p.sn';
+const PUBLIC_UPLOAD_BASE = '/api/uploads/public';
 
 export interface ApiError {
   message: string;
@@ -42,6 +44,21 @@ function isAuthRefreshCandidate(path: string) {
 function dispatchAuthExpired() {
   clearApiSessionCache();
   window.dispatchEvent(new CustomEvent('c2p:auth-expired'));
+}
+
+function normalizeLegacyUploadUrls(value: unknown): unknown {
+  if (typeof value === 'string' && value.startsWith(`${LEGACY_UPLOAD_ORIGIN}/`)) {
+    return `${PUBLIC_UPLOAD_BASE}/${value.slice(LEGACY_UPLOAD_ORIGIN.length + 1)}`;
+  }
+  if (Array.isArray(value)) {
+    return value.map(normalizeLegacyUploadUrls);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, normalizeLegacyUploadUrls(entry)]),
+    );
+  }
+  return value;
 }
 
 export function clearApiSessionCache() {
@@ -157,7 +174,7 @@ export async function apiRequest<T>(
       }
 
       const rawBody = await response.text();
-      const data = (rawBody.trim() ? JSON.parse(rawBody) : null) as T;
+      const data = normalizeLegacyUploadUrls(rawBody.trim() ? JSON.parse(rawBody) : null) as T;
       if (isUnsafeMethod(method)) {
         responseCache.clear();
       }

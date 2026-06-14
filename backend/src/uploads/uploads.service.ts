@@ -91,6 +91,19 @@ export class UploadsService {
     return fallbackOrigin ? `${fallbackOrigin.replace(/\/$/, '')}${normalizedPath}` : normalizedPath;
   }
 
+  async readPublicObject(publicPath: string, range?: string) {
+    const storageKey = publicPath
+      .replaceAll('\\', '/')
+      .split('/')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join('/');
+    if (!storageKey || storageKey.includes('..')) {
+      return null;
+    }
+    return this.storageProvider.readObject(storageKey, range);
+  }
+
   private getPolicy(resourceType: UploadResourceType): UploadPolicy {
     if (resourceType === 'image') {
       return {

@@ -3,8 +3,12 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
+  NotFoundException,
+  Param,
   Post,
   Req,
+  Res,
   UnauthorizedException,
   UseInterceptors,
 } from '@nestjs/common';
@@ -13,7 +17,9 @@ import { ApiTags } from '@nestjs/swagger';
 import { mkdirSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { pipeline } from 'node:stream/promises';
 import { diskStorage } from 'multer';
+import type { Response } from 'express';
 import { UploadsService, type StoredUploadFile } from './uploads.service.js';
 import type { UploadResourceType } from './upload-policy.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
@@ -32,6 +38,29 @@ export class UploadsController {
       throw new UnauthorizedException('Authentification requise.');
     }
     return this.uploadsService.getStrategy();
+  }
+
+  @Get('public/*path')
+  async getPublicFile(
+    @Param('path') path: string | string[],
+    @Headers('range') range: string | undefined,
+    @Res() response: Response,
+  ) {
+    const publicPath = Array.isArray(path) ? path.join('/') : path;
+    const stored = await this.uploadsService.readPublicObject(publicPath, range);
+    if (!stored) {
+      throw new NotFoundException('Fichier introuvable.');
+    }
+
+    response.status(stored.statusCode);
+    response.setHeader('Content-Type', stored.contentType);
+    response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    if (stored.contentLength !== undefined) response.setHeader('Content-Length', String(stored.contentLength));
+    if (stored.contentRange) response.setHeader('Content-Range', stored.contentRange);
+    if (stored.acceptRanges) response.setHeader('Accept-Ranges', stored.acceptRanges);
+    if (stored.etag) response.setHeader('ETag', stored.etag);
+    if (stored.lastModified) response.setHeader('Last-Modified', stored.lastModified);
+    await pipeline(stored.body, response);
   }
 
   @Post('local')

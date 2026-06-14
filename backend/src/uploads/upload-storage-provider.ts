@@ -1,6 +1,8 @@
 import { createHash, createHmac } from 'node:crypto';
-import { copyFile, mkdir, readFile, rename, unlink } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { copyFile, mkdir, readFile, rename, stat, unlink } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { Readable } from 'node:stream';
 
 export type UploadStorageDriver = 'local-disk' | 's3';
 
@@ -17,12 +19,24 @@ export interface UploadStorageWriteResult {
   relativePath: string;
 }
 
+export interface UploadStorageReadResult {
+  body: NodeJS.ReadableStream;
+  statusCode: 200 | 206;
+  contentType: string;
+  contentLength?: number;
+  contentRange?: string;
+  acceptRanges?: string;
+  etag?: string;
+  lastModified?: string;
+}
+
 export interface UploadStorageProvider {
   readonly driver: UploadStorageDriver;
   readonly publicRoot: string;
   readonly tempRoot: string;
   ensureTempRoot(): Promise<string>;
   storeObject(input: UploadStorageWriteInput): Promise<UploadStorageWriteResult>;
+  readObject(storageKey: string, range?: string): Promise<UploadStorageReadResult | null>;
   deleteObject(storageKey: string): Promise<void>;
 }
 
@@ -59,6 +73,32 @@ export class LocalDiskUploadStorageProvider implements UploadStorageProvider {
       driver: this.driver,
       storageKey,
       relativePath: `/uploads/${storageKey}`,
+    };
+  }
+
+  async readObject(storageKey: string, range?: string) {
+    const normalizedKey = storageKey.startsWith('uploads/') ? storageKey.slice('uploads/'.length) : storageKey;
+    const absolutePath = join(this.publicRoot, normalizedKey);
+    assertPathInsideRoot(this.publicRoot, absolutePath);
+
+    let objectStat;
+    try {
+      objectStat = await stat(absolutePath);
+    } catch {
+      return null;
+    }
+    if (!objectStat.isFile()) return null;
+
+    const parsedRange = parseByteRange(range, objectStat.size);
+    const contentLength = parsedRange ? parsedRange.end - parsedRange.start + 1 : objectStat.size;
+    return {
+      body: createReadStream(absolutePath, parsedRange ?? undefined),
+      statusCode: parsedRange ? 206 as const : 200 as const,
+      contentType: contentTypeFromPath(absolutePath),
+      contentLength,
+      contentRange: parsedRange ? `bytes ${parsedRange.start}-${parsedRange.end}/${objectStat.size}` : undefined,
+      acceptRanges: 'bytes',
+      lastModified: objectStat.mtime.toUTCString(),
     };
   }
 
@@ -148,6 +188,44 @@ export class S3UploadStorageProvider implements UploadStorageProvider {
     };
   }
 
+  async readObject(storageKey: string, range?: string) {
+    const normalizedKey = normalizeStoragePath(storageKey);
+    if (!normalizedKey || normalizedKey.includes('..') || !normalizedKey.startsWith(`${this.keyPrefix}/`)) {
+      return null;
+    }
+
+    const targetUrl = this.resolveObjectUrl(normalizedKey);
+    const headers = this.createSignedHeaders({
+      method: 'GET',
+      url: targetUrl,
+      body: Buffer.alloc(0),
+    });
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        ...headers,
+        ...(range ? { Range: range } : {}),
+      },
+    });
+
+    if (response.status === 404) return null;
+    if (!response.ok || !response.body) {
+      const responseBody = await response.text().catch(() => '');
+      throw new Error(`S3 download failed (${response.status}): ${responseBody.slice(0, 240)}`);
+    }
+
+    return {
+      body: Readable.fromWeb(response.body as import('node:stream/web').ReadableStream),
+      statusCode: response.status === 206 ? 206 as const : 200 as const,
+      contentType: response.headers.get('content-type') || 'application/octet-stream',
+      contentLength: parseOptionalPositiveInteger(response.headers.get('content-length')),
+      contentRange: response.headers.get('content-range') ?? undefined,
+      acceptRanges: response.headers.get('accept-ranges') ?? 'bytes',
+      etag: response.headers.get('etag') ?? undefined,
+      lastModified: response.headers.get('last-modified') ?? undefined,
+    };
+  }
+
   async deleteObject(storageKey: string) {
     const targetUrl = this.resolveObjectUrl(storageKey);
     const headers = this.createSignedHeaders({
@@ -184,10 +262,10 @@ export class S3UploadStorageProvider implements UploadStorageProvider {
   }
 
   private createSignedHeaders(input: {
-    method: 'PUT' | 'DELETE';
+    method: 'GET' | 'PUT' | 'DELETE';
     url: URL;
     body: Buffer;
-    contentType: string;
+    contentType?: string;
   }) {
     const now = new Date();
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
@@ -195,11 +273,13 @@ export class S3UploadStorageProvider implements UploadStorageProvider {
     const payloadHash = sha256Hex(input.body);
     const host = input.url.host;
     const headers: Record<string, string> = {
-      'content-type': input.contentType,
       host,
       'x-amz-content-sha256': payloadHash,
       'x-amz-date': amzDate,
     };
+    if (input.contentType) {
+      headers['content-type'] = input.contentType;
+    }
     const signedHeaderNames = Object.keys(headers).sort((left, right) => left.localeCompare(right));
     const canonicalHeaders = signedHeaderNames
       .map((header) => `${header}:${headers[header].trim()}\n`)
@@ -224,13 +304,58 @@ export class S3UploadStorageProvider implements UploadStorageProvider {
     const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex');
 
     return {
-      'Content-Type': headers['content-type'],
+      ...(headers['content-type'] ? { 'Content-Type': headers['content-type'] } : {}),
       Host: headers.host,
       'X-Amz-Content-Sha256': headers['x-amz-content-sha256'],
       'X-Amz-Date': headers['x-amz-date'],
       Authorization: `AWS4-HMAC-SHA256 Credential=${this.config.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
     };
   }
+}
+
+function parseByteRange(value: string | undefined, size: number) {
+  if (!value) return null;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(value.trim());
+  if (!match) return null;
+
+  const startText = match[1];
+  const endText = match[2];
+  if (!startText && !endText) return null;
+
+  if (!startText) {
+    const suffixLength = Number(endText);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) return null;
+    return { start: Math.max(size - suffixLength, 0), end: size - 1 };
+  }
+
+  const start = Number(startText);
+  const requestedEnd = endText ? Number(endText) : size - 1;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(requestedEnd) || start < 0 || start >= size) {
+    return null;
+  }
+  return { start, end: Math.min(Math.max(requestedEnd, start), size - 1) };
+}
+
+function parseOptionalPositiveInteger(value: string | null) {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function contentTypeFromPath(path: string) {
+  const extension = path.toLowerCase().split('.').pop();
+  const types: Record<string, string> = {
+    gif: 'image/gif',
+    jpeg: 'image/jpeg',
+    jpg: 'image/jpeg',
+    mp4: 'video/mp4',
+    pdf: 'application/pdf',
+    png: 'image/png',
+    svg: 'image/svg+xml',
+    webm: 'video/webm',
+    webp: 'image/webp',
+  };
+  return extension ? types[extension] ?? 'application/octet-stream' : 'application/octet-stream';
 }
 
 function normalizeStoragePath(value: string) {
