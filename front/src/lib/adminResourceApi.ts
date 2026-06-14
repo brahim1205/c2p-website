@@ -52,6 +52,9 @@ export interface AdminContentItem {
   views: number;
   category: string;
   description?: string;
+  thumbnail?: string | null;
+  trailer_url?: string | null;
+  instructor_id?: string | null;
 }
 
 export interface AdminCampaign {

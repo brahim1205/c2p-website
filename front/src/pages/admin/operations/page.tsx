@@ -36,6 +36,9 @@ export default function AdminOperationsPage() {
 
   const operationsQuery = useQuery({
     queryKey: queryKeys.admin.operations(),
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<OperationsSnapshot> => {
       const [reportsData, accreditationsData, contentsData, usersData, supportData, financeOverview] = await Promise.all([
         fetchAdminReports(),

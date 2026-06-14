@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
+import { isAdminRole, listUsers, type AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 import {
@@ -26,12 +26,14 @@ import {
 import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 @Injectable()
 export class FormateurCourseProgramService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getCourses(user: AuthUser | null) {
@@ -228,7 +230,25 @@ export class FormateurCourseProgramService {
       beforeRowsByTable: { courses: [previous] },
       afterRowsByTable: { courses: updated },
     });
-    return updated[0] ?? sanitized;
+    const result = updated[0] ?? sanitized;
+    if (String(previous.status) !== 'review' && String(result.status) === 'review') {
+      const admins = listUsers().filter((candidate) =>
+        (candidate.role === 'admin' || candidate.role === 'superadmin') && candidate.status === 'active',
+      );
+      await Promise.all(admins.map((admin) => this.notificationsService.create(actor, {
+        userId: admin.id,
+        title: 'Nouvelle demande de publication',
+        message: `${actor.firstName} ${actor.lastName} a soumis la formation "${String(result.title)}" pour validation.`,
+        type: 'formation',
+        link: '/admin/content',
+        metadata: {
+          course_id: result.id,
+          instructor_id: actor.id,
+          moderation_status: 'pending',
+        },
+      })));
+    }
+    return result;
   }
 
   async updateWorkflow(courseId: string, payload: unknown, user: AuthUser | null) {

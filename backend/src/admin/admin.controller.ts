@@ -35,7 +35,7 @@ export class AdminController {
     @Param('id') id: string,
     @Body() payload: unknown,
   ) {
-    return this.adminService.updateResource(resource, id, payload, request.auth?.user?.id ?? null);
+    return this.adminService.updateResource(resource, id, payload, request.auth?.user ?? null);
   }
 
   @Delete('resources/:resource/:id')

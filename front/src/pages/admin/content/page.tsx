@@ -19,6 +19,9 @@ export default function AdminContentPage() {
   const contentQuery = useQuery({
     queryKey: queryKeys.admin.content(),
     queryFn: fetchAdminContentItems,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {
@@ -62,7 +65,10 @@ export default function AdminContentPage() {
       success(labels[status], updated.title);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de mettre a jour le contenu.');
+      const message = err && typeof err === 'object' && 'message' in err
+        ? String(err.message)
+        : 'Impossible de mettre a jour le contenu.';
+      error('Erreur', message);
     }
   };
 
@@ -204,12 +210,29 @@ export default function AdminContentPage() {
 
         {showViewModal && selectedItem && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-lg w-full p-6">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-gray-900">{selectedItem.title}</h3>
                 <button onClick={() => setShowViewModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"><i className="ri-close-line text-gray-500 text-xl"></i></button>
               </div>
               <div className="space-y-4">
+                {selectedItem.thumbnail ? (
+                  <img
+                    src={selectedItem.thumbnail}
+                    alt={`Miniature de ${selectedItem.title}`}
+                    className="max-h-72 w-full rounded-xl border border-gray-200 bg-gray-100 object-contain"
+                  />
+                ) : null}
+                {selectedItem.trailer_url ? (
+                  <video
+                    src={selectedItem.trailer_url}
+                    controls
+                    preload="metadata"
+                    className="max-h-80 w-full rounded-xl border border-gray-200 bg-black"
+                  >
+                    Votre navigateur ne peut pas lire cette vidéo.
+                  </video>
+                ) : null}
                 <div className="flex items-center gap-3">{getStatusBadge(selectedItem.status)}<span className="text-sm text-gray-600">{selectedItem.type} • {selectedItem.category}</span></div>
                 <p className="text-sm text-gray-700">{selectedItem.description}</p>
                 <div className="grid grid-cols-2 gap-4">

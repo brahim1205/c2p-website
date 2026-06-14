@@ -114,6 +114,9 @@ export function syncCourseModerationItems() {
       views: toNumber(existingItem?.views) ?? toNumber(course.students_count) ?? 0,
       category: String(course.category ?? 'General'),
       description: String(course.description ?? ''),
+      thumbnail: trimText(course.thumbnail),
+      trailer_url: trimText(course.trailer_url),
+      instructor_id: trimText(course.instructor_id),
     };
   });
 

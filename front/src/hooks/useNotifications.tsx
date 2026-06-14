@@ -38,7 +38,9 @@ export function useNotifications() {
       return data.map(mapNotificationRecord);
     },
     enabled: Boolean(user?.id),
-    refetchInterval: 20000,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
   const notifications = useMemo(() => notificationsQuery.data ?? [], [notificationsQuery.data]);

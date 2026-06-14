@@ -40,7 +40,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { notifications, unreadCount: notificationUnreadCount } = useNotifications();
+  const { notifications, unreadCount: notificationUnreadCount, isLoading: notificationsLoading } = useNotifications();
   const { totalUnread: messageUnreadCount } = useBackendMessaging({ summaryOnly: true });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const canLoadSupportUnread = user?.role === 'admin' || user?.role === 'superadmin';
@@ -82,7 +82,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="admin-layout h-screen overflow-hidden bg-gray-50">
-      <LiveNotifications notifications={notifications} />
+      <LiveNotifications notifications={notifications} loading={notificationsLoading} />
       {/* Top Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-40 h-16 border-b border-gray-200 bg-white/95 backdrop-blur">
         <div className="flex h-full items-center justify-between gap-4 px-4 lg:px-6">

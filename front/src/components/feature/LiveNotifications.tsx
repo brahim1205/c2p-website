@@ -4,18 +4,27 @@ import { useToast } from '@/hooks/useToast';
 
 interface LiveNotificationsProps {
   notifications: Notification[];
+  loading?: boolean;
 }
 
-function playNotificationSound() {
+let sharedAudioContext: AudioContext | null = null;
+
+function getAudioContext() {
   if (typeof window === 'undefined') return;
 
   const AudioContextCtor = window.AudioContext
     ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 
   if (!AudioContextCtor) return;
+  sharedAudioContext ??= new AudioContextCtor();
+  return sharedAudioContext;
+}
 
+async function playNotificationSound() {
   try {
-    const context = new AudioContextCtor();
+    const context = getAudioContext();
+    if (!context) return;
+    if (context.state === 'suspended') await context.resume();
     const now = context.currentTime;
     const notes = [
       { frequency: 1174.66, start: 0, duration: 0.16 },
@@ -42,22 +51,21 @@ function playNotificationSound() {
       oscillator.stop(endAt);
     });
 
-    window.setTimeout(() => {
-      void context.close().catch(() => undefined);
-    }, 450);
   } catch {
     // Ignore autoplay and audio device failures.
   }
 }
 
-export default function LiveNotifications({ notifications }: LiveNotificationsProps) {
+export default function LiveNotifications({ notifications, loading = false }: LiveNotificationsProps) {
   const { info } = useToast();
   const lastNotifiedIds = useRef<Set<string>>(new Set());
+  const initialized = useRef(false);
 
   useEffect(() => {
-    // On first mount, mark all existing as notified so we don't flood the user
-    if (lastNotifiedIds.current.size === 0) {
+    if (loading) return;
+    if (!initialized.current) {
       notifications.forEach((n) => lastNotifiedIds.current.add(n.id));
+      initialized.current = true;
       return;
     }
 
@@ -71,7 +79,20 @@ export default function LiveNotifications({ notifications }: LiveNotificationsPr
       info(notification.title, notification.message);
       playNotificationSound();
     });
-  }, [notifications, info]);
+  }, [notifications, info, loading]);
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      const context = getAudioContext();
+      if (context?.state === 'suspended') void context.resume().catch(() => undefined);
+    };
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, []);
 
   return null;
 }

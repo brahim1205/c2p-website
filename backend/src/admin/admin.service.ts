@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import type { AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { sanitizeAdminContentItemRecord } from '../data/data-course-sanitizers.js';
 import {
   appendAppRows,
   clone,
@@ -14,6 +16,7 @@ import { applyDataDeleteCascade } from '../data/data-delete-cascade.js';
 import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 type AdminResourceConfig = {
   table: string;
@@ -40,6 +43,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listResource(resource: string) {
@@ -63,19 +67,83 @@ export class AdminService {
     return created[0] ?? row;
   }
 
-  async updateResource(resource: string, id: string, payload: unknown, actorId: string | null) {
+  async updateResource(resource: string, id: string, payload: unknown, actor: AuthUser | null) {
     const config = this.getResourceConfig(resource);
     const patch = this.requireObject(payload);
     await syncAppStoreFromDatabase(this.prisma);
     const previous = this.findResourceRow(config, id);
+    if (resource === 'content') {
+      if (!actor) throw new BadRequestException('Administrateur requis.');
+      return this.updateContentResource(config, previous, patch, actor);
+    }
+
     const updated = patchAppRows(config.table, (row) => String(row.id) === String(previous.id), patch);
     await this.platformPersistenceService.persistRows({ [config.table]: updated }, {
-      actorId,
+      actorId: actor?.id ?? null,
       reason: `admin:${resource}:update`,
       beforeRowsByTable: { [config.table]: [previous] },
       afterRowsByTable: { [config.table]: updated },
     });
     return updated[0] ?? { ...previous, ...patch };
+  }
+
+  private async updateContentResource(
+    config: AdminResourceConfig,
+    previous: Row,
+    patch: Row,
+    actor: AuthUser,
+  ) {
+    const sourceCourse = String(previous.source_table) === 'courses'
+      ? (store.courses ?? []).find((row) => String(row.id) === String(previous.source_id))
+      : null;
+    const previousCourse = sourceCourse ? clone(sourceCourse) : null;
+    const sanitized = sanitizeAdminContentItemRecord({ ...previous, ...patch }, actor);
+    const updated = patchAppRows(config.table, (row) => String(row.id) === String(previous.id), sanitized);
+    const updatedCourse = sourceCourse
+      ? (store.courses ?? []).find((row) => String(row.id) === String(sourceCourse.id)) ?? null
+      : null;
+    const rowsByTable: Record<string, Row[]> = { [config.table]: updated };
+    if (updatedCourse) rowsByTable.courses = [updatedCourse];
+
+    await this.platformPersistenceService.persistRows(rowsByTable, {
+      actorId: actor.id,
+      reason: 'admin:content:update',
+      beforeRowsByTable: {
+        [config.table]: [previous],
+        ...(previousCourse ? { courses: [previousCourse] } : {}),
+      },
+      afterRowsByTable: rowsByTable,
+    });
+
+    const result = updated[0] ?? { ...previous, ...sanitized };
+    const statusChanged = String(previous.status) !== String(result.status);
+    if (statusChanged && updatedCourse?.instructor_id) {
+      const status = String(result.status);
+      const decision = status === 'published'
+        ? {
+            title: 'Formation publiée',
+            message: `Votre formation "${String(updatedCourse.title ?? result.title)}" a été validée et publiée.`,
+          }
+        : status === 'rejected'
+          ? {
+              title: 'Formation à corriger',
+              message: `Votre formation "${String(updatedCourse.title ?? result.title)}" a été refusée. Consultez-la avant une nouvelle soumission.`,
+            }
+          : null;
+      if (decision) {
+        await this.notificationsService.create(actor, {
+          userId: String(updatedCourse.instructor_id),
+          ...decision,
+          type: 'formation',
+          link: `/dashboard/formateur/mes-cours/${encodeURIComponent(String(updatedCourse.id))}/programme`,
+          metadata: {
+            course_id: updatedCourse.id,
+            moderation_status: status,
+          },
+        });
+      }
+    }
+    return result;
   }
 
   async deleteResource(resource: string, id: string, actorId: string | null) {
