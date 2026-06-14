@@ -104,6 +104,7 @@ const formateurRoutes: RouteObject[] = [
   dashboardRoute('/dashboard/formateur/mes-cours', Pages.FormateurCoursPage, ['formateur']),
   dashboardRoute('/dashboard/formateur/mes-cours/:id/programme', Pages.FormateurCourseProgramPage, ['formateur']),
   dashboardRoute('/dashboard/formateur/classes-virtuelles', Pages.FormateurClassesPage, ['formateur']),
+  dashboardRoute('/dashboard/formateur/classes-virtuelles/nouvelle', Pages.FormateurCreateVirtualClassPage, ['formateur']),
   dashboardRoute('/dashboard/formateur/apprenants', Pages.FormateurApprenantsPage, ['formateur']),
   dashboardRoute('/dashboard/formateur/evaluations', Pages.FormateurEvaluationsPage, ['formateur']),
   dashboardRoute('/dashboard/formateur/certificats', Pages.FormateurCertificatsPage, ['formateur']),

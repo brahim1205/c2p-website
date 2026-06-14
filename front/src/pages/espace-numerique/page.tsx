@@ -142,6 +142,10 @@ export default function EspaceNumeriquePage() {
       toastError('Compte apprenant requis', 'Utilisez un compte apprenant pour suivre cette formation.');
       return;
     }
+    if (!course.is_free && Number(course.current_price ?? course.price ?? 0) > 0) {
+      navigate(`/espace-numerique/formation/${course.id}`);
+      return;
+    }
 
     try {
       await enrollEspaceCourse(course.id);

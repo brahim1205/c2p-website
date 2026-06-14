@@ -63,6 +63,7 @@ export const NotFoundPage = lazy(() => import('../pages/NotFound'));
 export const FormateurCoursPage = lazy(() => import('../pages/dashboard/formateur/mes-cours/page'));
 export const FormateurCourseProgramPage = lazy(() => import('../pages/dashboard/formateur/mes-cours/[id]/programme/page'));
 export const FormateurClassesPage = lazy(() => import('../pages/dashboard/formateur/classes-virtuelles/page'));
+export const FormateurCreateVirtualClassPage = lazy(() => import('../pages/dashboard/formateur/classes-virtuelles/nouvelle/page'));
 export const FormateurApprenantsPage = lazy(() => import('../pages/dashboard/formateur/apprenants/page'));
 export const FormateurEvaluationsPage = lazy(() => import('../pages/dashboard/formateur/evaluations/page'));
 export const FormateurCertificatsPage = lazy(() => import('../pages/dashboard/formateur/certificats/page'));

@@ -20,6 +20,9 @@ export interface EspaceCourse {
   is_free?: boolean | null;
   delivery_mode?: string | null;
   program_branch?: string | null;
+  objectives?: unknown;
+  prerequisites?: unknown;
+  tools?: unknown;
   metadata?: {
     learning_objectives?: unknown;
     prerequisites?: unknown;
@@ -133,6 +136,12 @@ export async function fetchEspaceCourseContext(courseId: string | number) {
 
 export async function enrollEspaceCourse(courseId: string | number) {
   return apiRequest<EspaceEnrollment>(`/learning/apprenant/courses/${encodeURIComponent(String(courseId))}/enroll`, {
+    method: 'POST',
+  });
+}
+
+export async function purchaseEspaceCourse(courseId: string | number) {
+  return apiRequest<EspaceEnrollment>(`/learning/apprenant/courses/${encodeURIComponent(String(courseId))}/purchase`, {
     method: 'POST',
   });
 }

@@ -26,6 +26,9 @@ export interface Course {
   thumbnail: string | null;
   price: number;
   current_price?: number;
+  objectives?: string[];
+  prerequisites?: string[];
+  tools?: string[];
 }
 
 export type CourseFormErrors = Partial<Record<

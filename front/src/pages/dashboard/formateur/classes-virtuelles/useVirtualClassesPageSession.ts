@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
@@ -33,6 +34,7 @@ export function useVirtualClassesPageSession() {
   const { user } = useAuth();
   const { gateFor } = useSubscriptionAccess(user);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<VirtualClassFilter>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newClass, setNewClass] = useState(DEFAULT_CLASS_FORM);
@@ -172,30 +174,30 @@ export function useVirtualClassesPageSession() {
       error('Formation requise', 'Créez ou publiez au moins une formation avant de programmer une classe virtuelle.');
       return;
     }
-    setShowCreateModal(true);
+    navigate('/dashboard/formateur/classes-virtuelles/nouvelle');
   };
 
   const handleCreateClass = async () => {
     if (!subscriptionGate.allowed) {
       error(subscriptionGate.title, subscriptionGate.message);
-      return;
+      return false;
     }
     if (!user?.id) {
       error('Session invalide', 'Impossible d identifier le formateur.');
-      return;
+      return false;
     }
     const nextErrors = validateVirtualClassForm(newClass, availableCourseIds);
     setCreateErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       setCreateFormMessage('Corrigez les champs signalés avant de programmer la classe.');
-      return;
+      return false;
     }
     const selectedCourse = findInstructorCourse(instructorCourses, newClass.course_id);
     if (!selectedCourse) {
       setCreateErrors((current) => ({ ...current, course_id: 'Sélectionnez une formation valide.' }));
       setCreateFormMessage('Corrigez les champs signalés avant de programmer la classe.');
       error('Formation invalide', 'Veuillez selectionner une formation valide.');
-      return;
+      return false;
     }
     setIsCreating(true);
     try {
@@ -204,11 +206,13 @@ export function useVirtualClassesPageSession() {
       success('Classe créée', 'La classe virtuelle a été programmée avec succès.');
       closeCreateModal();
       void refreshClasses();
+      return true;
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
       setCreateFormMessage('Impossible de créer la classe virtuelle.');
       error('Erreur', 'Impossible de créer la classe.');
       console.error(err);
+      return false;
     } finally {
       if (isMountedRef.current) {
         setIsCreating(false);

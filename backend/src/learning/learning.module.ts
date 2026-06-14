@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
 import { DatabaseModule } from '../database/database.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { PaymentsModule } from '../payments/payments.module.js';
 import { FormateurCourseProgramService } from './formateur-course-program.service.js';
 import { FormateurCommunityService } from './formateur-community.service.js';
 import { FormateurLearnersService } from './formateur-learners.service.js';
@@ -18,7 +19,7 @@ import { LearningPublicReadService } from './learning-public-read.service.js';
 import { LearningService } from './learning.service.js';
 
 @Module({
-  imports: [AuthModule, DatabaseModule, NotificationsModule],
+  imports: [AuthModule, DatabaseModule, NotificationsModule, PaymentsModule],
   controllers: [LearningController, LearningParentController, LearningPublicController],
   providers: [
     FormateurCommunityService,

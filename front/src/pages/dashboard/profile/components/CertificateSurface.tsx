@@ -8,79 +8,48 @@ export default function CertificateSurface({ data }: { data: CertificateData }) 
   const viewBoxSize = qr.size + quietZone * 2;
 
   return (
-    <div data-testid="certificate-surface" className="relative mx-auto aspect-[297/210] w-full max-w-[920px] overflow-hidden border border-slate-300 bg-white text-left">
-      <div className="absolute right-0 top-0 h-6 w-40 bg-teal-700"></div>
-      <aside className="absolute inset-y-0 left-0 flex w-[16%] flex-col justify-between bg-gradient-to-b from-[#06283d] to-teal-700 px-6 py-8 text-white">
-        <div>
-          <div className="text-xl font-extrabold tracking-[0.18em]">C2P</div>
-          <p className="mt-3 text-[11px] uppercase leading-5 tracking-[0.12em] text-white/75">
-            Academy<br />Verified Credential
-          </p>
-        </div>
-        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white/70 text-4xl font-extrabold">
-          ✓
-        </div>
-      </aside>
+    <div data-testid="certificate-surface" className="relative mx-auto aspect-[297/210] w-full max-w-[920px] overflow-hidden bg-[#fffef8] p-[3.5%] text-center text-[#164f48] shadow-sm">
+      <div className="pointer-events-none absolute inset-[1.4%] border-[10px] border-double border-[#477d73]" />
+      <div className="pointer-events-none absolute inset-[3.3%] border border-[#477d73]" />
+      {['left-3 top-3', 'right-3 top-3', 'bottom-3 left-3', 'bottom-3 right-3'].map((position) => (
+        <div key={position} className={`absolute ${position} h-16 w-16 rounded-full border-[7px] border-double border-[#477d73] bg-[#fffef8]`} />
+      ))}
 
-      <section className="ml-[16%] flex h-full flex-col px-12 py-9">
-        <div className="flex items-start justify-between gap-10 border-b border-slate-200 pb-8">
-          <div>
-            <div className="text-sm font-extrabold uppercase tracking-[0.2em] text-teal-700">C2P Academy</div>
-            <div className="mt-4 text-[34px] font-extrabold leading-tight text-slate-900">Certificate of Completion</div>
-          </div>
-          <div className="min-w-[150px] border border-slate-200 p-4 text-center">
-            <svg className="mx-auto mb-3 h-24 w-24" viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`} role="img" aria-label="QR code de verification du certificat">
-              <rect width={viewBoxSize} height={viewBoxSize} fill="#fff" />
-              <g fill="#111827">
-                {qr.cells.map((filled, index) => {
-                  if (!filled) return null;
-                  return (
-                    <rect
-                      key={index}
-                      x={(index % qr.size) + quietZone}
-                      y={Math.floor(index / qr.size) + quietZone}
-                      width="1"
-                      height="1"
-                    />
-                  );
-                })}
-              </g>
-            </svg>
-            <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-900">Verify Credential</p>
-            <p className="mt-1 break-all text-[10px] text-slate-500">{data.certificateId}</p>
-            <p className="mt-1 break-all text-[8px] text-teal-700">{verificationUrl}</p>
-            <p className="sr-only">{verificationUrl}</p>
-          </div>
+      <div className="relative z-10 flex h-full flex-col items-center px-[7%] py-[2%]">
+        <div className="text-lg font-black tracking-[0.2em] text-[#148dc1]">C2P</div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#477d73]">Centre de Promotion Professionnelle</p>
+        <h1 className="mt-3 text-[clamp(20px,3vw,39px)] font-black uppercase tracking-wide">Certificat de formation professionnelle</h1>
+        <p className="mt-2 text-sm">Est fièrement décerné à</p>
+        <h2 className="mt-1 min-w-[55%] border-b-2 border-[#477d73] px-8 pb-1 text-[clamp(24px,4vw,46px)] font-bold">{data.studentName}</h2>
+        <p className="mt-4 max-w-[78%] text-[clamp(11px,1.6vw,17px)] leading-relaxed text-slate-700">
+          Pour avoir suivi avec succès et achevé la formation
+          <strong className="block text-[#164f48]">« {data.courseTitle} »</strong>
+        </p>
+
+        <div className="mt-4 flex gap-3 text-[clamp(9px,1.2vw,13px)] font-bold text-white">
+          <span className="rounded bg-[#236b60] px-5 py-2">Date de délivrance : {data.date}</span>
+          <span className="rounded bg-[#236b60] px-5 py-2">N° série : {data.certificateId}</span>
         </div>
 
-        <div className="pt-10">
-          <div className="text-xs uppercase tracking-[0.16em] text-slate-500">Awarded to</div>
-          <h2 className="mt-4 text-[42px] font-extrabold leading-tight text-slate-900">{data.studentName}</h2>
-          <p className="mt-7 text-lg text-slate-600">For successfully completing the certified training</p>
-          <h3 className="mt-4 text-[29px] font-extrabold leading-tight text-teal-700">{data.courseTitle}</h3>
+        <div className="mt-auto grid w-full grid-cols-[1fr_auto_1fr] items-end gap-6 px-[5%]">
+          <div className="border-t border-[#477d73] pt-2 text-xs"><strong>Direction C2P</strong><br />Signature autorisée</div>
+          <div className="flex h-20 w-20 flex-col items-center justify-center rounded-full border-[7px] border-[#d7ad38] bg-gradient-to-br from-[#fff4a8] to-[#c8921e] text-[10px] font-black text-[#164f48] shadow-md">
+            C2P<br /><span className="text-sm">CERTIFIÉ</span>
+          </div>
+          <div className="border-t border-[#477d73] pt-2 text-xs"><strong>{data.instructor}</strong><br />Formateur</div>
         </div>
+      </div>
 
-        <div className="mt-10 grid grid-cols-2 gap-8">
-          <div className="border-t border-slate-200 pt-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Issued by</p>
-            <p className="mt-2 text-[15px] font-bold text-slate-900">{data.instructor}</p>
-          </div>
-          <div className="border-t border-slate-200 pt-4">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Completion date</p>
-            <p className="mt-2 text-[15px] font-bold text-slate-900">{data.date}</p>
-          </div>
-        </div>
-
-        <div className="mt-auto flex items-end justify-between gap-10">
-          <div className="min-w-[220px] border-t border-slate-400 pt-3 text-[11px] uppercase tracking-[0.1em] text-slate-500">
-            Authorized signature
-          </div>
-          <div className="text-right text-xs text-slate-500">
-            Credential ID<br />
-            <strong className="text-slate-700">{data.certificateId}</strong>
-          </div>
-        </div>
-      </section>
+      <div className="absolute bottom-[6%] right-[5%] z-20 bg-white p-1">
+        <svg className="h-12 w-12" viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`} role="img" aria-label="QR code de vérification">
+          <rect width={viewBoxSize} height={viewBoxSize} fill="#fff" />
+          <g fill="#164f48">
+            {qr.cells.map((filled, index) => filled ? (
+              <rect key={index} x={(index % qr.size) + quietZone} y={Math.floor(index / qr.size) + quietZone} width="1" height="1" />
+            ) : null)}
+          </g>
+        </svg>
+      </div>
     </div>
   );
 }

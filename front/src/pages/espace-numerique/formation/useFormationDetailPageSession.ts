@@ -7,9 +7,11 @@ import {
   fetchEspaceCourseContext,
   fetchEspaceCourseDetail,
   publishEspaceCourseReview,
+  purchaseEspaceCourse,
 } from '@/lib/espaceNumeriqueApi';
 import {
   readMetadataList,
+  isPaidCourse,
   type Course,
   type CourseLesson,
   type CourseReview,
@@ -130,7 +132,7 @@ export function useFormationDetailPageSession() {
         : null));
 
   const objectives = useMemo(() => {
-    const metadataObjectives = readMetadataList(course?.metadata?.learning_objectives);
+    const metadataObjectives = readMetadataList(course?.objectives ?? course?.metadata?.learning_objectives);
     if (metadataObjectives.length > 0) return metadataObjectives;
     const items = [
       'Comprendre les fondamentaux utiles au terrain.',
@@ -145,10 +147,10 @@ export function useFormationDetailPageSession() {
       items[1] = 'Travailler en présentiel avec démonstrations et ateliers appliqués.';
     }
     return items;
-  }, [course?.delivery_mode, course?.metadata?.learning_objectives]);
+  }, [course?.delivery_mode, course?.metadata?.learning_objectives, course?.objectives]);
 
   const requirements = useMemo(() => {
-    const metadataPrerequisites = readMetadataList(course?.metadata?.prerequisites);
+    const metadataPrerequisites = readMetadataList(course?.prerequisites ?? course?.metadata?.prerequisites);
     if (metadataPrerequisites.length > 0) return metadataPrerequisites;
     const base = ['Motivation et disponibilité pour suivre le parcours.'];
     if (course?.delivery_mode !== 'onsite') {
@@ -158,9 +160,12 @@ export function useFormationDetailPageSession() {
       base.push('Disponibilité pour les sessions planifiées en présentiel.');
     }
     return base;
-  }, [course?.delivery_mode, course?.metadata?.prerequisites]);
+  }, [course?.delivery_mode, course?.metadata?.prerequisites, course?.prerequisites]);
 
-  const tools = useMemo(() => readMetadataList(course?.metadata?.tools), [course?.metadata?.tools]);
+  const tools = useMemo(
+    () => readMetadataList(course?.tools ?? course?.metadata?.tools),
+    [course?.metadata?.tools, course?.tools],
+  );
 
   const openEnrollFlow = () => {
     if (!course) return;
@@ -186,14 +191,25 @@ export function useFormationDetailPageSession() {
 
     setEnrolling(true);
     try {
-      const data = await enrollEspaceCourse(course.id);
-      success('Inscription réussie', `Vous êtes maintenant inscrit à "${course.title}".`);
+      const paid = isPaidCourse(course);
+      const data = paid
+        ? await purchaseEspaceCourse(course.id)
+        : await enrollEspaceCourse(course.id);
+      success(
+        paid ? 'Paiement confirmé' : 'Inscription réussie',
+        paid
+          ? `Le paiement de "${course.title}" est confirmé et votre accès est actif.`
+          : `Vous êtes maintenant inscrit à "${course.title}".`,
+      );
       setExistingEnrollment({ id: Number((data as any)?.id ?? 0) || Date.now() });
       setShowEnrollModal(false);
       navigate('/espace-numerique/mon-apprentissage');
     } catch (err) {
       console.error(err);
-      toastError('Erreur', 'Impossible de confirmer votre inscription pour le moment.');
+      const message = err && typeof err === 'object' && 'message' in err
+        ? String(err.message)
+        : 'Impossible de confirmer votre inscription pour le moment.';
+      toastError('Paiement impossible', message);
     } finally {
       setEnrolling(false);
     }

@@ -2,293 +2,33 @@ import { buildCertificateVerificationUrl, buildQrSvgMarkup } from '@/lib/certifi
 import type { CertificateData } from './certificateViewerTypes';
 
 function escapeCertificateText(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 export function buildCertificatePrintHtml(data: CertificateData) {
-  const studentName = escapeCertificateText(data.studentName);
-  const courseTitle = escapeCertificateText(data.courseTitle);
+  const student = escapeCertificateText(data.studentName);
+  const course = escapeCertificateText(data.courseTitle);
   const instructor = escapeCertificateText(data.instructor);
   const date = escapeCertificateText(data.date);
-  const certificateId = escapeCertificateText(data.certificateId);
+  const id = escapeCertificateText(data.certificateId);
   const verificationUrl = buildCertificateVerificationUrl(data.certificateId);
-  const escapedVerificationUrl = escapeCertificateText(verificationUrl);
-  const verificationQr = buildQrSvgMarkup(verificationUrl, { className: 'qr', title: 'QR code de verification du certificat' });
+  const qr = buildQrSvgMarkup(verificationUrl, { className: 'qr', title: 'QR code de vérification du certificat' });
 
-  return `
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Certificat - ${courseTitle}</title>
-        <style>
-          @page { size: A4 landscape; margin: 0; }
-          * { box-sizing: border-box; }
-          html, body {
-            margin: 0;
-            min-height: 100%;
-            background: #f8fafc;
-            color: #111827;
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          }
-          body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-          }
-          .certificate {
-            position: relative;
-            width: 297mm;
-            height: 210mm;
-            border: 1px solid #d6dde7;
-            border-radius: 0;
-            background: #ffffff;
-            overflow: hidden;
-            text-align: left;
-            padding: 0 0 0 48mm;
-          }
-          .rail {
-            position: absolute;
-            inset: 0 auto 0 0;
-            width: 42mm;
-            background: linear-gradient(180deg, #06283d 0%, #0f766e 100%);
-            color: #fff;
-            padding: 20mm 8mm;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-          }
-          .rail-mark {
-            font-size: 20px;
-            font-weight: 800;
-            letter-spacing: 0.18em;
-          }
-          .rail-caption {
-            font-size: 11px;
-            line-height: 1.5;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.78);
-          }
-          .seal {
-            width: 28mm;
-            height: 28mm;
-            border: 2px solid rgba(255,255,255,0.75);
-            border-radius: 999px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            font-weight: 800;
-          }
-          .content {
-            height: 100%;
-            padding: 22mm 22mm 18mm;
-            display: flex;
-            flex-direction: column;
-          }
-          .topline {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 18mm;
-            border-bottom: 1px solid #d9e2ec;
-            padding-bottom: 10mm;
-          }
-          .brand {
-            color: #0f766e;
-            font-size: 15px;
-            font-weight: 800;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-          }
-          .credential {
-            margin-top: 5mm;
-            color: #111827;
-            font-size: 34px;
-            line-height: 1.1;
-            font-weight: 800;
-          }
-          .verify-box {
-            min-width: 46mm;
-            border: 1px solid #d9e2ec;
-            padding: 6mm;
-            text-align: center;
-          }
-          .qr {
-            width: 22mm;
-            height: 22mm;
-            margin: 0 auto 4mm;
-            display: block;
-          }
-          .verify-title {
-            margin: 0;
-            color: #111827;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-          }
-          .verify-id {
-            margin: 2mm 0 0;
-            color: #64748b;
-            font-size: 10px;
-          }
-          .verify-link {
-            margin: 2mm 0 0;
-            color: #0f766e;
-            font-size: 8px;
-            overflow-wrap: anywhere;
-          }
-          .recipient {
-            padding-top: 16mm;
-          }
-          .label {
-            color: #64748b;
-            font-size: 12px;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-          }
-          h1 {
-            margin: 4mm 0 0;
-            color: #0f172a;
-            font-size: 42px;
-            line-height: 1.05;
-            font-weight: 800;
-          }
-          .statement {
-            margin: 8mm 0 0;
-            color: #475569;
-            font-size: 17px;
-          }
-          h2 {
-            margin: 5mm 0 0;
-            color: #0f766e;
-            font-size: 29px;
-            line-height: 1.15;
-            font-weight: 800;
-          }
-          .meta {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 7mm;
-            margin-top: 12mm;
-          }
-          .meta-card {
-            border-top: 1px solid #d9e2ec;
-            padding-top: 4mm;
-          }
-          .meta-title {
-            margin: 0 0 2mm;
-            color: #64748b;
-            font-size: 11px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-          }
-          .meta-value {
-            margin: 0;
-            color: #111827;
-            font-size: 15px;
-            font-weight: 700;
-          }
-          .footer {
-            margin-top: auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            gap: 12mm;
-          }
-          .signature-line {
-            min-width: 54mm;
-            border-top: 1px solid #94a3b8;
-            padding-top: 3mm;
-            color: #64748b;
-            font-size: 11px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-          }
-          .credential-id {
-            color: #64748b;
-            font-size: 12px;
-            text-align: right;
-          }
-          .accent {
-            content: "";
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 42mm;
-            height: 6mm;
-            background: #0f766e;
-          }
-          @media print {
-            html, body {
-              width: 297mm;
-              height: 210mm;
-              background: #fff;
-              padding: 0;
-            }
-            .certificate {
-              width: 297mm;
-              height: 210mm;
-              box-shadow: none;
-              page-break-after: avoid;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <main class="certificate">
-          <div class="accent"></div>
-          <aside class="rail">
-            <div>
-              <div class="rail-mark">C2P</div>
-              <p class="rail-caption">Academy<br />Verified Credential</p>
-            </div>
-            <div class="seal">✓</div>
-          </aside>
-          <section class="content">
-            <div class="topline">
-              <div>
-                <div class="brand">C2P Academy</div>
-                <div class="credential">Certificate of Completion</div>
-              </div>
-              <div class="verify-box">
-                ${verificationQr}
-                <p class="verify-title">Verify Credential</p>
-                <p class="verify-id">${certificateId}</p>
-                <p class="verify-link">${escapedVerificationUrl}</p>
-              </div>
-            </div>
-            <div class="recipient">
-              <div class="label">Awarded to</div>
-              <h1>${studentName}</h1>
-              <p class="statement">For successfully completing the certified training</p>
-              <h2>${courseTitle}</h2>
-            </div>
-            <div class="meta">
-              <div class="meta-card">
-                <p class="meta-title">Issued by</p>
-                <p class="meta-value">${instructor}</p>
-              </div>
-              <div class="meta-card">
-                <p class="meta-title">Completion date</p>
-                <p class="meta-value">${date}</p>
-              </div>
-            </div>
-            <div class="footer">
-              <div class="signature-line">Authorized signature</div>
-              <div class="credential-id">Credential ID<br /><strong>${certificateId}</strong></div>
-            </div>
-          </section>
-        </main>
-      </body>
-    </html>
-  `;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Certificat - ${course}</title>
+  <style>
+  @page{size:A4 landscape;margin:0}*{box-sizing:border-box}html,body{margin:0;width:297mm;height:210mm;background:#fffef8;color:#164f48;font-family:Georgia,"Times New Roman",serif}
+  body{padding:8mm}.certificate{position:relative;width:281mm;height:194mm;border:10px double #477d73;outline:1px solid #477d73;outline-offset:-16px;padding:16mm 24mm 12mm;text-align:center;overflow:hidden}
+  .corner{position:absolute;width:23mm;height:23mm;border:7px double #477d73;border-radius:50%;background:#fffef8}.tl{left:-6mm;top:-6mm}.tr{right:-6mm;top:-6mm}.bl{left:-6mm;bottom:-6mm}.br{right:-6mm;bottom:-6mm}
+  .brand{color:#148dc1;font:bold 22px Arial;letter-spacing:.2em}.brand-sub{font:bold 9px Arial;text-transform:uppercase;letter-spacing:.12em}
+  h1{margin:5mm 0 2mm;font-size:31px;text-transform:uppercase;letter-spacing:.03em}p{margin:0}.name{display:inline-block;min-width:145mm;margin:2mm 0 5mm;border-bottom:2px solid #477d73;padding:0 10mm 2mm;font-size:36px;font-weight:bold}
+  .statement{font:16px Arial;color:#334155;line-height:1.45}.course{display:block;color:#164f48;font:bold 20px Georgia;margin-top:2mm}.meta{display:flex;justify-content:center;gap:5mm;margin-top:6mm;font:bold 12px Arial;color:white}.meta span{background:#236b60;border-radius:2mm;padding:3mm 7mm}
+  .footer{position:absolute;left:28mm;right:28mm;bottom:13mm;display:grid;grid-template-columns:1fr auto 1fr;gap:14mm;align-items:end;font:12px Arial}.signature{border-top:1px solid #477d73;padding-top:2mm;line-height:1.5}
+  .seal{width:28mm;height:28mm;border:7px solid #d7ad38;border-radius:50%;background:radial-gradient(circle,#fff4a8,#c8921e);display:flex;align-items:center;justify-content:center;font:bold 11px Arial}.qr{position:absolute;right:14mm;bottom:10mm;width:15mm;height:15mm;background:white;padding:1mm}
+  </style></head><body><main class="certificate"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="brand">C2P</div><div class="brand-sub">Centre de Promotion Professionnelle</div>
+  <h1>Certificat de formation professionnelle</h1><p>Est fièrement décerné à</p><div class="name">${student}</div>
+  <p class="statement">Pour avoir suivi avec succès et achevé la formation <strong class="course">« ${course} »</strong></p>
+  <div class="meta"><span>Date de délivrance : ${date}</span><span>N° série : ${id}</span></div>
+  <div class="footer"><div class="signature"><strong>Direction C2P</strong><br>Signature autorisée</div><div class="seal">C2P<br>CERTIFIÉ</div><div class="signature"><strong>${instructor}</strong><br>Formateur</div></div>
+  ${qr}</main></body></html>`;
 }

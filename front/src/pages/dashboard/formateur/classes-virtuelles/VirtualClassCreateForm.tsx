@@ -3,6 +3,7 @@ import type { VirtualClassCreateFormProps, VirtualClassForm } from './virtualCla
 import type { ReactNode } from 'react';
 
 export default function VirtualClassCreateForm({
+  embedded = false,
   newClass,
   errors,
   formMessage,
@@ -11,7 +12,7 @@ export default function VirtualClassCreateForm({
   onSelectCourse,
 }: VirtualClassCreateFormProps) {
   return (
-    <div className="max-h-[calc(90vh-168px)] overflow-y-auto p-6">
+    <div className={embedded ? 'p-6' : 'max-h-[calc(90vh-168px)] overflow-y-auto p-6'}>
       {formMessage ? (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {formMessage}

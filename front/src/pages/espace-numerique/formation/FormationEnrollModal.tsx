@@ -1,5 +1,6 @@
 import { getCourseDeliveryLabel } from '@/lib/courseDelivery';
-import { formatCoursePrice, type Course } from './formationDetailModel';
+import { Link } from 'react-router-dom';
+import { formatCoursePrice, isPaidCourse, type Course } from './formationDetailModel';
 
 interface FormationEnrollModalProps {
   course: Course;
@@ -20,6 +21,7 @@ export default function FormationEnrollModal({
   onClose,
   onConfirm,
 }: FormationEnrollModalProps) {
+  const paid = isPaidCourse(course);
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div role="dialog" aria-modal="true" aria-labelledby="course-enroll-title" className="w-full max-w-md rounded-xl bg-white p-5 sm:p-6">
@@ -53,6 +55,16 @@ export default function FormationEnrollModal({
           </div>
         </div>
 
+        {paid ? (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-semibold">Paiement obligatoire</p>
+            <p className="mt-1">Le montant sera débité de votre portefeuille C2P. Aucun accès ne sera accordé sans paiement confirmé.</p>
+            <Link to="/dashboard/paiements" className="mt-2 inline-flex font-semibold text-teal-800 underline">
+              Consulter ou recharger mon portefeuille
+            </Link>
+          </div>
+        ) : null}
+
         <button
           type="button"
           onClick={onConfirm}
@@ -62,10 +74,10 @@ export default function FormationEnrollModal({
           {enrolling ? (
             <span className="flex items-center justify-center gap-2">
               <i className="ri-loader-4-line animate-spin"></i>
-              Inscription en cours...
+              {paid ? 'Paiement en cours...' : 'Inscription en cours...'}
             </span>
           ) : (
-            'Confirmer l’inscription'
+            paid ? `Payer ${formatCoursePrice(course)} et s’inscrire` : 'Confirmer l’inscription'
           )}
         </button>
       </div>

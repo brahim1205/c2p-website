@@ -12,6 +12,7 @@ import {
 import {
   formatCoursePrice,
   getCourseImage,
+  isPaidCourse,
   normalizeCourseLevel,
   type Course,
   type FormationDetailTab,
@@ -36,10 +37,10 @@ export function FormationHero({
 }) {
   return (
     <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <div className="absolute inset-0 opacity-20">
+      <div className="absolute inset-0 opacity-30">
         <img src={getCourseImage(course)} alt="" className="w-full h-full object-cover object-top" />
       </div>
-      <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/45"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/88 to-slate-900/78"></div>
 
       <div className="relative max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <Link to="/espace-numerique" className="inline-flex items-center space-x-2 text-sm text-gray-300 hover:text-white mb-6">
@@ -66,7 +67,7 @@ export function FormationHero({
             </div>
 
             <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl">{course.title}</h1>
-            <p className="mb-5 text-base text-gray-200 sm:mb-6 sm:text-lg">
+            <p className="mb-5 max-w-3xl text-base font-medium leading-8 text-white sm:mb-6 sm:text-lg">
               {course.description || 'Formation professionnelle de qualité pour développer vos compétences.'}
             </p>
 
@@ -103,7 +104,11 @@ export function FormationHero({
                 onClick={onEnroll}
                 className="mb-3 w-full rounded-lg bg-teal-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-teal-700 sm:px-6 sm:text-base"
               >
-                {hasEnrollment ? 'Accéder à mon apprentissage' : 'S’inscrire maintenant'}
+                {hasEnrollment
+                  ? 'Accéder à mon apprentissage'
+                  : isPaidCourse(course)
+                    ? 'Payer et accéder à la formation'
+                    : 'S’inscrire gratuitement'}
               </button>
 
               <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">

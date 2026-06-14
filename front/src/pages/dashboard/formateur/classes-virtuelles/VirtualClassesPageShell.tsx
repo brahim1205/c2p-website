@@ -1,7 +1,7 @@
 import Breadcrumb from '@/components/base/Breadcrumb';
 import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import VirtualClassesOverview from './VirtualClassesOverview';
-import { VirtualClassCreateModal, VirtualClassEditModal } from './VirtualClassModals';
+import { VirtualClassEditModal } from './VirtualClassModals';
 import type { useVirtualClassesPageSession } from './useVirtualClassesPageSession';
 
 type VirtualClassesPageSession = ReturnType<typeof useVirtualClassesPageSession>;
@@ -34,20 +34,6 @@ export default function VirtualClassesPageShell({ session }: { session: VirtualC
         onEdit={session.handleEditClick}
         onDelete={session.handleDeleteClass}
       />
-
-      {session.showCreateModal ? (
-        <VirtualClassCreateModal
-          newClass={session.newClass}
-          errors={session.createErrors}
-          formMessage={session.createFormMessage}
-          instructorCourses={session.instructorCourses}
-          isCreating={session.isCreating}
-          onClose={session.closeCreateModal}
-          onSubmit={session.handleCreateClass}
-          onUpdateClass={session.updateNewClass}
-          onSelectCourse={session.selectCreateCourse}
-        />
-      ) : null}
 
       {session.showDetailModal && session.selectedClass && session.editForm ? (
         <VirtualClassEditModal

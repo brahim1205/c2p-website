@@ -196,6 +196,9 @@ export function useFormateurCoursesSession() {
         promotion_percentage: editForm.promotion_percentage ?? 0,
         trailer_url: editForm.trailer_url || null,
         thumbnail: editForm.thumbnail || selectedCourse.thumbnail,
+        objectives: editForm.objectives ?? [],
+        prerequisites: editForm.prerequisites ?? [],
+        tools: editForm.tools ?? [],
         updated_at: new Date().toISOString(),
       });
       if (!isMountedRef.current) return;

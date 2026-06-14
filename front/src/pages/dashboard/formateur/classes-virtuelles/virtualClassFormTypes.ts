@@ -9,6 +9,7 @@ export interface InstructorCourseOption {
 }
 
 export interface VirtualClassCreateFormProps {
+  embedded?: boolean;
   newClass: VirtualClassForm;
   errors: ClassFormErrors;
   formMessage: string | null;

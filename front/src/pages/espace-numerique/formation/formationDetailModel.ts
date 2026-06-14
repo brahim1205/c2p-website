@@ -17,6 +17,9 @@ export interface Course {
   is_free?: boolean | null;
   delivery_mode?: string | null;
   program_branch?: string | null;
+  objectives?: unknown;
+  prerequisites?: unknown;
+  tools?: unknown;
   metadata?: {
     learning_objectives?: unknown;
     prerequisites?: unknown;
@@ -137,4 +140,8 @@ export function readMetadataList(value: unknown) {
 export function formatCoursePrice(course: Course) {
   const price = course.current_price ?? course.price;
   return price ? `${price.toLocaleString('fr-FR')} FCFA` : 'Gratuit';
+}
+
+export function isPaidCourse(course: Course) {
+  return !course.is_free && Number(course.current_price ?? course.price ?? 0) > 0;
 }

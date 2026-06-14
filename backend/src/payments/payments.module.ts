@@ -26,6 +26,6 @@ import { ProviderRegistryService } from './provider-registry.service.js';
     ProviderIntegrationReadService,
     FinanceStateMachineService,
   ],
-  exports: [FinanceReadService],
+  exports: [FinanceReadService, PaymentCommandsService],
 })
 export class PaymentsModule {}

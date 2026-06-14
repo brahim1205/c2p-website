@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -49,10 +49,18 @@ import {
 import { LearningProgressReadService } from './learning-progress-read.service.js';
 import { LearningPublicFallbackService } from './learning-public-fallback.service.js';
 import { LearningPublicReadService } from './learning-public-read.service.js';
+import { PaymentCommandsService } from '../payments/payment-commands.service.js';
 
 @Injectable()
 export class LearningAccessService {
-  constructor(private readonly prisma: PrismaService, private readonly platformPersistenceService: PlatformPersistenceService, private readonly learningPublicReadService: LearningPublicReadService, private readonly learningProgressReadService: LearningProgressReadService, private readonly learningPublicFallbackService: LearningPublicFallbackService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly learningPublicReadService: LearningPublicReadService,
+    private readonly learningProgressReadService: LearningProgressReadService,
+    private readonly learningPublicFallbackService: LearningPublicFallbackService,
+    private readonly paymentCommandsService: PaymentCommandsService,
+  ) {}
 
   async getPublicCourses() {
     const prismaRows = await this.learningPublicReadService.getPublicCourses();
@@ -312,22 +320,99 @@ export class LearningAccessService {
     if (!course) {
       throw new NotFoundException('Formation introuvable.');
     }
+    if (this.getCoursePrice(course) > 0) {
+      throw new HttpException(
+        'Cette formation est payante. Le paiement doit être confirmé avant l inscription.',
+        HttpStatus.PAYMENT_REQUIRED,
+      );
+    }
+    return this.createEnrollment(course, actor);
+  }
+
+  async purchaseApprenantCourse(courseId: string, user: AuthUser | null) {
+    const actor = requireLearningActor(user);
+    if (actor.role !== 'apprenant' && !isAdminRole(actor)) {
+      throw new ForbiddenException('Seul un apprenant peut acheter cette formation.');
+    }
+    await syncAppStoreFromDatabase(this.prisma);
+    const course = hydrateRows('courses', store.courses ?? []).find((row) =>
+      String(row.id) === String(courseId)
+      && String(row.status ?? '').toLowerCase() === 'published'
+    );
+    if (!course) {
+      throw new NotFoundException('Formation introuvable.');
+    }
+    const price = this.getCoursePrice(course);
+    if (price <= 0) {
+      return this.createEnrollment(course, actor);
+    }
+
     const existing = getAccessibleEnrollment(courseId, actor);
-    if (existing) {
+    if (existing?.payment_transaction_id) {
       return existing;
     }
+    const charge = await this.paymentCommandsService.withdrawWallet(actor, {
+      amount: price,
+      method: 'wallet',
+      description: `Achat formation - ${text(course.title, 'Formation C2P')}`,
+    }, `course_purchase:${actor.id}:${course.id}`);
+
+    if (existing) {
+      const previous = clone(existing);
+      const updated = patchAppRows('course_enrollments', (row) => String(row.id) === String(existing.id), {
+        payment_transaction_id: charge.transaction.id,
+        financial_operation_id: charge.financialOperationId,
+        amount_paid: price,
+        payment_status: 'completed',
+        payment_method: 'wallet',
+        paid_at: new Date().toISOString(),
+      });
+      await this.platformPersistenceService.persistRows({ course_enrollments: updated }, {
+        actorId: actor.id,
+        reason: 'learning:apprenant:course:purchase-existing',
+        beforeRowsByTable: { course_enrollments: [previous] },
+        afterRowsByTable: { course_enrollments: updated },
+      });
+      return updated[0] ?? existing;
+    }
+
+    return this.createEnrollment(course, actor, {
+      transactionId: String(charge.transaction.id),
+      financialOperationId: charge.financialOperationId,
+      amount: price,
+    });
+  }
+
+  private getCoursePrice(course: Row) {
+    if (course.is_free === true || String(course.access_type ?? '') === 'free') return 0;
+    return Math.max(0, Number(course.current_price ?? course.price ?? 0));
+  }
+
+  private async createEnrollment(
+    course: Row,
+    actor: AuthUser,
+    payment?: { transactionId: string; financialOperationId: string; amount: number },
+  ) {
+    const existing = getAccessibleEnrollment(String(course.id), actor);
+    if (existing) return existing;
     const now = new Date().toISOString();
     const enrollment = withId(prepareInsert('course_enrollments', {
       course_id: course.id,
       course_name: course.title,
       course_category: course.category,
-      course_lessons_count: this.learningPublicFallbackService.getCourseLessons(courseId).length,
+      course_lessons_count: this.learningPublicFallbackService.getCourseLessons(String(course.id)).length,
       student_id: actor.id,
       student_name: `${actor.firstName} ${actor.lastName}`.trim() || actor.id,
       student_email: actor.email ?? null,
       progress: 0,
       grade: null,
       status: 'active',
+      payment_transaction_id: payment?.transactionId ?? null,
+      financial_operation_id: payment?.financialOperationId ?? null,
+      amount_paid: payment?.amount ?? 0,
+      payment_status: payment ? 'completed' : 'not_required',
+      payment_method: payment ? 'wallet' : null,
+      paid_at: payment ? now : null,
       enrolled_at: now,
       last_active: now,
       created_at: now,

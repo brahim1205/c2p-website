@@ -1,4 +1,7 @@
 import ImageUploadField from '@/components/base/ImageUploadField';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import CourseListFieldEditor, { type CourseListField } from './CourseListFieldEditor';
 import { type CourseDeliveryMode } from '@/lib/courseDelivery';
 import { type CourseWorkflowStatus } from '@/lib/courseWorkflow';
 import {
@@ -30,9 +33,26 @@ export default function CourseEditModal({
   onConfirm,
   updateEditForm,
 }: CourseEditModalProps) {
+  const [step, setStep] = useState(1);
+  const steps = ['Informations', 'Pédagogie', 'Programme', 'Tarif et publication'];
+
+  const updateList = (field: CourseListField, index: number, value: string) => {
+    const values = [...(editForm[field] ?? [])];
+    values[index] = value;
+    updateEditForm(field, values);
+  };
+
+  const addListItem = (field: CourseListField) => {
+    updateEditForm(field, [...(editForm[field] ?? []), '']);
+  };
+
+  const removeListItem = (field: CourseListField, index: number) => {
+    updateEditForm(field, (editForm[field] ?? []).filter((_, itemIndex) => itemIndex !== index));
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
             <i className="ri-edit-line text-teal-600 text-xl"></i>
@@ -44,7 +64,23 @@ export default function CourseEditModal({
             {editFormMessage}
           </div>
         ) : null}
+        <div className="mb-6 grid grid-cols-2 gap-2 md:grid-cols-4">
+          {steps.map((label, index) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setStep(index + 1)}
+              className={`rounded-xl border px-3 py-3 text-left text-sm font-semibold ${
+                step === index + 1 ? 'border-teal-600 bg-teal-50 text-teal-800' : 'border-gray-200 text-gray-500'
+              }`}
+            >
+              <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white">{index + 1}</span>
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="dashboard-form-grid">
+          {step === 1 ? <>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
             <input
@@ -96,20 +132,6 @@ export default function CourseEditModal({
               </select>
               {editErrors.delivery_mode ? <p className="mt-1 text-xs text-red-600">{editErrors.delivery_mode}</p> : null}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-              <select
-                value={editForm.status || ''}
-                onChange={(event) => updateEditForm('status', event.target.value as CourseWorkflowStatus)}
-                className={getFieldClass(false)}
-              >
-                <option value="draft">Brouillon</option>
-                <option value="review">En révision</option>
-                <option value="archived">Archivée</option>
-                {editForm.status === 'published' && <option value="published">Publiée</option>}
-                {editForm.status === 'rejected' && <option value="rejected">Rejetée</option>}
-              </select>
-            </div>
           </div>
           <div className="dashboard-form-wide">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -149,41 +171,6 @@ export default function CourseEditModal({
               {editErrors.modules ? <p className="mt-1 text-xs text-red-600">{editErrors.modules}</p> : null}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Prix (FCFA)</label>
-            <input
-              type="number"
-              min={0}
-              value={editForm.price || 0}
-              onChange={(event) => updateEditForm('price', parseInt(event.target.value, 10) || 0)}
-              disabled={Boolean(editForm.is_free)}
-              aria-invalid={Boolean(editErrors.price)}
-              className={getFieldClass(Boolean(editErrors.price))}
-            />
-            {editErrors.price ? <p className="mt-1 text-xs text-red-600">{editErrors.price}</p> : null}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Promotion (%)</label>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={editForm.promotion_percentage || 0}
-              onChange={(event) => updateEditForm('promotion_percentage', parseInt(event.target.value, 10) || 0)}
-              aria-invalid={Boolean(editErrors.promotion_percentage)}
-              className={getFieldClass(Boolean(editErrors.promotion_percentage))}
-            />
-            {editErrors.promotion_percentage ? <p className="mt-1 text-xs text-red-600">{editErrors.promotion_percentage}</p> : null}
-          </div>
-          <label className="dashboard-form-wide flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={Boolean(editForm.is_free)}
-              onChange={(event) => updateEditForm('is_free', event.target.checked)}
-              className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-            />
-            Formation gratuite
-          </label>
           <div className="dashboard-form-wide">
             <label className="block text-sm font-medium text-gray-700 mb-1">Bande-annonce vidéo</label>
             <input
@@ -204,6 +191,60 @@ export default function CourseEditModal({
             helper="Ce visuel sera utilise dans le catalogue et sur la fiche formation."
           />
           {editErrors.thumbnail ? <p className="dashboard-form-wide -mt-2 text-xs text-red-600">{editErrors.thumbnail}</p> : null}
+          </> : null}
+
+          {step === 2 ? (
+            <div className="dashboard-form-wide space-y-6">
+              <CourseListFieldEditor label="Ce que les apprenants vont apprendre" field="objectives" values={editForm.objectives ?? []} onAdd={addListItem} onChange={updateList} onRemove={removeListItem} />
+              <CourseListFieldEditor label="Prérequis" field="prerequisites" values={editForm.prerequisites ?? []} onAdd={addListItem} onChange={updateList} onRemove={removeListItem} />
+              <CourseListFieldEditor label="Outils et matériels" field="tools" values={editForm.tools ?? []} onAdd={addListItem} onChange={updateList} onRemove={removeListItem} />
+            </div>
+          ) : null}
+
+          {step === 3 ? (
+            <div className="dashboard-form-wide rounded-2xl border border-teal-100 bg-teal-50 p-6">
+              <h4 className="text-lg font-bold text-gray-900">Programme, modules et leçons</h4>
+              <p className="mt-2 text-sm text-gray-600">
+                Modifiez les sections, leçons, vidéos, documents et évaluations dans l’éditeur complet du programme.
+              </p>
+              <Link
+                to={`/dashboard/formateur/mes-cours/${course.id}/programme`}
+                className="mt-5 inline-flex items-center rounded-xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-700"
+              >
+                Ouvrir l’éditeur du programme
+              </Link>
+            </div>
+          ) : null}
+
+          {step === 4 ? <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+              <select
+                value={editForm.status || ''}
+                onChange={(event) => updateEditForm('status', event.target.value as CourseWorkflowStatus)}
+                className={getFieldClass(false)}
+              >
+                <option value="draft">Brouillon</option>
+                <option value="review">Soumettre en révision</option>
+                <option value="archived">Archivée</option>
+                {editForm.status === 'published' && <option value="published">Publiée</option>}
+                {editForm.status === 'rejected' && <option value="rejected">Rejetée</option>}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Prix (FCFA)</label>
+              <input type="number" min={0} value={editForm.price || 0} onChange={(event) => updateEditForm('price', parseInt(event.target.value, 10) || 0)} disabled={Boolean(editForm.is_free)} aria-invalid={Boolean(editErrors.price)} className={getFieldClass(Boolean(editErrors.price))} />
+              {editErrors.price ? <p className="mt-1 text-xs text-red-600">{editErrors.price}</p> : null}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Promotion (%)</label>
+              <input type="number" min={0} max={100} value={editForm.promotion_percentage || 0} onChange={(event) => updateEditForm('promotion_percentage', parseInt(event.target.value, 10) || 0)} aria-invalid={Boolean(editErrors.promotion_percentage)} className={getFieldClass(Boolean(editErrors.promotion_percentage))} />
+            </div>
+            <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
+              <input type="checkbox" checked={Boolean(editForm.is_free)} onChange={(event) => updateEditForm('is_free', event.target.checked)} />
+              Formation gratuite
+            </label>
+          </> : null}
         </div>
         <div className="flex gap-3 justify-end mt-6">
           <button
@@ -213,6 +254,12 @@ export default function CourseEditModal({
           >
             Annuler
           </button>
+          {step > 1 ? <button type="button" onClick={() => setStep((current) => current - 1)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium">Précédent</button> : null}
+          {step < 4 ? (
+            <button type="button" onClick={() => setStep((current) => current + 1)} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white">
+              Suivant
+            </button>
+          ) : (
           <button
             onClick={onConfirm}
             disabled={isUpdating}
@@ -220,6 +267,7 @@ export default function CourseEditModal({
           >
             {isUpdating ? 'Enregistrement...' : 'Enregistrer'}
           </button>
+          )}
         </div>
       </div>
     </div>
