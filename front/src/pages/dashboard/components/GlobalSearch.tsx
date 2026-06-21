@@ -49,6 +49,7 @@ const searchIndex: Record<string, SearchItem[]> = {
   ],
   partenaire: [
     { id: 'opp', label: 'Opportunités', category: 'Page', path: '/dashboard/partenaire/opportunites', icon: 'ri-search-line' },
+    { id: 'partner-funding', label: 'Mes financements', category: 'Page', path: '/dashboard/partenaire/financements', icon: 'ri-funds-line' },
     { id: 'suiv', label: 'Projets suivis', category: 'Page', path: '/dashboard/partenaire/projets-suivis', icon: 'ri-eye-line' },
     { id: 'coll', label: 'Collaborations', category: 'Page', path: '/dashboard/partenaire/collaborations', icon: 'ri-team-line' },
     { id: 'inv', label: 'Mes investissements', category: 'Page', path: '/dashboard/paiements', icon: 'ri-wallet-3-line' },

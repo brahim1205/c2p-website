@@ -24,6 +24,11 @@ export interface ProjectRecord {
   looking_for: string[];
   image: string | null;
   created_at: string;
+  partner_badge?: 'nianthio' | 'djambars' | 'ndanane' | null;
+  opportunity_score?: number;
+  flagged_by_c2p?: boolean;
+  alert_reason?: string;
+  suggested_roles?: PartnerAction[];
 }
 
 export interface ProjectMilestone {
@@ -161,6 +166,53 @@ export interface PartnerInterestResult {
 }
 
 export type PartnerType = 'technique' | 'financier';
+export type PartnerAction = 'coach' | 'mentor' | 'evaluate' | 'carry' | 'technical';
+export type ProjectFundingType = 'donation' | 'profit_share_loan' | 'interest_loan';
+
+export interface FundingScheduleEntry {
+  period: number;
+  openingBalance: number;
+  principal: number;
+  profit: number;
+  interest: number;
+  payment: number;
+  partnerProfitSharePercent: number;
+  closingBalance: number;
+}
+
+export interface ProjectFundingSimulation {
+  projectId: string | number;
+  projectTitle: string;
+  amount: number;
+  durationMonths: number;
+  fundingType: ProjectFundingType;
+  partnerBadge: 'nianthio' | 'djambars' | 'ndanane';
+  projectedProfit: number;
+  projectedInterest: number;
+  projectedReturnRate: number;
+  totalExpected: number;
+  schedule: FundingScheduleEntry[];
+  guarantee: string;
+  disclaimer: string;
+}
+
+export interface ProjectFundingCommitment {
+  id: string | number;
+  project_id: string | number;
+  project_title: string;
+  partner_id: string;
+  partner_badge: string;
+  funding_type: ProjectFundingType;
+  amount: number;
+  duration_months: number;
+  projected_profit: number;
+  projected_interest: number;
+  total_expected: number;
+  schedule: FundingScheduleEntry[];
+  guarantee: string;
+  status: string;
+  created_at: string;
+}
 
 export interface OwnerDashboardSnapshot {
   projects: ProjectRecord[];

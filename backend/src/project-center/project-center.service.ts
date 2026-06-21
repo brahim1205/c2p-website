@@ -15,6 +15,7 @@ import {
 import { hydrateRows } from '../data/data-row-hydration.js';
 import { prepareInsert } from '../data/data-runtime.js';
 import type { Row } from '../data/mock-store.js';
+import { createAppNotificationRow } from '../notifications/notification-payloads.js';
 import {
   parseOwnerFundingRoundCreatePayload,
   parseOwnerProjectUpdatePayload,
@@ -161,11 +162,23 @@ export class ProjectCenterService {
     if (!updatedProject) {
       throw new BadRequestException('Projet non modifie.');
     }
-    await this.platformPersistenceService.persistRows({ projects: [updatedProject] }, {
+    const trackingRows = clone(store.project_tracking ?? []).filter((row) => String(row.project_id) === String(updatedProject.id));
+    const notifications = trackingRows.length
+      ? appendAppRows('notifications', trackingRows.map((tracking) => createAppNotificationRow({
+          userId: String(tracking.partner_id),
+          title: 'Évolution d’un projet suivi',
+          message: `Le projet "${updatedProject.title}" a été mis à jour. Statut : ${updatedProject.status}.`,
+          type: 'project_update',
+          link: `/dashboard/partenaire/projets-suivis/${updatedProject.id}`,
+          metadata: { project_id: updatedProject.id, status: updatedProject.status },
+        })))
+      : [];
+    const persistedRows = { projects: [updatedProject], ...(notifications.length ? { notifications } : {}) };
+    await this.platformPersistenceService.persistRows(persistedRows, {
       actorId: owner.id,
       reason: 'project-center:owner-project:update',
       beforeRowsByTable: { projects: [previousProject] },
-      afterRowsByTable: { projects: [updatedProject] },
+      afterRowsByTable: persistedRows,
     });
     return updatedProject;
   }
@@ -591,6 +604,24 @@ export class ProjectCenterService {
     const documents = buildProjectDocuments(submission, projectIdValue, String(project.title), nowIso);
     if (documents.length > 0) {
       appendRows('project_documents', documents, rowsToPersist);
+    }
+
+    const eligiblePartners = clone(store.auth_users ?? []).filter((candidate) => {
+      if (String(candidate.role) !== 'partenaire' || String(candidate.status ?? 'active') !== 'active') return false;
+      const skills = Array.isArray(candidate.skills) ? candidate.skills.join(' ').toLowerCase() : '';
+      if (skills.includes('ndanane')) return fundingGoal >= 2_500_000;
+      if (skills.includes('djambars')) return fundingGoal >= 1_000_000;
+      return true;
+    });
+    if (eligiblePartners.length > 0) {
+      appendRows('notifications', eligiblePartners.map((partner) => createAppNotificationRow({
+        userId: String(partner.id),
+        title: 'Nouveau projet correspondant à votre badge',
+        message: `"${project.title}" vient d’être soumis dans ${project.sector}. Consultez l’opportunité et son porteur.`,
+        type: 'project_opportunity',
+        link: '/dashboard/partenaire/opportunites',
+        metadata: { project_id: project.id, project_tier: projectTier, funding_goal: fundingGoal },
+      })), rowsToPersist);
     }
 
     await this.platformPersistenceService.persistRows(rowsToPersist, {

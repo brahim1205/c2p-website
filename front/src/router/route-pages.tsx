@@ -83,6 +83,8 @@ export const PorteurProjetDetailPage = lazy(() => import('../pages/dashboard/por
 export const PorteurPartenariatsPage = lazy(() => import('../pages/dashboard/porteur/partenariats/page'));
 export const PorteurFinancementsPage = lazy(() => import('../pages/dashboard/porteur/financements/page'));
 export const PartenaireOpportunitesPage = lazy(() => import('../pages/dashboard/partenaire/opportunites/page'));
+export const PartenaireFinancerProjetPage = lazy(() => import('../pages/dashboard/partenaire/opportunites/[id]/financer/page'));
+export const PartenaireFinancementsPage = lazy(() => import('../pages/dashboard/partenaire/financements/page'));
 export const PartenaireProjetsSuivisPage = lazy(() => import('../pages/dashboard/partenaire/projets-suivis/page'));
 export const PartenaireCollaborationsPage = lazy(() => import('../pages/dashboard/partenaire/collaborations/page'));
 export const ClientDashboardPage = lazy(() => import('../pages/dashboard/client/page'));

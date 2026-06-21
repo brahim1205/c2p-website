@@ -69,6 +69,7 @@ export const roleNavOverrides: Record<string, DashboardNavItem[]> = {
   partenaire: [
     { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/partenaire' },
     { label: 'Opportunités', icon: 'ri-search-line', path: '/dashboard/partenaire/opportunites' },
+    { label: 'Mes financements', icon: 'ri-funds-line', path: '/dashboard/partenaire/financements' },
     { label: 'Projets suivis', icon: 'ri-eye-line', path: '/dashboard/partenaire/projets-suivis' },
     { label: 'Collaborations', icon: 'ri-team-line', path: '/dashboard/partenaire/collaborations' },
     { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },

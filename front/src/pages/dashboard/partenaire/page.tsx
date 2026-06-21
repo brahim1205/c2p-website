@@ -80,6 +80,7 @@ export default function PartenaireDashboardPage() {
     { label: 'Opportunités', icon: 'ri-search-line', link: '/dashboard/partenaire/opportunites', tone: 'bg-teal-50 text-teal-700' },
     { label: 'Projets suivis', icon: 'ri-eye-line', link: '/dashboard/partenaire/projets-suivis', tone: 'bg-sky-50 text-sky-700' },
     { label: 'Collaborations', icon: 'ri-team-line', link: '/dashboard/partenaire/collaborations', tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Mes financements', icon: 'ri-funds-line', link: '/dashboard/partenaire/financements', tone: 'bg-violet-50 text-violet-700' },
     { label: 'Paiements', icon: 'ri-wallet-line', link: '/dashboard/paiements', tone: 'bg-pink-50 text-pink-700' },
     { label: 'Messagerie', icon: 'ri-message-3-line', link: '/dashboard/messages', tone: 'bg-amber-50 text-amber-700' },
   ];
@@ -149,7 +150,7 @@ export default function PartenaireDashboardPage() {
               Explorer le pipeline
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
             {quickLinks.map((action) => (
               <Link
                 key={action.link}

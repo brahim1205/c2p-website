@@ -95,6 +95,8 @@ export const queryKeys = {
     trackedProjects: (userId: QueryKeyId) => [...queryKeys.partenaire.root(userId), 'tracked-projects'] as const,
     trackedProjectDetail: (userId: QueryKeyId, projectId: QueryKeyId) => [...queryKeys.partenaire.root(userId), 'tracked-project-detail', projectId] as const,
     collaborations: (userId: QueryKeyId) => [...queryKeys.partenaire.root(userId), 'collaborations'] as const,
+    fundingSimulation: (userId: QueryKeyId, projectId: QueryKeyId) => [...queryKeys.partenaire.root(userId), 'funding-simulation', projectId] as const,
+    fundingCommitments: (userId: QueryKeyId) => [...queryKeys.partenaire.root(userId), 'funding-commitments'] as const,
     publicProfileData: (userId: QueryKeyId) => [...queryKeys.partenaire.root(userId), 'public-profile-data'] as const,
   },
 };

@@ -5,7 +5,15 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { expressPartnerInterestAndNotify, fetchOpenProjects, fetchTrackedProjects, type PartnerType, type ProjectRecord } from '@/lib/projectApi';
+import {
+  expressPartnerInterestAndNotify,
+  fetchOpenProjects,
+  fetchTrackedProjects,
+  recordPartnerProjectAction,
+  type PartnerAction,
+  type PartnerType,
+  type ProjectRecord,
+} from '@/lib/projectApi';
 import { formatShortCurrency } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
 
@@ -69,6 +77,16 @@ export default function PartenaireOpportunitesPage() {
     }
   };
 
+  const handleAction = async (project: ProjectRecord, action: PartnerAction) => {
+    try {
+      await recordPartnerProjectAction(project.id, action);
+      success('Proposition transmise', 'Le porteur et C2P seront informés après validation de votre proposition.');
+    } catch (err) {
+      console.error(err);
+      error('Erreur', 'Impossible de transmettre cette proposition.');
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
@@ -111,6 +129,14 @@ export default function PartenaireOpportunitesPage() {
                   </div>
                   <span className="rounded-lg bg-[#5fa6f3]/10 px-2.5 py-1 text-sm font-bold text-[#5fa6f3]">{project.progress}%</span>
                 </div>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {project.flagged_by_c2p ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Sélection C2P</span> : null}
+                  <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800">
+                    Compatibilité {project.opportunity_score ?? 0}%
+                  </span>
+                  {project.partner_badge ? <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold capitalize text-violet-800">{project.partner_badge}</span> : null}
+                </div>
+                {project.alert_reason ? <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">{project.alert_reason}</p> : null}
                 <p className="text-sm text-gray-600 mb-4 line-clamp-3">{project.description}</p>
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="rounded-lg bg-gray-50 p-3"><p className="text-xs text-gray-500">Recherche</p><p className="font-semibold text-gray-900">{formatShortCurrency(project.funding_goal)}</p></div>
@@ -125,6 +151,21 @@ export default function PartenaireOpportunitesPage() {
                   </button>
                   <button onClick={() => handleInterest(project, 'technique')} className="flex-1 px-4 py-2 border border-[#5fa6f3]/25 text-[#27346b] rounded-lg text-sm font-medium hover:bg-[#5fa6f3]/5">
                     Interet technique
+                  </button>
+                  <Link to={`/dashboard/partenaire/opportunites/${project.id}/financer`} className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-emerald-700">
+                    Simuler un financement
+                  </Link>
+                  <button onClick={() => void handleAction(project, 'mentor')} className="flex-1 rounded-lg border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                    Rejoindre les mentors
+                  </button>
+                  <button onClick={() => void handleAction(project, 'coach')} className="flex-1 rounded-lg border border-sky-200 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50">
+                    Coacher
+                  </button>
+                  <button onClick={() => void handleAction(project, 'evaluate')} className="flex-1 rounded-lg border border-violet-200 px-4 py-2 text-sm font-medium text-violet-700 hover:bg-violet-50">
+                    Proposer une évaluation
+                  </button>
+                  <button onClick={() => void handleAction(project, 'carry')} className="flex-1 rounded-lg border border-amber-200 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50">
+                    Devenir co-porteur
                   </button>
                 </div>
               </div>

@@ -83,6 +83,8 @@ const dashboardRoutes: RouteObject[] = [
   dashboardRoute('/dashboard/parent', Pages.ParentDashboardPage, ['parent']),
   dashboardRoute('/dashboard/porteur', Pages.PorteurDashboardPage, ['porteur']),
   dashboardRoute('/dashboard/partenaire', Pages.PartenaireDashboardPage, ['partenaire']),
+  dashboardRoute('/dashboard/partenaire/opportunites/:id/financer', Pages.PartenaireFinancerProjetPage, ['partenaire']),
+  dashboardRoute('/dashboard/partenaire/financements', Pages.PartenaireFinancementsPage, ['partenaire']),
   dashboardRoute('/compte', Pages.ProfilePage, ['client']),
   dashboardRoute('/compte/messages', Pages.DashboardMessagesPage, ['client']),
   redirectRoute('/compte/notifications', '/dashboard/client'),

@@ -4,8 +4,12 @@ import type {
   Collaboration,
   PartnerDashboardSnapshot,
   PartnerInterestResult,
+  PartnerAction,
   PartnerOwnerConversationInput,
   PartnerType,
+  ProjectFundingCommitment,
+  ProjectFundingSimulation,
+  ProjectFundingType,
   ProjectDetailPayload,
   ProjectRecord,
   TrackedProject,
@@ -34,7 +38,46 @@ export async function fetchCollaborations(partnerId: string) {
 }
 
 export async function fetchOpenProjects() {
-  return apiRequest<ProjectRecord[]>('/project-center/partner/open-projects');
+  return apiRequest<ProjectRecord[]>('/project-center/partner/opportunities');
+}
+
+export function recordPartnerProjectAction(projectId: number | string, action: PartnerAction, input?: { score?: number; comment?: string }) {
+  return apiRequest(`/project-center/partner/projects/${encodeURIComponent(String(projectId))}/actions`, {
+    method: 'POST',
+    body: JSON.stringify({ action, ...input }),
+  });
+}
+
+export function simulateProjectFunding(input: {
+  projectId: number | string;
+  fundingRoundId?: number | string | null;
+  amount: number;
+  durationMonths: number;
+  fundingType: ProjectFundingType;
+}) {
+  return apiRequest<ProjectFundingSimulation>('/project-center/partner/funding/simulate', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function createProjectFundingCommitment(input: {
+  projectId: number | string;
+  fundingRoundId?: number | string | null;
+  amount: number;
+  durationMonths: number;
+  fundingType: ProjectFundingType;
+  contractAccepted: boolean;
+  riskAccepted: boolean;
+}) {
+  return apiRequest<{ commitment: ProjectFundingCommitment; simulation: ProjectFundingSimulation }>(
+    '/project-center/partner/funding/commitments',
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+}
+
+export function fetchProjectFundingCommitments() {
+  return apiRequest<ProjectFundingCommitment[]>('/project-center/partner/funding/commitments');
 }
 
 export async function expressPartnerInterest(
