@@ -2,7 +2,7 @@ ARG NODE_ALPINE_BASE=node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c5
 
 FROM ${NODE_ALPINE_BASE} AS builder
 WORKDIR /usr/src/app
-RUN apk add --no-cache openssl=3.5.6-r0
+RUN apk add --no-cache openssl=3.5.7-r0
 
 COPY package.json package-lock.json tsconfig.json tsconfig.build.json ./
 COPY prisma ./prisma
@@ -19,7 +19,7 @@ CMD ["npx", "prisma", "migrate", "deploy"]
 FROM ${NODE_ALPINE_BASE} AS runner
 WORKDIR /usr/src/app
 RUN apk add --no-cache \
-    openssl=3.5.6-r0 \
+    openssl=3.5.7-r0 \
     wget=1.25.0-r2
 
 COPY package.json package-lock.json ./
