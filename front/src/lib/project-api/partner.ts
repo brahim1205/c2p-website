@@ -38,7 +38,7 @@ export async function fetchCollaborations(partnerId: string) {
 }
 
 export async function fetchOpenProjects() {
-  return apiRequest<ProjectRecord[]>('/project-center/partner/opportunities');
+  return apiRequest<ProjectRecord[]>('/project-center/partner/open-projects');
 }
 
 export function recordPartnerProjectAction(projectId: number | string, action: PartnerAction, input?: { score?: number; comment?: string }) {

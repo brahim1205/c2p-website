@@ -14,6 +14,19 @@ function redactConnectionString(value) {
   }
 }
 
+function serializeConnectionError(error) {
+  const safeError = {
+    name: error instanceof Error ? error.name : 'UnknownError',
+    message: 'Database connectivity check failed.',
+  };
+
+  if (error && typeof error === 'object' && 'code' in error) {
+    safeError.code = String(error.code);
+  }
+
+  return safeError;
+}
+
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -39,8 +52,7 @@ async function main() {
 main().catch((error) => {
   console.error(JSON.stringify({
     ok: false,
-    connection: redactConnectionString(process.env.DATABASE_URL ?? ''),
-    error: error instanceof Error ? error.message : String(error),
+    error: serializeConnectionError(error),
   }, null, 2));
   process.exit(1);
 });
