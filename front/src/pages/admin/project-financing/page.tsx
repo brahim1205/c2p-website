@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/useToast';
 import {
   activateProjectFundingCommitment,
   fetchAdminProjectFundingCommitments,
+  flagProjectOpportunity,
   markProjectFundingInstallmentPaid,
   reviewProjectFundingCommitment,
   type ProjectFundingCommitment,
@@ -27,6 +28,7 @@ export default function AdminProjectFinancingPage() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<ProjectFundingCommitment | null>(null);
   const [reason, setReason] = useState('');
+  const [flagForm, setFlagForm] = useState({ projectId: '', partnerId: '', reason: '' });
   const [paymentReference, setPaymentReference] = useState('');
   const [busy, setBusy] = useState(false);
   const commitmentsQuery = useQuery({
@@ -73,6 +75,27 @@ export default function AdminProjectFinancingPage() {
       setBusy(false);
     }
   };
+  const flagOpportunity = async () => {
+    if (!flagForm.projectId.trim() || !flagForm.partnerId.trim()) {
+      error('Champs incomplets', 'Renseignez le projet et le partenaire à notifier.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await flagProjectOpportunity({
+        projectId: flagForm.projectId.trim(),
+        partnerId: flagForm.partnerId.trim(),
+        reason: flagForm.reason.trim() || undefined,
+      });
+      success('Opportunité signalée', 'Le partenaire recevra une alerte C2P dans son espace.');
+      setFlagForm({ projectId: '', partnerId: '', reason: '' });
+    } catch (err) {
+      console.error(err);
+      error('Signalement impossible', 'Vérifiez les identifiants projet et partenaire.');
+    } finally {
+      setBusy(false);
+    }
+  };
   const markPaid = async (period: number) => {
     if (!selected) return;
     setBusy(true);
@@ -102,6 +125,29 @@ export default function AdminProjectFinancingPage() {
           <Metric label="Financements actifs" value={String(active)} />
           <Metric label="Montant activé" value={formatCurrency(total)} />
         </div>
+        <section className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-amber-950">Flagger une opportunité pour un partenaire</h2>
+            <p className="mt-1 text-sm text-amber-900">C2P peut pousser un projet vers un partenaire technique ou financier selon son badge, son profil ou une analyse manuelle.</p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_1.4fr_auto] md:items-end">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-amber-950">ID projet</span>
+              <input value={flagForm.projectId} onChange={(event) => setFlagForm((current) => ({ ...current, projectId: event.target.value }))} className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm" placeholder="Ex: 42" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-amber-950">ID partenaire</span>
+              <input value={flagForm.partnerId} onChange={(event) => setFlagForm((current) => ({ ...current, partnerId: event.target.value }))} className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm" placeholder="Ex: usr-partner" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-amber-950">Raison affichée</span>
+              <input value={flagForm.reason} onChange={(event) => setFlagForm((current) => ({ ...current, reason: event.target.value }))} className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm" placeholder="Opportunité adaptée à votre badge" />
+            </label>
+            <button disabled={busy} onClick={() => void flagOpportunity()} className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+              Notifier
+            </button>
+          </div>
+        </section>
         <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
           <section className="space-y-3">
             {commitmentsQuery.isLoading ? <p className="text-sm text-gray-500">Chargement...</p> : null}

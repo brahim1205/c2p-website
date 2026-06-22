@@ -222,6 +222,12 @@ export interface ProjectFundingCommitment {
   review_reason?: string | null;
 }
 
+export interface ProjectOpportunityFlagInput {
+  projectId: string | number;
+  partnerId: string;
+  reason?: string;
+}
+
 export interface OwnerDashboardSnapshot {
   projects: ProjectRecord[];
   partnerships: ProjectPartnership[];

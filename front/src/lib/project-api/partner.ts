@@ -11,6 +11,7 @@ import type {
   ProjectFundingSimulation,
   ProjectFundingType,
   ProjectDetailPayload,
+  ProjectOpportunityFlagInput,
   ProjectRecord,
   TrackedProject,
 } from './types';
@@ -86,6 +87,13 @@ export function fetchOwnerProjectFundingCommitments() {
 
 export function fetchAdminProjectFundingCommitments() {
   return apiRequest<ProjectFundingCommitment[]>('/project-center/admin/funding/commitments');
+}
+
+export function flagProjectOpportunity(input: ProjectOpportunityFlagInput) {
+  return apiRequest('/project-center/admin/opportunity-flags', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function reviewProjectFundingCommitment(commitmentId: number | string, decision: 'approve' | 'reject', reason?: string) {
