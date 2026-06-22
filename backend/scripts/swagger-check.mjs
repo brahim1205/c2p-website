@@ -65,7 +65,11 @@ function trimSlashes(value) {
 
 function normalizeRouteParams(path) {
   const segments = path.split('/').filter(Boolean);
-  return `/${segments.map((segment) => (segment.startsWith(':') ? `{${segment.slice(1)}}` : segment)).join('/')}`;
+  return `/${segments.map((segment) => {
+    if (segment.startsWith(':')) return `{${segment.slice(1)}}`;
+    if (segment.startsWith('*')) return `{${segment.slice(1)}}`;
+    return segment;
+  }).join('/')}`;
 }
 
 async function parseControllerRoutes(file, apiPrefix) {
