@@ -178,6 +178,8 @@ export interface FundingScheduleEntry {
   payment: number;
   partnerProfitSharePercent: number;
   closingBalance: number;
+  status?: 'pending' | 'paid';
+  paidAt?: string | null;
 }
 
 export interface ProjectFundingSimulation {
@@ -212,6 +214,12 @@ export interface ProjectFundingCommitment {
   guarantee: string;
   status: string;
   created_at: string;
+  owner_id?: string;
+  partner_name?: string;
+  payment_reference?: string | null;
+  contract_status?: string;
+  total_repaid?: number;
+  review_reason?: string | null;
 }
 
 export interface OwnerDashboardSnapshot {

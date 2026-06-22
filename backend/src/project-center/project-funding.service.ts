@@ -6,6 +6,7 @@ import { PrismaService } from '../database/prisma.service.js';
 import {
   appendAppRows,
   clone,
+  patchAppRows,
   store,
   syncAppStoreFromDatabase,
   withId,
@@ -82,6 +83,23 @@ export class ProjectFundingService {
     this.requireFundingBadge(partner);
     return clone(store.project_funding_commitments ?? [])
       .filter((row) => String(row.partner_id) === partner.id)
+      .sort((left, right) => String(right.created_at ?? '').localeCompare(String(left.created_at ?? '')));
+  }
+
+  async listOwnerCommitments(user: AuthUser | null) {
+    if (!user || (user.role !== 'porteur' && !isAdminRole(user))) {
+      throw new BadRequestException('Accès porteur requis.');
+    }
+    await syncAppStoreFromDatabase(this.prisma);
+    return clone(store.project_funding_commitments ?? [])
+      .filter((row) => isAdminRole(user) || String(row.owner_id) === user.id)
+      .sort((left, right) => String(right.created_at ?? '').localeCompare(String(left.created_at ?? '')));
+  }
+
+  async listAdminCommitments(user: AuthUser | null) {
+    if (!user || !isAdminRole(user)) throw new BadRequestException('Accès administrateur requis.');
+    await syncAppStoreFromDatabase(this.prisma);
+    return clone(store.project_funding_commitments ?? [])
       .sort((left, right) => String(right.created_at ?? '').localeCompare(String(left.created_at ?? '')));
   }
 
@@ -234,6 +252,186 @@ export class ProjectFundingService {
     return actionRow;
   }
 
+  async reviewCommitment(commitmentId: string, payload: unknown, user: AuthUser | null) {
+    if (!user || !isAdminRole(user)) throw new BadRequestException('Accès administrateur requis.');
+    await syncAppStoreFromDatabase(this.prisma);
+    const input = this.requireObject(payload);
+    const decision = String(input.decision ?? '');
+    if (!['approve', 'reject'].includes(decision)) throw new BadRequestException('Décision invalide.');
+    const previous = this.requireCommitment(commitmentId);
+    if (String(previous.status) !== 'pending_c2p_validation') {
+      throw new BadRequestException('Cette souscription a déjà été traitée.');
+    }
+    const now = new Date().toISOString();
+    const status = decision === 'approve' ? 'approved_contract_ready' : 'rejected';
+    const reason = String(input.reason ?? '').trim() || null;
+    const updated = patchAppRows('project_funding_commitments', (row) => String(row.id) === commitmentId, {
+      status,
+      review_reason: reason,
+      reviewed_by: user.id,
+      reviewed_at: now,
+      contract_status: decision === 'approve' ? 'ready_for_signature' : 'not_applicable',
+    })[0];
+    const notifications = appendAppRows('notifications', [
+      createAppNotificationRow({
+        userId: String(previous.partner_id),
+        title: decision === 'approve' ? 'Souscription validée par C2P' : 'Souscription non retenue',
+        message: decision === 'approve'
+          ? `Le contrat de financement pour "${previous.project_title}" est prêt. Le transfert doit encore être confirmé.`
+          : `La souscription pour "${previous.project_title}" a été refusée.${reason ? ` Motif : ${reason}` : ''}`,
+        type: 'project_funding',
+        link: '/dashboard/partenaire/financements',
+        metadata: { commitment_id: previous.id, decision },
+      }),
+      createAppNotificationRow({
+        userId: String(previous.owner_id),
+        title: decision === 'approve' ? 'Financement partenaire validé' : 'Souscription partenaire refusée',
+        message: `C2P a ${decision === 'approve' ? 'validé' : 'refusé'} la souscription de ${Number(previous.amount).toLocaleString('fr-FR')} FCFA.`,
+        type: 'project_funding',
+        link: '/dashboard/porteur/financements',
+        metadata: { commitment_id: previous.id, decision },
+      }),
+    ]);
+    const rows = { project_funding_commitments: [updated], notifications };
+    await this.persistence.persistRows(rows, {
+      actorId: user.id,
+      reason: `project-center:funding-commitment:${decision}`,
+      beforeRowsByTable: { project_funding_commitments: [previous] },
+      afterRowsByTable: rows,
+    });
+    return updated;
+  }
+
+  async activateCommitment(commitmentId: string, payload: unknown, user: AuthUser | null) {
+    if (!user || !isAdminRole(user)) throw new BadRequestException('Accès administrateur requis.');
+    await syncAppStoreFromDatabase(this.prisma);
+    const input = this.requireObject(payload);
+    const paymentReference = String(input.paymentReference ?? '').trim();
+    if (!paymentReference) throw new BadRequestException('Référence du transfert requise.');
+    const previous = this.requireCommitment(commitmentId);
+    if (String(previous.status) !== 'approved_contract_ready') {
+      throw new BadRequestException('La souscription doit être validée avant activation.');
+    }
+    const now = new Date().toISOString();
+    const commitment = patchAppRows('project_funding_commitments', (row) => String(row.id) === commitmentId, {
+      status: 'active',
+      contract_status: 'signed_and_active',
+      payment_reference: paymentReference,
+      activated_by: user.id,
+      activated_at: now,
+      total_repaid: 0,
+    })[0];
+    const rows: Record<string, Row[]> = { project_funding_commitments: [commitment] };
+    const project = this.requireOpenProject(String(previous.project_id));
+    const updatedProject = patchAppRows('projects', (row) => String(row.id) === String(project.id), {
+      funding: Number(project.funding ?? 0) + Number(previous.amount ?? 0),
+      last_update: now,
+    })[0];
+    rows.projects = [updatedProject];
+    if (previous.funding_round_id) {
+      const round = clone(store.project_funding_rounds ?? []).find((row) => String(row.id) === String(previous.funding_round_id));
+      if (round) {
+        rows.project_funding_rounds = patchAppRows('project_funding_rounds', (row) => String(row.id) === String(round.id), {
+          raised_amount: Number(round.raised_amount ?? 0) + Number(previous.amount ?? 0),
+        });
+        rows.funding_investors = appendAppRows('funding_investors', [withId({
+          funding_round_id: round.id,
+          name: previous.partner_name,
+          avatar: null,
+          type: 'c2p_partner',
+          amount: previous.amount,
+          date: now.slice(0, 10),
+          equity: '0%',
+          status: 'active',
+          notes: `Financement ${previous.funding_type} · badge ${previous.partner_badge}`,
+          commitment_id: previous.id,
+        })]);
+      }
+    }
+    const tracking = clone(store.project_tracking ?? []).find((row) =>
+      String(row.partner_id) === String(previous.partner_id) && String(row.project_id) === String(previous.project_id));
+    if (tracking) {
+      rows.project_tracking = patchAppRows('project_tracking', (row) => String(row.id) === String(tracking.id), {
+        invested_amount: Number(tracking.invested_amount ?? 0) + Number(previous.amount ?? 0),
+        committed_amount: 0,
+        status: 'actif',
+        last_update: now,
+      });
+    }
+    rows.notifications = appendAppRows('notifications', [
+      createAppNotificationRow({
+        userId: String(previous.partner_id),
+        title: 'Financement activé',
+        message: `Le financement de "${previous.project_title}" est actif. Votre échéancier est disponible.`,
+        type: 'project_funding',
+        link: '/dashboard/partenaire/financements',
+        metadata: { commitment_id: previous.id, payment_reference: paymentReference },
+      }),
+      createAppNotificationRow({
+        userId: String(previous.owner_id),
+        title: 'Financement activé',
+        message: `${Number(previous.amount).toLocaleString('fr-FR')} FCFA ont été confirmés pour "${previous.project_title}".`,
+        type: 'project_funding',
+        link: '/dashboard/porteur/financements',
+        metadata: { commitment_id: previous.id, payment_reference: paymentReference },
+      }),
+    ]);
+    rows.project_history = appendAppRows('project_history', [withId({
+      project_id: previous.project_id,
+      date: now,
+      user: 'C2P',
+      action: `Financement de ${Number(previous.amount).toLocaleString('fr-FR')} FCFA activé`,
+      type: 'funding_activated',
+    })]);
+    await this.persistence.persistRows(rows, {
+      actorId: user.id,
+      reason: 'project-center:funding-commitment:activate',
+      beforeRowsByTable: { project_funding_commitments: [previous], projects: [project] },
+      afterRowsByTable: rows,
+    });
+    return commitment;
+  }
+
+  async markInstallmentPaid(commitmentId: string, period: string, user: AuthUser | null) {
+    if (!user || !isAdminRole(user)) throw new BadRequestException('Accès administrateur requis.');
+    await syncAppStoreFromDatabase(this.prisma);
+    const previous = this.requireCommitment(commitmentId);
+    if (String(previous.status) !== 'active') throw new BadRequestException('Financement non actif.');
+    const periodNumber = Math.round(Number(period));
+    const schedule = Array.isArray(previous.schedule) ? previous.schedule.map((entry) => ({ ...(entry as Row) })) : [];
+    const index = schedule.findIndex((entry) => Number(entry.period) === periodNumber);
+    if (index < 0) throw new BadRequestException('Échéance introuvable.');
+    if (schedule[index].status === 'paid') return previous;
+    const now = new Date().toISOString();
+    schedule[index] = { ...schedule[index], status: 'paid', paidAt: now };
+    const paidTotal = schedule
+      .filter((entry) => entry.status === 'paid')
+      .reduce((sum, entry) => sum + Number(entry.payment ?? 0), 0);
+    const allPaid = schedule.every((entry) => entry.status === 'paid');
+    const updated = patchAppRows('project_funding_commitments', (row) => String(row.id) === commitmentId, {
+      schedule,
+      total_repaid: paidTotal,
+      status: allPaid ? 'completed' : 'active',
+      completed_at: allPaid ? now : null,
+    })[0];
+    const notifications = appendAppRows('notifications', [createAppNotificationRow({
+      userId: String(previous.partner_id),
+      title: 'Échéance remboursée',
+      message: `L’échéance ${periodNumber} de "${previous.project_title}" a été confirmée pour ${Number(schedule[index].payment).toLocaleString('fr-FR')} FCFA.`,
+      type: 'project_funding',
+      link: '/dashboard/partenaire/financements',
+      metadata: { commitment_id: previous.id, period: periodNumber },
+    })]);
+    const rows = { project_funding_commitments: [updated], notifications };
+    await this.persistence.persistRows(rows, {
+      actorId: user.id,
+      reason: 'project-center:funding-installment:paid',
+      beforeRowsByTable: { project_funding_commitments: [previous] },
+      afterRowsByTable: rows,
+    });
+    return updated;
+  }
+
   async flagOpportunity(payload: unknown, user: AuthUser | null) {
     if (!user || !isAdminRole(user)) throw new BadRequestException('Accès administrateur requis.');
     await syncAppStoreFromDatabase(this.prisma);
@@ -339,6 +537,13 @@ export class ProjectFundingService {
       throw new BadRequestException('Projet indisponible.');
     }
     return project;
+  }
+
+  private requireCommitment(commitmentId: string) {
+    const commitment = clone(store.project_funding_commitments ?? [])
+      .find((row) => String(row.id) === commitmentId);
+    if (!commitment) throw new BadRequestException('Souscription introuvable.');
+    return commitment;
   }
 
   private findBadge(partner: AuthUser): PartnerBadge | null {

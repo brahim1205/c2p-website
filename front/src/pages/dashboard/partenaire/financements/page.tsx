@@ -4,6 +4,7 @@ import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProjectFundingCommitments, type ProjectFundingCommitment } from '@/lib/projectApi';
 import { formatCurrency, formatDate } from '@/lib/formatters';
+import { openProjectFundingContract } from '@/lib/downloads/projectFundingContract';
 import { queryKeys } from '@/lib/queryKeys';
 import DashboardLayout from '../../components/DashboardLayout';
 
@@ -67,6 +68,9 @@ export default function PartenaireFinancementsPage() {
               <>
                 <h2 className="text-xl font-bold text-gray-900">Tableau d’amortissement</h2>
                 <p className="mt-1 text-sm text-gray-600">{selected.project_title} · badge {selected.partner_badge}</p>
+                <button type="button" onClick={() => openProjectFundingContract(selected)} className="mt-3 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700">
+                  Consulter la convention
+                </button>
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
                   <Metric label="Capital" value={formatCurrency(selected.amount)} compact />
                   <Metric label="Bénéfice" value={formatCurrency(selected.projected_profit)} compact />
@@ -74,9 +78,9 @@ export default function PartenaireFinancementsPage() {
                 </div>
                 <div className="mt-5 overflow-x-auto">
                   <table className="min-w-full text-sm">
-                    <thead><tr className="border-b text-left text-gray-500"><th className="px-3 py-2">Mois</th><th className="px-3 py-2">Capital</th><th className="px-3 py-2">Bénéfice</th><th className="px-3 py-2">Intérêt</th><th className="px-3 py-2">Total</th><th className="px-3 py-2">Solde</th></tr></thead>
+                    <thead><tr className="border-b text-left text-gray-500"><th className="px-3 py-2">Mois</th><th className="px-3 py-2">Capital</th><th className="px-3 py-2">Bénéfice</th><th className="px-3 py-2">Intérêt</th><th className="px-3 py-2">Total</th><th className="px-3 py-2">État</th></tr></thead>
                     <tbody>{(selected.schedule ?? []).map((entry) => (
-                      <tr key={entry.period} className="border-b border-gray-100"><td className="px-3 py-2">{entry.period}</td><td className="px-3 py-2">{formatCurrency(entry.principal)}</td><td className="px-3 py-2">{formatCurrency(entry.profit)}</td><td className="px-3 py-2">{formatCurrency(entry.interest)}</td><td className="px-3 py-2 font-semibold">{formatCurrency(entry.payment)}</td><td className="px-3 py-2">{formatCurrency(entry.closingBalance)}</td></tr>
+                      <tr key={entry.period} className="border-b border-gray-100"><td className="px-3 py-2">{entry.period}</td><td className="px-3 py-2">{formatCurrency(entry.principal)}</td><td className="px-3 py-2">{formatCurrency(entry.profit)}</td><td className="px-3 py-2">{formatCurrency(entry.interest)}</td><td className="px-3 py-2 font-semibold">{formatCurrency(entry.payment)}</td><td className="px-3 py-2">{entry.status === 'paid' ? `Payée ${entry.paidAt ? formatDate(entry.paidAt) : ''}` : 'À venir'}</td></tr>
                     ))}</tbody>
                   </table>
                 </div>

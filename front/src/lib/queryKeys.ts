@@ -79,6 +79,7 @@ export const queryKeys = {
     security: () => ['admin', 'security'] as const,
     dashboard: (scope?: QueryKeyId) => ['admin', 'dashboard', scope] as const,
     operations: () => ['admin', 'operations'] as const,
+    projectFunding: () => ['admin', 'project-funding'] as const,
     payments: (scope?: QueryKeyId) => ['admin', 'payments', scope] as const,
     users: (scope?: QueryKeyId) => ['admin', 'users', scope] as const,
     accreditations: () => ['admin', 'accreditations'] as const,

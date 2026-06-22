@@ -13,6 +13,7 @@ import GlobalSearch from '@/pages/dashboard/components/GlobalSearch';
 const adminNavItems = [
   { label: 'Tableau de bord', icon: 'ri-dashboard-line', path: '/admin/dashboard' },
   { label: 'Opérations', icon: 'ri-inbox-archive-line', path: '/admin/operations' },
+  { label: 'Financements projets', icon: 'ri-funds-line', path: '/admin/project-financing' },
   { label: 'Utilisateurs', icon: 'ri-user-line', path: '/admin/users' },
   { label: 'Contenus', icon: 'ri-file-list-line', path: '/admin/content' },
   { label: 'Paiements', icon: 'ri-money-dollar-circle-line', path: '/admin/payments' },

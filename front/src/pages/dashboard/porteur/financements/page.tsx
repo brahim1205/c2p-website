@@ -7,7 +7,15 @@ import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequire
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { createOwnerFundingRound, fetchFundingRoundsForOwner, fetchOwnerProjects, type FundingRound, type ProjectRecord } from '@/lib/projectApi';
+import {
+  createOwnerFundingRound,
+  fetchFundingRoundsForOwner,
+  fetchOwnerProjectFundingCommitments,
+  fetchOwnerProjects,
+  type FundingRound,
+  type ProjectFundingCommitment,
+  type ProjectRecord,
+} from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
 
@@ -31,11 +39,12 @@ export default function PorteurFinancementsPage() {
   const fundingQuery = useQuery({
     queryKey: queryKeys.porteur.funding(user?.id),
     queryFn: async () => {
-      const [projectsData, roundsData] = await Promise.all([
+      const [projectsData, roundsData, commitmentsData] = await Promise.all([
         fetchOwnerProjects(user!.id),
         fetchFundingRoundsForOwner(user!.id),
+        fetchOwnerProjectFundingCommitments(),
       ]);
-      return { projects: projectsData, rounds: roundsData };
+      return { projects: projectsData, rounds: roundsData, commitments: commitmentsData };
     },
     enabled: Boolean(user?.id),
   });
@@ -50,6 +59,7 @@ export default function PorteurFinancementsPage() {
   const loading = fundingQuery.isLoading;
   const projects: ProjectRecord[] = useMemo(() => fundingQuery.data?.projects ?? [], [fundingQuery.data?.projects]);
   const rounds: FundingRound[] = useMemo(() => fundingQuery.data?.rounds ?? [], [fundingQuery.data?.rounds]);
+  const commitments: ProjectFundingCommitment[] = useMemo(() => fundingQuery.data?.commitments ?? [], [fundingQuery.data?.commitments]);
 
   const filteredRounds = useMemo(() => {
     return rounds.filter((round) => {
@@ -130,6 +140,22 @@ export default function PorteurFinancementsPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-blue-600">{stats.successRate}%</p><p className="text-sm text-gray-600">Taux d atteinte</p></div>
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-purple-600">{stats.investors}</p><p className="text-sm text-gray-600">Investisseur(s)</p></div>
         </div>
+
+        <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div><h2 className="text-lg font-bold text-gray-900">Souscriptions partenaires reçues</h2><p className="text-sm text-gray-500">C2P contrôle le contrat et le transfert avant activation.</p></div>
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">{commitments.length}</span>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {commitments.slice(0, 6).map((commitment) => (
+              <article key={commitment.id} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-gray-900">{commitment.project_title}</h3><p className="text-sm text-gray-500">{commitment.partner_name ?? commitment.partner_id} · badge {commitment.partner_badge}</p></div><span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold">{commitment.status.replaceAll('_', ' ')}</span></div>
+                <div className="mt-3 flex items-center justify-between"><strong className="text-emerald-700">{formatCurrency(commitment.amount)}</strong><span className="text-sm text-gray-500">{commitment.duration_months} mois</span></div>
+              </article>
+            ))}
+            {!loading && commitments.length === 0 ? <p className="text-sm text-gray-500">Aucune souscription partenaire reçue.</p> : null}
+          </div>
+        </section>
 
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-3">

@@ -43,6 +43,7 @@ export const DashboardFacturesPage = lazy(() => import('../pages/dashboard/factu
 export const DashboardSecurityPage = lazy(() => import('../pages/dashboard/securite/page'));
 export const AdminDashboardPage = lazy(() => import('../pages/admin/dashboard/page'));
 export const AdminOperationsPage = lazy(() => import('../pages/admin/operations/page'));
+export const AdminProjectFinancingPage = lazy(() => import('../pages/admin/project-financing/page'));
 export const AdminUsersPage = lazy(() => import('../pages/admin/users/page'));
 export const AdminContentPage = lazy(() => import('../pages/admin/content/page'));
 export const AdminAccreditationsPage = lazy(() => import('../pages/admin/accreditations/page'));

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/require-permission.decorator.js';
@@ -23,6 +23,18 @@ export class ProjectFundingController {
     return this.projectFundingService.listCommitments(request.auth?.user ?? null);
   }
 
+  @Get('owner/funding/commitments')
+  @RequirePermission('data.projects.read')
+  listOwnerCommitments(@Req() request: AuthenticatedRequest) {
+    return this.projectFundingService.listOwnerCommitments(request.auth?.user ?? null);
+  }
+
+  @Get('admin/funding/commitments')
+  @RequirePermission('data.projects.read')
+  listAdminCommitments(@Req() request: AuthenticatedRequest) {
+    return this.projectFundingService.listAdminCommitments(request.auth?.user ?? null);
+  }
+
   @Post('partner/funding/simulate')
   @RequirePermission('data.projects.read')
   simulate(@Req() request: AuthenticatedRequest, @Body() payload: unknown) {
@@ -45,5 +57,23 @@ export class ProjectFundingController {
   @RequirePermission('data.projects.write')
   flagOpportunity(@Req() request: AuthenticatedRequest, @Body() payload: unknown) {
     return this.projectFundingService.flagOpportunity(payload, request.auth?.user ?? null);
+  }
+
+  @Patch('admin/funding/commitments/:id/review')
+  @RequirePermission('data.projects.write')
+  reviewCommitment(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() payload: unknown) {
+    return this.projectFundingService.reviewCommitment(id, payload, request.auth?.user ?? null);
+  }
+
+  @Patch('admin/funding/commitments/:id/activate')
+  @RequirePermission('data.projects.write')
+  activateCommitment(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() payload: unknown) {
+    return this.projectFundingService.activateCommitment(id, payload, request.auth?.user ?? null);
+  }
+
+  @Patch('admin/funding/commitments/:id/installments/:period/paid')
+  @RequirePermission('data.projects.write')
+  markInstallmentPaid(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Param('period') period: string) {
+    return this.projectFundingService.markInstallmentPaid(id, period, request.auth?.user ?? null);
   }
 }

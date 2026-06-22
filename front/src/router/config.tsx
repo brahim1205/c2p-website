@@ -152,6 +152,7 @@ const adminRoutes: RouteObject[] = [
   adminRoute('/admin/dashboard', Pages.AdminDashboardPage),
   adminRoute('/admin/users', Pages.AdminUsersPage),
   adminRoute('/admin/operations', Pages.AdminOperationsPage),
+  adminRoute('/admin/project-financing', Pages.AdminProjectFinancingPage),
   adminRoute('/admin/content', Pages.AdminContentPage),
   adminRoute('/admin/accreditations', Pages.AdminAccreditationsPage),
   adminRoute('/admin/payments', Pages.AdminPaymentsPage),

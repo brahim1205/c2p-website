@@ -80,6 +80,35 @@ export function fetchProjectFundingCommitments() {
   return apiRequest<ProjectFundingCommitment[]>('/project-center/partner/funding/commitments');
 }
 
+export function fetchOwnerProjectFundingCommitments() {
+  return apiRequest<ProjectFundingCommitment[]>('/project-center/owner/funding/commitments');
+}
+
+export function fetchAdminProjectFundingCommitments() {
+  return apiRequest<ProjectFundingCommitment[]>('/project-center/admin/funding/commitments');
+}
+
+export function reviewProjectFundingCommitment(commitmentId: number | string, decision: 'approve' | 'reject', reason?: string) {
+  return apiRequest<ProjectFundingCommitment>(`/project-center/admin/funding/commitments/${encodeURIComponent(String(commitmentId))}/review`, {
+    method: 'PATCH',
+    body: JSON.stringify({ decision, reason }),
+  });
+}
+
+export function activateProjectFundingCommitment(commitmentId: number | string, paymentReference: string) {
+  return apiRequest<ProjectFundingCommitment>(`/project-center/admin/funding/commitments/${encodeURIComponent(String(commitmentId))}/activate`, {
+    method: 'PATCH',
+    body: JSON.stringify({ paymentReference }),
+  });
+}
+
+export function markProjectFundingInstallmentPaid(commitmentId: number | string, period: number) {
+  return apiRequest<ProjectFundingCommitment>(
+    `/project-center/admin/funding/commitments/${encodeURIComponent(String(commitmentId))}/installments/${period}/paid`,
+    { method: 'PATCH' },
+  );
+}
+
 export async function expressPartnerInterest(
   partnerId: string,
   project: ProjectRecord,
