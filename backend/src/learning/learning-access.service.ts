@@ -320,6 +320,8 @@ export class LearningAccessService {
     if (!course) {
       throw new NotFoundException('Formation introuvable.');
     }
+    const existing = getAccessibleEnrollment(courseId, actor);
+    if (existing) return existing;
     if (this.getCoursePrice(course) > 0) {
       throw new HttpException(
         'Cette formation est payante. Le paiement doit être confirmé avant l inscription.',
