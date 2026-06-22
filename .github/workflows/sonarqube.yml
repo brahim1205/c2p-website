@@ -48,16 +48,22 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
         shell: bash
         run: |
-          set +e
-          body="$(curl -fsSL --max-time 10 "${SONAR_HOST_URL%/}/api/system/status" 2>/dev/null)"
-          status=$?
-          if [ "$status" -eq 0 ] && echo "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"(UP|GREEN|YELLOW)"'; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "SonarQube is reachable."
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "SonarQube is not reachable or not serving the expected API."
-          fi
+          for attempt in 1 2 3; do
+            if curl -fsSL --max-time 10 "${SONAR_HOST_URL%/}/api/system/status" \
+              | grep -Eq '"status"[[:space:]]*:[[:space:]]*"(UP|GREEN|YELLOW)"'; then
+              echo "available=true" >> "$GITHUB_OUTPUT"
+              echo "SonarQube is reachable."
+              exit 0
+            fi
+            if curl -fsSL --max-time 10 "${SONAR_HOST_URL%/}/api/server/version" >/dev/null; then
+              echo "available=true" >> "$GITHUB_OUTPUT"
+              echo "SonarQube version endpoint is reachable."
+              exit 0
+            fi
+            sleep "$attempt"
+          done
+          echo "available=false" >> "$GITHUB_OUTPUT"
+          echo "SonarQube is not reachable or not serving the expected API."
 
       - name: Skip SonarQube scan when secrets are absent
         if: ${{ env.SONAR_TOKEN == '' || env.SONAR_HOST_URL == '' }}
