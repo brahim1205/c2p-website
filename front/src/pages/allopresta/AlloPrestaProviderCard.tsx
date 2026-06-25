@@ -13,6 +13,10 @@ export default function AlloPrestaProviderCard({
   prestataire: ProviderCatalogRecord;
   viewerTier: Parameters<typeof getProviderDisplayName>[1];
 }) {
+  const primaryService = prestataire.services[0] ?? prestataire.title ?? 'Service professionnel';
+  const secondaryServices = prestataire.services.slice(1, 4);
+  const remainingServicesCount = Math.max(prestataire.services.length - 4, 0);
+
   return (
     <Link
       to={`/allopresta/prestataire/${prestataire.id}`}
@@ -47,8 +51,13 @@ export default function AlloPrestaProviderCard({
               </span>
             </div>
             <h3 className="mb-1 text-base font-semibold text-[#0f1c35] sm:text-lg">
-              {prestataire.title}
+              {primaryService}
             </h3>
+            {prestataire.title && prestataire.title !== primaryService ? (
+              <p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-[#1a9a96]">
+                {prestataire.title}
+              </p>
+            ) : null}
             <p className="text-sm text-[#64748b]">{getProviderDisplayName(prestataire, viewerTier)}</p>
           </div>
         </div>
@@ -75,6 +84,24 @@ export default function AlloPrestaProviderCard({
           </div>
           <span>{prestataire.location}</span>
         </div>
+
+        {secondaryServices.length > 0 || remainingServicesCount > 0 ? (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {secondaryServices.map((service) => (
+              <span
+                key={service}
+                className="rounded-full border border-[#cde8e6] bg-[#f3fbfb] px-2.5 py-1 text-[11px] font-medium text-[#147f7b] sm:text-xs"
+              >
+                {service}
+              </span>
+            ))}
+            {remainingServicesCount > 0 ? (
+              <span className="rounded-full border border-[#d6dbe1] bg-[#f7f6f4] px-2.5 py-1 text-[11px] font-medium text-[#64748b] sm:text-xs">
+                +{remainingServicesCount} autre{remainingServicesCount > 1 ? 's' : ''}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mb-4 flex flex-wrap gap-2">
           {prestataire.operations_managed ? (
