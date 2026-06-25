@@ -124,13 +124,28 @@ export default function PublicLayoutHeader({
       </div>
 
       {mobileMenuOpen && (
-        <div id="public-mobile-menu" className="md:hidden border-t border-[#d6dbe1] bg-[#ffffff]/96 shadow-[0_24px_80px_rgba(15,28,53,0.08)] backdrop-blur-md">
-          <div className="px-4 py-4 space-y-2">
+        <div id="public-mobile-menu" className="md:hidden max-h-[calc(100svh-80px)] overflow-y-auto border-t border-[#d6dbe1] bg-[#ffffff]/96 shadow-[0_24px_80px_rgba(15,28,53,0.08)] backdrop-blur-md">
+          <div className="space-y-3 px-4 py-4">
+            <div className="grid gap-2">
+              <Link to="/auth/register" onClick={onInternalLinkClick('/auth/register', true)} className="flex min-h-12 items-center justify-center rounded-xl bg-[#0f1c35] px-4 py-3 text-sm font-bold text-white">
+                Créer mon compte
+              </Link>
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/allopresta" onClick={onInternalLinkClick('/allopresta', true)} className="flex min-h-11 items-center justify-center rounded-xl border border-[#d6dbe1] bg-white px-3 py-2 text-center text-xs font-bold text-[#0f1c35]">
+                  Prestataire
+                </Link>
+                <Link to="/espace-numerique" onClick={onInternalLinkClick('/espace-numerique', true)} className="flex min-h-11 items-center justify-center rounded-xl border border-[#d6dbe1] bg-white px-3 py-2 text-center text-xs font-bold text-[#0f1c35]">
+                  Formation
+                </Link>
+              </div>
+            </div>
+            <div className="border-t border-[#d6dbe1] pt-2">
             {PUBLIC_NAV_ITEMS.map((item) => (
               <Link key={item.href} to={item.href} onClick={onInternalLinkClick(item.href, true)} className="block rounded-lg px-4 py-3 text-sm font-medium text-[#64748b] hover:bg-[#ffffff] hover:text-[#0f1c35]">
                 {item.label}
               </Link>
             ))}
+            </div>
             <div className="my-2 border-t border-[#d6dbe1]"></div>
             {isAuthenticated && user ? (
               <Link to={accountPath} onClick={onInternalLinkClick(accountPath, true)} className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-[#0f1c35] hover:bg-[#ffffff]">

@@ -4,6 +4,33 @@ import { usePageMeta } from '@/lib/usePageMeta';
 const heroImage =
   '/images/brand/image44';
 
+const quickActions = [
+  {
+    label: 'Je cherche un prestataire',
+    title: 'Trouver un service fiable',
+    description: 'Comparez les profils, tarifs, notes et disponibilites avant de reserver.',
+    icon: 'ri-search-eye-line',
+    path: '/allopresta',
+    cta: 'Voir AlloPresta',
+  },
+  {
+    label: 'Je veux apprendre',
+    title: 'Acheter une formation',
+    description: 'Accedez aux videos, documents et certificats depuis votre espace apprenant.',
+    icon: 'ri-graduation-cap-line',
+    path: '/espace-numerique',
+    cta: 'Voir les formations',
+  },
+  {
+    label: 'J’ai un projet',
+    title: 'Soumettre ou financer',
+    description: 'Deposez un projet, suivez son evaluation et mobilisez des partenaires.',
+    icon: 'ri-rocket-line',
+    path: '/project-center',
+    cta: 'Ouvrir ProjectCenter',
+  },
+];
+
 const fleet = [
   {
     eyebrow: 'AlloPresta',
@@ -28,6 +55,13 @@ const fleet = [
   },
 ];
 
+const mobileFirstPrinciples = [
+  'Parcours en 3 choix des la premiere vue',
+  'Boutons larges utilisables au pouce',
+  'Textes courts, priorite aux actions',
+  'Acces direct aux espaces publics sans menu complexe',
+];
+
 export default function HomePage() {
   usePageMeta({
     title: 'C2P Sénégal | Services, formation et incubation',
@@ -37,47 +71,73 @@ export default function HomePage() {
 
   return (
     <div className="public-premium-page bg-c2p-bg text-c2p-text">
-      <section className="relative min-h-[78vh] overflow-hidden">
+      <section className="relative overflow-hidden bg-white pt-20">
         <img
           src={heroImage}
           alt="Centre C2P premium"
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.72]"
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.2] sm:opacity-[0.38]"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.95)_0%,rgba(248,250,252,0.82)_46%,rgba(248,250,252,0.42)_100%)]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.94)_54%,rgba(239,246,255,0.9)_100%)] sm:bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.86)_54%,rgba(248,250,252,0.58)_100%)]"></div>
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
 
-        <div className="relative z-10 mx-auto flex min-h-[78vh] max-w-7xl flex-col justify-end px-5 pb-12 pt-28 sm:px-8 lg:px-10">
-          <div className="max-w-5xl">
-            <p className="c2p-eyebrow mb-5 tracking-[0.38em]">
-              CENTRE DE DEVELOPPEMENT ET DE PRESTATIONS PROFESSIONNELS (C2P)
+        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-80px)] max-w-7xl flex-col justify-center px-4 py-8 sm:px-8 sm:py-14 lg:px-10">
+          <div className="max-w-4xl">
+            <p className="mb-4 inline-flex rounded-full border border-[#c8d6f0] bg-white/90 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#147f7b] shadow-sm sm:text-xs">
+              Services • formations • projets
             </p>
-            <h1 className="max-w-4xl animate-fade-in-up text-4xl font-semibold leading-[1.02] text-[#06053a] sm:text-5xl lg:text-6xl">
-              Osez rêver et devenez autonome.
+            <h1 className="max-w-3xl animate-fade-in-up text-[2.35rem] font-black leading-[0.98] tracking-tight text-[#06053a] sm:text-5xl lg:text-6xl">
+              C2P vous aide à trouver, apprendre et lancer votre projet.
             </h1>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-[#27346b] sm:text-lg">
-              C2P connecte prestataires, apprenants, entrepreneurs et partenaires dans un écosystème numérique unique — services, formation et incubation de projets, tout en un.
+            <p className="mt-5 max-w-2xl text-[15px] leading-7 text-[#27346b] sm:text-lg sm:leading-8">
+              Une plateforme simple pour réserver un professionnel, acheter une formation utile ou faire accompagner un projet entrepreneurial.
             </p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
               <Link
                 to="/auth/register"
-                className="c2p-btn-primary px-7 py-4"
+                className="c2p-btn-primary min-h-14 w-full px-6 py-4 text-center text-base sm:w-auto"
               >
                 Créer mon compte
               </Link>
               <Link
-                to="/tarifs"
-                className="c2p-btn-secondary border-c2p-accent bg-white/80 px-7 py-4"
+                to="/allopresta"
+                className="c2p-btn-secondary min-h-14 w-full border-c2p-accent bg-white/90 px-6 py-4 text-center text-base sm:w-auto"
               >
-                Voir les abonnements
+                Trouver un prestataire
               </Link>
               <Link
-                to="/project-center"
-                className="c2p-btn-secondary bg-c2p-surface-muted px-7 py-4 text-c2p-muted"
+                to="/espace-numerique"
+                className="c2p-btn-secondary min-h-14 w-full bg-c2p-surface-muted px-6 py-4 text-center text-base text-c2p-muted sm:w-auto"
               >
-                Soumettre un projet
+                Acheter une formation
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="bg-white px-4 pb-6 sm:px-8 lg:px-10">
+        <div className="mx-auto -mt-2 grid max-w-7xl gap-3 sm:grid-cols-3 sm:gap-4">
+          {quickActions.map((item) => (
+            <Link
+              key={item.title}
+              to={item.path}
+              className="group rounded-[22px] border border-[#d6dbe1] bg-white p-4 shadow-[0_14px_36px_rgba(15,28,53,0.08)] transition hover:-translate-y-1 hover:border-[#1a9a96] sm:p-5"
+            >
+              <div className="flex items-start gap-4">
+                <span className="flex h-12 w-12 flex-none items-center justify-center rounded-2xl bg-[#eaf4ff] text-[#147f7b]">
+                  <i className={`${item.icon} text-2xl`}></i>
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#64748b]">{item.label}</p>
+                  <h2 className="mt-1 text-lg font-bold leading-tight text-[#06053a]">{item.title}</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#4a5b70]">{item.description}</p>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#147f7b]">
+                    {item.cta} <i className="ri-arrow-right-line transition group-hover:translate-x-1"></i>
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -85,13 +145,13 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 max-w-3xl">
             <div>
-              <p className="c2p-eyebrow">Modules principaux</p>
+              <p className="c2p-eyebrow">Parcours simplifié</p>
               <h2 className="mt-4 text-3xl font-semibold leading-tight text-[#06053a] sm:text-5xl">
-                Choisissez ce que vous voulez faire.
+                Un site pensé d’abord pour l’action.
               </h2>
             </div>
             <p className="mt-4 max-w-2xl text-base leading-8 text-[#4a5b70]">
-              Trois espaces, trois actions simples : trouver un service, apprendre, ou faire avancer un projet.
+              L’utilisateur choisit son besoin, arrive dans le bon espace, puis avance sans devoir comprendre toute la plateforme.
             </p>
           </div>
 
@@ -119,6 +179,32 @@ export default function HomePage() {
                   </span>
                 </div>
               </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#0f1c35] px-4 py-12 text-white sm:px-8 lg:px-10">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#7ac943]">Mobile-first</p>
+            <h2 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">
+              Le mobile devient la référence, pas une adaptation tardive.
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-white/76">
+              Les écrans publics sont maintenant structurés pour une lecture rapide sur smartphone, avec des actions visibles sans chercher dans le menu.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {mobileFirstPrinciples.map((principle) => (
+              <div key={principle} className="rounded-2xl border border-white/12 bg-white/8 p-4">
+                <div className="flex gap-3">
+                  <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#7ac943] text-[#0f1c35]">
+                    <i className="ri-check-line"></i>
+                  </span>
+                  <p className="text-sm font-semibold leading-6 text-white/90">{principle}</p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
