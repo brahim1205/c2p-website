@@ -89,6 +89,22 @@ export function mapAdminContentStatusToCourseStatus(status: string) {
   }
 }
 
+function mapProviderServiceStatusToAdminContentStatus(status: string) {
+  switch (status) {
+    case 'active':
+    case 'published':
+      return 'published';
+    case 'rejected':
+      return 'rejected';
+    case 'archived':
+    case 'paused':
+      return 'archived';
+    case 'pending':
+    default:
+      return 'pending';
+  }
+}
+
 export function syncCourseModerationItems() {
   const existingItems = store.admin_content_items ?? [];
   const existingCourseItems = new Map(
@@ -96,7 +112,12 @@ export function syncCourseModerationItems() {
       .filter((item) => String(item.source_table) === 'courses')
       .map((item) => [String(item.source_id), item] as const),
   );
-  const nonCourseItems = existingItems.filter((item) => String(item.source_table) !== 'courses');
+  const existingServiceItems = new Map(
+    existingItems
+      .filter((item) => String(item.source_table) === 'provider_services')
+      .map((item) => [String(item.source_id), item] as const),
+  );
+  const unmanagedItems = existingItems.filter((item) => !new Set(['courses', 'provider_services']).has(String(item.source_table)));
 
   const courseItems = (store.courses ?? []).map((course) => {
     const existingItem = existingCourseItems.get(String(course.id));
@@ -120,5 +141,27 @@ export function syncCourseModerationItems() {
     };
   });
 
-  store.admin_content_items = [...courseItems, ...nonCourseItems];
+  const serviceItems = (store.provider_services ?? []).map((service) => {
+    const existingItem = existingServiceItems.get(String(service.id));
+    const provider = (store.providers ?? []).find((row) => String(row.id) === String(service.provider_id));
+    const updatedAt = String(service.updated_at ?? service.created_at ?? new Date().toISOString());
+    return {
+      id: existingItem?.id ?? `service-${String(service.id)}`,
+      source_table: 'provider_services',
+      source_id: service.id,
+      title: String(service.title ?? 'Service sans titre'),
+      type: 'Service prestataire',
+      author: String(provider?.name ?? 'Prestataire inconnu'),
+      status: existingItem?.status ?? mapProviderServiceStatusToAdminContentStatus(String(service.status ?? 'pending')),
+      date: String(existingItem?.date ?? updatedAt.slice(0, 10)),
+      views: toNumber(existingItem?.views) ?? 0,
+      category: String(service.category ?? provider?.category ?? 'Service'),
+      description: String(service.description ?? ''),
+      thumbnail: trimText(service.image),
+      provider_id: service.provider_id ?? null,
+      provider_user_id: service.provider_user_id ?? provider?.user_id ?? null,
+    };
+  });
+
+  store.admin_content_items = [...courseItems, ...serviceItems, ...unmanagedItems];
 }
