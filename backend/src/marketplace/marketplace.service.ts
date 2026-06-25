@@ -29,17 +29,22 @@ export class MarketplaceService {
   async listPublicProviders() {
     await syncAppStoreFromDatabase(this.prisma);
     const prismaProviders = await this.marketplacePrismaReadService.listPublicProviders();
-    if (prismaProviders) return prismaProviders;
+    if (prismaProviders) {
+      return prismaProviders
+        .map((provider) => this.attachActiveServicesToProvider(provider))
+        .sort((left, right) => this.compareNumbersDesc(left.rating, right.rating));
+    }
     return hydrateRows('providers', store.providers ?? [])
+      .map((provider) => this.attachActiveServicesToProvider(provider))
       .sort((left, right) => this.compareNumbersDesc(left.rating, right.rating));
   }
 
   async getPublicProvider(id: string) {
     await syncAppStoreFromDatabase(this.prisma);
     const prismaProvider = await this.marketplacePrismaReadService.getPublicProvider(id);
-    if (prismaProvider) return prismaProvider;
+    if (prismaProvider) return this.attachActiveServicesToProvider(prismaProvider);
     const provider = findRow('providers', id);
-    return provider ? hydrateRow('providers', provider) : null;
+    return provider ? this.attachActiveServicesToProvider(hydrateRow('providers', provider)) : null;
   }
 
   async listPublicProviderReviews(id: string) {
@@ -509,6 +514,52 @@ export class MarketplaceService {
     return hydrateRows(table, store[table] ?? [])
       .filter((row) => String(row.provider_id) === String(provider.id))
       .sort((left, right) => this.compareDatesDesc(left.created_at ?? left.booking_date, right.created_at ?? right.booking_date));
+  }
+
+  private attachActiveServicesToProvider(provider: Row) {
+    const activeServices = this.providerRows('provider_services', provider)
+      .filter((service) => this.isPublicServiceStatus(service.status));
+    if (activeServices.length === 0) return provider;
+
+    const serviceTitles = activeServices
+      .map((service) => this.readString(service.title))
+      .filter((title): title is string => Boolean(title));
+    const existingServices = this.readStringList(provider.services);
+    const services = Array.from(new Set([...serviceTitles, ...existingServices]));
+    const servicePrices = activeServices
+      .map((service) => this.priceToNumber(service.price))
+      .filter((price): price is number => price !== null);
+    const providerPrice = this.numberOrNull(provider.price_per_hour);
+    const minServicePrice = servicePrices.length ? Math.min(...servicePrices) : null;
+
+    return {
+      ...provider,
+      services,
+      service_items: activeServices,
+      price_per_hour: providerPrice && providerPrice > 0 ? providerPrice : minServicePrice ?? provider.price_per_hour,
+    };
+  }
+
+  private isPublicServiceStatus(status: unknown) {
+    return ['active', 'published'].includes(String(status ?? '').toLowerCase());
+  }
+
+  private readStringList(value: unknown) {
+    if (Array.isArray(value)) {
+      return value
+        .map((entry) => this.readString(entry))
+        .filter((entry): entry is string => Boolean(entry));
+    }
+    const text = this.readString(value);
+    return text ? text.split(',').map((entry) => entry.trim()).filter(Boolean) : [];
+  }
+
+  private priceToNumber(value: unknown) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value !== 'string') return null;
+    const normalized = value.replace(/\s|\u202f|\u00a0/g, '').replace(/[^\d.,-]/g, '').replace(',', '.');
+    const parsed = Number.parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private providerMapForBookings(bookings: Row[]) {
