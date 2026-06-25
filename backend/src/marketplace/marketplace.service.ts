@@ -434,7 +434,7 @@ export class MarketplaceService {
       description: this.readString(input.description) ?? '',
       price: this.readString(input.price) ?? '',
       price_type: this.readString(input.price_type ?? input.priceType) ?? 'fixed',
-      status: 'pending',
+      status: 'active',
       image: this.readString(input.image) ?? '',
       location: this.readString(input.location) ?? provider.location ?? provider.city ?? '',
       bookings: 0,
@@ -443,10 +443,10 @@ export class MarketplaceService {
     });
     const moderationItem = this.buildServiceModerationItem(service, provider, actor);
     const notifications = this.buildAdminNotifications({
-      title: 'Nouveau service à valider',
-      message: `${actor.firstName} ${actor.lastName} a publié le service "${String(service.title)}".`,
+      title: 'Nouveau service publié',
+      message: `${actor.firstName} ${actor.lastName} a publié directement le service "${String(service.title)}".`,
       type: 'service',
-      link: '/admin/operations',
+      link: '/admin/content',
       metadata: { service_id: service.id, provider_id: provider.id, provider_user_id: actor.id },
     });
     await this.platformPersistenceService.persistRows({
@@ -603,7 +603,7 @@ export class MarketplaceService {
       title: String(service.title ?? 'Service sans titre'),
       type: 'Service prestataire',
       author: provider.name ?? `${actor.firstName} ${actor.lastName}`.trim(),
-      status: 'pending',
+      status: 'published',
       date: now.slice(0, 10),
       views: 0,
       category: String(service.category ?? provider.category ?? 'Service'),
