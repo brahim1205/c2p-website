@@ -61,7 +61,7 @@ export class AdminController {
     @Param('bookingId') bookingId: string,
     @Body() payload: unknown,
   ) {
-    return this.adminService.assignBookingProvider(bookingId, payload, request.auth?.user?.id ?? null);
+    return this.adminService.assignBookingProvider(bookingId, payload, request.auth?.user ?? null);
   }
 
   @Get('analytics-data')

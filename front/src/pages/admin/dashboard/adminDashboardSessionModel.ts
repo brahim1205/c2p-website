@@ -1,8 +1,11 @@
 import type {
   AdminDashboardBooking as Booking,
+  AdminDashboardCertificate,
+  AdminDashboardContentItem,
   AdminDashboardCourse,
   AdminDashboardManagedUser,
   AdminDashboardProject,
+  AdminDashboardService,
 } from '@/lib/adminApi';
 import { formatPercent, formatShortCurrency } from '@/lib/formatters';
 import type { DexPayStatus } from '@/lib/paymentsApi';
@@ -81,13 +84,27 @@ export function createPendingActions(input: {
   bookings: Booking[];
   projects: AdminDashboardProject[];
   courses: AdminDashboardCourse[];
+  services: AdminDashboardService[];
+  contentItems: AdminDashboardContentItem[];
+  certificates: AdminDashboardCertificate[];
 }): PendingAction[] {
-  const { users, bookings, projects, courses } = input;
+  const { users, bookings, projects, courses, services, contentItems, certificates } = input;
+  const pendingServices = contentItems.filter((item) => (
+    item.status === 'pending'
+    && (String(item.source_table ?? '').includes('provider_services') || String(item.type ?? '').toLowerCase().includes('service'))
+  )).length || services.filter((service) => String(service.status ?? '').toLowerCase() === 'pending').length;
+  const pendingCourses = contentItems.filter((item) => (
+    item.status === 'pending'
+    && String(item.source_table ?? '') === 'courses'
+  )).length || courses.filter((course) => course.status === 'review').length;
+  const pendingCertificates = certificates.filter((certificate) => ['ready', 'pending', 'review'].includes(String(certificate.status ?? '').toLowerCase())).length;
   return [
     { label: 'Comptes a valider', count: users.filter((entry) => entry.status === 'pending').length, link: '/admin/users', color: 'bg-orange-500', icon: 'ri-user-follow-line' },
     { label: 'Demandes a assigner', count: bookings.filter((booking) => booking.status === 'pending' && !booking.provider_id).length, link: '/admin/dashboard', color: 'bg-[#5fa6f3]', icon: 'ri-file-list-3-line' },
-    { label: 'Projets en incubation', count: projects.filter((project) => project.status === 'incubation').length, link: '/admin/content', color: 'bg-amber-500', icon: 'ri-lightbulb-line' },
-    { label: 'Cours en revue', count: courses.filter((course) => course.status === 'review').length, link: '/admin/content', color: 'bg-blue-500', icon: 'ri-book-open-line' },
+    { label: 'Services a valider', count: pendingServices, link: '/admin/operations', color: 'bg-emerald-500', icon: 'ri-briefcase-line' },
+    { label: 'Formations en revue', count: pendingCourses, link: '/admin/content', color: 'bg-blue-500', icon: 'ri-book-open-line' },
+    { label: 'Certifications', count: pendingCertificates, link: '/admin/dashboard', color: 'bg-purple-500', icon: 'ri-award-line' },
+    { label: 'Projets en incubation', count: projects.filter((project) => project.status === 'incubation').length, link: '/admin/project-financing', color: 'bg-amber-500', icon: 'ri-lightbulb-line' },
   ];
 }
 

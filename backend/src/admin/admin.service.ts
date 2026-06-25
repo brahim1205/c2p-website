@@ -96,14 +96,22 @@ export class AdminService {
     const sourceCourse = String(previous.source_table) === 'courses'
       ? (store.courses ?? []).find((row) => String(row.id) === String(previous.source_id))
       : null;
+    const sourceService = String(previous.source_table) === 'provider_services'
+      ? (store.provider_services ?? []).find((row) => String(row.id) === String(previous.source_id))
+      : null;
     const previousCourse = sourceCourse ? clone(sourceCourse) : null;
+    const previousService = sourceService ? clone(sourceService) : null;
     const sanitized = sanitizeAdminContentItemRecord({ ...previous, ...patch }, actor);
     const updated = patchAppRows(config.table, (row) => String(row.id) === String(previous.id), sanitized);
     const updatedCourse = sourceCourse
       ? (store.courses ?? []).find((row) => String(row.id) === String(sourceCourse.id)) ?? null
       : null;
+    const updatedService = sourceService
+      ? (store.provider_services ?? []).find((row) => String(row.id) === String(sourceService.id)) ?? null
+      : null;
     const rowsByTable: Record<string, Row[]> = { [config.table]: updated };
     if (updatedCourse) rowsByTable.courses = [updatedCourse];
+    if (updatedService) rowsByTable.provider_services = [updatedService];
 
     await this.platformPersistenceService.persistRows(rowsByTable, {
       actorId: actor.id,
@@ -111,6 +119,7 @@ export class AdminService {
       beforeRowsByTable: {
         [config.table]: [previous],
         ...(previousCourse ? { courses: [previousCourse] } : {}),
+        ...(previousService ? { provider_services: [previousService] } : {}),
       },
       afterRowsByTable: rowsByTable,
     });
@@ -138,6 +147,34 @@ export class AdminService {
           link: `/dashboard/formateur/mes-cours/${encodeURIComponent(String(updatedCourse.id))}/programme`,
           metadata: {
             course_id: updatedCourse.id,
+            moderation_status: status,
+          },
+        });
+      }
+    }
+    if (statusChanged && updatedService) {
+      const serviceProvider = (store.providers ?? []).find((row) => String(row.id) === String(updatedService.provider_id));
+      const providerUserId = updatedService.provider_user_id ?? serviceProvider?.user_id;
+      const status = String(result.status);
+      const decision = status === 'published'
+        ? {
+            title: 'Service publié',
+            message: `Votre service "${String(updatedService.title ?? result.title)}" a été validé et publié.`,
+          }
+        : status === 'rejected'
+          ? {
+              title: 'Service à corriger',
+              message: `Votre service "${String(updatedService.title ?? result.title)}" a été refusé. Corrigez-le avant une nouvelle soumission.`,
+            }
+          : null;
+      if (decision && providerUserId) {
+        await this.notificationsService.create(actor, {
+          userId: String(providerUserId),
+          ...decision,
+          type: 'service',
+          link: '/dashboard/prestataire/services',
+          metadata: {
+            service_id: updatedService.id,
             moderation_status: status,
           },
         });
@@ -179,10 +216,19 @@ export class AdminService {
           verified: provider.verified ?? null,
         }))
         .sort((left, right) => String(left.name ?? '').localeCompare(String(right.name ?? ''))),
+      services: hydrateRows('provider_services', store.provider_services ?? []).sort((left, right) =>
+        this.compareDesc(left.updated_at ?? left.created_at, right.updated_at ?? right.created_at),
+      ),
+      contentItems: hydrateRows('admin_content_items', store.admin_content_items ?? []).sort((left, right) =>
+        this.compareDesc(left.date, right.date),
+      ),
+      certificates: hydrateRows('certificates', store.certificates ?? []).sort((left, right) =>
+        this.compareDesc(left.updated_at ?? left.created_at ?? left.issued_at, right.updated_at ?? right.created_at ?? right.issued_at),
+      ),
     };
   }
 
-  async assignBookingProvider(bookingId: string, payload: unknown, actorId: string | null) {
+  async assignBookingProvider(bookingId: string, payload: unknown, actor: AuthUser | null) {
     const input = this.requireObject(payload);
     const providerId = input.provider_id ?? input.providerId;
     if (providerId === undefined || providerId === null) {
@@ -205,16 +251,27 @@ export class AdminService {
       requested_provider_name: booking.requested_provider_name ?? null,
       status: 'confirmed',
       assignment_status: 'assigned',
-      assigned_by_c2p: actorId,
+      assigned_by_c2p: actor?.id ?? null,
       assigned_at: now,
       updated_at: now,
     });
     await this.platformPersistenceService.persistRows({ bookings: updated }, {
-      actorId,
+      actorId: actor?.id ?? null,
       reason: 'admin:booking:assign-provider',
       beforeRowsByTable: { bookings: [previous] },
       afterRowsByTable: { bookings: updated },
     });
+    if (actor && booking.client_id) {
+      await this.notificationsService.create(actor, {
+        userId: String(booking.client_id),
+        title: 'Prestataire assigné',
+        message: 'C2P a attribué votre demande à un prestataire.',
+        type: 'booking',
+        link: '/dashboard/client/reservations',
+        metadata: { booking_id: booking.id },
+      });
+    }
+
     return {
       ...(updated[0] ?? previous),
       provider: {

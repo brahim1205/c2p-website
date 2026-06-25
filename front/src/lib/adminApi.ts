@@ -31,9 +31,33 @@ export interface AdminDashboardManagedUser {
 }
 
 export interface AdminDashboardCourse {
+  id?: string | number;
   price: number;
   revenue?: number;
   status: string;
+}
+
+export interface AdminDashboardService {
+  id: string | number;
+  status?: string;
+  provider_id?: string | number | null;
+  title?: string | null;
+}
+
+export interface AdminDashboardContentItem {
+  id: string | number;
+  source_table?: string | null;
+  source_id?: string | number | null;
+  title?: string | null;
+  type?: string | null;
+  status: string;
+}
+
+export interface AdminDashboardCertificate {
+  id: string | number;
+  status?: string;
+  issued_at?: string | null;
+  certificate_number?: string | null;
 }
 
 export interface AdminDashboardProviderOption {
@@ -92,6 +116,9 @@ export interface AdminDashboardSnapshot {
   courses: AdminDashboardCourse[];
   bookings: AdminDashboardBooking[];
   providers: AdminDashboardProviderOption[];
+  services: AdminDashboardService[];
+  contentItems: AdminDashboardContentItem[];
+  certificates: AdminDashboardCertificate[];
   projects: AdminDashboardProject[];
   history: AdminDashboardHistoryItem[];
   escrows: EscrowCase[];
@@ -116,6 +143,9 @@ interface AdminDashboardData {
   courses: AdminDashboardCourse[];
   bookings: AdminDashboardBooking[];
   providers: AdminDashboardProviderOption[];
+  services: AdminDashboardService[];
+  contentItems: AdminDashboardContentItem[];
+  certificates: AdminDashboardCertificate[];
 }
 
 async function fetchAdminProjectDashboardSummary() {
@@ -153,6 +183,9 @@ export async function fetchAdminDashboardSnapshot(options: { includeSensitiveSup
     courses: dashboardData.courses || [],
     bookings: dashboardData.bookings || [],
     providers: dashboardData.providers || [],
+    services: dashboardData.services || [],
+    contentItems: dashboardData.contentItems || [],
+    certificates: dashboardData.certificates || [],
     projects: projectDashboard.projects || [],
     history: projectDashboard.history || [],
     escrows: financeOverview.escrowCases || [],

@@ -61,6 +61,9 @@ export function useAdminDashboardSession() {
   const courses = useMemo(() => snapshot?.courses ?? [], [snapshot?.courses]);
   const bookings = useMemo(() => snapshot?.bookings ?? [], [snapshot?.bookings]);
   const providers = useMemo(() => snapshot?.providers ?? [], [snapshot?.providers]);
+  const services = useMemo(() => snapshot?.services ?? [], [snapshot?.services]);
+  const contentItems = useMemo(() => snapshot?.contentItems ?? [], [snapshot?.contentItems]);
+  const certificates = useMemo(() => snapshot?.certificates ?? [], [snapshot?.certificates]);
   const projects = useMemo(() => snapshot?.projects ?? [], [snapshot?.projects]);
   const history = useMemo(() => snapshot?.history ?? [], [snapshot?.history]);
   const escrows = useMemo(() => snapshot?.escrows ?? [], [snapshot?.escrows]);
@@ -94,10 +97,13 @@ export function useAdminDashboardSession() {
 
   const pendingActions = useMemo(() => createPendingActions({
     bookings,
+    certificates,
+    contentItems,
     courses,
     projects,
+    services,
     users,
-  }), [bookings, courses, projects, users]);
+  }), [bookings, certificates, contentItems, courses, projects, services, users]);
 
   const modules = useMemo(() => createAdminModules(isSuperAdmin), [isSuperAdmin]);
 

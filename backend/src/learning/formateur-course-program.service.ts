@@ -212,6 +212,21 @@ export class FormateurCourseProgramService {
       reason: 'learning:formateur:course-bundle:create',
       afterRowsByTable: rowsByTable,
     });
+    const admins = listUsers().filter((candidate) =>
+      (candidate.role === 'admin' || candidate.role === 'superadmin') && candidate.status === 'active',
+    );
+    await Promise.all(admins.map((admin) => this.notificationsService.create(actor, {
+      userId: admin.id,
+      title: 'Nouvelle formation créée',
+      message: `${actor.firstName} ${actor.lastName} a créé la formation "${String(course.title)}".`,
+      type: 'formation',
+      link: '/admin/content',
+      metadata: {
+        course_id: course.id,
+        instructor_id: actor.id,
+        moderation_status: course.status ?? 'draft',
+      },
+    })));
 
     return course;
   }

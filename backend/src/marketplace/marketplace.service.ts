@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
+import { isAdminRole, listUsers, type AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 import {
@@ -15,6 +15,7 @@ import { filterRowsForActor } from '../data/data-actor-scope.js';
 import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/data-runtime.js';
 import { hydrateRow, hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
+import { createAppNotificationRow } from '../notifications/notification-payloads.js';
 import { MarketplacePrismaReadService } from './marketplace-prisma-read.service.js';
 
 @Injectable()
@@ -427,19 +428,40 @@ export class MarketplaceService {
     const provider = this.requireProviderForActor(actor);
     const service = this.insertRow('provider_services', {
       provider_id: provider.id,
+      provider_user_id: actor.id,
       title: this.requireString(input.title, 'Le titre est obligatoire.'),
       category: this.readString(input.category) ?? 'General',
       description: this.readString(input.description) ?? '',
       price: this.readString(input.price) ?? '',
       price_type: this.readString(input.price_type ?? input.priceType) ?? 'fixed',
-      status: this.readString(input.status) ?? 'active',
+      status: 'pending',
       image: this.readString(input.image) ?? '',
       location: this.readString(input.location) ?? provider.location ?? provider.city ?? '',
       bookings: 0,
       rating: 0,
       created_at: new Date().toISOString(),
     });
-    await this.persist('provider_services', [service], actor, 'marketplace:prestataire:service:create');
+    const moderationItem = this.buildServiceModerationItem(service, provider, actor);
+    const notifications = this.buildAdminNotifications({
+      title: 'Nouveau service à valider',
+      message: `${actor.firstName} ${actor.lastName} a publié le service "${String(service.title)}".`,
+      type: 'service',
+      link: '/admin/operations',
+      metadata: { service_id: service.id, provider_id: provider.id, provider_user_id: actor.id },
+    });
+    await this.platformPersistenceService.persistRows({
+      provider_services: [service],
+      admin_content_items: [moderationItem],
+      ...(notifications.length ? { notifications } : {}),
+    }, {
+      actorId: actor.id,
+      reason: 'marketplace:prestataire:service:create',
+      afterRowsByTable: {
+        provider_services: [service],
+        admin_content_items: [moderationItem],
+        ...(notifications.length ? { notifications } : {}),
+      },
+    });
     return this.persistedMarketplaceRow('provider_services', service);
   }
 
@@ -570,6 +592,45 @@ export class MarketplaceService {
       beforeRowsByTable: beforeRows.length ? { [table]: beforeRows } : undefined,
       afterRowsByTable: { [table]: rows },
     });
+  }
+
+  private buildServiceModerationItem(service: Row, provider: Row, actor: AuthUser): Row {
+    const now = String(service.created_at ?? new Date().toISOString());
+    return {
+      id: `service-${String(service.id)}`,
+      source_table: 'provider_services',
+      source_id: service.id,
+      title: String(service.title ?? 'Service sans titre'),
+      type: 'Service prestataire',
+      author: provider.name ?? `${actor.firstName} ${actor.lastName}`.trim(),
+      status: 'pending',
+      date: now.slice(0, 10),
+      views: 0,
+      category: String(service.category ?? provider.category ?? 'Service'),
+      description: String(service.description ?? ''),
+      thumbnail: service.image ?? null,
+      provider_id: provider.id,
+      provider_user_id: actor.id,
+    };
+  }
+
+  private buildAdminNotifications(input: {
+    title: string;
+    message: string;
+    type: string;
+    link: string;
+    metadata: Record<string, unknown>;
+  }) {
+    return listUsers()
+      .filter((candidate) => (candidate.role === 'admin' || candidate.role === 'superadmin') && candidate.status === 'active')
+      .map((admin) => createAppNotificationRow({
+        userId: admin.id,
+        title: input.title,
+        message: input.message,
+        type: input.type,
+        link: input.link,
+        metadata: input.metadata,
+      }));
   }
 
   private async persistedMarketplaceRow(table: string, row: Row) {

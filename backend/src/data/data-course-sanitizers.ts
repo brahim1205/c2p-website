@@ -69,6 +69,28 @@ export function sanitizeAdminContentItemRecord(row: Row, user: AuthUser) {
     });
   }
 
+  if (String(normalized.source_table) === 'provider_services') {
+    const service = findRow('provider_services', normalized.source_id);
+    if (!service) {
+      throw new BadRequestException('Le service associe est introuvable.');
+    }
+
+    const serviceStatus = status === 'published'
+      ? 'active'
+      : status === 'rejected'
+        ? 'rejected'
+        : status === 'archived'
+          ? 'archived'
+          : 'pending';
+    Object.assign(service, {
+      status: serviceStatus,
+      updated_at: new Date().toISOString(),
+      published_at: serviceStatus === 'active' ? new Date().toISOString() : service.published_at ?? null,
+      rejected_at: serviceStatus === 'rejected' ? new Date().toISOString() : service.rejected_at ?? null,
+      archived_at: serviceStatus === 'archived' ? new Date().toISOString() : service.archived_at ?? null,
+    });
+  }
+
   return normalized;
 }
 

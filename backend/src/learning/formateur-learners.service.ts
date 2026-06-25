@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
+import { isAdminRole, listUsers, type AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 import {
@@ -12,6 +12,7 @@ import { filterRowsForActor } from '../data/data-actor-scope.js';
 import { recomputeDerivedData } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
 
 @Injectable()
@@ -20,6 +21,7 @@ export class FormateurLearnersService {
     private readonly prisma: PrismaService,
     private readonly platformPersistenceService: PlatformPersistenceService,
     private readonly learningAssessmentsReadService: LearningAssessmentsReadService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getCertificates(user: AuthUser | null) {
@@ -53,6 +55,23 @@ export class FormateurLearnersService {
       beforeRowsByTable: { certificates: [previous] },
       afterRowsByTable: { certificates: updated },
     });
+    const updatedCertificate = updated[0] ?? certificate;
+    const admins = listUsers().filter((candidate) =>
+      (candidate.role === 'admin' || candidate.role === 'superadmin') && candidate.status === 'active',
+    );
+    await Promise.all(admins.map((admin) => this.notificationsService.create(actor, {
+      userId: admin.id,
+      title: 'Certificat émis',
+      message: `${actor.firstName} ${actor.lastName} a émis le certificat "${certificateId}" pour ${String(updatedCertificate.student_name ?? 'un apprenant')}.`,
+      type: 'certificate',
+      link: '/admin/dashboard',
+      metadata: {
+        certificate_id: updatedCertificate.id,
+        certificate_number: certificateId,
+        course_id: updatedCertificate.course_id,
+        student_id: updatedCertificate.student_id,
+      },
+    })));
     const prismaCertificate = await this.learningAssessmentsReadService.getCertificateById(String(certificate.id), actor);
     return { certificateId, issuedAt, certificate: prismaCertificate ?? updated[0] ?? null };
   }
