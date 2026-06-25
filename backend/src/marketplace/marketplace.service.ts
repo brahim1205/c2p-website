@@ -226,17 +226,22 @@ export class MarketplaceService {
     const input = this.requireObject(payload, 'Demande invalide.');
     const service = this.requireString(input.service, 'Le service est obligatoire.');
     const bookingDate = this.requireString(input.booking_date ?? input.bookingDate, 'La date est obligatoire.');
+    const bookingTime = this.readString(input.booking_time ?? input.bookingTime) ?? '09:00';
     await syncAppStoreFromDatabase(this.prisma);
+    const requestedProviderId = this.numberOrNull(input.requested_provider_id ?? input.requestedProviderId);
+    if (requestedProviderId !== null && this.isProviderSlotBlocked(String(requestedProviderId), bookingDate, bookingTime)) {
+      throw new BadRequestException('Ce créneau est indisponible pour ce prestataire.');
+    }
     const booking = this.insertRow('bookings', {
       client_id: actor.id,
       client_name: this.readString(input.client_name ?? input.clientName) ?? `${actor.firstName} ${actor.lastName}`.trim(),
       client_email: this.readString(input.client_email ?? input.clientEmail) ?? actor.email,
-      requested_provider_id: this.numberOrNull(input.requested_provider_id ?? input.requestedProviderId),
+      requested_provider_id: requestedProviderId,
       provider_id: null,
       service,
       description: this.readString(input.description) ?? '',
       booking_date: bookingDate,
-      booking_time: this.readString(input.booking_time ?? input.bookingTime) ?? '09:00',
+      booking_time: bookingTime,
       status: 'pending',
       request_type: this.readString(input.request_type ?? input.requestType) ?? 'booking',
       price: this.numberOrNull(input.price),
@@ -300,6 +305,57 @@ export class MarketplaceService {
       providerId: provider?.id ?? null,
       bookings: provider ? this.providerRows('bookings', provider) : [],
     };
+  }
+
+  async listPrestataireAvailabilityBlocks(user: AuthUser | null) {
+    const actor = this.requireRole(user, 'prestataire');
+    await syncAppStoreFromDatabase(this.prisma);
+    const provider = this.providerForUser(actor.id);
+    return {
+      providerId: provider?.id ?? null,
+      blocks: provider ? this.providerRows('provider_availability_blocks', provider) : [],
+    };
+  }
+
+  async createPrestataireAvailabilityBlock(payload: unknown, user: AuthUser | null) {
+    const actor = this.requireRole(user, 'prestataire');
+    const input = this.requireObject(payload, 'Créneau invalide.');
+    const startsAt = this.requireString(input.starts_at ?? input.startsAt, 'Le début du créneau est obligatoire.');
+    const endsAt = this.requireString(input.ends_at ?? input.endsAt, 'La fin du créneau est obligatoire.');
+    const startDate = new Date(startsAt);
+    const endDate = new Date(endsAt);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) {
+      throw new BadRequestException('Le créneau indisponible est invalide.');
+    }
+
+    await syncAppStoreFromDatabase(this.prisma);
+    const provider = this.requireProviderForActor(actor);
+    const block = this.insertRow('provider_availability_blocks', {
+      provider_id: provider.id,
+      user_id: actor.id,
+      starts_at: startDate.toISOString(),
+      ends_at: endDate.toISOString(),
+      reason: this.readString(input.reason) ?? 'Créneau bloqué',
+      status: 'blocked',
+      created_at: new Date().toISOString(),
+    });
+    await this.persist('provider_availability_blocks', [block], actor, 'marketplace:prestataire:availability-block:create');
+    return block;
+  }
+
+  async deletePrestataireAvailabilityBlock(blockId: string, user: AuthUser | null) {
+    const actor = this.requireRole(user, 'prestataire');
+    await syncAppStoreFromDatabase(this.prisma);
+    const provider = this.requireProviderForActor(actor);
+    const block = this.findProviderRow('provider_availability_blocks', blockId, provider, 'Créneau introuvable.');
+    store.provider_availability_blocks = (store.provider_availability_blocks ?? []).filter((row) => String(row.id) !== String(block.id));
+    recomputeDerivedData();
+    await this.platformPersistenceService.deleteRows({ provider_availability_blocks: [String(block.id)] }, {
+      actorId: actor.id,
+      reason: 'marketplace:prestataire:availability-block:delete',
+      beforeRowsByTable: { provider_availability_blocks: [block] },
+    });
+    return block;
   }
 
   async updatePrestataireBookingStatus(bookingId: string, payload: unknown, user: AuthUser | null) {
@@ -445,6 +501,24 @@ export class MarketplaceService {
           user_id: provider.user_id,
         }]),
     );
+  }
+
+  private isProviderSlotBlocked(providerId: string, bookingDate: string, bookingTime: string) {
+    const slot = this.parseBookingSlot(bookingDate, bookingTime);
+    if (!slot) return false;
+    return (store.provider_availability_blocks ?? []).some((block) => {
+      if (String(block.provider_id) !== String(providerId) || String(block.status ?? 'blocked') !== 'blocked') return false;
+      const startsAt = Date.parse(String(block.starts_at ?? ''));
+      const endsAt = Date.parse(String(block.ends_at ?? ''));
+      if (Number.isNaN(startsAt) || Number.isNaN(endsAt)) return false;
+      return slot >= startsAt && slot < endsAt;
+    });
+  }
+
+  private parseBookingSlot(bookingDate: string, bookingTime: string) {
+    const normalizedTime = bookingTime.match(/^\d{2}:\d{2}/) ? bookingTime.slice(0, 5) : '09:00';
+    const parsed = Date.parse(`${bookingDate}T${normalizedTime}:00`);
+    return Number.isNaN(parsed) ? null : parsed;
   }
 
   private findOwnedRow(table: string, rowId: string, actor: AuthUser, notFoundMessage: string) {

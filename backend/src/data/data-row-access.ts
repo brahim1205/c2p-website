@@ -183,6 +183,11 @@ export function filterRowsForActor(
         return rows.filter((row) => providerIds.includes(String(row.provider_id)));
       }
       return [];
+    case 'provider_availability_blocks':
+      if (user.role === 'prestataire') {
+        return rows.filter((row) => providerIds.includes(String(row.provider_id)) || String(row.user_id) === user.id);
+      }
+      return [];
     case 'provider_services':
       if (user.role === 'prestataire') {
         return rows.filter((row) => providerIds.includes(String(row.provider_id)));

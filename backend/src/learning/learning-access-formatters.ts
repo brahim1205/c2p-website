@@ -41,8 +41,67 @@ export function mapLessonType(value: unknown) {
 }
 
 export function buildContentBlocks(lesson: Row) {
+  const blocks: Array<
+    | { type: 'heading'; text: string }
+    | { type: 'paragraph'; text: string }
+    | { type: 'callout'; tone: 'warning' | 'info'; text: string }
+    | { type: 'quote'; text: string }
+    | { type: 'list'; items: string[] }
+  > = [];
+  const rawContent = text(lesson.content);
   const description = text(lesson.description);
-  return description ? [{ type: 'paragraph', text: description }] : [];
+  const source = rawContent || description;
+  if (!source) return blocks;
+
+  const lines = source.split(/\r?\n/);
+  let listItems: string[] = [];
+  const flushList = () => {
+    if (listItems.length > 0) {
+      blocks.push({ type: 'list', items: listItems });
+      listItems = [];
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushList();
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      flushList();
+      blocks.push({ type: 'heading', text: line.slice(3).trim() });
+      continue;
+    }
+    if (line.startsWith('> ')) {
+      flushList();
+      blocks.push({ type: 'quote', text: line.slice(2).trim() });
+      continue;
+    }
+    if (line.startsWith(':::note')) {
+      flushList();
+      blocks.push({ type: 'callout', tone: 'info', text: 'Point clé à retenir' });
+      continue;
+    }
+    if (line.startsWith(':::warning')) {
+      flushList();
+      blocks.push({ type: 'callout', tone: 'warning', text: 'Attention particulière' });
+      continue;
+    }
+    if (line.startsWith('- ') || line.startsWith('- [ ] ') || line.startsWith('- [x] ')) {
+      listItems.push(line.replace(/^- \[[ x]\] /i, '').replace(/^- /, '').trim());
+      continue;
+    }
+    if (line.startsWith('```') || line === ':::') continue;
+    flushList();
+    blocks.push({ type: 'paragraph', text: line });
+  }
+  flushList();
+  return blocks;
+}
+
+export function isSafeLocalUrl(value: string) {
+  return value.startsWith('/uploads/') || value.startsWith('/c2p-documents/') || value.startsWith('/images/');
 }
 
 export function formatAssetSize(value: unknown) {

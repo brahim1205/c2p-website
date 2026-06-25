@@ -28,6 +28,9 @@ export default function AlloPrestPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [profileFilter, setProfileFilter] = useState<'all' | ProviderProfileLevel>('all');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [maxPrice, setMaxPrice] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [minRating, setMinRating] = useState('');
   const [sortBy, setSortBy] = useState('rating');
   const [providers, setProviders] = useState<ProviderCatalogRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,21 @@ export default function AlloPrestPage() {
       result = result.filter((p) => p.verified);
     }
 
+    const maxPriceValue = Number(maxPrice);
+    if (Number.isFinite(maxPriceValue) && maxPrice.trim()) {
+      result = result.filter((p) => Number(p.price_per_hour || 0) <= maxPriceValue);
+    }
+
+    if (locationFilter.trim()) {
+      const q = locationFilter.toLowerCase();
+      result = result.filter((p) => `${p.location ?? ''} ${p.city ?? ''}`.toLowerCase().includes(q));
+    }
+
+    const minRatingValue = Number(minRating);
+    if (Number.isFinite(minRatingValue) && minRating.trim()) {
+      result = result.filter((p) => Number(p.rating || 0) >= minRatingValue);
+    }
+
     result.sort((a, b) => {
       if (sortBy === 'rating') return b.rating - a.rating;
       if (sortBy === 'price-low') return a.price_per_hour - b.price_per_hour;
@@ -84,17 +102,26 @@ export default function AlloPrestPage() {
     });
 
     return result;
-  }, [providers, selectedCategory, profileFilter, searchQuery, verifiedOnly, sortBy]);
+  }, [providers, selectedCategory, profileFilter, searchQuery, verifiedOnly, maxPrice, locationFilter, minRating, sortBy]);
 
   const resetFilters = () => {
     setSelectedCategory('all');
     setProfileFilter('all');
     setVerifiedOnly(false);
+    setMaxPrice('');
+    setLocationFilter('');
+    setMinRating('');
     setSearchQuery('');
     setSortBy('rating');
   };
 
-  const hasActiveFilters = selectedCategory !== 'all' || profileFilter !== 'all' || verifiedOnly || searchQuery !== '';
+  const hasActiveFilters = selectedCategory !== 'all'
+    || profileFilter !== 'all'
+    || verifiedOnly
+    || maxPrice !== ''
+    || locationFilter !== ''
+    || minRating !== ''
+    || searchQuery !== '';
   const accessAction = useMemo(() => {
     if (!user) {
       return {
@@ -144,10 +171,16 @@ export default function AlloPrestPage() {
                 showFiltersMobile={showFiltersMobile}
                 profileFilter={profileFilter}
                 verifiedOnly={verifiedOnly}
+                maxPrice={maxPrice}
+                locationFilter={locationFilter}
+                minRating={minRating}
                 hasActiveFilters={hasActiveFilters}
                 onToggleMobileFilters={() => setShowFiltersMobile(!showFiltersMobile)}
                 onProfileFilterChange={setProfileFilter}
                 onVerifiedOnlyChange={setVerifiedOnly}
+                onMaxPriceChange={setMaxPrice}
+                onLocationFilterChange={setLocationFilter}
+                onMinRatingChange={setMinRating}
                 onResetFilters={resetFilters}
               />
 

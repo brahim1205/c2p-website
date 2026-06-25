@@ -118,6 +118,7 @@ export default function LessonsTab({
           onComplete={() => onToggleComplete(activeLesson.id)}
           chapters={activeLesson.chapters}
           thumbnail={activeLesson.thumbnail}
+          src={activeLesson.videoUrl}
           initialTime={getInitialVideoTime(activeLesson.id)}
           onProgress={(seconds) => onVideoProgress(activeLesson.id, seconds)}
         />

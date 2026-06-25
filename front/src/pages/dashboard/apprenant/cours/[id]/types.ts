@@ -16,6 +16,7 @@ export interface Lesson {
   description: string;
   chapters?: Chapter[];
   thumbnail?: string;
+  videoUrl?: string;
   quizRequired?: boolean;
   contentBlocks?: LessonContentBlock[];
   resources?: Resource[];
@@ -56,6 +57,9 @@ export interface Resource {
   type: string;
   size: string;
   icon: string;
+  url?: string;
+  thumbnailUrl?: string;
+  mimeType?: string;
 }
 
 export interface Comment {

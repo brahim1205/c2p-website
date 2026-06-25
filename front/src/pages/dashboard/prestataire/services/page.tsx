@@ -165,11 +165,13 @@ export default function PrestataireServicesPage() {
     if (!selectedService) return;
     try {
       await updatePrestataireService(selectedService.id, {
-        title: editService.title || selectedService.title,
-        description: editService.description || selectedService.description,
-        price: editService.price || selectedService.price,
-        location: editService.location || selectedService.location,
-        image: editService.image || selectedService.image,
+        title: editService.title ?? selectedService.title,
+        category: editService.category ?? selectedService.category,
+        description: editService.description ?? selectedService.description,
+        price: editService.price ?? selectedService.price,
+        price_type: editService.price_type ?? selectedService.price_type,
+        location: editService.location ?? selectedService.location,
+        image: editService.image ?? selectedService.image,
       });
     } catch {
       error('Erreur', 'Impossible de modifier le service.');
@@ -190,7 +192,15 @@ export default function PrestataireServicesPage() {
       return;
     }
     setSelectedService(service);
-    setEditService({});
+    setEditService({
+      title: service.title,
+      category: service.category,
+      description: service.description,
+      price: service.price,
+      price_type: service.price_type,
+      location: service.location,
+      image: service.image,
+    });
     setShowEditModal(true);
   };
 

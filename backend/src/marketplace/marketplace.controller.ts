@@ -137,6 +137,27 @@ export class MarketplaceController {
     return this.marketplaceService.listPrestataireBookings(request.auth?.user ?? null);
   }
 
+  @Get('prestataire/availability-blocks')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.marketplace.read')
+  listPrestataireAvailabilityBlocks(@Req() request: AuthenticatedRequest) {
+    return this.marketplaceService.listPrestataireAvailabilityBlocks(request.auth?.user ?? null);
+  }
+
+  @Post('prestataire/availability-blocks')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.marketplace.write')
+  createPrestataireAvailabilityBlock(@Req() request: AuthenticatedRequest, @Body() payload: unknown) {
+    return this.marketplaceService.createPrestataireAvailabilityBlock(payload, request.auth?.user ?? null);
+  }
+
+  @Delete('prestataire/availability-blocks/:blockId')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.marketplace.write')
+  deletePrestataireAvailabilityBlock(@Req() request: AuthenticatedRequest, @Param('blockId') blockId: string) {
+    return this.marketplaceService.deletePrestataireAvailabilityBlock(blockId, request.auth?.user ?? null);
+  }
+
   @Patch('prestataire/bookings/:bookingId/status')
   @UseGuards(PermissionGuard)
   @RequirePermission('data.marketplace.write')

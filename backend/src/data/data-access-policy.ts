@@ -75,6 +75,7 @@ export const COMMAND_ONLY_WRITE_TABLES = new Set([
   'projects',
   'provider_reviews',
   'provider_services',
+  'provider_availability_blocks',
   'provider_verification_requests',
   'providers',
   'quiz_choices',
@@ -115,6 +116,7 @@ export const COMMAND_ONLY_WRITE_TABLES = new Set([
 const PROVIDER_CATALOG_TABLES = new Set([
   'providers',
   'provider_services',
+  'provider_availability_blocks',
   'provider_verification_requests',
 ]);
 
@@ -126,6 +128,7 @@ const MARKETPLACE_TABLES = new Set([
   'bookings',
   'client_orders',
   'client_favorites',
+  'provider_availability_blocks',
 ]);
 
 const FINANCE_TABLES = new Set([

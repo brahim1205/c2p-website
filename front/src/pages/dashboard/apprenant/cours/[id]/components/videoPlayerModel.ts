@@ -10,6 +10,7 @@ export interface VideoPlayerProps {
   isCompleted: boolean;
   chapters?: Chapter[];
   thumbnail?: string;
+  src?: string;
   initialTime?: number;
   onProgress?: (seconds: number) => void;
 }

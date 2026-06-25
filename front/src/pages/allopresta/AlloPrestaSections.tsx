@@ -27,10 +27,16 @@ interface AlloPrestaFiltersSidebarProps {
   showFiltersMobile: boolean;
   profileFilter: 'all' | ProviderProfileLevel;
   verifiedOnly: boolean;
+  maxPrice: string;
+  locationFilter: string;
+  minRating: string;
   hasActiveFilters: boolean;
   onToggleMobileFilters: () => void;
   onProfileFilterChange: (value: 'all' | ProviderProfileLevel) => void;
   onVerifiedOnlyChange: (value: boolean) => void;
+  onMaxPriceChange: (value: string) => void;
+  onLocationFilterChange: (value: string) => void;
+  onMinRatingChange: (value: string) => void;
   onResetFilters: () => void;
 }
 
@@ -90,10 +96,16 @@ export function AlloPrestaFiltersSidebar({
   showFiltersMobile,
   profileFilter,
   verifiedOnly,
+  maxPrice,
+  locationFilter,
+  minRating,
   hasActiveFilters,
   onToggleMobileFilters,
   onProfileFilterChange,
   onVerifiedOnlyChange,
+  onMaxPriceChange,
+  onLocationFilterChange,
+  onMinRatingChange,
   onResetFilters,
 }: AlloPrestaFiltersSidebarProps) {
   return (
@@ -151,6 +163,48 @@ export function AlloPrestaFiltersSidebar({
               />
               <span className="text-sm text-[#27346b]">Prestataires vérifiés uniquement</span>
             </label>
+          </div>
+
+          <div>
+            <label htmlFor="allopresta-max-price" className="mb-2 block text-sm font-medium text-[#27346b]">Prix maximum</label>
+            <input
+              id="allopresta-max-price"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              value={maxPrice}
+              onChange={(event) => onMaxPriceChange(event.target.value)}
+              placeholder="Ex: 15000"
+              className="w-full rounded-xl border border-[#80bfdf] bg-white px-3 py-2 text-sm text-[#27346b] outline-none focus:border-[#27346b]"
+            />
+            <p className="mt-1 text-xs text-[#64748b]">Filtre sur le prix horaire ou indicatif.</p>
+          </div>
+
+          <div>
+            <label htmlFor="allopresta-location" className="mb-2 block text-sm font-medium text-[#27346b]">Localisation</label>
+            <input
+              id="allopresta-location"
+              type="search"
+              value={locationFilter}
+              onChange={(event) => onLocationFilterChange(event.target.value)}
+              placeholder="Dakar, Thiès, Keur Massar..."
+              className="w-full rounded-xl border border-[#80bfdf] bg-white px-3 py-2 text-sm text-[#27346b] outline-none focus:border-[#27346b]"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="allopresta-min-rating" className="mb-2 block text-sm font-medium text-[#27346b]">Note minimale</label>
+            <select
+              id="allopresta-min-rating"
+              value={minRating}
+              onChange={(event) => onMinRatingChange(event.target.value)}
+              className="w-full rounded-xl border border-[#80bfdf] bg-white px-3 py-2 text-sm text-[#27346b] outline-none focus:border-[#27346b]"
+            >
+              <option value="">Toutes les notes</option>
+              <option value="4">4 étoiles et plus</option>
+              <option value="3">3 étoiles et plus</option>
+              <option value="2">2 étoiles et plus</option>
+            </select>
           </div>
 
           {hasActiveFilters && (

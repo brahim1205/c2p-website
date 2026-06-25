@@ -73,6 +73,7 @@ export const FormateurRevenuePage = lazy(() => import('../pages/dashboard/format
 export const FormateurAnalyticsPage = lazy(() => import('../pages/dashboard/formateur/analytics/page'));
 export const FormateurCommunityPage = lazy(() => import('../pages/dashboard/formateur/communaute/page'));
 export const PrestataireServicesPage = lazy(() => import('../pages/dashboard/prestataire/services/page'));
+export const PrestataireAgendaPage = lazy(() => import('../pages/dashboard/prestataire/agenda/page'));
 export const PrestataireDemandesPage = lazy(() => import('../pages/dashboard/prestataire/demandes/page'));
 export const PrestataireAvisPage = lazy(() => import('../pages/dashboard/prestataire/avis/page'));
 export const ApprenantCoursPage = lazy(() => import('../pages/dashboard/apprenant/mes-cours/page'));

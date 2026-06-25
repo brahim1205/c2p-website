@@ -198,12 +198,18 @@ export class LearningAccessService {
         lastViewedAt: text(progressByLessonId.get(String(lesson.id))?.last_viewed_at),
         description: text(lesson.description),
         contentBlocks: buildContentBlocks(lesson),
+        videoUrl: text(
+          (assetsByLesson.get(String(lesson.id)) ?? []).find((asset) => String(asset.asset_type) === 'video')?.url,
+        ),
         resources: (assetsByLesson.get(String(lesson.id)) ?? []).map((asset) => ({
           id: numberId(asset.id),
           title: text(asset.title, 'Ressource'),
           type: text(asset.asset_type, 'Fichier').toUpperCase(),
           size: formatAssetSize(asset.size_bytes),
           icon: getAssetIcon(asset.asset_type),
+          url: text(asset.url),
+          thumbnailUrl: text(asset.thumbnail_url),
+          mimeType: text(asset.mime_type),
         })),
       })),
     }));

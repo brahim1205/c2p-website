@@ -25,7 +25,8 @@ export const roleNavOverrides: Record<string, DashboardNavItem[]> = {
   prestataire: [
     { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/prestataire' },
     { label: 'Mes services', icon: 'ri-briefcase-line', path: '/dashboard/prestataire/services' },
-    { label: 'Demandes', icon: 'ri-inbox-line', path: '/dashboard/prestataire/demandes' },
+    { label: 'Agenda', icon: 'ri-calendar-line', path: '/dashboard/prestataire/agenda' },
+    { label: 'Demandes', icon: 'ri-calendar-check-line', path: '/dashboard/prestataire/demandes' },
     { label: 'Avis clients', icon: 'ri-star-line', path: '/dashboard/prestataire/avis' },
     { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
     { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },

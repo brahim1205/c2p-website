@@ -1,10 +1,38 @@
+import { useEffect, useRef } from 'react';
 import VideoPlayerControls from './VideoPlayerControls';
 import { useVideoPlayerSession } from './useVideoPlayerSession';
 import type { VideoPlayerProps } from './videoPlayerModel';
 
 export default function VideoPlayer(props: VideoPlayerProps) {
-  const { title, thumbnail, chapters, isCompleted, onComplete } = props;
+  const { title, thumbnail, chapters, isCompleted, onComplete, src, initialTime = 0, onProgress } = props;
   const session = useVideoPlayerSession(props);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (!src || !videoRef.current || initialTime <= 0) return;
+    videoRef.current.currentTime = initialTime;
+  }, [initialTime, src]);
+
+  if (src) {
+    return (
+      <div className="overflow-hidden rounded-lg bg-gray-950">
+        <video
+          ref={videoRef}
+          src={src}
+          poster={thumbnail || undefined}
+          controls
+          playsInline
+          className="aspect-video w-full bg-black"
+          onTimeUpdate={(event) => onProgress?.(event.currentTarget.currentTime)}
+          onEnded={() => {
+            if (!isCompleted) onComplete();
+          }}
+        >
+          Votre navigateur ne peut pas lire cette vidéo.
+        </video>
+      </div>
+    );
+  }
 
   return (
     <div

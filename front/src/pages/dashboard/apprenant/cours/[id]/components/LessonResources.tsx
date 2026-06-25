@@ -20,24 +20,44 @@ export default function LessonResources({ resources }: LessonResourcesProps) {
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {resources.map((resource) => (
-            <button
+          {resources.map((resource) => {
+            const content = (
+              <>
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                    <i className={`${resource.icon} text-lg`}></i>
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-slate-900">{resource.title}</span>
+                    <span className="text-xs text-slate-500">{resource.type} · {resource.size}</span>
+                  </span>
+                </span>
+                <i className="ri-download-line flex-shrink-0 text-slate-400"></i>
+              </>
+            );
+            const className = 'flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left hover:border-teal-200 hover:bg-teal-50/40';
+
+            return resource.url ? (
+              <a
+                key={resource.id}
+                href={resource.url}
+                target="_blank"
+                rel="noreferrer"
+                download={resource.type !== 'LINK' ? resource.title : undefined}
+                className={className}
+              >
+                {content}
+              </a>
+            ) : (
+              <button
               key={resource.id}
               type="button"
-              className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left hover:border-teal-200 hover:bg-teal-50/40"
+                className={className}
             >
-              <span className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                  <i className={`${resource.icon} text-lg`}></i>
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-slate-900">{resource.title}</span>
-                  <span className="text-xs text-slate-500">{resource.type} · {resource.size}</span>
-                </span>
-              </span>
-              <i className="ri-download-line flex-shrink-0 text-slate-400"></i>
-            </button>
-          ))}
+                {content}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

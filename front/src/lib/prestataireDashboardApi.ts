@@ -104,6 +104,17 @@ export interface PrestataireService {
   created_at: string;
 }
 
+export interface PrestataireAvailabilityBlock {
+  id: string | number;
+  provider_id: number;
+  user_id: string;
+  starts_at: string;
+  ends_at: string;
+  reason: string;
+  status: 'blocked';
+  created_at: string;
+}
+
 export async function fetchPrestataireDashboardSnapshot(user: PrestataireDashboardUser) {
   const [snapshot, finance] = await Promise.all([
     apiRequest<{
@@ -145,6 +156,28 @@ export async function updatePrestataireBookingStatus(booking: PrestataireBooking
 export async function fetchPrestataireBookings(userId: string) {
   void userId;
   return apiRequest<{ providerId: number | null; bookings: PrestataireBooking[] }>('/marketplace/prestataire/bookings');
+}
+
+export async function fetchPrestataireAvailabilityBlocks(userId: string) {
+  void userId;
+  return apiRequest<{ providerId: number | null; blocks: PrestataireAvailabilityBlock[] }>('/marketplace/prestataire/availability-blocks');
+}
+
+export async function createPrestataireAvailabilityBlock(payload: {
+  starts_at: string;
+  ends_at: string;
+  reason?: string;
+}) {
+  return apiRequest<PrestataireAvailabilityBlock>('/marketplace/prestataire/availability-blocks', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePrestataireAvailabilityBlock(blockId: string | number) {
+  return apiRequest<PrestataireAvailabilityBlock>(`/marketplace/prestataire/availability-blocks/${encodeURIComponent(String(blockId))}`, {
+    method: 'DELETE',
+  });
 }
 
 export function subscribePrestataireBookings(
@@ -222,7 +255,7 @@ export async function createPrestataireService(providerId: number, payload: {
   });
 }
 
-export async function updatePrestataireService(serviceId: number, payload: Partial<Pick<PrestataireService, 'title' | 'description' | 'price' | 'location' | 'image'>>) {
+export async function updatePrestataireService(serviceId: number, payload: Partial<Pick<PrestataireService, 'title' | 'category' | 'description' | 'price' | 'price_type' | 'status' | 'location' | 'image'>>) {
   await apiRequest<PrestataireService>(`/marketplace/prestataire/services/${encodeURIComponent(String(serviceId))}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),

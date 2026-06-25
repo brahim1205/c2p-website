@@ -31,6 +31,13 @@ import {
   trimText,
 } from './data-normalizers.js';
 
+function isValidLearningAssetUrl(value: string) {
+  return isValidAbsoluteUrl(value)
+    || value.startsWith('/uploads/')
+    || value.startsWith('/c2p-documents/')
+    || value.startsWith('/images/');
+}
+
 export function sanitizeLessonCommentRecord(row: Row, user: AuthUser) {
   const normalized = clone(row);
   const existing = normalized.id !== undefined && normalized.id !== null ? findRow('lesson_comments', normalized.id) : null;
@@ -240,13 +247,13 @@ export function sanitizeLessonAssetRecord(row: Row, user: AuthUser) {
   normalized.asset_type = assetType;
 
   const url = requireText(normalized.url, 'L URL du contenu est obligatoire.');
-  if (!isValidAbsoluteUrl(url)) {
+  if (!isValidLearningAssetUrl(url)) {
     throw new BadRequestException('L URL du contenu doit etre valide.');
   }
   normalized.url = url;
 
   const thumbnailUrl = trimText(normalized.thumbnail_url);
-  if (thumbnailUrl && !isValidAbsoluteUrl(thumbnailUrl)) {
+  if (thumbnailUrl && !isValidLearningAssetUrl(thumbnailUrl)) {
     throw new BadRequestException('La miniature doit etre une URL valide.');
   }
   normalized.thumbnail_url = thumbnailUrl;

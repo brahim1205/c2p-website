@@ -119,6 +119,7 @@ const formateurRoutes: RouteObject[] = [
 const roleSpecificRoutes: RouteObject[] = [
   ...formateurRoutes,
   dashboardRoute('/dashboard/prestataire/services', Pages.PrestataireServicesPage, ['prestataire']),
+  dashboardRoute('/dashboard/prestataire/agenda', Pages.PrestataireAgendaPage, ['prestataire']),
   dashboardRoute('/dashboard/prestataire/demandes', Pages.PrestataireDemandesPage, ['prestataire']),
   dashboardRoute('/dashboard/prestataire/avis', Pages.PrestataireAvisPage, ['prestataire']),
   dashboardRoute('/dashboard/apprenant/mes-cours', Pages.ApprenantCoursPage, ['apprenant']),
