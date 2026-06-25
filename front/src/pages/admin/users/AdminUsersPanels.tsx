@@ -222,6 +222,10 @@ function UserRow({
   onToggleTrainerVerification: (user: ManagedUser) => void;
   onToggleUser: (id: string) => void;
 }) {
+  const nextStatusAction = user.status === 'active'
+    ? { label: 'Suspendre', status: 'suspended' as const, className: 'border-red-200 text-red-700 hover:bg-red-50' }
+    : { label: user.status === 'suspended' ? 'Réactiver' : 'Valider', status: 'active' as const, className: 'border-green-200 text-green-700 hover:bg-green-50' };
+
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4">
@@ -263,11 +267,6 @@ function UserRow({
       <td className="px-6 py-4 text-sm text-gray-600">{formatDate(user.createdAt)}</td>
       <td className="px-6 py-4">
         <div className="flex justify-end gap-2">
-          {user.status !== 'active' ? (
-            <button onClick={() => onStatusChange(user.id, 'active')} className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50">
-              Valider
-            </button>
-          ) : null}
           {user.role === 'formateur' ? (
             <button
               onClick={() => onToggleTrainerVerification(user)}
@@ -280,15 +279,9 @@ function UserRow({
               {user.expertVerified ? 'Retirer le badge' : 'Vérifier'}
             </button>
           ) : null}
-          {user.status !== 'suspended' ? (
-            <button onClick={() => onStatusChange(user.id, 'suspended')} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50">
-              Suspendre
-            </button>
-          ) : (
-            <button onClick={() => onStatusChange(user.id, 'active')} className="rounded-lg border border-[#5fa6f3]/20 px-3 py-1.5 text-xs font-medium text-[#27346b] hover:bg-[#5fa6f3]/5">
-              Reactiver
-            </button>
-          )}
+          <button onClick={() => onStatusChange(user.id, nextStatusAction.status)} className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${nextStatusAction.className}`}>
+            {nextStatusAction.label}
+          </button>
         </div>
       </td>
     </tr>

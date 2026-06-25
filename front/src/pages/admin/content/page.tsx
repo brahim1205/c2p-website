@@ -192,14 +192,19 @@ export default function AdminContentPage() {
                     <td className="px-6 py-4">{getStatusBadge(content.status)}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{content.date}</td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button onClick={() => { setSelectedItem(content); setShowViewModal(true); }} className="p-2 text-[#5fa6f3] hover:bg-[#5fa6f3]/10 rounded-lg transition-colors" title="Voir"><i className="ri-eye-line text-base"></i></button>
-                        {content.status !== 'published' && <button onClick={() => mutateStatus(content.id, 'published')} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Publier"><i className="ri-check-line text-base"></i></button>}
-                        {content.status !== 'pending' && <button onClick={() => mutateStatus(content.id, 'pending')} className="p-2 text-[#5fa6f3] hover:bg-[#5fa6f3]/10 rounded-lg transition-colors" title="Mettre en révision"><i className="ri-refresh-line text-base"></i></button>}
-                        {content.status !== 'rejected' && <button onClick={() => mutateStatus(content.id, 'rejected')} className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Rejeter"><i className="ri-close-line text-base"></i></button>}
-                        {content.status !== 'archived' && <button onClick={() => mutateStatus(content.id, 'archived')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Archiver"><i className="ri-archive-line text-base"></i></button>}
-                        {content.source_table !== 'courses' && <button onClick={() => { setSelectedItem(content); setShowDeleteModal(true); }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer"><i className="ri-delete-bin-line text-base"></i></button>}
-                      </div>
+                      <details className="relative inline-block text-left">
+                        <summary className="list-none rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer">
+                          Actions <i className="ri-arrow-down-s-line align-middle"></i>
+                        </summary>
+                        <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white py-2 text-left shadow-xl">
+                          <button onClick={() => { setSelectedItem(content); setShowViewModal(true); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><i className="ri-eye-line text-[#5fa6f3]"></i> Voir le contenu</button>
+                          {content.status !== 'published' && <button onClick={() => mutateStatus(content.id, 'published')} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-green-50"><i className="ri-check-line text-green-600"></i> Publier</button>}
+                          {content.status !== 'pending' && <button onClick={() => mutateStatus(content.id, 'pending')} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"><i className="ri-refresh-line text-[#5fa6f3]"></i> Mettre en révision</button>}
+                          {content.status !== 'rejected' && <button onClick={() => mutateStatus(content.id, 'rejected')} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"><i className="ri-close-line text-orange-600"></i> Rejeter</button>}
+                          {content.status !== 'archived' && <button onClick={() => mutateStatus(content.id, 'archived')} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><i className="ri-archive-line text-gray-600"></i> Archiver</button>}
+                          {content.source_table !== 'courses' && <button onClick={() => { setSelectedItem(content); setShowDeleteModal(true); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-700 hover:bg-red-50"><i className="ri-delete-bin-line"></i> Supprimer</button>}
+                        </div>
+                      </details>
                     </td>
                   </tr>
                 ))}
