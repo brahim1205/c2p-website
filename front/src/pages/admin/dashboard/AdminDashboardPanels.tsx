@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { formatShortCurrency } from '@/lib/formatters';
 import type {
   BreakdownItem,
@@ -25,20 +26,20 @@ export function DashboardHeader({
   onExport: () => void;
 }) {
   return (
-    <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+    <section className="mb-4 rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm sm:px-5">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-medium text-teal-600">Administration</p>
-          <h1 className="mt-1 text-3xl font-bold text-gray-900 md:text-4xl">
-            Bonjour, {managerName} <span className="align-middle">👋</span>
+          <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
+            Bonjour, {managerName}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-gray-600 md:text-base">
-            Vue d’ensemble des validations, contenus, paiements et signaux de supervision.
+          <p className="mt-1 max-w-2xl text-sm text-gray-600">
+            Priorités, demandes et signaux essentiels.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 xl:items-end">
-          <div className="inline-flex rounded-full bg-gray-100 p-1" role="group" aria-label="Période d'analyse">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:justify-end">
+          <div className="inline-flex overflow-x-auto rounded-full bg-gray-100 p-1" role="group" aria-label="Période d'analyse">
             {[
               { key: 'today', label: 'Aujourd’hui' },
               { key: 'week', label: 'Cette semaine' },
@@ -49,7 +50,7 @@ export function DashboardHeader({
                 type="button"
                 onClick={() => onTimeRangeChange(item.key as TimeRange)}
                 aria-pressed={timeRange === item.key}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold transition-colors sm:text-sm ${
                   timeRange === item.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -62,7 +63,7 @@ export function DashboardHeader({
             type="button"
             onClick={onExport}
             aria-label="Exporter le snapshot administrateur"
-            className="rounded-2xl bg-teal-600 px-4 py-3 text-sm font-medium text-white hover:bg-teal-700"
+            className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"
           >
             Exporter
           </button>
@@ -74,20 +75,20 @@ export function DashboardHeader({
 
 export function KpiGrid({ kpis }: { kpis: KpiCard[] }) {
   return (
-    <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
       {kpis.map((item) => (
-        <div key={item.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-gray-500">{item.label}</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">{item.value}</p>
-              <p className="mt-1 text-sm text-gray-500">{item.detail}</p>
+        <div key={item.label} className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-gray-500 sm:text-sm">{item.label}</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">{item.value}</p>
+              <p className="mt-0.5 truncate text-xs text-gray-500">{item.detail}</p>
             </div>
-            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${item.surface}`}>
-              <i className={`${item.icon} text-2xl`} />
+            <div className={`hidden h-11 w-11 flex-none items-center justify-center rounded-xl sm:flex ${item.surface}`}>
+              <i className={`${item.icon} text-xl`} />
             </div>
           </div>
-          <div className="mt-4 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
+          <div className="mt-3 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
             <i className="ri-arrow-up-line mr-1" />{item.trend}
           </div>
         </div>
@@ -98,22 +99,23 @@ export function KpiGrid({ kpis }: { kpis: KpiCard[] }) {
 
 export function QuickAccessGrid({ quickAccess }: { quickAccess: QuickAccessItem[] }) {
   return (
-    <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-      <div className="mb-5">
+    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+      <div className="mb-3">
         <h2 className="text-lg font-bold text-gray-900">Accès rapide</h2>
-        <p className="text-sm text-gray-500">Les modules que l’administration utilise le plus souvent.</p>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2">
         {quickAccess.map((item) => (
           <Link
             key={item.path}
             to={item.path}
-            className={`rounded-2xl px-4 py-5 text-center transition-colors hover:opacity-90 ${item.tone}`}
+            className={`rounded-xl px-3 py-3 transition-colors hover:opacity-90 ${item.tone}`}
           >
-            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80">
-              <i className={`${item.icon} text-xl`} />
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-white/80">
+                <i className={`${item.icon} text-base`} />
+              </span>
+              <p className="truncate text-left text-xs font-semibold sm:text-sm">{item.title}</p>
             </div>
-            <p className="text-sm font-medium">{item.title}</p>
           </Link>
         ))}
       </div>
@@ -121,19 +123,43 @@ export function QuickAccessGrid({ quickAccess }: { quickAccess: QuickAccessItem[
   );
 }
 
+export function DashboardSectionDisclosure({
+  children,
+  summary,
+  title,
+}: {
+  children: ReactNode;
+  summary: string;
+  title: string;
+}) {
+  return (
+    <details className="group rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 [&::-webkit-details-marker]:hidden">
+        <div>
+          <h2 className="text-base font-bold text-gray-900">{title}</h2>
+          <p className="text-sm text-gray-500">{summary}</p>
+        </div>
+        <i className="ri-arrow-down-s-line text-xl text-gray-400 transition group-open:rotate-180"></i>
+      </summary>
+      <div className="border-t border-gray-100 p-4">
+        {children}
+      </div>
+    </details>
+  );
+}
+
 export function RevenueBarsPanel({ revenueBars }: { revenueBars: RevenueBar[] }) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-      <div className="mb-5 flex items-center justify-between">
+    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Évolution des revenus</h2>
-          <p className="text-sm text-gray-500">Derniers 7 jours de revenus observés sur les flux suivis.</p>
         </div>
         <Link to="/admin/analytics" className="text-sm font-medium text-teal-600 hover:text-teal-700">Voir rapports</Link>
       </div>
 
       <div className="overflow-x-auto pb-2">
-        <div className="grid h-[260px] min-w-[28rem] grid-cols-7 items-end gap-4">
+        <div className="grid h-[190px] min-w-[24rem] grid-cols-7 items-end gap-3">
           {revenueBars.map((item) => (
             <div key={item.label} className="flex h-full flex-col justify-end">
               <div className="mb-2 text-center text-xs font-medium text-gray-500">
@@ -154,33 +180,32 @@ export function RevenueBarsPanel({ revenueBars }: { revenueBars: RevenueBar[] })
 
 export function PendingActionsPanel({ pendingActions }: { pendingActions: PendingAction[] }) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-      <div className="mb-5 flex items-center justify-between">
+    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Actions prioritaires</h2>
-          <p className="text-sm text-gray-500">Les éléments qui demandent une décision rapide de l’administration.</p>
         </div>
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
           {pendingActions.reduce((sum, item) => sum + item.count, 0)} à traiter
         </span>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {pendingActions.map((action) => (
           <Link
             key={action.label}
             to={action.link}
-            className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 px-4 py-4 transition-colors hover:bg-gray-50"
+            className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-3 py-3 transition-colors hover:bg-gray-50"
           >
             <div className="flex min-w-0 items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${action.color} text-white`}>
+              <div className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${action.color} text-white`}>
                 <i className={`${action.icon} text-base`} />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900">{action.label}</p>
+                <p className="truncate text-sm font-medium text-gray-900">{action.label}</p>
               </div>
             </div>
-            <span className="text-xl font-bold text-gray-900">{action.count}</span>
+            <span className="text-lg font-bold text-gray-900">{action.count}</span>
           </Link>
         ))}
       </div>
@@ -198,23 +223,22 @@ export function MonetizationPanel({
   commissionTotal: number;
 }) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-      <div className="mb-5">
+    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+      <div className="mb-4">
         <h2 className="text-lg font-bold text-gray-900">Monétisation C2P</h2>
-        <p className="text-sm text-gray-500">Vue rapide sur l’abonnement, les séquestres et le revenu plateforme.</p>
       </div>
-      <div className="space-y-4">
-        <div className="rounded-2xl bg-gray-50 px-4 py-4">
+      <div className="grid gap-2">
+        <div className="rounded-xl bg-gray-50 px-3 py-3">
           <p className="text-sm text-gray-500">Abonnements actifs</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{activeSubscriptionCount}</p>
+          <p className="mt-1 text-xl font-bold text-gray-900">{activeSubscriptionCount}</p>
         </div>
-        <div className="rounded-2xl bg-gray-50 px-4 py-4">
+        <div className="rounded-xl bg-gray-50 px-3 py-3">
           <p className="text-sm text-gray-500">Séquestres en cours</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{activeEscrowCount}</p>
+          <p className="mt-1 text-xl font-bold text-gray-900">{activeEscrowCount}</p>
         </div>
-        <div className="rounded-2xl bg-gray-50 px-4 py-4">
+        <div className="rounded-xl bg-gray-50 px-3 py-3">
           <p className="text-sm text-gray-500">Ledger reconnu</p>
-          <p className="mt-2 text-2xl font-bold text-gray-900">{commissionTotal.toLocaleString('fr-FR')} FCFA</p>
+          <p className="mt-1 text-xl font-bold text-gray-900">{commissionTotal.toLocaleString('fr-FR')} FCFA</p>
         </div>
       </div>
     </section>
@@ -223,13 +247,12 @@ export function MonetizationPanel({
 
 export function BreakdownPanel({ breakdown }: { breakdown: BreakdownItem[] }) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-      <div className="mb-5">
+    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4">
+      <div className="mb-4">
         <h2 className="text-lg font-bold text-gray-900">Répartition</h2>
-        <p className="text-sm text-gray-500">Poids relatif des grands blocs de gestion administrés.</p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {breakdown.map((item) => (
           <div key={item.label}>
             <div className="mb-2 flex items-center justify-between text-sm">
@@ -257,11 +280,10 @@ export function RecentActivityPanel({
   onRefreshActivity: () => void;
 }) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-      <div className="mb-5 flex items-center justify-between">
+    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Activité récente</h2>
-          <p className="text-sm text-gray-500">Dernières actions structurantes sur la plateforme.</p>
         </div>
         <button
           type="button"
@@ -273,11 +295,11 @@ export function RecentActivityPanel({
         </button>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {loading && <p className="rounded-2xl bg-gray-50 px-4 py-4 text-sm text-gray-500">Chargement de l’activité...</p>}
-        {!loading && history.map((entry) => (
-          <div key={entry.id} className="flex items-start gap-3 rounded-2xl border border-gray-100 px-4 py-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+        {!loading && history.slice(0, 6).map((entry) => (
+          <div key={entry.id} className="flex items-start gap-3 rounded-xl border border-gray-100 px-3 py-3">
+            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-teal-50 text-teal-700">
               <i className="ri-notification-3-line" />
             </div>
             <div className="min-w-0">

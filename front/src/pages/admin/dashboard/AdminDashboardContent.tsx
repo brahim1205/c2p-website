@@ -2,6 +2,7 @@ import {
   BreakdownPanel,
   C2PRequestsPanel,
   DashboardHeader,
+  DashboardSectionDisclosure,
   KpiGrid,
   MonetizationPanel,
   PendingActionsPanel,
@@ -92,10 +93,10 @@ export default function AdminDashboardContent({
       />
 
       <KpiGrid kpis={kpis} />
-      <QuickAccessGrid quickAccess={quickAccess} />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr,0.85fr]">
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr),360px]">
+        <div className="space-y-4">
+          <PendingActionsPanel pendingActions={pendingActions} />
           <C2PRequestsPanel
             assigningBookingId={assigningBookingId}
             getRequestedProviderLabel={getRequestedProviderLabel}
@@ -106,11 +107,16 @@ export default function AdminDashboardContent({
             pendingC2PRequests={pendingC2PRequests}
             providers={providers}
           />
-          <RevenueBarsPanel revenueBars={revenueBars} />
-          <PendingActionsPanel pendingActions={pendingActions} />
+          <DashboardSectionDisclosure title="Revenus et activité" summary="Graphique revenus, répartition et dernières actions">
+            <div className="grid gap-4 xl:grid-cols-[1fr,340px]">
+              <RevenueBarsPanel revenueBars={revenueBars} />
+              <RecentActivityPanel history={history} loading={loading} onRefreshActivity={onRefreshActivity} />
+            </div>
+          </DashboardSectionDisclosure>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
+          <QuickAccessGrid quickAccess={quickAccess} />
           <MonetizationPanel
             activeEscrowCount={activeEscrowCount}
             activeSubscriptionCount={activeSubscriptionCount}
@@ -123,8 +129,9 @@ export default function AdminDashboardContent({
               providerRuntimeBadge={providerRuntimeBadge}
             />
           ) : null}
-          <BreakdownPanel breakdown={breakdown} />
-          <RecentActivityPanel history={history} loading={loading} onRefreshActivity={onRefreshActivity} />
+          <DashboardSectionDisclosure title="Répartition" summary="Poids des blocs administrés">
+            <BreakdownPanel breakdown={breakdown} />
+          </DashboardSectionDisclosure>
         </div>
       </div>
     </>
