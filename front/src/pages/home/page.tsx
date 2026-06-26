@@ -1,66 +1,91 @@
 import { Link } from 'react-router-dom';
 import { usePageMeta } from '@/lib/usePageMeta';
 
-const heroImage =
-  '/images/brand/image44';
-
-const quickActions = [
+const pillars = [
   {
-    label: 'Je cherche un prestataire',
-    title: 'Trouver un service fiable',
-    description: 'Comparez les profils, tarifs, notes et disponibilites avant de reserver.',
-    icon: 'ri-search-eye-line',
+    label: 'Prestation',
+    title: 'Trouver des experts qualifiés',
+    icon: 'ri-service-line',
     path: '/allopresta',
-    cta: 'Voir AlloPresta',
   },
   {
-    label: 'Je veux apprendre',
-    title: 'Acheter une formation',
-    description: 'Accedez aux videos, documents et certificats depuis votre espace apprenant.',
+    label: 'Formation',
+    title: 'Développer vos compétences',
     icon: 'ri-graduation-cap-line',
     path: '/espace-numerique',
-    cta: 'Voir les formations',
   },
   {
-    label: 'J’ai un projet',
+    label: 'Projets',
     title: 'Soumettre ou financer',
-    description: 'Deposez un projet, suivez son evaluation et mobilisez des partenaires.',
     icon: 'ri-rocket-line',
     path: '/project-center',
-    cta: 'Ouvrir ProjectCenter',
+  },
+  {
+    label: 'Opportunités',
+    title: 'Parcours vers l’autonomie',
+    icon: 'ri-sparkling-line',
+    path: '/tarifs',
   },
 ];
 
-const fleet = [
+const featuredCards = [
   {
-    eyebrow: 'AlloPresta',
-    title: 'Prestations Qualifiées',
-    subtitle: 'Publiez un besoin, trouvez un professionnel fiable ou proposez vos services dans un cadre simple et sécurisé.',
-    image: '/images/brand/image2.jpeg',
+    badge: 'AlloPresta',
+    title: 'Services professionnels vérifiés',
+    description: 'Comparez les prix, la localisation, les notes et demandez un devis.',
+    image: '/images/home/service.jpg',
+    price: 'Devis encadré',
+    rating: '4.8',
     path: '/allopresta',
   },
   {
-    eyebrow: 'Espace Numérique',
-    title: 'Formations Certifiantes',
-    subtitle: 'Des formations en ligne, en présentiel ou hybrides pour apprendre à votre rythme et obtenir des certifications utiles.',
-    image: '/images/brand/image3.jpeg',
+    badge: 'Espace Numérique',
+    title: 'Formations en ligne et certificats',
+    description: 'Achetez un cours, suivez les vidéos, documents et évaluations.',
+    image: '/images/home/academy.jpg',
+    price: 'Accès formation',
+    rating: '4.9',
     path: '/espace-numerique',
   },
   {
-    eyebrow: 'ProjectCenter',
-    title: 'Incubation de projets',
-    subtitle: 'Un accompagnement complet pour transformer une idée en projet structuré, finançable et prêt à être lancé.',
-    image: '/images/brand/image8.jpeg',
+    badge: 'ProjectCenter',
+    title: 'Incubation et financement participatif',
+    description: 'Soumettez un projet, trouvez des mentors et partenaires financiers.',
+    image: '/images/home/venture.jpg',
+    price: 'Dossier projet',
+    rating: '4.7',
     path: '/project-center',
+  },
+  {
+    badge: 'Prestataires',
+    title: 'Publier vos services',
+    description: 'Créez votre offre, ajoutez vos images, prix, zones et disponibilités.',
+    image: '/images/home/precision.jpg',
+    price: 'Profil public',
+    rating: '4.8',
+    path: '/auth/register?role=prestataire',
+  },
+  {
+    badge: 'Formateurs',
+    title: 'Créer et vendre vos cours',
+    description: 'Organisez vos modules, vidéos, documents, classes et certifications.',
+    image: '/images/home/support.jpg',
+    price: 'Revenus cours',
+    rating: '4.9',
+    path: '/auth/register?role=formateur',
+  },
+  {
+    badge: 'Partenaires',
+    title: 'Coacher ou financer des projets',
+    description: 'Recevez les alertes, simulez vos contributions et suivez l’évolution.',
+    image: '/images/home/global.jpg',
+    price: 'Badge partenaire',
+    rating: '4.8',
+    path: '/auth/register?role=partenaire',
   },
 ];
 
-const mobileFirstPrinciples = [
-  'Parcours en 3 choix des la premiere vue',
-  'Boutons larges utilisables au pouce',
-  'Textes courts, priorite aux actions',
-  'Acces direct aux espaces publics sans menu complexe',
-];
+const categories = ['AlloPresta', 'Formation', 'ProjectCenter', 'Partenaires', 'Certification'];
 
 export default function HomePage() {
   usePageMeta({
@@ -70,228 +95,177 @@ export default function HomePage() {
   });
 
   return (
-    <div className="public-premium-page bg-c2p-bg text-c2p-text">
-      <section className="relative overflow-hidden bg-white pt-20">
-        <img
-          src={heroImage}
-          alt="Centre C2P premium"
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.2] sm:opacity-[0.38]"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.94)_54%,rgba(239,246,255,0.9)_100%)] sm:bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.86)_54%,rgba(248,250,252,0.58)_100%)]"></div>
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
+    <main className="bg-white text-[#0f1c35]">
+      <section className="px-4 pt-5 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-[28px] bg-[#eaf8f1]">
+          <div className="grid min-h-[620px] items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-14 lg:py-16">
+            <div className="relative z-10 max-w-xl">
+              <div className="mb-7 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-[#147f7b] shadow-sm">
+                <i className="ri-leaf-line text-base" />
+                Construisez vos opportunités avec C2P
+              </div>
+              <h1 className="text-[2.45rem] font-black leading-[1.02] tracking-tight text-[#102033] sm:text-5xl lg:text-6xl">
+                Développez vos compétences, valorisez vos talents, créez vos opportunités.
+              </h1>
+              <p className="mt-5 max-w-lg text-base leading-8 text-[#526275]">
+                C2P connecte les talents, les professionnels et les entrepreneurs pour construire ensemble un avenir meilleur.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  to="/auth/register"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#147f7b] px-6 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(20,127,123,0.22)] transition hover:bg-[#0f6b68]"
+                >
+                  Démarrer mon parcours
+                </Link>
+                <Link
+                  to="/allopresta"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#cfe3dd] bg-white px-6 py-3 text-sm font-bold text-[#102033] transition hover:border-[#147f7b]"
+                >
+                  Nous rejoindre
+                </Link>
+              </div>
+            </div>
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-80px)] max-w-7xl flex-col justify-center px-4 py-8 sm:px-8 sm:py-14 lg:px-10">
-          <div className="max-w-4xl">
-            <p className="mb-4 inline-flex rounded-full border border-[#c8d6f0] bg-white/90 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#147f7b] shadow-sm sm:text-xs">
-              Services • formations • projets
-            </p>
-            <h1 className="max-w-3xl animate-fade-in-up text-[2.35rem] font-black leading-[0.98] tracking-tight text-[#06053a] sm:text-5xl lg:text-6xl">
-              C2P vous aide à trouver, apprendre et lancer votre projet.
-            </h1>
-            <p className="mt-5 max-w-2xl text-[15px] leading-7 text-[#27346b] sm:text-lg sm:leading-8">
-              Une plateforme simple pour réserver un professionnel, acheter une formation utile ou faire accompagner un projet entrepreneurial.
-            </p>
-            <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
-              <Link
-                to="/auth/register"
-                className="c2p-btn-primary min-h-14 w-full px-6 py-4 text-center text-base sm:w-auto"
-              >
-                Créer mon compte
-              </Link>
-              <Link
-                to="/allopresta"
-                className="c2p-btn-secondary min-h-14 w-full border-c2p-accent bg-white/90 px-6 py-4 text-center text-base sm:w-auto"
-              >
-                Trouver un prestataire
-              </Link>
-              <Link
-                to="/espace-numerique"
-                className="c2p-btn-secondary min-h-14 w-full bg-c2p-surface-muted px-6 py-4 text-center text-base text-c2p-muted sm:w-auto"
-              >
-                Acheter une formation
-              </Link>
+            <div className="relative min-h-[390px] lg:min-h-[540px]">
+              <div className="absolute right-0 top-2 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
+                <div className="flex items-center gap-1 text-sm font-black text-[#147f7b]">
+                  4.8 <i className="ri-star-fill text-[#f5b642]" />
+                </div>
+                <p className="text-[11px] font-medium text-[#6b7a8d]">Avis utilisateurs</p>
+              </div>
+
+              <div className="absolute left-2 top-16 z-10 rounded-full bg-[#147f7b] px-5 py-4 text-center text-white shadow-[0_18px_40px_rgba(20,127,123,0.28)] sm:left-8">
+                <i className="ri-book-open-line text-xl" />
+                <p className="mt-1 text-xl font-black leading-none">1,235</p>
+                <p className="text-[11px] font-semibold">opportunités</p>
+              </div>
+
+              <div className="absolute bottom-2 left-2 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)] sm:left-10">
+                <p className="text-xs font-bold text-[#102033]">Services • cours • projets</p>
+                <p className="mt-1 text-[11px] text-[#6b7a8d]">Un seul compte pour évoluer</p>
+              </div>
+
+              <div className="absolute inset-x-6 bottom-0 h-[74%] rounded-t-full bg-[#ffd15a] sm:inset-x-16" />
+              <img
+                src="/images/home/academy.jpg"
+                alt="Utilisateur C2P"
+                className="absolute bottom-0 right-0 h-[92%] w-full rounded-b-[28px] object-cover object-center lg:w-[82%]"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      <section className="bg-white px-4 pb-6 sm:px-8 lg:px-10">
-        <div className="mx-auto -mt-2 grid max-w-7xl gap-3 sm:grid-cols-3 sm:gap-4">
-          {quickActions.map((item) => (
+      <section className="px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-3 rounded-[24px] border border-[#e6eee9] bg-white p-4 shadow-[0_18px_50px_rgba(15,28,53,0.06)] sm:grid-cols-2 lg:grid-cols-4">
+          {pillars.map((pillar) => (
             <Link
-              key={item.title}
-              to={item.path}
-              className="group rounded-[22px] border border-[#d6dbe1] bg-white p-4 shadow-[0_14px_36px_rgba(15,28,53,0.08)] transition hover:-translate-y-1 hover:border-[#1a9a96] sm:p-5"
+              key={pillar.label}
+              to={pillar.path}
+              className="group rounded-2xl p-4 transition hover:bg-[#f2fbf6]"
             >
-              <div className="flex items-start gap-4">
-                <span className="flex h-12 w-12 flex-none items-center justify-center rounded-2xl bg-[#eaf4ff] text-[#147f7b]">
-                  <i className={`${item.icon} text-2xl`}></i>
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#64748b]">{item.label}</p>
-                  <h2 className="mt-1 text-lg font-bold leading-tight text-[#06053a]">{item.title}</h2>
-                  <p className="mt-2 text-sm leading-6 text-[#4a5b70]">{item.description}</p>
-                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#147f7b]">
-                    {item.cta} <i className="ri-arrow-right-line transition group-hover:translate-x-1"></i>
-                  </span>
-                </div>
-              </div>
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eff8ff] text-[#147f7b]">
+                <i className={`${pillar.icon} text-2xl`} />
+              </span>
+              <h2 className="mt-4 text-base font-black text-[#102033]">{pillar.label}</h2>
+              <p className="mt-1 text-sm leading-6 text-[#607083]">{pillar.title}</p>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="bg-white px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
+      <section className="px-4 pb-16 pt-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-10 max-w-3xl">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="c2p-eyebrow">Parcours simplifié</p>
-              <h2 className="mt-4 text-3xl font-semibold leading-tight text-[#06053a] sm:text-5xl">
-                Un site pensé d’abord pour l’action.
+              <p className="text-sm font-bold text-[#147f7b]">Explorer C2P</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-[#102033] sm:text-4xl">
+                Choisissez ce que vous voulez faire.
               </h2>
             </div>
-            <p className="mt-4 max-w-2xl text-base leading-8 text-[#4a5b70]">
-              L’utilisateur choisit son besoin, arrive dans le bon espace, puis avance sans devoir comprendre toute la plateforme.
-            </p>
+            <div className="flex min-h-12 items-center gap-2 rounded-xl border border-[#dbe7e2] bg-[#f8fbfa] px-4">
+              <i className="ri-search-line text-[#147f7b]" />
+              <span className="text-sm text-[#708194]">Chercher un service, une formation ou un projet</span>
+            </div>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-3">
-            {fleet.map((item) => (
+          <div className="mb-7 flex gap-2 overflow-x-auto rounded-2xl bg-[#f2fbf6] p-2">
+            {categories.map((category, index) => (
               <Link
-                key={item.title}
-                to={item.path}
-                className="group relative min-h-[330px] overflow-hidden rounded-[22px] border border-[#d6dbe1] bg-white shadow-[0_14px_38px_rgba(15,28,53,0.055)]"
+                key={category}
+                to={index === 0 ? '/allopresta' : index === 1 ? '/espace-numerique' : index === 2 ? '/project-center' : '/tarifs'}
+                className={`whitespace-nowrap rounded-xl px-5 py-3 text-sm font-bold transition ${
+                  index === 0 ? 'bg-white text-[#147f7b] shadow-sm' : 'text-[#617386] hover:bg-white'
+                }`}
               >
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/20"></div>
-                <div className="absolute inset-x-0 bottom-0 p-6 lg:p-7">
-                  <p className="inline-flex items-center rounded-full border border-[#d6dbe1] bg-white/86 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#147f7b] shadow-sm backdrop-blur-md">
-                    {item.eyebrow}
-                  </p>
-                  <h3 className="mt-4 text-2xl font-semibold text-[#06053a]">{item.title}</h3>
-                  <p className="mt-3 max-w-md text-sm leading-7 text-[#4a5b70]">{item.subtitle}</p>
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#0f1c35]">
-                    Découvrir <i className="ri-arrow-right-line"></i>
-                  </span>
+                {category}
+              </Link>
+            ))}
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredCards.map((card) => (
+              <Link
+                key={card.title}
+                to={card.path}
+                className="group overflow-hidden rounded-[22px] border border-[#e1e8e5] bg-white shadow-[0_18px_44px_rgba(15,28,53,0.06)] transition hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,28,53,0.1)]"
+              >
+                <div className="h-48 overflow-hidden p-3">
+                  <img
+                    src={card.image}
+                    alt={card.title}
+                    className="h-full w-full rounded-2xl object-cover transition duration-500 group-hover:scale-105"
+                  />
+                </div>
+                <div className="px-5 pb-5">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-[#eef9f4] px-3 py-1 text-[11px] font-bold text-[#147f7b]">
+                      {card.badge}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs font-bold text-[#f5a623]">
+                      {card.rating} <i className="ri-star-fill" />
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-black leading-snug text-[#102033]">{card.title}</h3>
+                  <p className="mt-2 min-h-[48px] text-sm leading-6 text-[#607083]">{card.description}</p>
+                  <div className="mt-4 flex items-center justify-between border-t border-[#edf1ef] pt-4">
+                    <span className="text-sm font-black text-[#147f7b]">{card.price}</span>
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#f2fbf6] text-[#147f7b] transition group-hover:bg-[#147f7b] group-hover:text-white">
+                      <i className="ri-arrow-right-line" />
+                    </span>
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
-        </div>
-      </section>
 
-      <section className="bg-[#0f1c35] px-4 py-12 text-white sm:px-8 lg:px-10">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#7ac943]">Mobile-first</p>
-            <h2 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">
-              Le mobile devient la référence, pas une adaptation tardive.
-            </h2>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-white/76">
-              Les écrans publics sont maintenant structurés pour une lecture rapide sur smartphone, avec des actions visibles sans chercher dans le menu.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {mobileFirstPrinciples.map((principle) => (
-              <div key={principle} className="rounded-2xl border border-white/12 bg-white/8 p-4">
-                <div className="flex gap-3">
-                  <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#7ac943] text-[#0f1c35]">
-                    <i className="ri-check-line"></i>
-                  </span>
-                  <p className="text-sm font-semibold leading-6 text-white/90">{principle}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-[#e6eaf4] bg-white px-5 py-14 sm:px-8 lg:px-10 lg:py-20">
-        <div className="mx-auto max-w-7xl rounded-[24px] bg-[#f3f6ff] px-5 py-8 sm:px-8 sm:py-10 lg:rounded-[28px] lg:px-12">
-          <div className="grid items-center gap-6 md:grid-cols-[220px_1fr] lg:grid-cols-[260px_1fr] lg:gap-8">
-            <div className="flex flex-col items-center justify-center text-center">
-              <div className="flex h-20 w-20 items-center justify-center text-[#7ac943] sm:h-28 sm:w-28">
-                <i className="ri-android-fill text-[4rem] leading-none sm:text-[5rem]"></i>
-              </div>
-              <p className="mt-1 text-2xl font-black tracking-tight text-[#c9ced8] sm:mt-2 sm:text-4xl">
-                ANDROID
-              </p>
-            </div>
-
-            <div>
-              <h2 className="public-mobile-title text-2xl font-semibold leading-tight text-[#06053a] sm:text-4xl">
-                Application mobile bientôt disponible !
-              </h2>
-              <p className="mt-3 max-w-3xl text-base leading-7 text-[#4f5f78] sm:mt-4 sm:text-lg sm:leading-8">
-                Profite bientôt de l&apos;expérience C2P sur ton smartphone Android. Suis tes
-                demandes, apprends, reçois tes messages utiles et garde tes projets à portée de
-                main où que tu sois.
-              </p>
-
-              <div className="mt-6 flex items-center gap-4 sm:mt-8">
-                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <img
-                      src="/images/stores/google-play-icon.png"
-                      alt="Google Play"
-                      className="h-12 w-12 flex-none sm:h-14 sm:w-14"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#27346b]">
-                        PlayStore
-                      </p>
-                      <p className="mt-0.5 text-base font-medium text-[#06053a] sm:mt-1 sm:text-xl">
-                        Disponible prochainement sur Google Play
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <img
-                      src="/images/stores/app-store-icon.png"
-                      alt="App Store"
-                      className="h-12 w-12 flex-none sm:h-14 sm:w-14"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#27346b]">
-                        App Store
-                      </p>
-                      <p className="mt-0.5 text-base font-medium text-[#06053a] sm:mt-1 sm:text-xl">
-                        Version iPhone à venir
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10 lg:py-24">
-        <div className="rounded-[28px] border border-[#d6dbe1] bg-white px-6 py-8 shadow-[0_18px_48px_rgba(15,28,53,0.07)] sm:px-10 sm:py-10 lg:flex lg:items-center lg:justify-between lg:gap-10">
-          <div>
-            <p className="c2p-eyebrow">Démarrer</p>
-            <h2 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#06053a] sm:text-4xl">
-              Accédez au bon espace C2P.
-            </h2>
-            <p className="mt-4 max-w-2xl text-base leading-8 text-[#4a5b70]">
-              Créez un compte ou contactez l’équipe pour être orienté vers le bon parcours.
-            </p>
-          </div>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row lg:mt-0">
-            <Link to="/auth/register" className="c2p-btn-primary px-7 py-4">
-              Créer mon compte
-            </Link>
-            <Link to="/contact" className="c2p-btn-secondary px-7 py-4">
-              Contacter C2P
+          <div className="mt-8 text-center">
+            <Link
+              to="/tarifs"
+              className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#147f7b] px-6 py-3 text-sm font-bold text-[#147f7b] transition hover:bg-[#147f7b] hover:text-white"
+            >
+              Voir les modalités d’accès
             </Link>
           </div>
         </div>
       </section>
-    </div>
+
+      <section className="px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7xl items-center gap-6 rounded-[28px] bg-[#eaf8f1] p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:p-10">
+          <div>
+            <p className="text-sm font-bold text-[#147f7b]">Devenir acteur C2P</p>
+            <h2 className="mt-2 max-w-2xl text-2xl font-black leading-tight text-[#102033] sm:text-4xl">
+              Vous pouvez rejoindre C2P comme prestataire, formateur, porteur de projet ou partenaire.
+            </h2>
+          </div>
+          <Link
+            to="/auth/register"
+            className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#147f7b] px-7 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(20,127,123,0.22)] transition hover:bg-[#0f6b68]"
+          >
+            Créer mon compte
+          </Link>
+        </div>
+      </section>
+    </main>
   );
 }
