@@ -7,6 +7,7 @@ interface AlloPrestaResultsProps {
   sortBy: string;
   viewerTier: ProviderViewerAccessTier;
   onSortChange: (value: string) => void;
+  onQuoteRequest: (provider: ProviderCatalogRecord) => void;
   onResetFilters: () => void;
 }
 
@@ -16,6 +17,7 @@ export function AlloPrestaResults({
   sortBy,
   viewerTier,
   onSortChange,
+  onQuoteRequest,
   onResetFilters,
 }: AlloPrestaResultsProps) {
   return (
@@ -46,6 +48,7 @@ export function AlloPrestaResults({
               key={prestataire.result_key ?? prestataire.id}
               prestataire={prestataire}
               viewerTier={viewerTier}
+              onQuoteRequest={onQuoteRequest}
             />
           ))}
         </div>

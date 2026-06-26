@@ -9,9 +9,11 @@ import {
 export default function AlloPrestaProviderCard({
   prestataire,
   viewerTier,
+  onQuoteRequest,
 }: {
   prestataire: ProviderCatalogRecord;
   viewerTier: Parameters<typeof getProviderDisplayName>[1];
+  onQuoteRequest: (prestataire: ProviderCatalogRecord) => void;
 }) {
   const primaryService = prestataire.display_service ?? prestataire.services[0] ?? prestataire.title ?? 'Service professionnel';
   const secondaryServices = prestataire.services.filter((service) => service !== primaryService).slice(0, 3);
@@ -20,10 +22,7 @@ export default function AlloPrestaProviderCard({
   const cardLocation = prestataire.display_location || prestataire.location;
 
   return (
-    <Link
-      to={`/allopresta/prestataire/${prestataire.id}`}
-      className="group cursor-pointer overflow-hidden rounded-[24px] border border-[#d6dbe1] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#1a9a96]/40 hover:shadow-[0_24px_60px_rgba(12,14,58,0.10)]"
-    >
+    <article className="group overflow-hidden rounded-[24px] border border-[#d6dbe1] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#1a9a96]/40 hover:shadow-[0_24px_60px_rgba(12,14,58,0.10)]">
       <div className="relative h-40 w-full overflow-hidden sm:h-64">
         <img
           src={cardImage}
@@ -118,12 +117,22 @@ export default function AlloPrestaProviderCard({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-end border-t border-[#eceff3] pt-3 sm:pt-4">
-          <div className="text-sm font-medium text-[#1a9a96]">
+        <div className="flex flex-col gap-2 border-t border-[#eceff3] pt-3 sm:flex-row sm:items-center sm:justify-end sm:pt-4">
+          <button
+            type="button"
+            onClick={() => onQuoteRequest(prestataire)}
+            className="inline-flex w-full items-center justify-center rounded-xl bg-[#1a9a96] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#147f7b] sm:w-auto"
+          >
+            Demander un devis
+          </button>
+          <Link
+            to={`/allopresta/prestataire/${prestataire.id}`}
+            className="inline-flex w-full items-center justify-center rounded-xl border border-[#cde8e6] px-4 py-2.5 text-sm font-medium text-[#1a9a96] transition-colors hover:bg-[#f3fbfb] sm:w-auto"
+          >
             Voir le profil
-          </div>
+          </Link>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
