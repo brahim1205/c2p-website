@@ -6,6 +6,11 @@ import {
   type ProviderCatalogRecord,
 } from '@/lib/providerApi';
 
+function isTechnicalTestServiceTitle(title: string) {
+  return /^publication directe service\b/i.test(title.trim())
+    || /^smoke service admin\b/i.test(title.trim());
+}
+
 export default function AlloPrestaProviderCard({
   prestataire,
   viewerTier,
@@ -16,7 +21,9 @@ export default function AlloPrestaProviderCard({
   onQuoteRequest: (prestataire: ProviderCatalogRecord) => void;
 }) {
   const primaryService = prestataire.display_service ?? prestataire.services[0] ?? prestataire.title ?? 'Service professionnel';
-  const secondaryServices = prestataire.services.filter((service) => service !== primaryService).slice(0, 3);
+  const secondaryServices = prestataire.services
+    .filter((service) => service !== primaryService && !isTechnicalTestServiceTitle(service))
+    .slice(0, 3);
   const remainingServicesCount = Math.max(prestataire.services.length - secondaryServices.length - 1, 0);
   const cardImage = prestataire.display_image || prestataire.image || '/images/brand/image7.jpeg';
   const cardLocation = prestataire.display_location || prestataire.location;
