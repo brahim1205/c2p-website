@@ -45,7 +45,7 @@ export default function AlloPrestaProviderRequestModal({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1a9a96]">AlloPresta</p>
-              <h2 id="allopresta-reservation-title" className="text-2xl font-bold leading-tight text-[#0f1c35] sm:text-3xl">Demande de prestation</h2>
+              <h2 id="allopresta-reservation-title" className="text-2xl font-bold leading-tight text-[#0f1c35] sm:text-3xl">Demande de devis</h2>
               <p className="mt-1 max-w-2xl text-sm leading-5 text-[#64748b]">
                 C2P qualifie votre besoin, vérifie les disponibilités, puis affecte le bon intervenant.
               </p>
@@ -146,7 +146,7 @@ export default function AlloPrestaProviderRequestModal({
               Annuler
             </button>
             <button type="submit" className="rounded-xl bg-[#1a9a96] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(26,154,150,0.24)] transition-all hover:bg-[#147f7b]">
-              Envoyer à C2P
+              Envoyer la demande de devis
             </button>
           </div>
         </form>
