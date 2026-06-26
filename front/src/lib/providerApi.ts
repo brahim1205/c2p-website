@@ -33,6 +33,19 @@ export interface ProviderRecord {
   alerts_enabled?: boolean | null;
   plan_name?: string | null;
   subscription_status?: string | null;
+  service_items?: ProviderServiceItemRecord[];
+}
+
+export interface ProviderServiceItemRecord {
+  id?: string | number;
+  title?: string | null;
+  description?: string | null;
+  category?: string | null;
+  location?: string | null;
+  price?: string | number | null;
+  price_type?: string | null;
+  status?: string | null;
+  image?: string | null;
 }
 
 export interface ProviderReviewRecord {
@@ -51,6 +64,10 @@ export interface ProviderReviewRecord {
 export interface ProviderCatalogRecord extends ProviderRecord {
   result_key?: string;
   display_service?: string;
+  display_image?: string | null;
+  display_price?: string | number | null;
+  display_location?: string | null;
+  display_category?: string | null;
   public_alias: string;
   reviews: number;
   reviews_count: number;
@@ -68,6 +85,7 @@ export interface ProviderCatalogRecord extends ProviderRecord {
   visibility_tier: 'standard' | 'priority' | 'premium';
   operations_managed: boolean;
   alerts_enabled: boolean;
+  service_items: ProviderServiceItemRecord[];
 }
 
 function toNumber(value: unknown, fallback = 0) {
@@ -128,6 +146,7 @@ export function normalizeProviderCatalogRecord(provider: ProviderRecord | Record
     verified_badge_enabled: verifiedBadgeEnabled,
     image: typeof provider.image === 'string' ? provider.image : null,
     services: toStringArray(provider.services),
+    service_items: Array.isArray(raw.service_items) ? raw.service_items as ProviderServiceItemRecord[] : [],
     languages: toStringArray(provider.languages),
     completed_jobs: toNumber(provider.completed_jobs ?? raw.completedJobs ?? raw.jobs, 0),
     response_time: typeof provider.response_time === 'string' ? provider.response_time : null,

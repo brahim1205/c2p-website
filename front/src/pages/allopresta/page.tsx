@@ -107,18 +107,30 @@ export default function AlloPrestPage() {
           || provider.public_alias.toLowerCase().includes(q)
           || (provider.title || '').toLowerCase().includes(q)
         : true;
-      const serviceNames = provider.services.length
-        ? provider.services
-        : [provider.title || 'Service professionnel'];
+      const serviceItems = provider.service_items.length
+        ? provider.service_items
+        : (provider.services.length ? provider.services : [provider.title || 'Service professionnel']).map((title) => ({ title }));
       const visibleServices = q && !providerMatchesQuery
-        ? serviceNames.filter((service) => service.toLowerCase().includes(q))
-        : serviceNames;
+        ? serviceItems.filter((service) => String(service.title ?? '').toLowerCase().includes(q))
+        : serviceItems;
 
-      return visibleServices.map((service, index) => ({
+      return visibleServices.map((service, index) => {
+        const title = String(service.title || provider.title || 'Service professionnel');
+        const servicePrice = service.price ?? null;
+        const serviceCategory = typeof service.category === 'string' && service.category.trim() ? service.category : provider.category;
+
+        return {
         ...provider,
-        result_key: `${provider.id}-${index}-${service}`,
-        display_service: service,
-      }));
+          category: serviceCategory,
+          price_per_hour: servicePrice === null ? provider.price_per_hour : Number(String(servicePrice).replace(/\s|\u202f|\u00a0/g, '').replace(/[^\d.,-]/g, '').replace(',', '.')) || provider.price_per_hour,
+          result_key: `${provider.id}-${String(service.id ?? index)}-${title}`,
+          display_service: title,
+          display_image: service.image || provider.image,
+          display_price: servicePrice,
+          display_location: service.location || provider.location,
+          display_category: serviceCategory,
+        };
+      });
     });
   }, [providers, selectedCategory, profileFilter, searchQuery, verifiedOnly, maxPrice, locationFilter, minRating, sortBy]);
 

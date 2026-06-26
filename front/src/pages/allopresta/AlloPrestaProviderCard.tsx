@@ -16,6 +16,8 @@ export default function AlloPrestaProviderCard({
   const primaryService = prestataire.display_service ?? prestataire.services[0] ?? prestataire.title ?? 'Service professionnel';
   const secondaryServices = prestataire.services.filter((service) => service !== primaryService).slice(0, 3);
   const remainingServicesCount = Math.max(prestataire.services.length - secondaryServices.length - 1, 0);
+  const cardImage = prestataire.display_image || prestataire.image || '/images/brand/image7.jpeg';
+  const cardLocation = prestataire.display_location || prestataire.location;
 
   return (
     <Link
@@ -24,8 +26,8 @@ export default function AlloPrestaProviderCard({
     >
       <div className="relative h-40 w-full overflow-hidden sm:h-64">
         <img
-          src={prestataire.image || '/images/brand/image7.jpeg'}
-          alt={prestataire.name}
+          src={cardImage}
+          alt={primaryService}
           className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent"></div>
@@ -82,7 +84,7 @@ export default function AlloPrestaProviderCard({
           <div className="w-4 h-4 flex items-center justify-center">
             <i className="ri-map-pin-line"></i>
           </div>
-          <span>{prestataire.location}</span>
+          <span>{cardLocation}</span>
         </div>
 
         {secondaryServices.length > 0 || remainingServicesCount > 0 ? (
