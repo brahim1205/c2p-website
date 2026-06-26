@@ -107,9 +107,16 @@ export default function AlloPrestPage() {
           || provider.public_alias.toLowerCase().includes(q)
           || (provider.title || '').toLowerCase().includes(q)
         : true;
-      const serviceItems = provider.service_items.length
-        ? provider.service_items
-        : (provider.services.length ? provider.services : [provider.title || 'Service professionnel']).map((title) => ({ title }));
+      const detailedServiceItems = provider.service_items;
+      const detailedServiceTitles = new Set(
+        detailedServiceItems
+          .map((service) => String(service.title ?? '').trim().toLowerCase())
+          .filter(Boolean),
+      );
+      const fallbackServiceItems = (provider.services.length ? provider.services : [provider.title || 'Service professionnel'])
+        .filter((title) => !detailedServiceTitles.has(String(title).trim().toLowerCase()))
+        .map((title) => ({ title }));
+      const serviceItems = [...detailedServiceItems, ...fallbackServiceItems];
       const visibleServices = q && !providerMatchesQuery
         ? serviceItems.filter((service) => String(service.title ?? '').toLowerCase().includes(q))
         : serviceItems;
