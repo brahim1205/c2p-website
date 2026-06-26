@@ -27,6 +27,7 @@ export default function AlloPrestaProviderCard({
   const remainingServicesCount = Math.max(prestataire.services.length - secondaryServices.length - 1, 0);
   const cardImage = prestataire.display_image || prestataire.image || '/images/brand/image7.jpeg';
   const cardLocation = prestataire.display_location || prestataire.location;
+  const cardPrice = prestataire.display_price || prestataire.price_range;
 
   return (
     <article className="group overflow-hidden rounded-[24px] border border-[#d6dbe1] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#1a9a96]/40 hover:shadow-[0_24px_60px_rgba(12,14,58,0.10)]">
@@ -124,14 +125,21 @@ export default function AlloPrestaProviderCard({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-[#eceff3] pt-3 sm:flex-row sm:items-center sm:justify-end sm:pt-4">
+        <div className="rounded-2xl border border-[#d9eeee] bg-[#f7fcfc] p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-[#64748b]">Demande de devis</span>
+            <span className="text-sm font-semibold text-[#0f1c35]">{cardPrice}</span>
+          </div>
           <button
             type="button"
             onClick={() => onQuoteRequest(prestataire)}
-            className="inline-flex w-full items-center justify-center rounded-xl bg-[#1a9a96] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#147f7b] sm:w-auto"
+            className="inline-flex w-full items-center justify-center rounded-xl bg-[#1a9a96] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#147f7b]"
           >
             Demander un devis
           </button>
+        </div>
+
+        <div className="mt-3 flex justify-end">
           <Link
             to={`/allopresta/prestataire/${prestataire.id}`}
             className="inline-flex w-full items-center justify-center rounded-xl border border-[#cde8e6] px-4 py-2.5 text-sm font-medium text-[#1a9a96] transition-colors hover:bg-[#f3fbfb] sm:w-auto"
