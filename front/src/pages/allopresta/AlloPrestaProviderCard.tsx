@@ -13,9 +13,9 @@ export default function AlloPrestaProviderCard({
   prestataire: ProviderCatalogRecord;
   viewerTier: Parameters<typeof getProviderDisplayName>[1];
 }) {
-  const primaryService = prestataire.services[0] ?? prestataire.title ?? 'Service professionnel';
-  const secondaryServices = prestataire.services.slice(1, 4);
-  const remainingServicesCount = Math.max(prestataire.services.length - 4, 0);
+  const primaryService = prestataire.display_service ?? prestataire.services[0] ?? prestataire.title ?? 'Service professionnel';
+  const secondaryServices = prestataire.services.filter((service) => service !== primaryService).slice(0, 3);
+  const remainingServicesCount = Math.max(prestataire.services.length - secondaryServices.length - 1, 0);
 
   return (
     <Link

@@ -54,6 +54,7 @@ export default function AlloPrestPage() {
 
   const filteredPrestataires = useMemo(() => {
     let result = [...providers];
+    const q = searchQuery.trim().toLowerCase();
 
     if (selectedCategory !== 'all') {
       result = result.filter((p) => p.category === selectedCategory);
@@ -63,8 +64,7 @@ export default function AlloPrestPage() {
       result = result.filter((p) => p.public_profile_level === profileFilter);
     }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (q) {
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
@@ -101,7 +101,25 @@ export default function AlloPrestPage() {
       return 0;
     });
 
-    return result;
+    return result.flatMap((provider) => {
+      const providerMatchesQuery = q
+        ? provider.name.toLowerCase().includes(q)
+          || provider.public_alias.toLowerCase().includes(q)
+          || (provider.title || '').toLowerCase().includes(q)
+        : true;
+      const serviceNames = provider.services.length
+        ? provider.services
+        : [provider.title || 'Service professionnel'];
+      const visibleServices = q && !providerMatchesQuery
+        ? serviceNames.filter((service) => service.toLowerCase().includes(q))
+        : serviceNames;
+
+      return visibleServices.map((service, index) => ({
+        ...provider,
+        result_key: `${provider.id}-${index}-${service}`,
+        display_service: service,
+      }));
+    });
   }, [providers, selectedCategory, profileFilter, searchQuery, verifiedOnly, maxPrice, locationFilter, minRating, sortBy]);
 
   const resetFilters = () => {
@@ -150,7 +168,7 @@ export default function AlloPrestPage() {
   return (
     <div className="public-premium-page min-h-screen bg-c2p-bg text-c2p-text">
         <AlloPrestaHero
-          providersCount={providers.length}
+          providersCount={providers.reduce((total, provider) => total + Math.max(provider.services.length, 1), 0)}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           onScrollToResults={scrollToResults}

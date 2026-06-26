@@ -22,7 +22,7 @@ export function AlloPrestaResults({
     <div id="allopresta-results" className="min-w-0 flex-1">
       <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div className="text-sm text-[#64748b]">
-          <strong className="text-[#0f1c35]">{providers.length}</strong> prestataire{providers.length !== 1 ? 's' : ''} trouvé{providers.length !== 1 ? 's' : ''}
+          <strong className="text-[#0f1c35]">{providers.length}</strong> service{providers.length !== 1 ? 's' : ''} trouvé{providers.length !== 1 ? 's' : ''}
         </div>
         <select
           aria-label="Trier les prestataires"
@@ -42,7 +42,11 @@ export function AlloPrestaResults({
       {!loading && providers.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
           {providers.map((prestataire) => (
-            <AlloPrestaProviderCard key={prestataire.id} prestataire={prestataire} viewerTier={viewerTier} />
+            <AlloPrestaProviderCard
+              key={prestataire.result_key ?? prestataire.id}
+              prestataire={prestataire}
+              viewerTier={viewerTier}
+            />
           ))}
         </div>
       ) : null}
@@ -75,7 +79,7 @@ function AlloPrestaNoResults({ onResetFilters }: { onResetFilters: () => void })
           <i className="ri-search-line text-2xl text-[#0f1c35]" />
         </div>
       </div>
-      <h3 className="mb-2 text-lg font-semibold text-[#0f1c35]">Aucun prestataire trouvé</h3>
+      <h3 className="mb-2 text-lg font-semibold text-[#0f1c35]">Aucun service trouvé</h3>
       <p className="mb-4 text-sm text-[#64748b]">Essayez d&apos;ajuster vos filtres pour voir plus de résultats</p>
       <button type="button" onClick={onResetFilters} className="c2p-btn-accent w-full cursor-pointer px-6 py-2 sm:w-auto">
         Réinitialiser les filtres

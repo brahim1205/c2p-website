@@ -55,11 +55,11 @@ export function AlloPrestaHero({
               <button
                 type="button"
                 onClick={onScrollToResults}
-                aria-label="Afficher les prestataires correspondant à la recherche"
+                aria-label="Afficher les services correspondant à la recherche"
                 className="c2p-btn-accent inline-flex min-h-14 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-8 py-4 text-center"
               >
                 <i className="ri-search-line text-lg" />
-                Chercher prestataire
+                Chercher service
               </button>
               <Link
                 to="/auth/register?role=prestataire"
@@ -72,7 +72,7 @@ export function AlloPrestaHero({
           </div>
 
           <p className="mt-5 text-sm text-[#64748b]">
-            {providersCount > 0 ? `${providersCount}+ prestataires visibles` : 'Des prestataires visibles'}, avec une mise en relation cadrée par C2P.
+            {providersCount > 0 ? `${providersCount}+ services visibles` : 'Des services visibles'}, avec une mise en relation cadrée par C2P.
           </p>
         </div>
       </div>

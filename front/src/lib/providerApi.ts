@@ -49,6 +49,8 @@ export interface ProviderReviewRecord {
 }
 
 export interface ProviderCatalogRecord extends ProviderRecord {
+  result_key?: string;
+  display_service?: string;
   public_alias: string;
   reviews: number;
   reviews_count: number;
