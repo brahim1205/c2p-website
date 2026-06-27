@@ -11,7 +11,7 @@ const inputClass = 'c2p-input block py-3 pl-10 pr-3 text-sm';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { success, error } = useToast();
+  const { error } = useToast();
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,9 +44,8 @@ export default function LoginPage() {
       return;
     }
 
-    success('Connexion réussie', 'Vous êtes connecté.');
     const target = location.state?.from || getDashboardPathForRole(result.user?.role || 'client');
-    setTimeout(() => navigate(target), 800);
+    navigate(target, { replace: true });
   };
 
   return (

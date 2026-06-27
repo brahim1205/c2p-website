@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import type { PublicContactSubmission } from '@/lib/communicationsApi';
 import { formatRelativeDate } from './adminMessagesModel';
 import type { useAdminMessagesSession } from './useAdminMessagesSession';
@@ -5,14 +6,54 @@ import type { useAdminMessagesSession } from './useAdminMessagesSession';
 type AdminMessagesSession = ReturnType<typeof useAdminMessagesSession>;
 
 export default function AdminMessagesExternalPanel({ session }: { session: AdminMessagesSession }) {
+  const [filter, setFilter] = useState<'all' | 'new' | 'handled'>('new');
+  const counts = useMemo(() => ({
+    all: session.publicRequests.length,
+    new: session.publicRequests.filter((item) => item.status === 'new').length,
+    handled: session.publicRequests.filter((item) => item.status !== 'new').length,
+  }), [session.publicRequests]);
+  const filteredRequests = useMemo(() => {
+    return session.publicRequests
+      .filter((item) => filter === 'all' || (filter === 'new' ? item.status === 'new' : item.status !== 'new'))
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status === 'new' ? -1 : 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [filter, session.publicRequests]);
+
   return (
     <div className="space-y-4" role="tabpanel" id="admin-messages-panel-external" aria-labelledby="admin-messages-tab-external">
-      {session.publicRequests.length === 0 ? (
+      <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Demandes du formulaire public</h2>
+            <p className="mt-1 text-sm text-gray-500">Les nouvelles demandes restent prioritaires jusqu'à traitement.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {([
+              ['new', 'Nouvelles'],
+              ['handled', 'Traitées'],
+              ['all', 'Toutes'],
+            ] as Array<[typeof filter, string]>).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilter(key)}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold ${filter === key ? 'bg-teal-600 text-white' : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                {label} ({counts[key]})
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {filteredRequests.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center text-sm text-gray-500 shadow-sm">
-          Aucune demande externe pour le moment.
+          Aucune demande dans ce filtre.
         </div>
       ) : (
-        session.publicRequests.map((submission) => (
+        filteredRequests.map((submission) => (
           <PublicSubmissionCard key={submission.id} submission={submission} session={session} />
         ))
       )}

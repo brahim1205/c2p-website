@@ -13,29 +13,28 @@ export default function AdminMessagesPanels({ session }: { session: AdminMessage
 
   return (
     <>
-      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Messages support</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Les demandes support internes et les messages du formulaire public remontent ici pour l administration.
+      <section className="mb-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-teal-600">Centre support</p>
+            <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">Messages admin</h1>
+            <p className="mt-2 max-w-3xl text-sm text-gray-600">
+              Traitez les conversations internes et les demandes reçues depuis le formulaire public.
           </p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:min-w-[420px]">
           {stats.map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.tone}`}>
+              <div key={stat.label} className="rounded-2xl bg-gray-50 p-3">
+                <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-xl ${stat.tone}`}>
                   <i className={`${stat.icon} text-lg`}></i>
                 </div>
-                <div>
-                  <div className="text-xl font-semibold text-gray-900">{stat.value}</div>
-                  <div className="text-xs text-gray-500">{stat.label}</div>
-                </div>
+                <div className="text-xl font-bold text-gray-900">{stat.value}</div>
+                <div className="text-xs font-medium text-gray-500">{stat.label}</div>
               </div>
-            </div>
           ))}
+          </div>
         </div>
-      </div>
+      </section>
 
       <AdminMessagesTabs session={session} />
 
