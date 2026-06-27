@@ -96,9 +96,9 @@ export default function HomePage() {
 
   return (
     <main className="bg-white text-[#0f1c35]">
-      <section className="px-4 pt-5 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-[28px] bg-[#eaf8f1]">
-          <div className="grid min-h-[620px] items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-14 lg:py-16">
+      <section className="bg-[#eaf8f1]">
+        <div className="mx-auto max-w-7xl overflow-hidden px-5 py-10 sm:px-8 lg:px-14 lg:py-16">
+          <div className="grid min-h-[620px] items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="relative z-10 max-w-xl">
               <div className="mb-7 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-[#147f7b] shadow-sm">
                 <i className="ri-leaf-line text-base" />
@@ -147,7 +147,7 @@ export default function HomePage() {
 
               <div className="absolute inset-x-6 bottom-0 h-[74%] rounded-t-full bg-[#ffd15a] sm:inset-x-16" />
               <img
-                src="/images/home/academy.jpg"
+                src="/images/home/acceuil.jpg"
                 alt="Utilisateur C2P"
                 className="absolute bottom-0 right-0 h-[92%] w-full rounded-b-[28px] object-cover object-center lg:w-[82%]"
               />
