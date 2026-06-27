@@ -4,6 +4,8 @@ import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { fetchAdminReports, updateAdminReport, type AdminReport } from '@/lib/adminApi';
+import { fetchUsers, updateManagedUser } from '@/lib/accountApi';
+import type { AuthUser } from '@/lib/roles';
 import { queryKeys } from '@/lib/queryKeys';
 
 export default function AdminReportsPage() {
@@ -19,6 +21,11 @@ export default function AdminReportsPage() {
     queryFn: fetchAdminReports,
   });
 
+  const usersQuery = useQuery({
+    queryKey: queryKeys.admin.users('reports-suspension'),
+    queryFn: fetchUsers,
+  });
+
   useEffect(() => {
     if (reportsQuery.isError) {
       console.error(reportsQuery.error);
@@ -27,6 +34,7 @@ export default function AdminReportsPage() {
   }, [error, reportsQuery.error, reportsQuery.isError]);
 
   const reports: AdminReport[] = useMemo(() => reportsQuery.data ?? [], [reportsQuery.data]);
+  const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
 
   const filteredReports = useMemo(() => reports.filter((report) => report.status === activeTab), [activeTab, reports]);
 
@@ -56,10 +64,33 @@ export default function AdminReportsPage() {
 
   const confirmSuspend = async () => {
     if (!pendingSuspend || !suspendReason.trim()) return;
-    await mutateReport(pendingSuspend.id, { status: 'resolved', adminAction: `Utilisateur suspendu - ${suspendReason.trim()}` }, 'Utilisateur suspendu');
-    setShowSuspendModal(false);
-    setPendingSuspend(null);
-    setSuspendReason('');
+
+    const normalizedReported = pendingSuspend.reported.trim().toLowerCase();
+    const reportedUser = users.find((user) => {
+      const fullName = `${user.firstName} ${user.lastName}`.trim().toLowerCase();
+      return fullName === normalizedReported || user.email.toLowerCase() === normalizedReported;
+    }) as (AuthUser & { status?: string }) | undefined;
+
+    if (!reportedUser) {
+      error('Compte introuvable', 'Impossible de suspendre automatiquement cet utilisateur. Vérifiez la fiche utilisateur.');
+      return;
+    }
+
+    try {
+      await updateManagedUser(reportedUser.id, { status: 'suspended' });
+      await mutateReport(
+        pendingSuspend.id,
+        { status: 'resolved', adminAction: `Utilisateur suspendu - ${suspendReason.trim()}` },
+        'Utilisateur suspendu',
+      );
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.users('reports-suspension') });
+      setShowSuspendModal(false);
+      setPendingSuspend(null);
+      setSuspendReason('');
+    } catch (err) {
+      console.error(err);
+      error('Erreur', "La suspension du compte n'a pas pu être appliquée.");
+    }
   };
 
   return (
