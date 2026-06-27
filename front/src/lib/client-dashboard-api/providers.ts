@@ -26,14 +26,53 @@ export async function publishClientProviderDirectReview(params: {
 export async function fetchClientProvidersAndFavorites(userId?: string) {
   if (!userId) {
     const providers = await apiRequest<ClientDashboardProviderRow[]>('/marketplace/providers/public');
-    return { providers: providers.map(mapProviderRowToPrestataire), favorites: [] as ClientFavoriteRow[] };
+    return { providers: providers.flatMap(mapProviderRowToServiceCards), favorites: [] as ClientFavoriteRow[] };
   }
   const snapshot = await apiRequest<{ providers: ClientDashboardProviderRow[]; favorites: ClientFavoriteRow[] }>('/marketplace/client/providers');
 
   return {
-    providers: snapshot.providers.map(mapProviderRowToPrestataire),
+    providers: snapshot.providers.flatMap(mapProviderRowToServiceCards),
     favorites: snapshot.favorites,
   };
+}
+
+function mapProviderRowToServiceCards(provider: ClientDashboardProviderRow): ClientPrestataire[] {
+  const base = mapProviderRowToPrestataire(provider);
+  const serviceItems = Array.isArray(provider.service_items) ? provider.service_items : [];
+  const detailedTitles = new Set(
+    serviceItems
+      .map((service) => String(service.title ?? '').trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const fallbackItems = base.services
+    .filter((title) => !detailedTitles.has(title.trim().toLowerCase()))
+    .map((title, index) => ({ id: `fallback-${index}`, title }));
+  const items = [...serviceItems, ...fallbackItems];
+
+  if (items.length === 0) return [base];
+
+  return items.map((service, index) => {
+    const title = String(service.title || base.service || base.title || 'Service professionnel');
+    const servicePrice = service.price ?? null;
+    const serviceCategory = service.category || provider.category || null;
+    return {
+      ...base,
+      resultKey: `${provider.id}-${String(service.id ?? index)}-${title}`,
+      service: title,
+      services: [title, ...base.services.filter((entry) => entry !== title)],
+      avatar: service.image || base.avatar,
+      location: service.location || base.location,
+      pricePerHour: priceToNumber(servicePrice) ?? base.pricePerHour,
+      categories: [
+        serviceCategory ? String(serviceCategory) : null,
+        provider.category ? String(provider.category) : null,
+        title,
+      ].filter(Boolean) as string[],
+      serviceDescription: service.description ?? null,
+      servicePriceLabel: servicePrice,
+      serviceCategory,
+    };
+  });
 }
 
 function mapProviderRowToPrestataire(provider: ClientDashboardProviderRow): ClientPrestataire {
@@ -63,6 +102,14 @@ function mapProviderRowToPrestataire(provider: ClientDashboardProviderRow): Clie
       ? provider.payment_methods
       : ['wave', 'orange_money', 'card'],
   };
+}
+
+function priceToNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/\s|\u202f|\u00a0/g, '').replace(/[^\d.,-]/g, '').replace(',', '.');
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export async function addClientFavorite(clientId: string, providerId: number) {

@@ -75,6 +75,19 @@ export interface ClientDashboardProviderRow {
   availability_status?: 'today' | 'tomorrow' | 'busy' | null;
   next_available_at?: string | null;
   payment_methods?: string[];
+  service_items?: ClientDashboardProviderServiceItem[];
+}
+
+export interface ClientDashboardProviderServiceItem {
+  id?: string | number;
+  title?: string | null;
+  description?: string | null;
+  category?: string | null;
+  location?: string | null;
+  price?: string | number | null;
+  price_type?: string | null;
+  status?: string | null;
+  image?: string | null;
 }
 
 export interface ClientDashboardProvider {
@@ -98,6 +111,7 @@ export interface ClientFavoriteRow {
 }
 
 export interface ClientPrestataire {
+  resultKey?: string;
   id: number;
   user_id?: string;
   name: string;
@@ -117,6 +131,9 @@ export interface ClientPrestataire {
   experience: string;
   distanceKm: number | null;
   paymentMethods: string[];
+  serviceDescription?: string | null;
+  servicePriceLabel?: string | number | null;
+  serviceCategory?: string | null;
 }
 
 export interface ClientIssueReportInput {

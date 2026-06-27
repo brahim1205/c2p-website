@@ -58,7 +58,7 @@ export function buildSmartScore(provider: Prestataire, query: string) {
 export function createRequestForm(provider: Prestataire, requestType: BookingRequestType): RequestFormState {
   return {
     requestType,
-    service: provider.services[0] || provider.service,
+    service: provider.service || provider.services[0],
     date: '',
     time: '09:00',
     budget: provider.pricePerHour ? String(provider.pricePerHour) : '',

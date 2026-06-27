@@ -187,10 +187,16 @@ export class MarketplaceService {
       this.marketplacePrismaReadService.listClientFavorites(actor.id),
     ]);
     if (prismaProviders && prismaFavorites) {
-      return { providers: prismaProviders, favorites: prismaFavorites };
+      return {
+        providers: prismaProviders
+          .map((provider) => this.attachActiveServicesToProvider(provider))
+          .sort((left, right) => this.compareNumbersDesc(left.rating, right.rating)),
+        favorites: prismaFavorites,
+      };
     }
     return {
       providers: hydrateRows('providers', store.providers ?? [])
+        .map((provider) => this.attachActiveServicesToProvider(provider))
         .sort((left, right) => this.compareNumbersDesc(left.rating, right.rating)),
       favorites: this.clientRows('client_favorites', actor),
     };

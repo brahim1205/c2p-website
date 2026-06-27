@@ -136,15 +136,15 @@ export function ClientPrestatairesList({
     <section>
       <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Prestataires disponibles</h2>
-          <p className="text-sm text-gray-500">Chaque fiche garde les informations essentielles pour comparer les profils.</p>
+          <h2 className="text-lg font-bold text-gray-900">Services disponibles</h2>
+          <p className="text-sm text-gray-500">Chaque fiche correspond à un service publié par un prestataire.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((provider) => (
           <ClientProviderCard
-            key={provider.id}
+            key={provider.resultKey ?? provider.id}
             isFavorite={favoriteIds.has(provider.id)}
             openRequestModal={openRequestModal}
             provider={provider}

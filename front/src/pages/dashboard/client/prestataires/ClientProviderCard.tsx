@@ -47,8 +47,11 @@ export function ClientProviderCard({
       <div className="flex flex-1 flex-col p-5">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
-            <p className="text-sm text-gray-500">{provider.title}</p>
+            <h3 className="text-lg font-semibold text-gray-900">{provider.service}</h3>
+            <p className="text-sm text-gray-500">
+              {provider.name}
+              {provider.title ? ` · ${provider.title}` : ''}
+            </p>
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-medium ${provider.available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
             {formatAvailability(provider)}
@@ -66,7 +69,9 @@ export function ClientProviderCard({
           </span>
         </div>
 
-        <p className="mb-3 text-sm text-gray-700">{provider.service}</p>
+        <p className="mb-3 text-sm text-gray-700">
+          {provider.serviceDescription || provider.title || 'Service professionnel disponible via C2P.'}
+        </p>
 
         <div className="mb-3 flex flex-wrap gap-2">
           {provider.categories.slice(0, 3).map((category) => (
