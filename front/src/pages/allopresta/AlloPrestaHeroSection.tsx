@@ -14,66 +14,87 @@ export function AlloPrestaHero({
   onScrollToResults,
 }: AlloPrestaHeroProps) {
   return (
-    <section className="relative min-h-[520px] w-full overflow-hidden bg-[#ffffff]">
-      <div className="absolute inset-0">
-        <img
-          src="/images/brand/image2.jpeg"
-          alt="AlloPresta"
-          className="h-full w-full object-cover object-center opacity-[0.36]"
-        />
-      </div>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent" />
-
-      <div className="relative z-10 flex min-h-[520px] items-center px-4 pt-24 sm:px-6 lg:px-20">
-        <div className="mx-auto w-full max-w-7xl">
-          <div className="max-w-3xl">
-            <p className="c2p-eyebrow mb-5">AlloPresta by C2P</p>
-            <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl">
-              La marketplace de services professionnels la plus complète d'Afrique de l'Ouest.
+    <section className="bg-white px-4 pt-5 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-[30px] bg-[#fff4e3]">
+        <div className="grid min-h-[590px] items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-14 lg:py-16">
+          <div className="relative z-10 max-w-xl">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#ffb41f]/40 bg-white/85 px-4 py-2 text-xs font-black text-[#0b0b4f] shadow-sm">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ffb41f] text-[#0b0b4f]">
+                <i className="ri-briefcase-4-line" />
+              </span>
+              Services vérifiés par C2P
+            </div>
+            <h1 className="text-[2.45rem] font-black leading-[1.02] tracking-tight text-[#08084f] sm:text-5xl lg:text-6xl">
+              Trouvez le bon service, au bon prix, sans perdre de temps.
             </h1>
-            <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
-              Trouvez le bon prestataire ou proposez vos services en quelques clics.
+            <p className="mt-5 max-w-lg text-base leading-8 text-[#5d6474]">
+              Décrivez votre besoin, comparez les prestataires, puis demandez un devis directement depuis la carte du service.
             </p>
-          </div>
 
-          <div className="c2p-panel mt-10 max-w-4xl p-3">
-            <div className="flex flex-col gap-3 lg:flex-row">
-              <div className="flex min-h-14 flex-1 items-center gap-3 rounded-2xl bg-white/82 px-4">
-                <div className="flex h-6 w-6 items-center justify-center">
-                  <i className="ri-search-line text-xl text-[#27346b]" />
-                </div>
+            <div className="mt-8 max-w-xl rounded-2xl border border-white/80 bg-white p-2 shadow-[0_20px_55px_rgba(255,180,31,0.15)]">
+              <div className="flex min-h-12 items-center gap-3 rounded-xl bg-[#fffaf2] px-4">
+                <i className="ri-search-line text-lg text-[#ff9f0a]" />
                 <input
                   type="text"
                   aria-label="Rechercher un service ou un prestataire"
-                  placeholder="Rechercher un service ou un prestataire..."
+                  placeholder="Rechercher un service..."
                   value={searchQuery}
                   onChange={(event) => onSearchQueryChange(event.target.value)}
-                  className="c2p-input flex-1 border-0 bg-transparent px-0 text-[15px] shadow-none focus:ring-0"
+                  className="min-w-0 flex-1 border-0 bg-transparent text-sm font-medium text-[#08084f] outline-none placeholder:text-[#8b8f9c]"
                 />
+                <button
+                  type="button"
+                  onClick={onScrollToResults}
+                  aria-label="Afficher les services correspondant à la recherche"
+                  className="hidden h-9 w-9 items-center justify-center rounded-lg bg-[#ffb41f] text-[#08084f] sm:flex"
+                >
+                  <i className="ri-arrow-right-line" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onScrollToResults}
-                aria-label="Afficher les services correspondant à la recherche"
-                className="c2p-btn-accent inline-flex min-h-14 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-8 py-4 text-center"
-              >
-                <i className="ri-search-line text-lg" />
-                Chercher service
-              </button>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/auth/register?role=prestataire"
-                className="c2p-btn-secondary inline-flex min-h-14 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-8 py-4 text-center"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#08084f] px-6 py-3 text-sm font-black text-white transition hover:bg-[#111177]"
               >
                 <i className="ri-briefcase-line text-lg" />
                 Devenir prestataire
               </Link>
+              <button
+                type="button"
+                onClick={onScrollToResults}
+                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#f2d7a6] bg-white px-6 py-3 text-sm font-black text-[#08084f] transition hover:border-[#ffb41f]"
+              >
+                Voir les services
+              </button>
             </div>
           </div>
 
-          <p className="mt-5 text-sm text-[#64748b]">
-            {providersCount > 0 ? `${providersCount}+ services visibles` : 'Des services visibles'}, avec une mise en relation cadrée par C2P.
-          </p>
+          <div className="relative min-h-[390px] lg:min-h-[520px]">
+            <div className="absolute right-3 top-5 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
+              <p className="text-sm font-black text-[#08084f]">4.8 <i className="ri-star-fill text-[#ffb41f]" /></p>
+              <p className="text-[11px] font-medium text-[#6b7280]">avis clients</p>
+            </div>
+
+            <div className="absolute left-4 top-20 z-10 rounded-2xl bg-[#ffb41f] px-5 py-4 text-center text-[#08084f] shadow-[0_18px_40px_rgba(255,180,31,0.30)] sm:left-10">
+              <i className="ri-service-line text-xl" />
+              <p className="mt-1 text-2xl font-black leading-none">{providersCount || 19}+</p>
+              <p className="text-[11px] font-black">services visibles</p>
+            </div>
+
+            <div className="absolute bottom-8 left-3 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)] sm:left-10">
+              <p className="text-xs font-bold text-[#08084f]">Prix • localisation • avis</p>
+              <p className="mt-1 text-[11px] text-[#6b7280]">C2P cadre la mise en relation</p>
+            </div>
+
+            <div className="absolute inset-x-8 bottom-2 h-[72%] rounded-t-full bg-[#ffcf63]" />
+            <img
+              src="/images/home/service.jpg"
+              alt="Services professionnels AlloPresta"
+              className="absolute bottom-10 right-0 h-[78%] w-full rounded-[28px] object-cover object-center shadow-[0_24px_70px_rgba(15,28,53,0.12)] lg:w-[86%]"
+            />
+          </div>
         </div>
       </div>
     </section>

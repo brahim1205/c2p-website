@@ -17,6 +17,7 @@ import {
   AlloPrestaCategoriesBar,
   AlloPrestaFiltersSidebar,
   AlloPrestaHero,
+  AlloPrestaHowItWorks,
   AlloPrestaResults,
 } from './AlloPrestaSections';
 import AlloPrestaProviderRequestModal from './prestataire/AlloPrestaProviderRequestModal';
@@ -273,6 +274,8 @@ export default function AlloPrestPage() {
           onScrollToResults={scrollToResults}
         />
 
+        <AlloPrestaHowItWorks />
+
         <AlloPrestaCategoriesBar
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
@@ -281,7 +284,7 @@ export default function AlloPrestPage() {
         <AlloPrestaAccessBanner viewerTier={viewerTier} accessAction={accessAction} />
 
         {/* Main Content */}
-        <section className="px-4 py-10 sm:px-6 lg:px-20 lg:py-14">
+        <section className="bg-white px-4 pb-16 pt-2 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="flex flex-col lg:flex-row gap-8">
               <AlloPrestaFiltersSidebar

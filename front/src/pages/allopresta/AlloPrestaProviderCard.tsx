@@ -30,64 +30,64 @@ export default function AlloPrestaProviderCard({
   const cardPrice = prestataire.display_price || prestataire.price_range;
 
   return (
-    <article className="group overflow-hidden rounded-[24px] border border-[#d6dbe1] bg-white transition-all duration-300 hover:-translate-y-1 hover:border-[#1a9a96]/40 hover:shadow-[0_24px_60px_rgba(12,14,58,0.10)]">
-      <div className="relative h-40 w-full overflow-hidden sm:h-64">
+    <article className="group overflow-hidden rounded-[22px] border border-[#e7d8c0] bg-[#fff7ec] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,28,53,0.10)]">
+      <div className="relative h-56 w-full overflow-hidden">
         <img
           src={cardImage}
           alt={primaryService}
-          className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/30 to-transparent"></div>
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/35 to-transparent"></div>
+        <div className="absolute left-6 top-6 rounded-full bg-[#ffb41f] px-5 py-2 text-sm font-black text-[#08084f] shadow-sm">
+          {cardPrice}
+        </div>
         {prestataire.verified && (
-          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-[#1D9BF0] px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(29,155,240,0.28)] sm:right-4 sm:top-4 sm:px-3 sm:text-xs">
+          <div className="absolute right-4 top-6 flex items-center gap-1 rounded-full bg-[#87ff37] px-3 py-1.5 text-[11px] font-black text-[#08084f] shadow-sm">
             <div className="w-4 h-4 flex items-center justify-center">
               <i className="ri-verified-badge-fill"></i>
             </div>
-            <span>Verifie</span>
+            <span>Vérifié</span>
           </div>
         )}
       </div>
 
-      <div className="p-4 sm:p-5">
-        <div className="mb-2.5 flex items-start justify-between sm:mb-3">
-          <div>
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-[#d7e6fb] bg-[#f8fbff] px-2.5 py-1 text-[11px] font-medium text-[#27346b]">
+      <div className="px-5 pb-6 pt-6 text-center">
+        <div className="mb-3 flex flex-wrap justify-center gap-2">
+              <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-[#08084f]">
                 {getProviderTierLabel(prestataire.public_profile_level)}
               </span>
-              <span className="rounded-full border border-[#d6dbe1] bg-[#f7f6f4] px-2.5 py-1 text-[11px] font-medium text-[#64748b]">
+              <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black text-[#626b7a]">
                 {getProviderVisibilityLabel(prestataire.visibility_tier)}
               </span>
             </div>
-            <h3 className="mb-1 text-base font-semibold text-[#0f1c35] sm:text-lg">
+
+        <h3 className="mx-auto min-h-[56px] max-w-sm text-xl font-black uppercase leading-tight text-[#141827]">
               {primaryService}
-            </h3>
+        </h3>
             {prestataire.title && prestataire.title !== primaryService ? (
-              <p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-[#1a9a96]">
+          <p className="mt-2 text-base font-bold text-[#ff9f0a]">
                 {prestataire.title}
               </p>
             ) : null}
-            <p className="text-sm text-[#64748b]">{getProviderDisplayName(prestataire, viewerTier)}</p>
-          </div>
-        </div>
+        <p className="mt-2 text-sm font-medium text-[#626b7a]">{getProviderDisplayName(prestataire, viewerTier)}</p>
 
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-[#626b7a]">
+          <div className="flex items-center gap-1 font-bold">
             <div className="w-4 h-4 flex items-center justify-center">
-              <i className="ri-star-fill text-yellow-400 text-sm"></i>
+              <i className="ri-star-fill text-[#141827] text-sm"></i>
             </div>
-            <span className="text-sm font-semibold text-[#0f1c35]">
+            <span>
               {prestataire.rating}
             </span>
           </div>
-          <span className="text-sm text-[#64748b]">
+          <span>
             ({prestataire.reviews} avis)
           </span>
-          <span className="text-[#c6bfb2]">•</span>
-          <span className="text-sm text-[#64748b]">{prestataire.completed_jobs} missions</span>
+          <span className="text-[#d2c3ad]">•</span>
+          <span>{prestataire.completed_jobs} missions</span>
         </div>
 
-        <div className="mb-4 flex items-center gap-2 text-sm text-[#64748b]">
+        <div className="mt-3 flex items-center justify-center gap-2 text-sm font-semibold text-[#626b7a]">
           <div className="w-4 h-4 flex items-center justify-center">
             <i className="ri-map-pin-line"></i>
           </div>
@@ -95,54 +95,47 @@ export default function AlloPrestaProviderCard({
         </div>
 
         {secondaryServices.length > 0 || remainingServicesCount > 0 ? (
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
             {secondaryServices.map((service) => (
               <span
                 key={service}
-                className="rounded-full border border-[#cde8e6] bg-[#f3fbfb] px-2.5 py-1 text-[11px] font-medium text-[#147f7b] sm:text-xs"
+                className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#08084f]"
               >
                 {service}
               </span>
             ))}
             {remainingServicesCount > 0 ? (
-              <span className="rounded-full border border-[#d6dbe1] bg-[#f7f6f4] px-2.5 py-1 text-[11px] font-medium text-[#64748b] sm:text-xs">
+              <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#626b7a]">
                 +{remainingServicesCount} autre{remainingServicesCount > 1 ? 's' : ''}
               </span>
             ) : null}
           </div>
         ) : null}
 
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
           {prestataire.operations_managed ? (
-            <span className="rounded-full border border-[#d6dbe1] bg-[#f7fbfb] px-2.5 py-1 text-[11px] font-medium text-[#1a9a96] sm:text-xs">
+            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#147f7b]">
               C2P gère la mise en relation
             </span>
           ) : null}
           {prestataire.plan_name ? (
-            <span className="rounded-full border border-[#d6dbe1] bg-white px-2.5 py-1 text-[11px] font-medium text-[#64748b] sm:text-xs">
+            <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-[#626b7a]">
               {prestataire.plan_name}
             </span>
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-[#d9eeee] bg-[#f7fcfc] p-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <span className="text-xs font-medium text-[#64748b]">Demande de devis</span>
-            <span className="text-sm font-semibold text-[#0f1c35]">{cardPrice}</span>
-          </div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <button
             type="button"
             onClick={() => onQuoteRequest(prestataire)}
-            className="inline-flex w-full items-center justify-center rounded-xl bg-[#1a9a96] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#147f7b]"
+            className="inline-flex w-full items-center justify-center rounded-full bg-[#08084f] px-4 py-2.5 text-sm font-black uppercase text-white transition-colors hover:bg-[#111177]"
           >
-            Demander un devis
+            Demande de devis
           </button>
-        </div>
-
-        <div className="mt-3 flex justify-end">
           <Link
             to={`/allopresta/prestataire/${prestataire.id}`}
-            className="inline-flex w-full items-center justify-center rounded-xl border border-[#cde8e6] px-4 py-2.5 text-sm font-medium text-[#1a9a96] transition-colors hover:bg-[#f3fbfb] sm:w-auto"
+            className="inline-flex w-full items-center justify-center rounded-full bg-[#ffb41f] px-4 py-2.5 text-sm font-black uppercase text-[#08084f] transition-colors hover:bg-[#ffc44c]"
           >
             Voir le profil
           </Link>
