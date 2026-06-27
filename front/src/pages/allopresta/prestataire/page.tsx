@@ -112,7 +112,7 @@ export default function PrestataireDetailPage() {
         bookingTime: '09:00',
         paymentMethod: 'wallet',
         address: resForm.address,
-        requestType: 'booking',
+        requestType: 'quote',
         price: Number(resForm.budget) || prestataire?.price_per_hour || 0,
       });
       await notifyAdminPublicAlloPrestaRequest(
@@ -127,7 +127,7 @@ export default function PrestataireDetailPage() {
           user.avatar,
         );
       }
-      setFormSuccess('Votre demande a été transmise à C2P. L’équipe va analyser le besoin et attribuer la mission.');
+      setFormSuccess('Votre demande de devis a été transmise à C2P. L’équipe va analyser le besoin et vous répondre.');
       setShowReservationModal(false);
       setResForm({ service: '', date: '', description: '', budget: '', address: '' });
       setTimeout(() => setFormSuccess(null), 5000);

@@ -7,7 +7,6 @@ interface AlloPrestaResultsProps {
   sortBy: string;
   viewerTier: ProviderViewerAccessTier;
   onSortChange: (value: string) => void;
-  onQuoteRequest: (provider: ProviderCatalogRecord) => void;
   onResetFilters: () => void;
 }
 
@@ -17,7 +16,6 @@ export function AlloPrestaResults({
   sortBy,
   viewerTier,
   onSortChange,
-  onQuoteRequest,
   onResetFilters,
 }: AlloPrestaResultsProps) {
   return (
@@ -33,7 +31,7 @@ export function AlloPrestaResults({
           aria-label="Trier les prestataires"
           value={sortBy}
           onChange={(event) => onSortChange(event.target.value)}
-          className="w-full cursor-pointer rounded-xl border border-[#f0d4a2] bg-[#fffaf2] px-4 py-3 text-sm font-bold text-[#08084f] outline-none focus:border-[#ffb41f] sm:w-auto"
+          className="w-full cursor-pointer rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-bold text-[#0f1c35] outline-none focus:border-[#0f766e] sm:w-auto"
         >
           <option value="rating">Mieux notés</option>
           <option value="price-low">Prix croissant</option>
@@ -45,13 +43,12 @@ export function AlloPrestaResults({
       {loading ? <AlloPrestaResultsSkeleton /> : null}
       {!loading && providers.length === 0 ? <AlloPrestaNoResults onResetFilters={onResetFilters} /> : null}
       {!loading && providers.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {providers.map((prestataire) => (
             <AlloPrestaProviderCard
               key={prestataire.result_key ?? prestataire.id}
               prestataire={prestataire}
               viewerTier={viewerTier}
-              onQuoteRequest={onQuoteRequest}
             />
           ))}
         </div>
@@ -62,9 +59,9 @@ export function AlloPrestaResults({
 
 function AlloPrestaResultsSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
       {[...Array(4)].map((_, index) => (
-        <div key={index} className="animate-pulse overflow-hidden rounded-[22px] border border-[#e7d8c0] bg-[#fff7ec] shadow-[0_18px_45px_rgba(12,14,58,0.05)]">
+        <div key={index} className="animate-pulse overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-white shadow-[0_18px_45px_rgba(12,14,58,0.05)]">
           <div className="h-44 bg-[#e9eef5] sm:h-64" />
           <div className="space-y-3 p-4 sm:p-5">
             <div className="h-5 w-3/4 rounded bg-[#e9eef5]" />
@@ -79,7 +76,7 @@ function AlloPrestaResultsSkeleton() {
 
 function AlloPrestaNoResults({ onResetFilters }: { onResetFilters: () => void }) {
   return (
-    <div className="rounded-[24px] border border-[#e7d8c0] bg-[#fff7ec] p-6 text-center shadow-[0_18px_45px_rgba(12,14,58,0.05)] sm:p-12">
+    <div className="rounded-[24px] border border-[#e5e7eb] bg-white p-6 text-center shadow-[0_18px_45px_rgba(12,14,58,0.05)] sm:p-12">
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#ffffff]">
         <div className="flex h-8 w-8 items-center justify-center">
           <i className="ri-search-line text-2xl text-[#0f1c35]" />
@@ -87,7 +84,7 @@ function AlloPrestaNoResults({ onResetFilters }: { onResetFilters: () => void })
       </div>
       <h3 className="mb-2 text-lg font-black text-[#08084f]">Aucun service trouvé</h3>
       <p className="mb-4 text-sm text-[#626b7a]">Essayez d&apos;ajuster vos filtres pour voir plus de résultats</p>
-      <button type="button" onClick={onResetFilters} className="w-full cursor-pointer rounded-xl bg-[#ffb41f] px-6 py-2 font-black text-[#08084f] sm:w-auto">
+      <button type="button" onClick={onResetFilters} className="w-full cursor-pointer rounded-xl bg-[#0f1c35] px-6 py-2 font-black text-white sm:w-auto">
         Réinitialiser les filtres
       </button>
     </div>

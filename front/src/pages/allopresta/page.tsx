@@ -1,10 +1,5 @@
-import { useState, useMemo, useEffect, type FormEvent } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  notifyAdminPublicAlloPrestaRequest,
-  notifyClientManagedBookingReceipt,
-} from '@/hooks/useCreateNotification';
-import { createClientManagedBooking } from '@/lib/clientDashboardApi';
 import { usePageMeta } from '@/lib/usePageMeta';
 import {
   fetchPublicProviders,
@@ -20,8 +15,6 @@ import {
   AlloPrestaHowItWorks,
   AlloPrestaResults,
 } from './AlloPrestaSections';
-import AlloPrestaProviderRequestModal from './prestataire/AlloPrestaProviderRequestModal';
-import type { ReservationFormData } from './prestataire/providerDetailTypes';
 
 function isTechnicalTestServiceTitle(title: string) {
   return /^publication directe service\b/i.test(title.trim())
@@ -48,15 +41,6 @@ export default function AlloPrestPage() {
   const [providers, setProviders] = useState<ProviderCatalogRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
-  const [selectedQuoteProvider, setSelectedQuoteProvider] = useState<ProviderCatalogRecord | null>(null);
-  const [quoteForm, setQuoteForm] = useState<ReservationFormData>({
-    service: '',
-    date: '',
-    description: '',
-    budget: '',
-    address: '',
-  });
-  const [quoteMessage, setQuoteMessage] = useState<string | null>(null);
   const viewerTier = normalizeViewerAccessTier(user);
 
   useEffect(() => {
@@ -166,62 +150,6 @@ export default function AlloPrestPage() {
     });
   }, [providers, selectedCategory, profileFilter, searchQuery, verifiedOnly, maxPrice, locationFilter, minRating, sortBy]);
 
-  const openQuoteRequest = (provider: ProviderCatalogRecord) => {
-    if (!user?.id) {
-      setQuoteMessage('Connectez-vous comme client pour demander un devis.');
-      setTimeout(() => setQuoteMessage(null), 5000);
-      return;
-    }
-    setSelectedQuoteProvider(provider);
-    setQuoteForm({
-      service: provider.display_service || provider.services[0] || 'Service général',
-      date: '',
-      description: '',
-      budget: provider.display_price ? String(provider.display_price).replace(/[^\d]/g, '') : '',
-      address: provider.display_location || provider.location || '',
-    });
-  };
-
-  const updateQuoteField = <K extends keyof ReservationFormData>(field: K, value: ReservationFormData[K]) => {
-    setQuoteForm((state) => ({ ...state, [field]: value }));
-  };
-
-  const submitQuoteRequest = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!user?.id || !selectedQuoteProvider) return;
-    try {
-      await createClientManagedBooking({
-        user,
-        requestedProviderId: selectedQuoteProvider.id,
-        service: quoteForm.service || selectedQuoteProvider.display_service || 'Service général',
-        description: quoteForm.description,
-        bookingDate: quoteForm.date,
-        bookingTime: '09:00',
-        paymentMethod: 'wallet',
-        address: quoteForm.address,
-        requestType: 'quote',
-        price: Number(quoteForm.budget) || selectedQuoteProvider.price_per_hour || null,
-      });
-      await notifyAdminPublicAlloPrestaRequest(
-        `${user.firstName} ${user.lastName}`,
-        selectedQuoteProvider.display_service || selectedQuoteProvider.name,
-        user.avatar,
-      );
-      await notifyClientManagedBookingReceipt(
-        user.id,
-        selectedQuoteProvider.display_service || selectedQuoteProvider.name,
-        user.avatar,
-      );
-      setSelectedQuoteProvider(null);
-      setQuoteMessage('Votre demande de devis a été transmise à C2P.');
-      setTimeout(() => setQuoteMessage(null), 5000);
-    } catch (err) {
-      console.error(err);
-      setQuoteMessage('Erreur lors de l’envoi du devis. Veuillez réessayer.');
-      setTimeout(() => setQuoteMessage(null), 5000);
-    }
-  };
-
   const resetFilters = () => {
     setSelectedCategory('all');
     setProfileFilter('all');
@@ -310,29 +238,11 @@ export default function AlloPrestPage() {
                 sortBy={sortBy}
                 viewerTier={viewerTier}
                 onSortChange={setSortBy}
-                onQuoteRequest={openQuoteRequest}
                 onResetFilters={resetFilters}
               />
             </div>
           </div>
         </section>
-
-        {quoteMessage ? (
-          <div className="fixed bottom-5 left-1/2 z-[1100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl bg-[#0f1c35] px-5 py-3 text-sm font-semibold text-white shadow-[0_20px_45px_rgba(15,28,53,0.24)]">
-            {quoteMessage}
-          </div>
-        ) : null}
-
-        {selectedQuoteProvider ? (
-          <AlloPrestaProviderRequestModal
-            providerName={selectedQuoteProvider.name}
-            resForm={quoteForm}
-            visibleServiceOptions={[selectedQuoteProvider.display_service || selectedQuoteProvider.services[0] || 'Service général']}
-            onClose={() => setSelectedQuoteProvider(null)}
-            onFieldChange={updateQuoteField}
-            onSubmit={submitQuoteRequest}
-          />
-        ) : null}
 
     </div>
   );

@@ -72,10 +72,10 @@ export default function AlloPrestaProviderProfileCard({
               type="button"
               onClick={onOpenReservationFlow}
               aria-label={`Contacter ${displayName} via C2P`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a9a96] px-5 py-3 text-sm font-semibold leading-tight text-white shadow-[0_14px_34px_rgba(26,154,150,0.20)] transition-all hover:bg-[#147f7b] cursor-pointer sm:w-fit"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0f1c35] px-5 py-3 text-sm font-semibold leading-tight text-white shadow-[0_14px_34px_rgba(15,28,53,0.20)] transition-all hover:bg-[#172b50] cursor-pointer sm:w-fit"
             >
-              <i className="ri-shield-check-line text-base"></i>
-              Contacter
+              <i className="ri-file-list-3-line text-base"></i>
+              Demande de devis
             </button>
           </div>
         </div>
