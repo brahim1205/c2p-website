@@ -52,7 +52,11 @@ export class LearningService {
     const actor = this.requireApprenantReadActor(user);
     await syncAppStoreFromDatabase(this.prisma);
     const limit = this.parseOptionalLimit(options.limit);
+    const existingCourseIds = new Set(
+      hydrateRows('courses', this.accessibleRows('courses', actor)).map((course) => String(course.id)),
+    );
     const rows = hydrateRows('course_enrollments', this.accessibleRows('course_enrollments', actor))
+      .filter((enrollment) => existingCourseIds.has(String(enrollment.course_id)))
       .sort((left, right) => this.compareDatesDesc(left.last_active ?? left.enrolled_at, right.last_active ?? right.enrolled_at));
     return typeof limit === 'number' ? rows.slice(0, limit) : rows;
   }
