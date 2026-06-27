@@ -14,7 +14,7 @@ export function AlloPrestaHero({
   onScrollToResults,
 }: AlloPrestaHeroProps) {
   return (
-    <section className="bg-[#fff4e3]">
+    <section style={{ backgroundColor: '#fff4e3' }}>
       <div className="mx-auto max-w-7xl overflow-hidden px-5 py-10 sm:px-8 lg:px-14 lg:py-16">
         <div className="grid min-h-[590px] items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative z-10 max-w-xl">

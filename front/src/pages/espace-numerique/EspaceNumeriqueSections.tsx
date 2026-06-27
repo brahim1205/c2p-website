@@ -43,7 +43,7 @@ interface EspaceNumeriqueCoursesGridProps {
 
 export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }: EspaceNumeriqueHeroProps) {
   return (
-    <section className="bg-[#f4f0ff]">
+    <section style={{ backgroundColor: '#f4f0ff' }}>
       <div className="mx-auto max-w-7xl overflow-hidden px-5 py-10 sm:px-8 lg:px-14 lg:py-16">
         <div className="grid min-h-[600px] items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative z-10 max-w-xl">
