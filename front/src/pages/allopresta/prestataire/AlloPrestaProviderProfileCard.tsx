@@ -9,6 +9,7 @@ interface AlloPrestaProviderProfileCardProps {
   prestataire: ProviderDetailRecord;
   profileUnlocked: boolean;
   reviewsCount: number;
+  onContactProvider: () => void;
   onOpenReservationFlow: () => void;
 }
 
@@ -17,6 +18,7 @@ export default function AlloPrestaProviderProfileCard({
   prestataire,
   profileUnlocked,
   reviewsCount,
+  onContactProvider,
   onOpenReservationFlow,
 }: AlloPrestaProviderProfileCardProps) {
   return (
@@ -70,8 +72,17 @@ export default function AlloPrestaProviderProfileCard({
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <button
               type="button"
-              onClick={onOpenReservationFlow}
+              onClick={onContactProvider}
               aria-label={`Contacter ${displayName} via C2P`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#147f7b] px-5 py-3 text-sm font-semibold leading-tight text-white shadow-[0_14px_34px_rgba(20,127,123,0.20)] transition-all hover:bg-[#0f6b68] cursor-pointer sm:w-fit"
+            >
+              <i className="ri-message-3-line text-base"></i>
+              Contacter
+            </button>
+            <button
+              type="button"
+              onClick={onOpenReservationFlow}
+              aria-label={`Demander un devis à ${displayName} via C2P`}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0f1c35] px-5 py-3 text-sm font-semibold leading-tight text-white shadow-[0_14px_34px_rgba(15,28,53,0.20)] transition-all hover:bg-[#172b50] cursor-pointer sm:w-fit"
             >
               <i className="ri-file-list-3-line text-base"></i>

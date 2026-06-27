@@ -60,6 +60,10 @@ export default function PrestataireDetailPage() {
     }
     setShowReservationModal(true);
   };
+  const contactProvider = () => {
+    setFormSuccess('Contact via C2P : décrivez votre besoin dans une demande de devis pour être mis en relation avec ce prestataire.');
+    setTimeout(() => setFormSuccess(null), 5000);
+  };
   const updateReservationField = <K extends keyof ReservationFormData>(field: K, value: ReservationFormData[K]) => {
     setResForm((state) => ({ ...state, [field]: value }));
   };
@@ -198,6 +202,7 @@ export default function PrestataireDetailPage() {
                   prestataire={prestataire}
                   profileUnlocked={profileUnlocked}
                   reviewsCount={reviews.length}
+                  onContactProvider={contactProvider}
                   onOpenReservationFlow={openReservationFlow}
                 />
 
