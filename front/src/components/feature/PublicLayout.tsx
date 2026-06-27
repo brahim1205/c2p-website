@@ -45,8 +45,8 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
   }, [mobileMenuOpen]);
 
   const navBg = isScrolled
-    ? 'border-b border-[#d6dbe1]/80 bg-white/92 shadow-[0_18px_55px_rgba(15,28,53,0.10)] backdrop-blur-xl'
-    : 'border-b border-white/60 bg-white/82 shadow-[0_14px_40px_rgba(15,28,53,0.08)] backdrop-blur-xl';
+    ? 'border-b border-[#d6dbe1]/90 bg-white/95 shadow-[0_18px_55px_rgba(15,28,53,0.10)] backdrop-blur-xl'
+    : 'border-b border-[#e5e7eb] bg-white shadow-[0_10px_34px_rgba(15,28,53,0.06)]';
   const accountPath = getDashboardPathForRole(user?.role || 'client');
   const accountLabel = user ? `${user.firstName || 'Mon'} ${user.lastName || 'profil'}`.trim() : 'Mon profil';
   const accountInitials = user

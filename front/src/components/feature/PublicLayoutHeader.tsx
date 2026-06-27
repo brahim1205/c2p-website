@@ -57,10 +57,10 @@ export default function PublicLayoutHeader({
   return (
     <nav aria-label="Navigation publique principale" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}>
       <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex h-[72px] items-center justify-between lg:h-20">
           <BrandLogo to="/" className="flex items-center" imageClassName="h-10 w-auto object-contain" />
 
-          <div className="hidden md:flex items-center gap-2 lg:gap-4">
+          <div className="hidden md:flex items-center gap-1 lg:gap-3">
             {PUBLIC_NAV_ITEMS.map((item) => (
               <Link key={item.href} to={item.href} onClick={onInternalLinkClick(item.href)} className={getPublicLinkClass(currentPath, item.href)}>
                 {item.label}

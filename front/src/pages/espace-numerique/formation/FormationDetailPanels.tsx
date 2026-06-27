@@ -36,14 +36,14 @@ export function FormationHero({
   onEnroll: () => void;
 }) {
   return (
-    <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <div className="absolute inset-0 opacity-30">
+    <div className="relative overflow-hidden bg-[#eef8f4] text-[#0f1c35]">
+      <div className="absolute inset-y-0 right-0 hidden w-1/2 opacity-20 lg:block">
         <img src={getCourseImage(course)} alt="" className="w-full h-full object-cover object-top" />
       </div>
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/88 to-slate-900/78"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_20%,rgba(26,154,150,0.18),transparent_28%),radial-gradient(circle_at_12%_80%,rgba(249,200,70,0.20),transparent_30%)]"></div>
 
       <div className="relative max-w-7xl mx-auto px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-        <Link to="/espace-numerique" className="inline-flex items-center space-x-2 text-sm text-gray-300 hover:text-white mb-6">
+        <Link to="/espace-numerique" className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#d6eee7] bg-white/80 px-4 py-2 text-sm font-semibold text-[#0f766e] shadow-sm hover:bg-white">
           <i className="ri-arrow-left-line"></i>
           <span>Retour aux formations</span>
         </Link>
@@ -51,7 +51,7 @@ export function FormationHero({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
           <div className="lg:col-span-2">
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-teal-500 px-3 py-1 text-xs font-medium text-white sm:text-sm">
+              <span className="rounded-full bg-[#1a9a96] px-3 py-1 text-xs font-semibold text-white sm:text-sm">
                 {course.category}
               </span>
               <span className={`rounded-full border px-3 py-1 text-xs font-medium sm:text-sm ${getCourseBranchBadgeClass(course.program_branch)}`}>
@@ -61,13 +61,13 @@ export function FormationHero({
                 <i className={getCourseDeliveryIcon(course.delivery_mode)}></i>
                 <span>{getCourseDeliveryLabel(course.delivery_mode)}</span>
               </span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-white/90 sm:text-sm">
+              <span className="rounded-full border border-[#d6eee7] bg-white px-3 py-1 text-xs font-medium text-[#0f1c35] shadow-sm sm:text-sm">
                 {normalizeCourseLevel(course.level)}
               </span>
             </div>
 
-            <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl">{course.title}</h1>
-            <p className="mb-5 max-w-3xl text-base font-medium leading-8 text-white sm:mb-6 sm:text-lg">
+            <h1 className="mb-4 text-3xl font-black leading-tight text-[#0f1c35] sm:text-4xl md:text-5xl">{course.title}</h1>
+            <p className="mb-5 max-w-3xl text-base font-medium leading-8 text-[#475569] sm:mb-6 sm:text-lg">
               {course.description || 'Formation professionnelle de qualité pour développer vos compétences.'}
             </p>
 
@@ -79,19 +79,19 @@ export function FormationHero({
             </div>
 
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white sm:h-12 sm:w-12">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#1a9a96] shadow-sm sm:h-12 sm:w-12">
                 <i className="ri-user-star-line text-xl"></i>
               </div>
               <div>
-                <div className="text-sm text-gray-300">Formateur</div>
-                <div className="text-base font-medium">{course.instructor_name || 'Équipe pédagogique C2P'}</div>
+                <div className="text-sm text-[#64748b]">Formateur</div>
+                <div className="text-base font-bold text-[#0f1c35]">{course.instructor_name || 'Équipe pédagogique C2P'}</div>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-1">
-            <div className="sticky top-24 rounded-xl bg-white p-4 text-gray-900 shadow-xl sm:p-6">
-              <div className="mb-4 aspect-video overflow-hidden rounded-lg">
+            <div className="sticky top-24 rounded-[28px] border border-[#d6eee7] bg-white p-4 text-gray-900 shadow-[0_28px_80px_rgba(15,28,53,0.12)] sm:p-6">
+              <div className="mb-4 aspect-video overflow-hidden rounded-2xl bg-[#f8fafc]">
                 <img src={getCourseImage(course)} alt={course.title} className="w-full h-full object-cover object-top" />
               </div>
 
@@ -102,7 +102,7 @@ export function FormationHero({
               <button
                 type="button"
                 onClick={onEnroll}
-                className="mb-3 w-full rounded-lg bg-teal-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-teal-700 sm:px-6 sm:text-base"
+                className="mb-3 w-full rounded-xl bg-[#1a9a96] px-5 py-3 text-sm font-bold text-white shadow-[0_14px_34px_rgba(26,154,150,0.22)] transition-colors hover:bg-[#147f7b] sm:px-6 sm:text-base"
               >
                 {hasEnrollment
                   ? 'Accéder à mon apprentissage'
@@ -129,9 +129,9 @@ export function FormationHero({
 
 function HeroMetric({ icon, label }: { icon: string; label: string }) {
   return (
-    <div className="flex items-center space-x-2">
-      <i className={`${icon} text-base text-gray-300`}></i>
-      <span className="text-sm text-gray-300">{label}</span>
+    <div className="flex items-center gap-2 rounded-full border border-[#d6eee7] bg-white/80 px-3 py-2 shadow-sm">
+      <i className={`${icon} text-base text-[#1a9a96]`}></i>
+      <span className="text-sm font-semibold text-[#334155]">{label}</span>
     </div>
   );
 }
