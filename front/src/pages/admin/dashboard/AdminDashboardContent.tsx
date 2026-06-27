@@ -1,6 +1,7 @@
 import {
   BreakdownPanel,
   C2PRequestsPanel,
+  CommandCenterPanel,
   DashboardHeader,
   DashboardSectionDisclosure,
   KpiGrid,
@@ -92,11 +93,15 @@ export default function AdminDashboardContent({
         onExport={onExport}
       />
 
-      <KpiGrid kpis={kpis} />
+      <CommandCenterPanel
+        kpis={kpis}
+        loading={loading}
+        pendingActions={pendingActions}
+        pendingRequestCount={pendingC2PRequests.length}
+      />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr),360px]">
         <div className="space-y-4">
-          <PendingActionsPanel pendingActions={pendingActions} />
           <C2PRequestsPanel
             assigningBookingId={assigningBookingId}
             getRequestedProviderLabel={getRequestedProviderLabel}
@@ -107,12 +112,7 @@ export default function AdminDashboardContent({
             pendingC2PRequests={pendingC2PRequests}
             providers={providers}
           />
-          <DashboardSectionDisclosure title="Revenus et activité" summary="Graphique revenus, répartition et dernières actions">
-            <div className="grid gap-4 xl:grid-cols-[1fr,340px]">
-              <RevenueBarsPanel revenueBars={revenueBars} />
-              <RecentActivityPanel history={history} loading={loading} onRefreshActivity={onRefreshActivity} />
-            </div>
-          </DashboardSectionDisclosure>
+          <PendingActionsPanel pendingActions={pendingActions} />
         </div>
 
         <div className="space-y-4">
@@ -129,10 +129,20 @@ export default function AdminDashboardContent({
               providerRuntimeBadge={providerRuntimeBadge}
             />
           ) : null}
-          <DashboardSectionDisclosure title="Répartition" summary="Poids des blocs administrés">
-            <BreakdownPanel breakdown={breakdown} />
-          </DashboardSectionDisclosure>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <DashboardSectionDisclosure title="Pilotage avancé" summary="Revenus, activité récente, KPI et répartition détaillée">
+          <div className="space-y-4">
+            <KpiGrid kpis={kpis} />
+            <div className="grid gap-4 xl:grid-cols-[1fr,340px]">
+              <RevenueBarsPanel revenueBars={revenueBars} />
+              <RecentActivityPanel history={history} loading={loading} onRefreshActivity={onRefreshActivity} />
+            </div>
+            <BreakdownPanel breakdown={breakdown} />
+          </div>
+        </DashboardSectionDisclosure>
       </div>
     </>
   );

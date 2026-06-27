@@ -176,6 +176,7 @@ export function createKpis(input: {
 
 export function createQuickAccess(isSuperAdmin: boolean): QuickAccessItem[] {
   return [
+    { title: 'Opérations', path: '/admin/operations', icon: 'ri-inbox-archive-line', tone: 'bg-teal-50 text-teal-700' },
     { title: 'Utilisateurs', path: '/admin/users', icon: 'ri-user-line', tone: 'bg-emerald-50 text-emerald-700' },
     { title: 'Paiements', path: '/admin/payments', icon: 'ri-money-dollar-circle-line', tone: 'bg-teal-50 text-teal-700' },
     { title: 'Contenus', path: '/admin/content', icon: 'ri-file-list-line', tone: 'bg-cyan-50 text-cyan-700' },

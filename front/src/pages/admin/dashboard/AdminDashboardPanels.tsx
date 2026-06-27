@@ -26,15 +26,15 @@ export function DashboardHeader({
   onExport: () => void;
 }) {
   return (
-    <section className="mb-4 rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm sm:px-5">
+    <section className="mb-4 overflow-hidden rounded-3xl border border-teal-100 bg-[linear-gradient(135deg,#ffffff_0%,#f0fdfa_52%,#ecfccb_100%)] px-4 py-4 shadow-sm sm:px-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-teal-600">Administration</p>
-          <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
+          <p className="inline-flex rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Administration</p>
+          <h1 className="mt-3 text-2xl font-black text-gray-950 md:text-3xl">
             Bonjour, {managerName}
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-600">
-            Priorités, demandes et signaux essentiels.
+            Votre poste de pilotage : priorités, demandes et actions rapides.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export function DashboardHeader({
             type="button"
             onClick={onExport}
             aria-label="Exporter le snapshot administrateur"
-            className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700"
+            className="rounded-2xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800"
           >
             Exporter
           </button>
@@ -73,9 +73,84 @@ export function DashboardHeader({
   );
 }
 
+export function CommandCenterPanel({
+  kpis,
+  loading,
+  pendingActions,
+  pendingRequestCount,
+}: {
+  kpis: KpiCard[];
+  loading: boolean;
+  pendingActions: PendingAction[];
+  pendingRequestCount: number;
+}) {
+  const totalPending = pendingActions.reduce((sum, item) => sum + item.count, 0);
+  const topActions = [...pendingActions].sort((left, right) => right.count - left.count).slice(0, 3);
+  const statusTone = totalPending > 0 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200';
+
+  return (
+    <section className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.25fr),minmax(320px,0.75fr)]">
+      <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">À traiter maintenant</p>
+            <h2 className="mt-2 text-2xl font-black text-gray-950">
+              {loading ? 'Chargement des priorités...' : `${totalPending} action${totalPending > 1 ? 's' : ''} en attente`}
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Les validations, assignations et demandes importantes sont regroupées ici.
+            </p>
+          </div>
+          <div className={`rounded-2xl border px-4 py-3 text-sm font-bold ${statusTone}`}>
+            {totalPending > 0 ? 'Action requise' : 'Plateforme stable'}
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {topActions.map((action) => (
+            <Link
+              key={action.label}
+              to={action.link}
+              className={`group rounded-2xl border px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md ${
+                action.count > 0 ? 'border-teal-100 bg-teal-50/60' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-2xl ${action.count > 0 ? action.color : 'bg-gray-300'} text-white`}>
+                  <i className={`${action.icon} text-lg`} />
+                </div>
+                <span className="text-2xl font-black text-gray-950">{action.count}</span>
+              </div>
+              <p className="mt-3 text-sm font-bold text-gray-900">{action.label}</p>
+              <p className="mt-1 text-xs font-semibold text-teal-700 group-hover:text-teal-800">Ouvrir</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Vue rapide</p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {kpis.slice(0, 4).map((item) => (
+            <div key={item.label} className="rounded-2xl bg-gray-50 px-3 py-3">
+              <p className="truncate text-xs font-semibold text-gray-500">{item.label}</p>
+              <p className="mt-1 text-xl font-black text-gray-950">{item.value}</p>
+              <p className="mt-1 truncate text-[11px] text-gray-500">{item.detail}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3">
+          <p className="text-sm font-bold text-cyan-900">{pendingRequestCount} demande{pendingRequestCount > 1 ? 's' : ''} C2P à assigner</p>
+          <p className="mt-1 text-xs text-cyan-700">Attribuez rapidement un prestataire quand une demande client arrive.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function KpiGrid({ kpis }: { kpis: KpiCard[] }) {
   return (
-    <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {kpis.map((item) => (
         <div key={item.label} className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
@@ -99,9 +174,9 @@ export function KpiGrid({ kpis }: { kpis: KpiCard[] }) {
 
 export function QuickAccessGrid({ quickAccess }: { quickAccess: QuickAccessItem[] }) {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+    <section className="rounded-3xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
       <div className="mb-3">
-        <h2 className="text-lg font-bold text-gray-900">Accès rapide</h2>
+        <h2 className="text-lg font-black text-gray-900">Accès rapide</h2>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {quickAccess.map((item) => (
@@ -133,10 +208,10 @@ export function DashboardSectionDisclosure({
   title: string;
 }) {
   return (
-    <details className="group rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <details className="group rounded-3xl border border-gray-200 bg-white shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 [&::-webkit-details-marker]:hidden">
         <div>
-          <h2 className="text-base font-bold text-gray-900">{title}</h2>
+          <h2 className="text-base font-black text-gray-900">{title}</h2>
           <p className="text-sm text-gray-500">{summary}</p>
         </div>
         <i className="ri-arrow-down-s-line text-xl text-gray-400 transition group-open:rotate-180"></i>
@@ -179,23 +254,27 @@ export function RevenueBarsPanel({ revenueBars }: { revenueBars: RevenueBar[] })
 }
 
 export function PendingActionsPanel({ pendingActions }: { pendingActions: PendingAction[] }) {
+  const sortedActions = [...pendingActions].sort((left, right) => right.count - left.count);
+
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+    <section className="rounded-3xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Actions prioritaires</h2>
+          <h2 className="text-lg font-black text-gray-900">Toutes les priorités</h2>
         </div>
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
           {pendingActions.reduce((sum, item) => sum + item.count, 0)} à traiter
         </span>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        {pendingActions.map((action) => (
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {sortedActions.map((action) => (
           <Link
             key={action.label}
             to={action.link}
-            className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-3 py-3 transition-colors hover:bg-gray-50"
+            className={`flex items-center justify-between gap-3 rounded-2xl border px-3 py-3 transition-colors ${
+              action.count > 0 ? 'border-gray-200 bg-white hover:bg-gray-50' : 'border-gray-100 bg-gray-50 opacity-75'
+            }`}
           >
             <div className="flex min-w-0 items-center gap-3">
               <div className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${action.color} text-white`}>
@@ -223,9 +302,9 @@ export function MonetizationPanel({
   commissionTotal: number;
 }) {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
+    <section className="rounded-3xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
       <div className="mb-4">
-        <h2 className="text-lg font-bold text-gray-900">Monétisation C2P</h2>
+        <h2 className="text-lg font-black text-gray-900">Monétisation C2P</h2>
       </div>
       <div className="grid gap-2">
         <div className="rounded-xl bg-gray-50 px-3 py-3">
