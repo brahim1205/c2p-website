@@ -94,7 +94,6 @@ export default function AdminDashboardContent({
       />
 
       <CommandCenterPanel
-        kpis={kpis}
         loading={loading}
         pendingActions={pendingActions}
         pendingRequestCount={pendingC2PRequests.length}
@@ -112,24 +111,34 @@ export default function AdminDashboardContent({
             pendingC2PRequests={pendingC2PRequests}
             providers={providers}
           />
-          <PendingActionsPanel pendingActions={pendingActions} />
         </div>
 
         <div className="space-y-4">
           <QuickAccessGrid quickAccess={quickAccess} />
-          <MonetizationPanel
-            activeEscrowCount={activeEscrowCount}
-            activeSubscriptionCount={activeSubscriptionCount}
-            commissionTotal={commissionTotal}
-          />
-          {isSuperAdmin ? (
-            <ProviderHealthPanel
-              dexPayStatus={dexPayStatus}
-              financeProviderSignals={financeProviderSignals}
-              providerRuntimeBadge={providerRuntimeBadge}
-            />
-          ) : null}
         </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <DashboardSectionDisclosure title="Toutes les priorités" summary="Liste complète des actions à traiter">
+          <PendingActionsPanel pendingActions={pendingActions} />
+        </DashboardSectionDisclosure>
+
+        <DashboardSectionDisclosure title="Supervision" summary="Monétisation et santé provider">
+          <div className="space-y-4">
+            <MonetizationPanel
+              activeEscrowCount={activeEscrowCount}
+              activeSubscriptionCount={activeSubscriptionCount}
+              commissionTotal={commissionTotal}
+            />
+            {isSuperAdmin ? (
+              <ProviderHealthPanel
+                dexPayStatus={dexPayStatus}
+                financeProviderSignals={financeProviderSignals}
+                providerRuntimeBadge={providerRuntimeBadge}
+              />
+            ) : null}
+          </div>
+        </DashboardSectionDisclosure>
       </div>
 
       <div className="mt-4">

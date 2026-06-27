@@ -74,12 +74,10 @@ export function DashboardHeader({
 }
 
 export function CommandCenterPanel({
-  kpis,
   loading,
   pendingActions,
   pendingRequestCount,
 }: {
-  kpis: KpiCard[];
   loading: boolean;
   pendingActions: PendingAction[];
   pendingRequestCount: number;
@@ -89,59 +87,43 @@ export function CommandCenterPanel({
   const statusTone = totalPending > 0 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200';
 
   return (
-    <section className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.25fr),minmax(320px,0.75fr)]">
-      <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">À traiter maintenant</p>
-            <h2 className="mt-2 text-2xl font-black text-gray-950">
-              {loading ? 'Chargement des priorités...' : `${totalPending} action${totalPending > 1 ? 's' : ''} en attente`}
-            </h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Les validations, assignations et demandes importantes sont regroupées ici.
-            </p>
-          </div>
-          <div className={`rounded-2xl border px-4 py-3 text-sm font-bold ${statusTone}`}>
-            {totalPending > 0 ? 'Action requise' : 'Plateforme stable'}
-          </div>
+    <section className="mb-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">À traiter maintenant</p>
+          <h2 className="mt-2 text-2xl font-black text-gray-950">
+            {loading ? 'Chargement des priorités...' : `${totalPending} action${totalPending > 1 ? 's' : ''} en attente`}
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Les priorités sont limitées ici aux actions qui demandent une décision.
+          </p>
         </div>
+        <div className={`w-fit rounded-2xl border px-4 py-3 text-sm font-bold ${statusTone}`}>
+          {totalPending > 0 ? 'Action requise' : 'Plateforme stable'}
+        </div>
+      </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
+      <div className="mt-5 grid gap-3 lg:grid-cols-4">
+        <div className="rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-4 lg:col-span-1">
+          <p className="text-2xl font-black text-cyan-950">{pendingRequestCount}</p>
+          <p className="mt-1 text-sm font-bold text-cyan-900">demande{pendingRequestCount > 1 ? 's' : ''} C2P à assigner</p>
+        </div>
+        <div className="grid gap-2 lg:col-span-3 lg:grid-cols-3">
           {topActions.map((action) => (
             <Link
               key={action.label}
               to={action.link}
-              className={`group rounded-2xl border px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md ${
+              className={`group flex items-center justify-between gap-3 rounded-2xl border px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md ${
                 action.count > 0 ? 'border-teal-100 bg-teal-50/60' : 'border-gray-200 bg-gray-50'
               }`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-2xl ${action.count > 0 ? action.color : 'bg-gray-300'} text-white`}>
-                  <i className={`${action.icon} text-lg`} />
-                </div>
-                <span className="text-2xl font-black text-gray-950">{action.count}</span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-gray-900">{action.label}</p>
+                <p className="mt-1 text-xs font-semibold text-teal-700 group-hover:text-teal-800">Ouvrir</p>
               </div>
-              <p className="mt-3 text-sm font-bold text-gray-900">{action.label}</p>
-              <p className="mt-1 text-xs font-semibold text-teal-700 group-hover:text-teal-800">Ouvrir</p>
+              <span className="text-2xl font-black text-gray-950">{action.count}</span>
             </Link>
           ))}
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Vue rapide</p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          {kpis.slice(0, 4).map((item) => (
-            <div key={item.label} className="rounded-2xl bg-gray-50 px-3 py-3">
-              <p className="truncate text-xs font-semibold text-gray-500">{item.label}</p>
-              <p className="mt-1 text-xl font-black text-gray-950">{item.value}</p>
-              <p className="mt-1 truncate text-[11px] text-gray-500">{item.detail}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3">
-          <p className="text-sm font-bold text-cyan-900">{pendingRequestCount} demande{pendingRequestCount > 1 ? 's' : ''} C2P à assigner</p>
-          <p className="mt-1 text-xs text-cyan-700">Attribuez rapidement un prestataire quand une demande client arrive.</p>
         </div>
       </div>
     </section>
