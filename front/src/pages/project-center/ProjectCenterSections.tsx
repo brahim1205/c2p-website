@@ -85,7 +85,7 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
         <div className="relative">
           <div className="absolute -left-5 bottom-12 hidden h-44 w-20 rounded-full bg-[#ffd166] lg:block" />
           <img
-            src="/images/brand/image8.jpeg"
+            src="/images/home/project.png"
             alt="ProjectCenter"
             className="relative h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
           />

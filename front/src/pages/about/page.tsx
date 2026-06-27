@@ -71,7 +71,7 @@ export default function AboutPage() {
     title: 'À propos de C2P | Écosystème professionnel au Sénégal',
     description: 'C2P réunit services qualifiés, formation continue et incubation pour accompagner les talents et entrepreneurs.',
     path: '/a-propos',
-    image: 'https://c2p.sn/images/brand/images12.jpeg',
+    image: 'https://c2p.sn/images/home/apropos.png',
   });
 
   return (
@@ -109,7 +109,7 @@ export default function AboutPage() {
 
           <div className="relative">
             <img
-              src="/images/brand/images12.jpeg"
+              src="/images/home/apropos.png"
               alt="C2P ecosysteme professionnel"
               className="h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
             />
