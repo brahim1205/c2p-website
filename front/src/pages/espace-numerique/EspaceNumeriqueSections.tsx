@@ -44,14 +44,14 @@ interface EspaceNumeriqueCoursesGridProps {
 export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }: EspaceNumeriqueHeroProps) {
   return (
     <section style={{ backgroundColor: '#f4f0ff' }}>
-      <div className="mx-auto max-w-7xl overflow-hidden px-5 py-10 sm:px-8 lg:px-14 lg:py-16">
-        <div className="grid min-h-[600px] items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="mx-auto max-w-7xl overflow-hidden px-4 pb-10 pt-24 sm:px-8 lg:px-14 lg:py-16">
+        <div className="grid items-center gap-7 lg:min-h-[600px] lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative z-10 max-w-xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-bold text-[#7b3ff2] shadow-sm">
               <i className="ri-sparkling-2-line text-base" />
               {branchCopy.eyebrow}
             </div>
-            <h1 className="text-[2.45rem] font-black leading-[1.02] tracking-tight text-[#102033] sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-black leading-[1.02] tracking-tight text-[#102033] sm:text-5xl lg:text-6xl">
               {branchCopy.title}
             </h1>
             <p className="mt-5 max-w-lg text-base leading-8 text-[#526275]">{branchCopy.description}</p>
@@ -74,7 +74,7 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
             </div>
           </div>
 
-          <div className="relative min-h-[390px] lg:min-h-[520px]">
+          <div className="relative min-h-[280px] sm:min-h-[370px] lg:min-h-[520px]">
             <div className="absolute right-3 top-4 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
               <div className="flex items-center gap-2">
                 <div className="-space-x-2">
@@ -104,7 +104,7 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
             <img
               src="/images/home/numerique.png"
               alt="Apprentissage numérique C2P"
-              className="absolute bottom-10 right-0 h-[78%] w-full rounded-[28px] object-cover object-center shadow-[0_24px_70px_rgba(15,28,53,0.12)] lg:w-[86%]"
+              className="absolute bottom-6 right-0 h-[80%] w-full rounded-[28px] object-contain object-center drop-shadow-[0_24px_45px_rgba(15,28,53,0.14)] lg:bottom-10 lg:w-[86%]"
             />
           </div>
         </div>

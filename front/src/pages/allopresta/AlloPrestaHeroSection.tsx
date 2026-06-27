@@ -15,8 +15,8 @@ export function AlloPrestaHero({
 }: AlloPrestaHeroProps) {
   return (
     <section style={{ backgroundColor: '#fff4e3' }}>
-      <div className="mx-auto max-w-7xl overflow-hidden px-5 py-10 sm:px-8 lg:px-14 lg:py-16">
-        <div className="grid min-h-[590px] items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="mx-auto max-w-7xl overflow-hidden px-4 pb-10 pt-24 sm:px-8 lg:px-14 lg:py-16">
+        <div className="grid items-center gap-7 lg:min-h-[590px] lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative z-10 max-w-xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#ffb41f]/40 bg-white/85 px-4 py-2 text-xs font-black text-[#0b0b4f] shadow-sm">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ffb41f] text-[#0b0b4f]">
@@ -24,7 +24,7 @@ export function AlloPrestaHero({
               </span>
               Services vérifiés par C2P
             </div>
-            <h1 className="text-[2.45rem] font-black leading-[1.02] tracking-tight text-[#08084f] sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-black leading-[1.02] tracking-tight text-[#08084f] sm:text-5xl lg:text-6xl">
               Trouvez le bon service, au bon prix, sans perdre de temps.
             </h1>
             <p className="mt-5 max-w-lg text-base leading-8 text-[#5d6474]">
@@ -71,7 +71,7 @@ export function AlloPrestaHero({
             </div>
           </div>
 
-          <div className="relative min-h-[390px] lg:min-h-[520px]">
+          <div className="relative min-h-[280px] sm:min-h-[370px] lg:min-h-[520px]">
             <div className="absolute right-3 top-5 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
               <p className="text-sm font-black text-[#08084f]">4.8 <i className="ri-star-fill text-[#ffb41f]" /></p>
               <p className="text-[11px] font-medium text-[#6b7280]">avis clients</p>
@@ -92,7 +92,7 @@ export function AlloPrestaHero({
             <img
               src="/images/home/pesta.png"
               alt="Services professionnels AlloPresta"
-              className="absolute bottom-10 right-0 h-[78%] w-full rounded-[28px] object-cover object-center shadow-[0_24px_70px_rgba(15,28,53,0.12)] lg:w-[86%]"
+              className="absolute bottom-6 right-0 h-[80%] w-full rounded-[28px] object-contain object-center drop-shadow-[0_24px_45px_rgba(15,28,53,0.14)] lg:bottom-10 lg:w-[86%]"
             />
           </div>
         </div>

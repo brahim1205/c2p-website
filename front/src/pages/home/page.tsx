@@ -97,14 +97,14 @@ export default function HomePage() {
   return (
     <main className="bg-white text-[#0f1c35]">
       <section className="bg-[#eaf8f1]">
-        <div className="mx-auto max-w-7xl overflow-hidden px-5 py-10 sm:px-8 lg:px-14 lg:py-16">
-          <div className="grid min-h-[620px] items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="mx-auto max-w-7xl overflow-hidden px-4 pb-10 pt-24 sm:px-8 lg:px-14 lg:py-16">
+          <div className="grid items-center gap-7 lg:min-h-[620px] lg:grid-cols-[0.95fr_1.05fr]">
             <div className="relative z-10 max-w-xl">
               <div className="mb-7 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-[#147f7b] shadow-sm">
                 <i className="ri-leaf-line text-base" />
                 Construisez vos opportunités avec C2P
               </div>
-              <h1 className="text-[2.45rem] font-black leading-[1.02] tracking-tight text-[#102033] sm:text-5xl lg:text-6xl">
+              <h1 className="text-4xl font-black leading-[1.02] tracking-tight text-[#102033] sm:text-5xl lg:text-6xl">
                 Oser rêver et devenir autonome.
               </h1>
               <p className="mt-5 max-w-lg text-base leading-8 text-[#526275]">
@@ -126,7 +126,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="relative min-h-[390px] lg:min-h-[540px]">
+            <div className="relative min-h-[270px] sm:min-h-[360px] lg:min-h-[540px]">
               <div className="absolute right-0 top-2 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
                 <div className="flex items-center gap-1 text-sm font-black text-[#147f7b]">
                   4.8 <i className="ri-star-fill text-[#f5b642]" />
@@ -149,7 +149,7 @@ export default function HomePage() {
               <img
                 src="/images/home/acceuil.jpg"
                 alt="Utilisateur C2P"
-                className="absolute bottom-0 right-0 h-[92%] w-full rounded-b-[28px] object-cover object-center lg:w-[82%]"
+                className="absolute bottom-0 right-0 h-[88%] w-full rounded-b-[28px] object-cover object-center sm:h-[92%] lg:w-[82%]"
               />
             </div>
           </div>

@@ -42,8 +42,14 @@
 
   html {
     scroll-behavior: smooth;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
   body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-family: 'Inter', system-ui, sans-serif;
@@ -61,6 +67,18 @@
   ::selection {
     background: rgba(26, 154, 150, 0.24);
     color: var(--c2p-text);
+  }
+
+  #root {
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
   }
 }
 
@@ -222,20 +240,14 @@
   }
 
   .public-premium-page > section:first-child {
+    position: relative;
+    overflow: hidden;
     border-bottom: 1px solid rgba(15, 28, 53, 0.08);
-    background-color: #ffffff;
-    min-height: clamp(500px, 72vh, 700px) !important;
+    min-height: auto;
   }
 
   .public-premium-page > section:first-child::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    background:
-      radial-gradient(circle at 18% 20%, rgba(183, 131, 47, 0.08), transparent 26%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.16));
+    display: none;
   }
 
   .public-premium-page > section:first-child h1,
@@ -311,8 +323,8 @@
 
   .public-premium-page > section:first-child h1 {
     max-width: 60rem;
-    font-size: clamp(2rem, 3.5vw, 3.2rem) !important;
-    line-height: 1.08 !important;
+    font-size: clamp(2.15rem, 10vw, 3.2rem) !important;
+    line-height: 1.04 !important;
     font-weight: 650;
   }
 
@@ -326,7 +338,7 @@
     max-width: 100%;
     font-size: clamp(0.92rem, 3.2vw, 2rem) !important;
     line-height: 1.12 !important;
-    white-space: nowrap;
+    white-space: normal;
    }
 
   .public-premium-page p {
@@ -335,6 +347,17 @@
 
   .public-premium-page section {
     scroll-margin-top: 6rem;
+  }
+
+  @media (min-width: 1024px) {
+    .public-premium-page > section:first-child {
+      min-height: clamp(500px, 72vh, 700px);
+    }
+
+    .public-premium-page > section:first-child h1 {
+      font-size: clamp(2.6rem, 4vw, 4rem) !important;
+      line-height: 1.02 !important;
+    }
   }
 
   .dashboard-layout [class*='from-teal-'],

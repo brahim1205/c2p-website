@@ -33,7 +33,7 @@ type ProjectCenterGridProps = {
 
 export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenterHeroProps) {
   return (
-    <section className="relative min-h-[540px] w-full overflow-hidden bg-[#ffffff]">
+    <section className="relative w-full overflow-hidden bg-[#ffffff] lg:min-h-[540px]">
       <div className="absolute inset-0">
         <img
           src="/images/brand/image8.jpeg"
@@ -44,7 +44,7 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent" />
 
-      <div className="relative z-10 flex min-h-[540px] items-center px-4 pt-24 sm:px-6 lg:px-20">
+      <div className="relative z-10 flex items-center px-4 pb-12 pt-24 sm:px-6 lg:min-h-[540px] lg:px-20">
         <div className="mx-auto w-full max-w-7xl">
           <div className="max-w-3xl">
             <p className="c2p-eyebrow mb-5">Projects Center C2P</p>
@@ -62,9 +62,9 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
                 Découvrir les projets
               </a>
             </div>
-            <div className="mt-7 flex max-w-3xl flex-wrap gap-2">
+            <div className="mt-7 flex max-w-3xl gap-2 overflow-x-auto pb-2 sm:flex-wrap sm:overflow-visible sm:pb-0">
               {projectCenterSteps.map((step, index) => (
-                <div key={step} className="rounded-full border border-[#dbe7f3] bg-white/82 px-3 py-2 shadow-sm">
+                <div key={step} className="shrink-0 rounded-full border border-[#dbe7f3] bg-white/82 px-3 py-2 shadow-sm">
                   <span className="text-sm font-semibold text-[#1a9a96]">{index + 1}</span>
                   <span className="ml-2 text-sm font-semibold text-[#0f1c35]">{step}</span>
                 </div>

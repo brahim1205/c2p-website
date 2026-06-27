@@ -34,6 +34,16 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
   const navBg = isScrolled
     ? 'border-b border-[#d6dbe1]/80 bg-white/92 shadow-[0_18px_55px_rgba(15,28,53,0.10)] backdrop-blur-xl'
     : 'border-b border-white/60 bg-white/82 shadow-[0_14px_40px_rgba(15,28,53,0.08)] backdrop-blur-xl';
