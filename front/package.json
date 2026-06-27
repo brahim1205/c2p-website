@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "smoke:test": "node scripts/smoke.mjs",
     "smoke:test:local": "FRONT_URL=http://localhost:3000 API_URL=http://localhost:3003/api node scripts/smoke.mjs",
-    "smoke:test:client": "FRONT_URL=http://localhost:3000 API_URL=http://localhost:3003/api C2P_SMOKE_SUITES=client node scripts/smoke.mjs",
+    "smoke:test:client": "FRONT_URL=${FRONT_URL:-http://localhost:3000} API_URL=${API_URL:-http://localhost:3003/api} C2P_SMOKE_SUITES=client node scripts/smoke.mjs",
     "smoke:test:forms": "node scripts/form-coherence.mjs",
     "smoke:test:forms:local": "FRONT_URL=http://localhost:3000 API_URL=http://localhost:3003/api node scripts/form-coherence.mjs",
     "smoke:test:release": "npm run smoke:test && npm run smoke:test:forms",
