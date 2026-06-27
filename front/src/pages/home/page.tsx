@@ -105,10 +105,10 @@ export default function HomePage() {
                 Construisez vos opportunités avec C2P
               </div>
               <h1 className="text-[2.45rem] font-black leading-[1.02] tracking-tight text-[#102033] sm:text-5xl lg:text-6xl">
-                Développez vos compétences, valorisez vos talents, créez vos opportunités.
+                Oser rêver et devenir autonome.
               </h1>
               <p className="mt-5 max-w-lg text-base leading-8 text-[#526275]">
-                C2P connecte les talents, les professionnels et les entrepreneurs pour construire ensemble un avenir meilleur.
+                C2P est une plateforme qui réunit services professionnels, formations, projets à incuber et partenaires pour vous aider à apprendre, travailler, financer et avancer vers l’autonomie.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
