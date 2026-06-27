@@ -47,11 +47,11 @@ interface ProblemReportModalProps {
 export function ClientReservationsHeader({ statusFilter, onStatusFilterChange }: ReservationsHeaderProps) {
   return (
     <>
-      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Client / Prestateur', path: '/dashboard/client' }, { label: 'Mes réservations' }]} />
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Client', path: '/dashboard/client' }, { label: 'Mes réservations' }]} />
 
       <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-teal-600">Suivi prestateur</p>
+          <p className="text-sm font-medium text-teal-600">Suivi client</p>
           <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">Mes réservations</h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-600 md:text-base">
             Vos rendez-vous, devis et prestations sont regroupés dans une vue simple, avec des actions claires.

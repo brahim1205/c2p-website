@@ -3,8 +3,8 @@ export type BookingStatus = 'confirmed' | 'pending' | 'completed' | 'cancelled' 
 export type OrderStatus = 'pending_payment' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
 export const REQUEST_TYPE_META: Record<BookingRequestType, { label: string; color: string; icon: string }> = {
-  booking: { label: 'Commande', color: 'bg-teal-100 text-teal-700', icon: 'ri-shopping-bag-line' },
-  quote: { label: 'Devis', color: 'bg-amber-100 text-amber-700', icon: 'ri-file-paper-2-line' },
+  booking: { label: 'Réservation', color: 'bg-teal-100 text-teal-700', icon: 'ri-calendar-check-line' },
+  quote: { label: 'Demande de devis', color: 'bg-amber-100 text-amber-700', icon: 'ri-file-paper-2-line' },
   appointment: { label: 'Rendez-vous', color: 'bg-blue-100 text-blue-700', icon: 'ri-calendar-event-line' },
 };
 

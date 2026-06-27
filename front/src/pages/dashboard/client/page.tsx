@@ -34,7 +34,7 @@ export default function ClientDashboardPage() {
   useEffect(() => {
     if (dashboardQuery.isError) {
       console.error(dashboardQuery.error);
-      error('Erreur', 'Impossible de charger l espace client / prestataire.');
+      error('Erreur', 'Impossible de charger l’espace client.');
     }
   }, [dashboardQuery.error, dashboardQuery.isError, error]);
 
@@ -59,7 +59,7 @@ export default function ClientDashboardPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-7xl">
-        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Client / Prestataire', path: '/dashboard/client' }]} />
+        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Client', path: '/dashboard/client' }]} />
 
         <ClientDashboardHero firstName={user?.firstName} period={period} onPeriodChange={setPeriod} />
         <ClientQuickAccessPanel />

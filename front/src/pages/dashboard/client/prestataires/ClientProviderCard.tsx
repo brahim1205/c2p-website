@@ -74,17 +74,26 @@ export function ClientProviderCard({
           ))}
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+        <div className="mt-auto flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <Link to={`/allopresta/prestataire/${provider.id}`} className="text-sm font-medium text-teal-600 hover:text-teal-700">
             Voir le profil
           </Link>
-          <button
-            type="button"
-            onClick={() => openRequestModal(provider, 'booking')}
-            className="rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700"
-          >
-            Contacter
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => openRequestModal(provider, 'quote')}
+              className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100"
+            >
+              Devis
+            </button>
+            <button
+              type="button"
+              onClick={() => openRequestModal(provider, 'booking')}
+              className="rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700"
+            >
+              Réserver
+            </button>
+          </div>
         </div>
       </div>
     </article>

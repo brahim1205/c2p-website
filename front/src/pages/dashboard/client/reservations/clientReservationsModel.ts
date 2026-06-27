@@ -87,7 +87,7 @@ export function buildBookingSummaryLines(booking: Booking, providers: Record<num
     `Paiement : ${getPaymentMethodLabel(booking.payment_method)}`,
     `Montant : ${getBookingPriceLabel(booking)}`,
     '',
-    'Besoin prestateur :',
+    'Besoin client :',
     booking.description || 'Aucun détail complémentaire.',
   ];
 }

@@ -92,7 +92,7 @@ export default function ClientCommandesPage() {
         `Type : ${asset.kind}`,
         `Date : ${order.date}`,
         '',
-        'Document de demonstration genere depuis le dashboard client / prestateur.',
+        'Document généré depuis votre espace client C2P.',
       ],
     });
     success('Téléchargement prêt', `${asset.label} a été généré.`);
@@ -155,7 +155,7 @@ export default function ClientCommandesPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-7xl">
-        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Client / Prestateur', path: '/dashboard/client' }, { label: 'Mes commandes' }]} />
+        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Client', path: '/dashboard/client' }, { label: 'Mes commandes' }]} />
         <ClientCommandesHero />
         <ClientCommandesFilters
           paymentFilter={paymentFilter}

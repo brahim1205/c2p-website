@@ -19,7 +19,7 @@ export function ClientBaseDashboard({ firstName }: { firstName: string }) {
       <section className="rounded-3xl border border-gray-200 bg-white px-7 py-7 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-sm font-semibold text-teal-600">Espace client / prestataire</p>
+            <p className="text-sm font-semibold text-teal-600">Espace client</p>
             <h1 className="mt-2 text-4xl font-bold tracking-tight text-gray-950">
               Bonjour, {firstName || 'Awa'} <span className="align-middle">👋</span>
             </h1>

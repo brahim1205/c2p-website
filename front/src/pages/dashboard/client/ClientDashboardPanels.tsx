@@ -22,12 +22,12 @@ export function ClientDashboardHero({
     <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-teal-600">Espace client / prestataire</p>
+          <p className="text-sm font-medium text-teal-600">Espace client</p>
           <h1 className="mt-1 text-2xl font-bold text-gray-900 md:text-3xl">
             Bonjour, {firstName || 'Prestataire'} <span className="align-middle">👋</span>
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-600 md:text-base">
-            Suivez vos demandes, vos commandes et le traitement C2P sans surcharge d’information.
+            Suivez vos demandes de service, devis, réservations, commandes et paiements C2P sans surcharge d’information.
           </p>
         </div>
         <div className="flex flex-col gap-3 xl:items-end">

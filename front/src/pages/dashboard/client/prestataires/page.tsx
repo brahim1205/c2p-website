@@ -15,7 +15,7 @@ export default function ClientPrestatairesPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-7xl">
-        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Client / Prestateur', path: '/dashboard/client' }, { label: 'Trouver un prestataire' }]} />
+        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Client', path: '/dashboard/client' }, { label: 'Trouver un prestataire' }]} />
 
         <ClientPrestatairesHero />
 
