@@ -144,9 +144,8 @@ export function useGsapRouteAnimations(
 
         gsap.fromTo(
           card,
-          { autoAlpha: 0, y: 28, scale: 0.985 },
+          { y: 28, scale: 0.985 },
           {
-            autoAlpha: 1,
             y: 0,
             scale: 1,
             duration: 0.65,
