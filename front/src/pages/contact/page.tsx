@@ -116,36 +116,48 @@ export default function ContactPage() {
   };
 
   return (
-    <main className="public-premium-page min-h-screen bg-c2p-bg text-c2p-text">
-      <section className="relative min-h-[520px] overflow-hidden bg-[#ffffff]">
-        <div className="absolute inset-0">
-          <img
-            src="/images/brand/images10.jpeg"
-            alt="Contact C2P"
-            className="h-full w-full object-cover object-center opacity-[0.36]"
-          />
-        </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]"></div>
-        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
+    <main className="public-premium-page min-h-screen bg-[#fbfdf7] text-c2p-text">
+      <section className="relative overflow-hidden bg-[#e8f5d8] px-4 pb-10 pt-[92px] sm:px-6 lg:px-20 lg:pb-16 lg:pt-28">
+        <div className="absolute left-[-8rem] top-[-8rem] h-72 w-72 rounded-full bg-white/45 blur-3xl" />
+        <div className="absolute bottom-[-10rem] right-[-8rem] h-80 w-80 rounded-full bg-[#f5c542]/25 blur-3xl" />
 
-        <div className="relative z-10 flex min-h-[520px] items-center px-4 pt-24 sm:px-6 lg:px-20">
-          <div className="mx-auto w-full max-w-7xl">
-            <div className="max-w-3xl">
-              <p className="c2p-eyebrow mb-5">
-                Contact C2P
-              </p>
-              <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl">
-                Parlons de votre prochain mouvement professionnel
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
-                Que vous soyez apprenant, prestataire, formateur, porteur de projet ou partenaire, notre équipe vous oriente vers le bon parcours.
-              </p>
+        <div className="relative mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+          <div>
+            <p className="mb-5 inline-flex w-fit items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-[#147f7b] shadow-sm">
+              <i className="ri-customer-service-2-line text-lg" />
+              Contact C2P
+            </p>
+            <h1 className="max-w-3xl text-4xl font-black leading-[1.02] text-[#0f1c35] sm:text-5xl lg:text-6xl">
+              Parlons de votre prochain mouvement professionnel.
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[#506176] sm:text-lg">
+              Que vous soyez apprenant, prestataire, formateur, porteur de projet ou partenaire, notre équipe vous oriente vers le bon parcours.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <a href="#contact-form" className="c2p-btn-accent px-7 py-4">Envoyer un message</a>
+              <Link to="/project-center" className="c2p-btn-secondary bg-white px-7 py-4">Explorer C2P</Link>
+            </div>
+          </div>
+
+          <div className="relative">
+            <img
+              src="/images/brand/images10.jpeg"
+              alt="Contact C2P"
+              className="h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
+            />
+            <div className="absolute right-4 top-4 rounded-3xl bg-white/92 px-5 py-4 shadow-[0_18px_45px_rgba(15,28,53,0.12)]">
+              <p className="text-2xl font-black text-[#147f7b]">24h</p>
+              <p className="text-xs font-semibold text-[#64748b]">réponse ouvrée</p>
+            </div>
+            <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/92 p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
+              <p className="text-sm font-black text-[#0f1c35]">Une demande, le bon parcours</p>
+              <p className="mt-1 text-xs leading-5 text-[#64748b]">Formation, service, projet, partenariat ou support.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="px-4 py-12 sm:px-6 lg:px-20 lg:py-16">
+      <section className="bg-white px-4 py-12 sm:px-6 lg:px-20 lg:py-16">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="c2p-panel p-6 sm:p-8 lg:p-10">
             <p className="c2p-eyebrow mb-3">Message</p>
@@ -248,7 +260,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section className="border-y border-[#d6dbe1] bg-[#ffffff] px-4 py-16 sm:px-6 lg:px-20">
+      <section className="border-y border-[#e3eadb] bg-[#f7fbef] px-4 py-16 sm:px-6 lg:px-20">
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 max-w-2xl">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.34em] text-[#1a9a96]">Localisation</p>

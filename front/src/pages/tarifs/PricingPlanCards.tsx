@@ -42,21 +42,21 @@ function getPlanCta(
 
 export function FreePlanCard({ role }: { role: MonetizedRole }) {
   return (
-    <article className="relative flex min-h-[480px] flex-col justify-between rounded-[22px] border border-[#d6dbe1] bg-white px-7 py-8 shadow-[0_18px_46px_rgba(15,28,53,0.06)] sm:px-8">
+    <article className="relative flex min-h-[440px] flex-col justify-between rounded-[28px] border border-[#dce8cf] bg-white px-6 py-7 shadow-[0_18px_50px_rgba(15,28,53,0.06)] sm:px-8">
       <div>
-        <p className="text-xl font-semibold text-[#0f1c35]">Essentiel</p>
+        <p className="text-xl font-black text-[#0f1c35]">Essentiel</p>
         <div className="mt-3">
           <span className="block text-5xl font-semibold tracking-tight text-[#0f1c35]">Gratuit</span>
         </div>
         <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">Démarrez votre parcours sur C2P sans frais.</p>
         <ul className="mt-7 space-y-4 text-sm leading-6 text-[#0f1c35]">
-          <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Accès au compte de base</span></li>
-          <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Préparer votre profil public</span></li>
-          <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Explorer les services et formations</span></li>
-          <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i><span>Passer au premium quand vous êtes prêt</span></li>
+          <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#147f7b]"></i><span>Accès au compte de base</span></li>
+          <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#147f7b]"></i><span>Préparer votre profil public</span></li>
+          <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#147f7b]"></i><span>Explorer les services et formations</span></li>
+          <li className="flex items-start gap-3"><i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#147f7b]"></i><span>Passer au premium quand vous êtes prêt</span></li>
         </ul>
       </div>
-      <Link to={`/auth/register?role=${role}`} className="mt-8 inline-flex w-full items-center justify-center rounded-xl border border-[#d6dbe1] bg-white px-5 py-4 text-base font-semibold text-[#0f1c35] transition-colors hover:border-[#1a9a96]">
+      <Link to={`/auth/register?role=${role}`} className="mt-8 inline-flex w-full items-center justify-center rounded-2xl border border-[#dce8cf] bg-[#f7fbef] px-5 py-4 text-base font-black text-[#0f1c35] transition-colors hover:border-[#147f7b]">
         Créer un compte
       </Link>
     </article>
@@ -78,14 +78,14 @@ export function PaidPlanCard({ plan, contentSummary, index, isAuthenticated, cur
   const period = getPlanPeriod(plan);
 
   return (
-    <article className={`relative flex min-h-[480px] flex-col justify-between rounded-[22px] border bg-white px-7 py-8 shadow-[0_18px_46px_rgba(15,28,53,0.06)] sm:px-8 ${isPopular ? 'border-[#08b84f]' : isBestValue ? 'border-[#f5bb00]' : 'border-[#d6dbe1]'}`}>
+    <article className={`relative flex min-h-[440px] flex-col justify-between rounded-[28px] border bg-white px-6 py-7 shadow-[0_18px_50px_rgba(15,28,53,0.06)] sm:px-8 ${isPopular ? 'border-[#147f7b]' : isBestValue ? 'border-[#f5bb00]' : 'border-[#dce8cf]'}`}>
       {isPopular || isBestValue ? (
         <span className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full px-6 py-2 text-sm font-semibold text-white ${isBestValue ? 'bg-[#f5bb00] text-[#0f1c35]' : 'bg-[#08a846]'}`}>
           {isBestValue ? 'Meilleure valeur' : 'Le plus populaire'}
         </span>
       ) : null}
       <div>
-        <h4 className="text-xl font-semibold text-[#0f1c35]">{plan.name}</h4>
+        <h4 className="text-xl font-black text-[#0f1c35]">{plan.name}</h4>
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <span className="text-5xl font-semibold tracking-tight text-[#0f1c35]">{formatAmountOnly(plan.price_monthly)}</span>
           <span className="pb-2 text-base text-[#64748b]">{formatCurrencyLabel(plan.currency)}{period.suffix}</span>
@@ -99,13 +99,13 @@ export function PaidPlanCard({ plan, contentSummary, index, isAuthenticated, cur
         <ul className="mt-7 space-y-4 text-sm leading-6 text-[#0f1c35]">
           {plan.features.map((feature) => (
             <li key={feature} className="flex items-start gap-3">
-              <i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#08b84f]"></i>
+              <i className="ri-checkbox-circle-line mt-0.5 text-xl text-[#147f7b]"></i>
               <span>{feature}</span>
             </li>
           ))}
         </ul>
       </div>
-      <Link to={cta.to} className={`mt-8 inline-flex w-full items-center justify-center rounded-xl px-5 py-4 text-base font-semibold transition-colors ${isBestValue ? 'bg-[#ffc400] text-[#0f1c35] hover:bg-[#f2b800]' : isPopular ? 'bg-[#08a846] text-white hover:bg-[#078f3d]' : cta.variant === 'featured_orange' ? 'bg-[#0f1c35] text-white hover:bg-[#1b2d4a]' : 'border border-[#d6dbe1] bg-white text-[#0f1c35] hover:border-[#1a9a96]'}`}>
+      <Link to={cta.to} className={`mt-8 inline-flex w-full items-center justify-center rounded-2xl px-5 py-4 text-base font-black transition-colors ${isBestValue ? 'bg-[#ffc400] text-[#0f1c35] hover:bg-[#f2b800]' : isPopular ? 'bg-[#147f7b] text-white hover:bg-[#0f6b68]' : cta.variant === 'featured_orange' ? 'bg-[#0f1c35] text-white hover:bg-[#1b2d4a]' : 'border border-[#dce8cf] bg-[#f7fbef] text-[#0f1c35] hover:border-[#147f7b]'}`}>
         {isBestValue ? "Contacter l'équipe" : isPopular ? 'Commencer maintenant' : cta.label}
       </Link>
     </article>

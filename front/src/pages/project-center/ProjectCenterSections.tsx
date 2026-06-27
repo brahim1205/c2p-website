@@ -33,50 +33,43 @@ type ProjectCenterGridProps = {
 
 export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenterHeroProps) {
   return (
-    <section className="relative w-full overflow-hidden bg-[#ffffff] lg:min-h-[540px]">
-      <div className="absolute inset-0">
-        <img
-          src="/images/brand/image8.jpeg"
-          alt="ProjectCenter"
-          className="h-full w-full object-cover object-center opacity-[0.36]"
-        />
-      </div>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent" />
+    <section className="relative overflow-hidden bg-[#e8f5d8] px-4 pb-10 pt-[92px] sm:px-6 lg:px-20 lg:pb-16 lg:pt-28">
+      <div className="absolute left-[-8rem] top-[-8rem] h-72 w-72 rounded-full bg-white/45 blur-3xl" />
+      <div className="absolute bottom-[-10rem] right-[-8rem] h-80 w-80 rounded-full bg-[#f5c542]/25 blur-3xl" />
 
-      <div className="relative z-10 flex items-center px-4 pb-12 pt-24 sm:px-6 lg:min-h-[540px] lg:px-20">
-        <div className="mx-auto w-full max-w-7xl">
-          <div className="max-w-3xl">
-            <p className="c2p-eyebrow mb-5">Projects Center C2P</p>
-            <h1 className="mb-5 text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl">
-              De l&apos;idée au lancement
-            </h1>
-            <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
-              Notre centre d&apos;incubation vous accompagne à chaque étape avec des experts, des outils et un réseau de partenaires engagés.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link to="/project-center/soumettre" className="c2p-btn-accent px-7 py-4">
-                Soumettre mon projet
-              </Link>
-              <a href="#project-center-results" className="c2p-btn-secondary bg-white/82 px-7 py-4">
-                Découvrir les projets
-              </a>
-            </div>
-            <div className="mt-7 flex max-w-3xl gap-2 overflow-x-auto pb-2 sm:flex-wrap sm:overflow-visible sm:pb-0">
-              {projectCenterSteps.map((step, index) => (
-                <div key={step} className="shrink-0 rounded-full border border-[#dbe7f3] bg-white/82 px-3 py-2 shadow-sm">
-                  <span className="text-sm font-semibold text-[#1a9a96]">{index + 1}</span>
-                  <span className="ml-2 text-sm font-semibold text-[#0f1c35]">{step}</span>
-                </div>
-              ))}
-            </div>
+      <div className="relative mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+        <div>
+          <p className="mb-5 inline-flex w-fit items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-[#147f7b] shadow-sm">
+            <i className="ri-rocket-line text-lg" />
+            ProjectCenter C2P
+          </p>
+          <h1 className="max-w-3xl text-4xl font-black leading-[1.02] text-[#0f1c35] sm:text-5xl lg:text-6xl">
+            Transformez une idée en projet accompagné et finançable.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-8 text-[#506176] sm:text-lg">
+            Soumettez votre projet, trouvez des mentors, mobilisez des partenaires techniques ou financiers et suivez votre progression jusqu’à l’autonomie.
+          </p>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <Link to="/project-center/soumettre" className="c2p-btn-accent px-7 py-4">
+              Soumettre mon projet
+            </Link>
+            <a href="#project-center-results" className="c2p-btn-secondary bg-white px-7 py-4">
+              Découvrir les projets
+            </a>
           </div>
 
-          <div className="c2p-panel mt-10 max-w-3xl p-3">
-            <div className="flex min-h-14 items-center gap-3 rounded-2xl bg-white/82 px-5 py-3">
-              <div className="flex h-6 w-6 items-center justify-center">
-                <i className="ri-search-line text-xl text-[#64748b]" />
+          <div className="mt-7 grid gap-2 sm:grid-cols-3">
+            {projectCenterSteps.map((step, index) => (
+              <div key={step} className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3 shadow-sm backdrop-blur">
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-[#147f7b]">Étape {index + 1}</span>
+                <p className="mt-1 text-sm font-bold text-[#0f1c35]">{step}</p>
               </div>
+            ))}
+          </div>
+
+          <div className="mt-7 max-w-2xl rounded-[24px] border border-white/80 bg-white/86 p-3 shadow-[0_20px_55px_rgba(15,28,53,0.08)] backdrop-blur">
+            <div className="flex min-h-14 items-center gap-3 rounded-2xl bg-white px-4 py-3">
+              <i className="ri-search-line text-xl text-[#64748b]" />
               <input
                 type="text"
                 aria-label="Rechercher un projet ou un porteur"
@@ -88,6 +81,23 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
             </div>
           </div>
         </div>
+
+        <div className="relative">
+          <div className="absolute -left-5 bottom-12 hidden h-44 w-20 rounded-full bg-[#ffd166] lg:block" />
+          <img
+            src="/images/brand/image8.jpeg"
+            alt="ProjectCenter"
+            className="relative h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
+          />
+          <div className="absolute right-4 top-4 rounded-3xl bg-white/92 px-5 py-4 shadow-[0_18px_45px_rgba(15,28,53,0.12)]">
+            <p className="text-2xl font-black text-[#147f7b]">100%</p>
+            <p className="text-xs font-semibold text-[#64748b]">soumission gratuite</p>
+          </div>
+          <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/92 p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
+            <p className="text-sm font-black text-[#0f1c35]">Projets • mentors • financement</p>
+            <p className="mt-1 text-xs leading-5 text-[#64748b]">Un espace pour construire, évaluer et accompagner les projets.</p>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -95,7 +105,7 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
 
 export function ProjectCenterCategoryBar({ selectedCategory, onSelectCategory }: ProjectCenterCategoryBarProps) {
   return (
-    <section className="border-y border-[#d6dbe1] bg-[#ffffff] px-4 py-4 sm:px-6 lg:px-20">
+    <section className="bg-white px-4 py-5 sm:px-6 lg:px-20">
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center gap-3 overflow-x-auto pb-2" role="group" aria-label="Filtrer les projets par categorie">
           {projectCenterCategories.map((category) => (
@@ -130,7 +140,7 @@ export function ProjectCenterFilterBar({
   onResetFilters,
 }: ProjectCenterFilterBarProps) {
   return (
-    <section className="border-b border-[#d6dbe1] bg-[#ffffff] px-4 py-4 sm:px-6 lg:px-20">
+    <section className="border-y border-[#e3eadb] bg-[#f7fbef] px-4 py-4 sm:px-6 lg:px-20">
       <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
           <span className="text-sm text-[#64748b]">
@@ -160,7 +170,7 @@ export function ProjectCenterFilterBar({
 
 export function ProjectCenterGrid({ loading, projects, onResetFilters }: ProjectCenterGridProps) {
   return (
-    <section id="project-center-results" className="px-4 py-12 sm:px-6 lg:px-20">
+    <section id="project-center-results" className="bg-[#fbfdf7] px-4 py-12 sm:px-6 lg:px-20">
       <div className="mx-auto max-w-7xl">
         {loading ? <ProjectSkeletonGrid /> : null}
         {!loading && projects.length === 0 ? <EmptyProjectsState onResetFilters={onResetFilters} /> : null}

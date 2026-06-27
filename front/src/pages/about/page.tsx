@@ -75,49 +75,53 @@ export default function AboutPage() {
   });
 
   return (
-    <main className="public-premium-page min-h-screen bg-c2p-bg text-c2p-text">
-      <section className="relative min-h-[680px] overflow-hidden bg-[#ffffff]">
-        <div className="absolute inset-0">
-          <img
-            src="/images/brand/images12.jpeg"
-            alt="C2P ecosysteme professionnel"
-            className="h-full w-full object-cover object-center opacity-[0.36]"
-          />
-        </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.82)_48%,rgba(248,250,252,0.48)_100%)]"></div>
-        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#ffffff] to-transparent"></div>
+    <main className="public-premium-page min-h-screen bg-[#fbfdf7] text-c2p-text">
+      <section className="relative overflow-hidden bg-[#e8f5d8] px-4 pb-10 pt-[92px] sm:px-6 lg:px-20 lg:pb-16 lg:pt-28">
+        <div className="absolute left-[-8rem] top-[-8rem] h-72 w-72 rounded-full bg-white/45 blur-3xl" />
+        <div className="absolute bottom-[-10rem] right-[-8rem] h-80 w-80 rounded-full bg-[#f5c542]/25 blur-3xl" />
 
-        <div className="relative z-10 flex min-h-[680px] items-center px-4 pt-24 sm:px-6 lg:px-20">
-          <div className="mx-auto w-full max-w-7xl">
-            <div className="max-w-3xl">
-              <p className="c2p-eyebrow mb-5">
-                À propos de C2P
-              </p>
-              <h1 className="mb-6 text-4xl font-semibold leading-[0.98] text-[#0f1c35] sm:text-5xl lg:text-7xl">
-                Un écosystème professionnel conçu pour faire avancer les talents
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
-                C2P rassemble AlloPresta, l’Espace Numérique et ProjectCenter dans une plateforme unique pour transformer les ambitions en actions mesurables.
-              </p>
-            </div>
+        <div className="relative mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+          <div>
+            <p className="mb-5 inline-flex w-fit items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-[#147f7b] shadow-sm">
+              <i className="ri-community-line text-lg" />
+              À propos de C2P
+            </p>
+            <h1 className="max-w-3xl text-4xl font-black leading-[1.02] text-[#0f1c35] sm:text-5xl lg:text-6xl">
+              Un écosystème pour apprendre, travailler et devenir autonome.
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[#506176] sm:text-lg">
+              C2P rassemble AlloPresta, l’Espace Numérique et ProjectCenter dans une plateforme unique pour transformer les ambitions en actions mesurables.
+            </p>
 
-            <div className="mt-12 grid max-w-4xl grid-cols-1 gap-px overflow-hidden rounded-2xl border border-[#d6dbe1] bg-[#d6dbe1] sm:grid-cols-3">
+            <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {[
                 ['2,500+', 'Professionnels'],
-                ['150+', 'Projets accompagnes'],
+                ['150+', 'Projets accompagnés'],
                 ['98%', 'Satisfaction'],
               ].map(([value, label]) => (
-                <div key={label} className="bg-[#f7f6f4] p-5 text-center">
-                  <div className="mb-1 text-3xl font-semibold text-[#0f1c35]">{value}</div>
-                  <div className="text-xs uppercase tracking-[0.22em] text-[#1a9a96]">{label}</div>
+                <div key={label} className="rounded-3xl border border-white/70 bg-white/82 p-5 text-center shadow-sm backdrop-blur">
+                  <div className="text-3xl font-black text-[#147f7b]">{value}</div>
+                  <div className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-[#64748b]">{label}</div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="relative">
+            <img
+              src="/images/brand/images12.jpeg"
+              alt="C2P ecosysteme professionnel"
+              className="h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
+            />
+            <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/92 p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
+              <p className="text-sm font-black text-[#0f1c35]">AlloPresta • Espace Numérique • ProjectCenter</p>
+              <p className="mt-1 text-xs leading-5 text-[#64748b]">Un seul compte pour évoluer selon votre parcours.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="px-4 py-20 sm:px-6 lg:px-20 lg:py-28">
+      <section className="bg-white px-4 py-16 sm:px-6 lg:px-20 lg:py-24">
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative overflow-hidden rounded-[30px] border border-[#d6dbe1]">
             <img src="/images/brand/image7.jpeg" alt="Mission C2P" className="h-[520px] w-full object-cover object-center" />
@@ -153,7 +157,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="border-y border-[#d6dbe1] bg-[#ffffff] px-4 py-20 sm:px-6 lg:px-20">
+      <section className="border-y border-[#e3eadb] bg-[#f7fbef] px-4 py-16 sm:px-6 lg:px-20 lg:py-20">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 max-w-2xl">
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#1a9a96]">Nos valeurs</p>
@@ -170,7 +174,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden px-4 py-20 sm:px-6 lg:px-20 lg:py-28">
+      <section className="relative overflow-hidden bg-white px-4 py-16 sm:px-6 lg:px-20 lg:py-24">
         <div className="absolute left-1/2 top-56 hidden h-[calc(100%-18rem)] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#d6dbe1] to-transparent lg:block"></div>
 
         <div className="mx-auto max-w-6xl">

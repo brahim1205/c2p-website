@@ -52,50 +52,55 @@ export default function PricingPage() {
   const monetizedRoles = Object.keys(monetizedRoleContent) as MonetizedRole[];
 
   return (
-    <div className="public-premium-page bg-c2p-bg text-c2p-text">
-      <section className="relative overflow-hidden bg-[#ffffff] px-5 pb-14 pt-28 sm:px-8 lg:px-10 lg:pb-18 lg:pt-32">
-        <img
-          src="/images/brand/images11.jpeg"
-          alt="Plans d'abonnement C2P"
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.36]"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.84)_52%,rgba(248,250,252,0.58)_100%)]" />
-        <div className="relative mx-auto max-w-7xl">
-          <p className="c2p-eyebrow">
-            Tarifs et abonnements
-          </p>
-          <div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-            <div>
-              <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-[#0f1c35] sm:text-5xl">
-                Des plans simples pour passer à l’action.
-              </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-[#64748b] sm:text-lg">
-                Créez votre compte gratuitement. L’abonnement intervient uniquement quand vous voulez publier,
-                vendre, piloter ou développer une activité premium sur C2P.
-              </p>
+    <div className="public-premium-page bg-[#fbfdf7] text-c2p-text">
+      <section className="relative overflow-hidden bg-[#e8f5d8] px-4 pb-10 pt-[92px] sm:px-6 lg:px-20 lg:pb-16 lg:pt-28">
+        <div className="absolute left-[-8rem] top-[-8rem] h-72 w-72 rounded-full bg-white/45 blur-3xl" />
+        <div className="absolute bottom-[-10rem] right-[-8rem] h-80 w-80 rounded-full bg-[#f5c542]/25 blur-3xl" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+          <div>
+            <p className="mb-5 inline-flex w-fit items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-[#147f7b] shadow-sm">
+              <i className="ri-price-tag-3-line text-lg" />
+              Tarifs et abonnements
+            </p>
+            <h1 className="max-w-3xl text-4xl font-black leading-[1.02] text-[#0f1c35] sm:text-5xl lg:text-6xl">
+              Des plans simples pour évoluer sur C2P.
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[#506176] sm:text-lg">
+              Créez votre compte gratuitement. Les abonnements débloquent les actions premium : publier, vendre, financer, accompagner ou développer votre activité.
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link to="/auth/register" className="c2p-btn-accent px-7 py-4">
+                Créer mon compte
+              </Link>
+              <a href="#plans-premium" className="c2p-btn-secondary bg-white px-7 py-4">
+                Voir les plans
+              </a>
             </div>
-            <div className="c2p-panel p-6">
-              <p className="c2p-eyebrow text-sm tracking-[0.2em]">Compte gratuit</p>
-              <h2 className="mt-4 text-2xl font-semibold text-[#0f1c35]">Vous pouvez démarrer sans payer.</h2>
+          </div>
+
+          <div className="relative">
+            <img
+              src="/images/brand/images11.jpeg"
+              alt="Plans d'abonnement C2P"
+              className="h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
+            />
+            <div className="absolute right-4 top-4 rounded-3xl bg-white/92 px-5 py-4 shadow-[0_18px_45px_rgba(15,28,53,0.12)]">
+              <p className="text-2xl font-black text-[#147f7b]">Promo</p>
+              <p className="text-xs font-semibold text-[#64748b]">tarifs évolutifs</p>
+            </div>
+            <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/92 p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
+              <p className="text-sm font-black text-[#0f1c35]">Compte gratuit</p>
               <ul className="mt-5 space-y-3 text-sm leading-7 text-[#64748b]">
                 <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Créer un compte et accéder à votre espace.</span></li>
                 <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Explorer les services, formations et projets publics.</span></li>
                 <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Passer à un plan premium au moment où vous en avez besoin.</span></li>
               </ul>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Link to="/auth/register" className="c2p-btn-accent px-6 py-3">
-                  Créer mon compte
-                </Link>
-                <Link to="/auth/login" className="c2p-btn-secondary px-6 py-3">
-                  Me connecter
-                </Link>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="px-5 py-10 sm:px-8 lg:px-10 lg:py-12">
+      <section id="plans-premium" className="px-4 py-10 sm:px-6 lg:px-20 lg:py-14">
         <div className="mx-auto max-w-7xl">
           <div className="mb-7 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
