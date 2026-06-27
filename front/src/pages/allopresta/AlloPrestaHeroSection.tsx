@@ -14,9 +14,9 @@ export function AlloPrestaHero({
   onScrollToResults,
 }: AlloPrestaHeroProps) {
   return (
-    <section className="bg-white px-4 pt-5 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-[30px] bg-[#fff4e3]">
-        <div className="grid min-h-[590px] items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-14 lg:py-16">
+    <section className="bg-[#fff4e3]">
+      <div className="mx-auto max-w-7xl overflow-hidden px-5 py-10 sm:px-8 lg:px-14 lg:py-16">
+        <div className="grid min-h-[590px] items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative z-10 max-w-xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#ffb41f]/40 bg-white/85 px-4 py-2 text-xs font-black text-[#0b0b4f] shadow-sm">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ffb41f] text-[#0b0b4f]">
@@ -90,7 +90,7 @@ export function AlloPrestaHero({
 
             <div className="absolute inset-x-8 bottom-2 h-[72%] rounded-t-full bg-[#ffcf63]" />
             <img
-              src="/images/home/service.jpg"
+              src="/images/home/pesta.png"
               alt="Services professionnels AlloPresta"
               className="absolute bottom-10 right-0 h-[78%] w-full rounded-[28px] object-cover object-center shadow-[0_24px_70px_rgba(15,28,53,0.12)] lg:w-[86%]"
             />

@@ -43,9 +43,9 @@ interface EspaceNumeriqueCoursesGridProps {
 
 export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }: EspaceNumeriqueHeroProps) {
   return (
-    <section className="bg-white px-4 pt-5 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-[30px] bg-[#f4f0ff]">
-        <div className="grid min-h-[600px] items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-14 lg:py-16">
+    <section className="bg-[#f4f0ff]">
+      <div className="mx-auto max-w-7xl overflow-hidden px-5 py-10 sm:px-8 lg:px-14 lg:py-16">
+        <div className="grid min-h-[600px] items-center gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative z-10 max-w-xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-bold text-[#7b3ff2] shadow-sm">
               <i className="ri-sparkling-2-line text-base" />
@@ -102,7 +102,7 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
 
             <div className="absolute inset-x-8 bottom-2 h-[72%] rounded-t-full bg-[#fff0c7]" />
             <img
-              src="/images/home/academy.jpg"
+              src="/images/home/numerique.png"
               alt="Apprentissage numérique C2P"
               className="absolute bottom-10 right-0 h-[78%] w-full rounded-[28px] object-cover object-center shadow-[0_24px_70px_rgba(15,28,53,0.12)] lg:w-[86%]"
             />
