@@ -29,6 +29,9 @@ function inferPartnerBadge(skills: string[] = []) {
 function buildInitialProfile(user: AuthUser): RoleProfileData {
   return {
     ...emptyRoleProfile,
+    firstName: user.firstName ?? '',
+    lastName: user.lastName ?? '',
+    phone: user.phone ?? '',
     publicTitle: user.publicTitle ?? '',
     location: user.location ?? '',
     bio: user.bio ?? '',
@@ -59,7 +62,11 @@ export default function OnboardingProfilePage() {
   const selectedUserTypeTitle = user?.role ? ROLE_LABELS[user.role] : undefined;
 
   const missingRequiredField = useMemo(() => (
-    selectedRoleFields?.fields.find((field) => field.required && !roleProfile[field.key].trim()) ?? null
+    !roleProfile.firstName.trim()
+      ? { label: 'Prénom' }
+      : !roleProfile.lastName.trim()
+        ? { label: 'Nom' }
+        : selectedRoleFields?.fields.find((field) => field.required && !roleProfile[field.key].trim()) ?? null
   ), [roleProfile, selectedRoleFields]);
 
   if (isLoading) return null;
@@ -93,6 +100,9 @@ export default function OnboardingProfilePage() {
       const updatedUser = await apiRequest<AuthUser>(`/auth/profile/${encodeURIComponent(user.id)}`, {
         method: 'PATCH',
         body: JSON.stringify({
+          firstName: roleProfile.firstName.trim(),
+          lastName: roleProfile.lastName.trim(),
+          phone: roleProfile.phone.trim() || undefined,
           publicTitle: roleProfile.publicTitle.trim() || undefined,
           location: roleProfile.location.trim() || undefined,
           bio: roleProfile.bio.trim() || undefined,
@@ -114,15 +124,15 @@ export default function OnboardingProfilePage() {
 
   return (
     <main className="min-h-dvh bg-[#e8f5d8] px-4 py-6 text-[#0f1c35] sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-7xl flex-col justify-center">
+      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-5xl flex-col justify-center">
         <div className="mb-5 text-center">
           <span className="inline-flex rounded-lg bg-white/85 px-4 py-2 text-lg font-semibold text-[#0f1c35] shadow-sm">
             Question d&apos;intégration - {selectedUserTypeTitle}
           </span>
         </div>
 
-        <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)] lg:min-h-[620px] lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
-          <section className="min-w-0 p-4 sm:p-7 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:p-9 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
+        <div className="mx-auto w-full overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)]">
+          <section className="min-w-0 p-4 sm:p-7 lg:p-9">
             <div className="mb-7">
               <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-10 w-auto" />
               <div className="mt-7 flex gap-2" aria-hidden="true">
@@ -144,6 +154,36 @@ export default function OnboardingProfilePage() {
             </div>
 
             <form onSubmit={handleSubmit}>
+              <div className="mb-5 rounded-[24px] border border-[#e2ecd4] bg-[#f7fbef] p-4 sm:p-5">
+                <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[#4d7f16]">Identité du compte</p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <OnboardingInput
+                    id="onboarding-first-name"
+                    label="Prénom *"
+                    value={roleProfile.firstName}
+                    placeholder="Votre prénom"
+                    disabled={submitting}
+                    onChange={(value) => setRoleProfile((current) => ({ ...current, firstName: value }))}
+                  />
+                  <OnboardingInput
+                    id="onboarding-last-name"
+                    label="Nom *"
+                    value={roleProfile.lastName}
+                    placeholder="Votre nom"
+                    disabled={submitting}
+                    onChange={(value) => setRoleProfile((current) => ({ ...current, lastName: value }))}
+                  />
+                  <OnboardingInput
+                    id="onboarding-phone"
+                    label="Téléphone"
+                    value={roleProfile.phone}
+                    placeholder="+221 7X XXX XX XX"
+                    disabled={submitting}
+                    onChange={(value) => setRoleProfile((current) => ({ ...current, phone: value }))}
+                  />
+                </div>
+              </div>
+
               {selectedRoleFields ? (
                 <RoleProfileFields
                   roleProfile={roleProfile}
@@ -164,19 +204,39 @@ export default function OnboardingProfilePage() {
               </button>
             </form>
           </section>
-
-          <aside className="relative hidden bg-[#f7faf4] p-8 lg:flex lg:items-center lg:justify-center">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_22%,rgba(77,127,22,0.12),transparent_28%),radial-gradient(circle_at_78%_72%,rgba(249,200,70,0.22),transparent_30%)]"></div>
-            <div className="relative max-w-md text-center">
-              <img src="/images/home/pesta.png" alt="Parcours C2P" className="mx-auto h-80 w-full object-contain drop-shadow-[0_24px_45px_rgba(15,28,53,0.14)]" />
-              <h2 className="mt-8 text-3xl font-semibold text-[#0f1c35]">Un parcours adapté à chaque utilisateur</h2>
-              <p className="mt-4 text-sm leading-7 text-[#64748b]">
-                Les informations demandées changent selon le rôle : prestation, formation, apprentissage, projet ou partenariat.
-              </p>
-            </div>
-          </aside>
         </div>
       </div>
     </main>
+  );
+}
+
+function OnboardingInput({
+  id,
+  label,
+  value,
+  placeholder,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-2 block text-sm font-medium text-[#475569]">{label}</label>
+      <input
+        id={id}
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="c2p-input block px-4 py-3 text-sm"
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+    </div>
   );
 }

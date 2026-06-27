@@ -4,10 +4,10 @@ import { queryClient } from '@/lib/queryClient';
 import { isUserRole, ROLE_DASHBOARD_PATHS, type AuthUser, type UserRole } from '@/lib/roles';
 
 export interface RegisterData {
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
-  phone: string;
+  phone?: string;
   password: string;
   role: string;
   bio?: string;

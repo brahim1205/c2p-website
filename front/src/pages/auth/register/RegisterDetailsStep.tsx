@@ -3,10 +3,7 @@ import { inputClass, type RoleProfileData } from './registerModel';
 import { startSocialAuth } from '@/lib/socialAuth';
 
 export interface RegisterFormData {
-  firstName: string;
-  lastName: string;
   email: string;
-  phone: string;
   password: string;
   confirmPassword: string;
   acceptTerms: boolean;
@@ -80,26 +77,7 @@ export default function RegisterDetailsStep({
       </div>
 
       <form onSubmit={onSubmit} className="space-y-5">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <TextInput
-            id="firstName"
-            label="Prenom"
-            placeholder="Votre prenom"
-            value={formData.firstName}
-            disabled={isLoading}
-            onChange={(value) => onFormDataChange({ ...formData, firstName: value })}
-          />
-          <TextInput
-            id="lastName"
-            label="Nom"
-            placeholder="Votre nom"
-            value={formData.lastName}
-            disabled={isLoading}
-            onChange={(value) => onFormDataChange({ ...formData, lastName: value })}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
           <TextInput
             id="email"
             type="email"
@@ -108,15 +86,6 @@ export default function RegisterDetailsStep({
             value={formData.email}
             disabled={isLoading}
             onChange={(value) => onFormDataChange({ ...formData, email: value })}
-          />
-          <TextInput
-            id="phone"
-            type="tel"
-            label="Telephone"
-            placeholder="+221 7X XXX XX XX"
-            value={formData.phone}
-            disabled={isLoading}
-            onChange={(value) => onFormDataChange({ ...formData, phone: value })}
           />
         </div>
 

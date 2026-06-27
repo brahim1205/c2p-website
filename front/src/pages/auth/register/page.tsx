@@ -30,10 +30,7 @@ export default function RegisterPage() {
   const [subscriptionPlans, setSubscriptionPlans] = useState<PublicSubscriptionPlan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [formData, setFormData] = useState<RegisterFormData>({
-    firstName: '',
-    lastName: '',
     email: '',
-    phone: '',
     password: '',
     confirmPassword: '',
     acceptTerms: false,
@@ -115,10 +112,7 @@ export default function RegisterPage() {
     }
 
     const result = await register({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
       email: formData.email,
-      phone: formData.phone,
       password: formData.password,
       role: userType,
     });
@@ -149,8 +143,8 @@ export default function RegisterPage() {
           </span>
         </div>
 
-        <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)] lg:min-h-[640px] lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
-          <section className="min-w-0 p-4 sm:p-7 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:p-9 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
+        <div className="mx-auto w-full max-w-4xl overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)]">
+          <section className="min-w-0 p-4 sm:p-7 lg:p-9">
             <div className="mb-6 flex items-center justify-between gap-4">
               <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f766e]">
                 <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-9 w-auto" />
@@ -196,17 +190,6 @@ export default function RegisterPage() {
               />
             )}
           </section>
-
-          <aside className="relative hidden bg-[#f7faf4] p-8 lg:flex lg:items-center lg:justify-center">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_20%,rgba(26,154,150,0.13),transparent_28%),radial-gradient(circle_at_78%_72%,rgba(249,200,70,0.22),transparent_30%)]"></div>
-            <div className="relative max-w-md text-center">
-              <img src="/images/home/acceuil.jpg" alt="Écosystème C2P" className="mx-auto h-80 w-full rounded-[28px] object-cover shadow-[0_24px_70px_rgba(15,28,53,0.12)]" />
-              <h2 className="mt-8 text-3xl font-semibold text-[#0f1c35]">Bienvenue dans l’écosystème C2P</h2>
-              <p className="mt-4 text-sm leading-7 text-[#64748b]">
-                Services, formations, projets et partenariats : un seul compte pour évoluer progressivement vers l’autonomie.
-              </p>
-            </div>
-          </aside>
         </div>
       </div>
     </main>

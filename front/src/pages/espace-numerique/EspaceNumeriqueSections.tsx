@@ -44,19 +44,19 @@ interface EspaceNumeriqueCoursesGridProps {
 export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }: EspaceNumeriqueHeroProps) {
   return (
     <section style={{ backgroundColor: '#f4f0ff' }}>
-      <div className="mx-auto max-w-7xl overflow-hidden px-4 pb-10 pt-24 sm:px-8 lg:px-14 lg:py-16">
-        <div className="grid items-center gap-7 lg:min-h-[600px] lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="mx-auto max-w-7xl overflow-hidden px-4 pb-8 pt-[88px] sm:px-8 lg:px-14 lg:py-14">
+        <div className="grid items-center gap-6 lg:min-h-[560px] lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative z-10 max-w-xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-bold text-[#7b3ff2] shadow-sm">
               <i className="ri-sparkling-2-line text-base" />
               {branchCopy.eyebrow}
             </div>
-            <h1 className="text-4xl font-black leading-[1.02] tracking-tight text-[#102033] sm:text-5xl lg:text-6xl">
+            <h1 className="text-3xl font-black leading-[1.04] tracking-tight text-[#102033] sm:text-5xl lg:text-6xl">
               {branchCopy.title}
             </h1>
             <p className="mt-5 max-w-lg text-base leading-8 text-[#526275]">{branchCopy.description}</p>
 
-            <div className="mt-8 max-w-xl rounded-2xl border border-white/80 bg-white p-2 shadow-[0_20px_55px_rgba(84,56,168,0.10)]">
+            <div className="mt-6 max-w-xl rounded-2xl border border-white/80 bg-white p-2 shadow-[0_20px_55px_rgba(84,56,168,0.10)] lg:mt-8">
               <div className="flex min-h-12 items-center gap-3 rounded-xl bg-[#faf9ff] px-4">
                 <i className="ri-search-line text-lg text-[#7b3ff2]" />
               <input
@@ -74,7 +74,7 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
             </div>
           </div>
 
-          <div className="relative min-h-[280px] sm:min-h-[370px] lg:min-h-[520px]">
+          <div className="relative min-h-[210px] sm:min-h-[320px] lg:min-h-[500px]">
             <div className="absolute right-3 top-4 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
               <div className="flex items-center gap-2">
                 <div className="-space-x-2">
@@ -89,13 +89,13 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
               </div>
             </div>
 
-            <div className="absolute left-4 top-20 z-10 rounded-2xl bg-[#147f7b] px-5 py-4 text-white shadow-[0_18px_40px_rgba(20,127,123,0.28)] sm:left-10">
+            <div className="absolute left-4 top-16 z-10 rounded-2xl bg-[#147f7b] px-4 py-3 text-white shadow-[0_18px_40px_rgba(20,127,123,0.28)] sm:left-10 sm:top-20 sm:px-5 sm:py-4">
               <i className="ri-graduation-cap-line text-xl" />
               <p className="mt-1 text-2xl font-black leading-none">1,235</p>
               <p className="text-[11px] font-semibold">cours actifs</p>
             </div>
 
-            <div className="absolute bottom-8 left-4 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)] sm:left-10">
+            <div className="absolute bottom-3 left-4 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)] sm:bottom-8 sm:left-10">
               <p className="text-xs font-bold text-[#102033]">Vidéos • documents • certificats</p>
               <p className="mt-1 text-[11px] text-[#6b7a8d]">Un parcours complet après achat</p>
             </div>

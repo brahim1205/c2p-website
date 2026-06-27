@@ -828,7 +828,7 @@ export class AuthService {
   async register(payload: RegisterPayload, request: AuthenticatedRequest, response: Response) {
     return this.runSerializedMutation(async () => {
       const email = payload.email?.trim().toLowerCase();
-      if (!email || !payload.password || !payload.firstName || !payload.lastName || !payload.role) {
+      if (!email || !payload.password || !payload.role) {
         throw new BadRequestException('Informations de compte invalides.');
       }
 
@@ -844,13 +844,18 @@ export class AuthService {
 
       const meta = this.getRequestMeta(request);
       const passwordHash = await argon2.hash(payload.password, { type: argon2.argon2id });
+      const emailLocalPart = email.split('@')[0] || 'utilisateur';
+      const fallbackFirstName = emailLocalPart
+        .split(/[._-]+/)
+        .filter(Boolean)[0]
+        ?.replace(/^\w/, (letter) => letter.toUpperCase()) || 'Utilisateur';
       const user: StoredUser = {
         id: createAuthId('usr'),
         email,
         passwordHash,
         passwordHistory: [passwordHash],
-        firstName: payload.firstName,
-        lastName: payload.lastName,
+        firstName: payload.firstName?.trim() || fallbackFirstName,
+        lastName: payload.lastName?.trim() || 'C2P',
         phone,
         role: payload.role,
         status: 'active',

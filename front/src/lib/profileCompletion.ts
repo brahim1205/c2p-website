@@ -1,9 +1,9 @@
 import type { AuthUser, UserRole } from './roles';
 
-export const PROFILE_ONBOARDING_ROLES: UserRole[] = ['prestataire', 'formateur', 'apprenant', 'porteur', 'partenaire'];
+export const PROFILE_ONBOARDING_ROLES: UserRole[] = ['client', 'prestataire', 'formateur', 'apprenant', 'porteur', 'partenaire'];
 
-export function requiresProfileOnboarding(role?: string | null): role is 'prestataire' | 'formateur' | 'apprenant' | 'porteur' | 'partenaire' {
-  return role === 'prestataire' || role === 'formateur' || role === 'apprenant' || role === 'porteur' || role === 'partenaire';
+export function requiresProfileOnboarding(role?: string | null): role is 'client' | 'prestataire' | 'formateur' | 'apprenant' | 'porteur' | 'partenaire' {
+  return role === 'client' || role === 'prestataire' || role === 'formateur' || role === 'apprenant' || role === 'porteur' || role === 'partenaire';
 }
 
 function hasText(value?: string | null) {
@@ -18,6 +18,10 @@ function hasSkill(user: AuthUser, expected?: string) {
 
 export function isProfileOnboardingComplete(user: AuthUser | null | undefined) {
   if (!user || !requiresProfileOnboarding(user.role)) return true;
+
+  if (user.role === 'client') {
+    return hasText(user.location);
+  }
 
   if (user.role === 'prestataire') {
     return hasText(user.publicTitle) && hasText(user.location) && hasSkill(user);

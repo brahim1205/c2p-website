@@ -1,6 +1,9 @@
 export const inputClass = 'c2p-input block px-4 py-3 text-sm';
 
 export type RoleProfileData = {
+  firstName: string;
+  lastName: string;
+  phone: string;
   publicTitle: string;
   location: string;
   bio: string;
@@ -120,6 +123,9 @@ export const roleProfileFields: Record<string, { title: string; description: str
 };
 
 export const emptyRoleProfile: RoleProfileData = {
+  firstName: '',
+  lastName: '',
+  phone: '',
   publicTitle: '',
   location: '',
   bio: '',
