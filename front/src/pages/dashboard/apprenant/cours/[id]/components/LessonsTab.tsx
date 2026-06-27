@@ -187,7 +187,11 @@ export default function LessonsTab({
         <LessonResources resources={lessonResources} />
 
         {activeLesson.type === 'exercise' && (
-          <LessonExerciseBox />
+          <LessonExerciseBox
+            instructions={activeLesson.exerciseInstructions}
+            codeSample={activeLesson.codeSample}
+            codeLanguage={activeLesson.codeLanguage}
+          />
         )}
 
         <ChapterQuizPrompt

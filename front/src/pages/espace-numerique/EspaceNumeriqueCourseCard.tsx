@@ -1,19 +1,11 @@
 import { Link } from 'react-router-dom';
 import {
-  getCourseDeliveryBadgeClass,
-  getCourseDeliveryIcon,
   getCourseDeliveryLabel,
 } from '@/lib/courseDelivery';
-import {
-  getCourseBranchBadgeClass,
-  normalizeCourseBranch,
-} from '@/lib/courseBranch';
 import {
   formatCoursePrice,
   getCategoryLabel,
   getCourseImage,
-  getCourseLevelLabel,
-  getPublicBranchLabel,
   type Course,
 } from './espaceNumeriquePageModel';
 
@@ -24,99 +16,58 @@ export default function EspaceNumeriqueCourseCard({
   formation: Course;
   onEnroll: (course: Course) => void;
 }) {
+  const price = formatCoursePrice(formation.current_price ?? formation.price);
+
   return (
-    <div className="group overflow-hidden rounded-[22px] border border-[#e1e8e5] bg-white shadow-[0_18px_44px_rgba(15,28,53,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,28,53,0.1)]">
-      <Link to={`/espace-numerique/formation/${formation.id}`}>
-        <div className="relative h-48 overflow-hidden p-3">
+    <article className="group overflow-hidden rounded-2xl border border-[#e7eaf4] bg-white shadow-[0_12px_35px_rgba(16,24,63,0.06)] transition hover:-translate-y-1 hover:shadow-[0_18px_50px_rgba(16,24,63,0.10)]">
+      <Link to={`/espace-numerique/formation/${formation.id}`} className="block">
+        <div className="relative h-40 overflow-hidden">
           <img
             src={getCourseImage(formation)}
             alt={formation.title}
-            className="h-full w-full rounded-2xl object-cover object-top transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
           />
-          <div className="absolute inset-x-3 bottom-3 h-20 rounded-b-2xl bg-gradient-to-t from-black/45 to-transparent"></div>
-          <div className="absolute left-6 top-6 flex flex-wrap gap-2">
-            <div className="rounded-full bg-[#147f7b] px-3 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-white shadow-sm">
-              {getCategoryLabel(formation.category)}
-            </div>
-          </div>
-          <div className="absolute right-6 top-6 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#102033] shadow-sm">
-            <i className="ri-heart-line" />
-          </div>
-          <div className="absolute bottom-6 left-6 flex items-center gap-2 text-xs font-semibold text-white">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 backdrop-blur">
-              <i className="ri-user-line" />
-            </span>
-            {formation.instructor_name || 'Formateur C2P'}
-          </div>
+          <span className="absolute left-3 top-3 rounded-full bg-[#6f63d8] px-3 py-1 text-[10px] font-black text-white">
+            {getCourseDeliveryLabel(formation.delivery_mode)}
+          </span>
         </div>
       </Link>
 
-      <div className="px-5 pb-5">
+      <div className="p-4">
+        <p className="text-[11px] font-bold text-[#8b93aa]">{getCategoryLabel(formation.category)}</p>
         <Link to={`/espace-numerique/formation/${formation.id}`}>
-          <h3 className="min-h-[54px] text-lg font-black leading-snug text-[#102033] transition-colors hover:text-[#147f7b]">
+          <h3 className="mt-2 min-h-[44px] text-sm font-black leading-snug text-[#10183f] transition hover:text-[#6f63d8]">
             {formation.title}
           </h3>
         </Link>
-
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-semibold text-[#607083]">
-          <span className="inline-flex items-center gap-1">
-            <i className="ri-time-line text-[#147f7b]" />
-            {formation.duration || 'N/A'}
+        <p className="mt-2 truncate text-xs font-semibold text-[#68718b]">
+          <i className="ri-user-line mr-1"></i>
+          {formation.instructor_name || 'Formateur C2P'}
+        </p>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="flex items-center gap-1 text-xs font-bold text-[#f5a623]">
+            <i className="ri-star-fill"></i>
+            {Number(formation.rating || 4.8).toFixed(1)}
+            <span className="text-[#9aa2b8]">({formation.students_count || 0})</span>
           </span>
-          <span className="inline-flex items-center gap-1">
-            <i className="ri-book-line text-[#147f7b]" />
-            {formation.modules || 0} modules
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <i className={getCourseDeliveryIcon(formation.delivery_mode)} />
-            {getCourseDeliveryLabel(formation.delivery_mode)}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <i className="ri-group-line text-[#147f7b]" />
-            {formation.students_count || 0} apprenants
-          </span>
+          <span className="text-sm font-black text-[#10183f]">{price}</span>
         </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-[#eef9f4] px-3 py-1 text-[11px] font-bold text-[#147f7b]">
-            {getCourseLevelLabel(formation.level)}
-          </span>
-          <span className={`rounded-full border px-3 py-1 text-[11px] font-bold ${getCourseBranchBadgeClass(formation.program_branch)}`}>
-            {getPublicBranchLabel(formation.program_branch)}
-          </span>
-          <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-bold ${getCourseDeliveryBadgeClass(formation.delivery_mode)}`}>
-            <i className={getCourseDeliveryIcon(formation.delivery_mode)} />
-            {getCourseDeliveryLabel(formation.delivery_mode)}
-          </span>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between border-t border-[#edf1ef] pt-4">
-          <div>
-            <div className="text-lg font-black text-[#147f7b]">
-              {formatCoursePrice(formation.current_price ?? formation.price)}
-            </div>
-            <div className="mt-1 flex items-center gap-1 text-xs font-bold text-[#f5a623]">
-              {Number(formation.rating || 4.8).toFixed(1)} <i className="ri-star-fill" />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label={`S’inscrire à la formation ${formation.title}`}
-              onClick={() => onEnroll(formation)}
-              className="rounded-xl bg-[#147f7b] px-3.5 py-2 text-xs font-black text-white transition hover:bg-[#0f6b68]"
-            >
-              {normalizeCourseBranch(formation.program_branch) === 'end' ? 'Rejoindre' : 'Accéder'}
-            </button>
-            <Link
-              to={`/espace-numerique/formation/${formation.id}`}
-              className="rounded-xl border border-[#dbe7e2] px-3.5 py-2 text-xs font-black text-[#102033] transition hover:border-[#147f7b] hover:text-[#147f7b]"
-            >
-              Détails
-            </Link>
-          </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => onEnroll(formation)}
+            className="rounded-xl bg-[#6f63d8] px-3 py-2 text-xs font-black text-white transition hover:bg-[#5d52c4]"
+          >
+            Accéder
+          </button>
+          <Link
+            to={`/espace-numerique/formation/${formation.id}`}
+            className="rounded-xl border border-[#dfe3ef] px-3 py-2 text-center text-xs font-black text-[#6f63d8] transition hover:bg-[#f6f4ff]"
+          >
+            Détails
+          </Link>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

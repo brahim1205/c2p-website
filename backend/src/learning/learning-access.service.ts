@@ -197,6 +197,9 @@ export class LearningAccessService {
         videoPositionSeconds: nonNegativeInteger(progressByLessonId.get(String(lesson.id))?.video_position_seconds),
         lastViewedAt: text(progressByLessonId.get(String(lesson.id))?.last_viewed_at),
         description: text(lesson.description),
+        exerciseInstructions: text(lesson.exercise_instructions),
+        codeSample: text(lesson.code_sample),
+        codeLanguage: text(lesson.code_language, 'markdown'),
         contentBlocks: buildContentBlocks(lesson),
         videoUrl: text(
           (assetsByLesson.get(String(lesson.id)) ?? []).find((asset) => String(asset.asset_type) === 'video')?.url,

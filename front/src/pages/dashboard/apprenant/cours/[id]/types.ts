@@ -14,6 +14,9 @@ export interface Lesson {
   videoPositionSeconds?: number;
   lastViewedAt?: string;
   description: string;
+  exerciseInstructions?: string;
+  codeSample?: string;
+  codeLanguage?: string;
   chapters?: Chapter[];
   thumbnail?: string;
   videoUrl?: string;
