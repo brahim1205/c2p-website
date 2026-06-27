@@ -50,47 +50,30 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative min-h-dvh overflow-x-hidden bg-c2p-bg px-3 py-5 pt-20 text-c2p-text sm:px-6 sm:py-6 sm:pt-24 lg:h-dvh lg:overflow-hidden lg:px-8">
-      <div className="absolute inset-0">
-        <img src="/images/brand/image44" alt="" className="h-full w-full object-cover object-center opacity-16" />
-      </div>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(247,248,252,0.96)_0%,rgba(247,248,252,0.90)_48%,rgba(247,248,252,0.78)_100%)]"></div>
+    <main className="min-h-dvh bg-[#e8f5d8] px-4 py-6 text-c2p-text sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-7xl flex-col justify-center">
+        <div className="mb-5 text-center">
+          <span className="inline-flex rounded-lg bg-white/85 px-4 py-2 text-lg font-semibold text-[#0f1c35] shadow-sm">
+            Se connecter
+          </span>
+        </div>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100dvh-6.25rem)] max-w-7xl items-center gap-6 lg:h-full lg:min-h-0 lg:grid-cols-[1fr_460px] lg:gap-10">
-        <section className="hidden max-w-2xl lg:block">
-          <p className="c2p-eyebrow mb-5">Accès sécurisé</p>
-          <h1 className="text-5xl font-semibold leading-[0.98] text-[#06053a] xl:text-7xl">
-            Retrouvez votre espace de gestion C2P
-          </h1>
-          <p className="mt-6 text-lg leading-8 text-[#27346b]">
-            Connectez-vous pour suivre vos abonnements, missions, formations, projets, paiements et validations dans l&apos;écosystème C2P.
-          </p>
-          <div className="mt-6">
-            <Link
-              to="/tarifs"
-              className="c2p-link inline-flex items-center gap-2 text-sm font-medium"
-            >
-              <span>Voir les abonnements publics et leurs tarifs</span>
-              <i className="ri-arrow-right-line"></i>
+        <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)] lg:min-h-[620px] lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]">
+        <section className="p-4 sm:p-7 lg:p-9">
+          <div className="mb-6 flex items-center justify-between">
+            <Link to="/">
+              <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-10 w-auto" />
+            </Link>
+            <Link to="/auth/register" className="rounded-full border border-[#dbe7ca] px-4 py-2 text-sm font-semibold text-[#0f1c35] hover:bg-[#f7fbef]">
+              S&apos;inscrire
             </Link>
           </div>
-          <div className="mt-10 grid max-w-xl grid-cols-3 gap-px overflow-hidden rounded-2xl border border-[#80bfdf] bg-[#80bfdf]">
-            {[
-              ['7', 'roles'],
-              ['Hub', 'C2P'],
-              ['RBAC', 'actif'],
-            ].map(([value, label]) => (
-              <div key={label} className="bg-white p-5 text-center">
-                <div className="text-2xl font-semibold text-[#27346b]">{value}</div>
-                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-[#5fa6f3]">{label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
 
-        <section className="c2p-panel max-h-none rounded-[22px] p-4 sm:rounded-[30px] sm:p-7 lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:p-8 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
           <div className="mb-4 sm:mb-6">
-            <h2 className="text-2xl font-semibold text-[#06053a] sm:text-3xl">Connexion</h2>
+            <h1 className="text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Connexion</h1>
+            <p className="mt-3 text-sm leading-7 text-[#64748b]">
+              Accédez à vos services, formations, projets, messages et paiements C2P.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
@@ -162,6 +145,18 @@ export default function LoginPage() {
             </Link>
           </p>
         </section>
+
+        <aside className="relative hidden bg-[#f7faf4] p-8 lg:flex lg:items-center lg:justify-center">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_22%,rgba(26,154,150,0.13),transparent_28%),radial-gradient(circle_at_80%_74%,rgba(249,200,70,0.22),transparent_30%)]"></div>
+          <div className="relative max-w-md text-center">
+            <img src="/images/home/numerique.png" alt="Connexion C2P" className="mx-auto h-80 w-full object-contain drop-shadow-[0_24px_45px_rgba(15,28,53,0.14)]" />
+            <h2 className="mt-8 text-3xl font-semibold text-[#0f1c35]">Oser rêver et devenir autonome</h2>
+            <p className="mt-4 text-sm leading-7 text-[#64748b]">
+              Un seul espace pour piloter votre parcours selon votre rôle : client, prestataire, formateur, apprenant, porteur de projet ou partenaire.
+            </p>
+          </div>
+        </aside>
+        </div>
       </div>
     </main>
   );

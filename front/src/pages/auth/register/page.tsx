@@ -141,52 +141,72 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-3 py-8 text-c2p-text sm:px-6 sm:py-16 lg:px-8 lg:py-24">
-      <div className="absolute inset-0">
-        <img src="/images/brand/image8.jpeg" alt="" className="h-full w-full object-cover object-center opacity-14" />
-      </div>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,241,232,0.96)_0%,rgba(246,241,232,0.92)_48%,rgba(246,241,232,0.78)_100%)]"></div>
-
-      <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="mb-7 text-center sm:mb-10">
-          <h1 className="text-3xl font-semibold text-[#172033] sm:text-5xl">Creer votre compte</h1>
-          <p className="mt-3 text-sm leading-7 text-[#5b6778]">Choisissez votre role et accedez a l ecosysteme C2P.</p>
+    <main className="min-h-dvh bg-[#e8f5d8] px-4 py-6 text-c2p-text sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-7xl flex-col justify-center">
+        <div className="mb-5 text-center">
+          <span className="inline-flex rounded-lg bg-white/85 px-4 py-2 text-lg font-semibold text-[#0f1c35] shadow-sm">
+            S&apos;inscrire
+          </span>
         </div>
 
-        <RegisterStepIndicator step={step} />
+        <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)] lg:min-h-[640px] lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+          <section className="min-w-0 p-4 sm:p-7 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:p-9 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
+            <div className="mb-6 flex items-center justify-between gap-4">
+              <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f766e]">
+                <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-9 w-auto" />
+              </Link>
+              <Link to="/auth/login" className="rounded-full border border-[#dbe7ca] px-4 py-2 text-sm font-semibold text-[#0f1c35] hover:bg-[#f7fbef]">
+                Connexion
+              </Link>
+            </div>
 
-        {step === 1 && (
-          <RegisterAccountTypeStep
-            isLoading={isLoading}
-            isLoadingPlans={isLoadingPlans}
-            selectedRolePlanSummary={selectedRolePlanSummary}
-            userType={userType}
-            onSelectUserType={handleSelectUserType}
-          />
-        )}
+            <div className="mb-6">
+              <h1 className="text-3xl font-semibold leading-tight text-[#0f1c35] sm:text-4xl">Créer un compte C2P</h1>
+              <p className="mt-3 text-sm leading-7 text-[#64748b]">
+                Choisissez votre rôle. C2P adapte ensuite les informations demandées selon votre parcours.
+              </p>
+            </div>
 
-        {step === 2 && (
-          <RegisterDetailsStep
-            formData={formData}
-            isLoading={isLoading}
-            selectedUserTypeTitle={selectedUserType?.title}
-            selectedUserTypeId={userType}
-            socialReturnTo={postProfileTarget}
-            showConfirmPassword={showConfirmPassword}
-            showPassword={showPassword}
-            onBack={() => setStep(1)}
-            onFormDataChange={setFormData}
-            onSubmit={handleSubmit}
-            onToggleConfirmPassword={() => setShowConfirmPassword(!showConfirmPassword)}
-            onTogglePassword={() => setShowPassword(!showPassword)}
-          />
-        )}
+            <RegisterStepIndicator step={step} />
 
-        <div className="mt-7 text-center">
-          <Link to="/" className="text-sm text-[#7c8698] transition-colors hover:text-[#172033]">
-            <i className="ri-arrow-left-line mr-1"></i>
-            Retour a l&apos;accueil
-          </Link>
+            {step === 1 && (
+              <RegisterAccountTypeStep
+                isLoading={isLoading}
+                isLoadingPlans={isLoadingPlans}
+                selectedRolePlanSummary={selectedRolePlanSummary}
+                userType={userType}
+                onSelectUserType={handleSelectUserType}
+              />
+            )}
+
+            {step === 2 && (
+              <RegisterDetailsStep
+                formData={formData}
+                isLoading={isLoading}
+                selectedUserTypeTitle={selectedUserType?.title}
+                selectedUserTypeId={userType}
+                socialReturnTo={postProfileTarget}
+                showConfirmPassword={showConfirmPassword}
+                showPassword={showPassword}
+                onBack={() => setStep(1)}
+                onFormDataChange={setFormData}
+                onSubmit={handleSubmit}
+                onToggleConfirmPassword={() => setShowConfirmPassword(!showConfirmPassword)}
+                onTogglePassword={() => setShowPassword(!showPassword)}
+              />
+            )}
+          </section>
+
+          <aside className="relative hidden bg-[#f7faf4] p-8 lg:flex lg:items-center lg:justify-center">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_20%,rgba(26,154,150,0.13),transparent_28%),radial-gradient(circle_at_78%_72%,rgba(249,200,70,0.22),transparent_30%)]"></div>
+            <div className="relative max-w-md text-center">
+              <img src="/images/home/acceuil.jpg" alt="Écosystème C2P" className="mx-auto h-80 w-full rounded-[28px] object-cover shadow-[0_24px_70px_rgba(15,28,53,0.12)]" />
+              <h2 className="mt-8 text-3xl font-semibold text-[#0f1c35]">Bienvenue dans l’écosystème C2P</h2>
+              <p className="mt-4 text-sm leading-7 text-[#64748b]">
+                Services, formations, projets et partenariats : un seul compte pour évoluer progressivement vers l’autonomie.
+              </p>
+            </div>
+          </aside>
         </div>
       </div>
     </main>

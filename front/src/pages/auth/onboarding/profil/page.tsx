@@ -113,36 +113,69 @@ export default function OnboardingProfilePage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f7f8fc] px-4 py-8 text-[#0f1c35] sm:px-6 sm:py-12">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#1a9a96]">Bienvenue sur C2P</p>
-          <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Complétez votre profil professionnel</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#64748b]">
-            Ces informations sont obligatoires pour ouvrir votre espace {selectedUserTypeTitle?.toLowerCase()} et préparer votre visibilité publique.
-          </p>
+    <main className="min-h-dvh bg-[#e8f5d8] px-4 py-6 text-[#0f1c35] sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-7xl flex-col justify-center">
+        <div className="mb-5 text-center">
+          <span className="inline-flex rounded-lg bg-white/85 px-4 py-2 text-lg font-semibold text-[#0f1c35] shadow-sm">
+            Question d&apos;intégration - {selectedUserTypeTitle}
+          </span>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-[28px] border border-[#d6dbe1] bg-white p-5 shadow-[0_24px_70px_rgba(15,28,53,0.08)] sm:p-8">
-          {selectedRoleFields ? (
-            <RoleProfileFields
-              roleProfile={roleProfile}
-              selectedRoleFields={selectedRoleFields}
-              selectedUserTypeTitle={selectedUserTypeTitle}
-              userType={user.role}
-              isLoading={submitting}
-              onRoleProfileChange={setRoleProfile}
-            />
-          ) : null}
+        <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)] lg:min-h-[620px] lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+          <section className="min-w-0 p-4 sm:p-7 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:p-9 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
+            <div className="mb-7">
+              <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-10 w-auto" />
+              <div className="mt-7 flex gap-2" aria-hidden="true">
+                {[0, 1, 2, 3, 4, 5].map((item) => (
+                  <span key={item} className={`h-1.5 flex-1 rounded-full ${item < 4 ? 'bg-[#4d7f16]' : 'bg-[#e2e8f0]'}`} />
+                ))}
+              </div>
+              <p className="mt-3 text-xs font-semibold text-[#64748b]">Profil {selectedUserTypeTitle?.toLowerCase()} personnalisé</p>
+            </div>
 
-          <button
-            type="submit"
-            disabled={submitting || Boolean(missingRequiredField)}
-            className="mt-7 w-full rounded-xl bg-[#0f1c35] px-6 py-3.5 text-sm font-semibold text-white hover:bg-[#17233f] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting ? 'Enregistrement...' : 'Continuer vers mon espace'}
-          </button>
-        </form>
+            <div className="mb-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#1a9a96]">Bienvenue sur C2P</p>
+              <h1 className="mt-3 text-3xl font-semibold leading-tight sm:text-4xl">
+                Complétez les informations utiles à votre rôle
+              </h1>
+              <p className="mt-4 text-sm leading-7 text-[#64748b]">
+                Ces données préparent votre espace {selectedUserTypeTitle?.toLowerCase()} et votre visibilité selon le parcours choisi.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              {selectedRoleFields ? (
+                <RoleProfileFields
+                  roleProfile={roleProfile}
+                  selectedRoleFields={selectedRoleFields}
+                  selectedUserTypeTitle={selectedUserTypeTitle}
+                  userType={user.role}
+                  isLoading={submitting}
+                  onRoleProfileChange={setRoleProfile}
+                />
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={submitting || Boolean(missingRequiredField)}
+                className="mt-7 w-full rounded-xl bg-[#4d7f16] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(77,127,22,0.22)] hover:bg-[#3f6812] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? 'Enregistrement...' : 'Continuer vers mon espace'}
+              </button>
+            </form>
+          </section>
+
+          <aside className="relative hidden bg-[#f7faf4] p-8 lg:flex lg:items-center lg:justify-center">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_22%,rgba(77,127,22,0.12),transparent_28%),radial-gradient(circle_at_78%_72%,rgba(249,200,70,0.22),transparent_30%)]"></div>
+            <div className="relative max-w-md text-center">
+              <img src="/images/home/pesta.png" alt="Parcours C2P" className="mx-auto h-80 w-full object-contain drop-shadow-[0_24px_45px_rgba(15,28,53,0.14)]" />
+              <h2 className="mt-8 text-3xl font-semibold text-[#0f1c35]">Un parcours adapté à chaque utilisateur</h2>
+              <p className="mt-4 text-sm leading-7 text-[#64748b]">
+                Les informations demandées changent selon le rôle : prestation, formation, apprentissage, projet ou partenariat.
+              </p>
+            </div>
+          </aside>
+        </div>
       </div>
     </main>
   );

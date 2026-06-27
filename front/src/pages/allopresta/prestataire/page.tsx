@@ -9,6 +9,7 @@ import {
   createClientManagedBooking,
   publishClientProviderDirectReview,
 } from '@/lib/clientDashboardApi';
+import { apiRequest } from '@/lib/api';
 import {
   canAccessProviderProfile,
   fetchPublicProviderReviews,
@@ -38,8 +39,12 @@ export default function PrestataireDetailPage() {
   const [reviews, setReviews] = useState<ProviderReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [showReservationModal, setShowReservationModal] = useState(false);
+  const [requestMode, setRequestMode] = useState<'quote' | 'contact'>('quote');
 
   const [resForm, setResForm] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
     service: '',
     date: '',
     description: '',
@@ -53,16 +58,12 @@ export default function PrestataireDetailPage() {
   const [showReviewForm, setShowReviewForm] = useState(false);
 
   const openReservationFlow = () => {
-    if (!user?.id) {
-      setFormSuccess('Connectez-vous pour transmettre votre besoin à C2P.');
-      setTimeout(() => setFormSuccess(null), 5000);
-      return;
-    }
+    setRequestMode('quote');
     setShowReservationModal(true);
   };
   const contactProvider = () => {
-    setFormSuccess('Contact via C2P : décrivez votre besoin dans une demande de devis pour être mis en relation avec ce prestataire.');
-    setTimeout(() => setFormSuccess(null), 5000);
+    setRequestMode('contact');
+    setShowReservationModal(true);
   };
   const updateReservationField = <K extends keyof ReservationFormData>(field: K, value: ReservationFormData[K]) => {
     setResForm((state) => ({ ...state, [field]: value }));
@@ -100,9 +101,69 @@ export default function PrestataireDetailPage() {
 
   const handleReservationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id) {
-      setFormSuccess('Connectez-vous pour transmettre votre besoin à C2P.');
+    if (requestMode === 'contact') {
+      await apiRequest('/public/contact', {
+        method: 'POST',
+        body: JSON.stringify({
+          firstName: user?.firstName || 'Visiteur',
+          lastName: user?.lastName || resForm.customerName || 'AlloPresta',
+          email: user?.email || resForm.customerEmail,
+          subject: `Contact prestataire - ${prestataire?.name || 'Prestataire C2P'}`,
+          message: [
+            `Demandeur: ${user ? `${user.firstName} ${user.lastName}` : resForm.customerName}`,
+            `Email: ${user?.email || resForm.customerEmail}`,
+            `Téléphone: ${user?.phone || resForm.customerPhone}`,
+            `Prestataire: ${prestataire?.name || displayName}`,
+            `Service: ${resForm.service || prestataire?.services[0] || 'Service général'}`,
+            '',
+            resForm.description,
+          ].filter(Boolean).join('\n'),
+        }),
+      }, { retryOnAuth: false });
+      await notifyAdminPublicAlloPrestaRequest(
+        user ? `${user.firstName} ${user.lastName}` : 'Visiteur AlloPresta',
+        prestataire?.name || 'un prestataire',
+        user?.avatar,
+      );
+      setFormSuccess('Votre message a été transmis à C2P. L’équipe vous orientera vers le bon contact.');
       setShowReservationModal(false);
+      setResForm({ customerName: '', customerEmail: '', customerPhone: '', service: '', date: '', description: '', budget: '', address: '' });
+      setTimeout(() => setFormSuccess(null), 5000);
+      return;
+    }
+
+    if (!user?.id) {
+      await apiRequest('/public/contact', {
+        method: 'POST',
+        body: JSON.stringify({
+          firstName: resForm.customerName || 'Visiteur',
+          lastName: 'AlloPresta',
+          email: resForm.customerEmail,
+          subject: `Demande de devis - ${prestataire?.name || 'Prestataire C2P'}`,
+          message: [
+            `Demandeur: ${resForm.customerName}`,
+            `Email: ${resForm.customerEmail}`,
+            `Téléphone: ${resForm.customerPhone}`,
+            `Prestataire: ${prestataire?.name || displayName}`,
+            `Service: ${resForm.service || prestataire?.services[0] || 'Service général'}`,
+            `Date souhaitée: ${resForm.date || 'Non renseignée'}`,
+            `Adresse: ${resForm.address || 'Non renseignée'}`,
+            `Budget: ${resForm.budget || 'Non renseigné'} FCFA`,
+            '',
+            resForm.description,
+          ].filter(Boolean).join('\n'),
+        }),
+      }, { retryOnAuth: false });
+      await notifyAdminPublicAlloPrestaRequest(
+        requestMode === 'contact' ? 'Visiteur AlloPresta' : 'Visiteur devis AlloPresta',
+        prestataire?.name || 'un prestataire',
+        undefined,
+      );
+      setFormSuccess(requestMode === 'contact'
+        ? 'Votre message a été transmis à C2P. L’équipe vous orientera vers le bon contact.'
+        : 'Votre demande de devis a été transmise à C2P. L’équipe va vous recontacter.');
+      setShowReservationModal(false);
+      setResForm({ customerName: '', customerEmail: '', customerPhone: '', service: '', date: '', description: '', budget: '', address: '' });
       setTimeout(() => setFormSuccess(null), 5000);
       return;
     }
@@ -131,9 +192,11 @@ export default function PrestataireDetailPage() {
           user.avatar,
         );
       }
-      setFormSuccess('Votre demande de devis a été transmise à C2P. L’équipe va analyser le besoin et vous répondre.');
+      setFormSuccess(requestMode === 'contact'
+        ? 'Votre message a été transmis à C2P. L’équipe vous mettra en relation.'
+        : 'Votre demande de devis a été transmise à C2P. L’équipe va analyser le besoin et vous répondre.');
       setShowReservationModal(false);
-      setResForm({ service: '', date: '', description: '', budget: '', address: '' });
+      setResForm({ customerName: '', customerEmail: '', customerPhone: '', service: '', date: '', description: '', budget: '', address: '' });
       setTimeout(() => setFormSuccess(null), 5000);
     } catch (err) {
       console.error(err);
@@ -245,7 +308,9 @@ export default function PrestataireDetailPage() {
 
         {showReservationModal && (
           <AlloPrestaProviderRequestModal
+            mode={requestMode}
             providerName={prestataire.name}
+            requesterRequired={!user?.id}
             resForm={resForm}
             visibleServiceOptions={visibleServiceOptions}
             onClose={() => setShowReservationModal(false)}

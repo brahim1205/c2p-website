@@ -65,12 +65,22 @@ export const roleProfileFields: Record<string, { title: string; description: str
   apprenant: {
     title: 'Objectif d apprentissage',
     description: 'On adapte votre espace aux formations que vous voulez suivre.',
-    fields: [],
+    fields: [
+      { key: 'publicTitle', label: 'Objectif principal', placeholder: 'Ex: Trouver un emploi, lancer une activité, renforcer mes compétences', required: true },
+      { key: 'skills', label: 'Domaines qui vous intéressent', placeholder: 'Développement web, bureautique, marketing digital', required: true, hint: 'Separez les domaines par des virgules.' },
+      { key: 'preferredLanguage', label: 'Langue préférée', placeholder: 'Ex: Français, Wolof, Anglais' },
+      { key: 'bio', label: 'Disponibilité et niveau actuel', placeholder: 'Expliquez votre niveau, votre disponibilité et ce que vous voulez atteindre.', type: 'textarea' },
+    ],
   },
   porteur: {
     title: 'Projet a accompagner',
     description: 'Ces informations aident C2P a comprendre rapidement votre projet.',
-    fields: [],
+    fields: [
+      { key: 'publicTitle', label: 'Nom ou résumé du projet', placeholder: 'Ex: Plateforme de livraison locale', required: true },
+      { key: 'location', label: 'Localisation du projet', placeholder: 'Ex: Dakar, Thiès, Sénégal', required: true },
+      { key: 'skills', label: 'Secteur / besoins', placeholder: 'Agriculture, numérique, financement, mentorat', required: true, hint: 'Separez les éléments par des virgules.' },
+      { key: 'bio', label: 'Description du projet', placeholder: 'Décrivez le problème, la solution, le stade actuel et le besoin d’accompagnement.', type: 'textarea', required: true },
+    ],
   },
   partenaire: {
     title: 'Profil partenaire',

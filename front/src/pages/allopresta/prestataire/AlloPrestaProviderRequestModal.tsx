@@ -4,7 +4,9 @@ import { createPortal } from 'react-dom';
 import type { ReservationFormData } from './providerDetailTypes';
 
 interface AlloPrestaProviderRequestModalProps {
+  mode?: 'quote' | 'contact';
   providerName: string;
+  requesterRequired?: boolean;
   resForm: ReservationFormData;
   visibleServiceOptions: string[];
   onClose: () => void;
@@ -13,13 +15,17 @@ interface AlloPrestaProviderRequestModalProps {
 }
 
 export default function AlloPrestaProviderRequestModal({
+  mode = 'quote',
   providerName,
+  requesterRequired = false,
   resForm,
   visibleServiceOptions,
   onClose,
   onFieldChange,
   onSubmit,
 }: AlloPrestaProviderRequestModalProps) {
+  const isContactMode = mode === 'contact';
+
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
@@ -45,9 +51,13 @@ export default function AlloPrestaProviderRequestModal({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1a9a96]">AlloPresta</p>
-              <h2 id="allopresta-reservation-title" className="text-2xl font-bold leading-tight text-[#0f1c35] sm:text-3xl">Demande de devis</h2>
+              <h2 id="allopresta-reservation-title" className="text-2xl font-bold leading-tight text-[#0f1c35] sm:text-3xl">
+                {isContactMode ? 'Contacter le prestataire' : 'Demande de devis'}
+              </h2>
               <p className="mt-1 max-w-2xl text-sm leading-5 text-[#64748b]">
-                C2P qualifie votre besoin, vérifie les disponibilités, puis affecte le bon intervenant.
+                {isContactMode
+                  ? 'Expliquez votre besoin. C2P transmettra la demande et cadrera la mise en relation.'
+                  : 'C2P qualifie votre besoin, vérifie les disponibilités, puis affecte le bon intervenant.'}
               </p>
             </div>
             <button
@@ -67,7 +77,9 @@ export default function AlloPrestaProviderRequestModal({
               <div>
                 <p className="text-sm font-semibold text-[#0f1c35]">{providerName}</p>
                 <p className="mt-1 text-xs leading-4 text-[#64748b]">
-                  C2P cadre la demande avant toute mise en relation directe.
+              {isContactMode
+                ? 'Votre message est transmis à C2P pour éviter les échanges incomplets.'
+                : 'C2P cadre la demande avant toute mise en relation directe.'}
                 </p>
               </div>
               <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#0f1c35] shadow-sm">
@@ -75,6 +87,53 @@ export default function AlloPrestaProviderRequestModal({
                 Cadrage C2P
               </div>
             </div>
+
+            {requesterRequired ? (
+              <div className="mb-4 grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label htmlFor="reservation-customer-name" className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Votre nom
+                  </label>
+                  <input
+                    id="reservation-customer-name"
+                    type="text"
+                    required
+                    value={resForm.customerName}
+                    onChange={(event) => onFieldChange('customerName', event.target.value)}
+                    placeholder="Prénom et nom"
+                    className="w-full rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-[#1a9a96] focus:ring-4 focus:ring-[#1a9a96]/10"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reservation-customer-email" className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    id="reservation-customer-email"
+                    type="email"
+                    required
+                    value={resForm.customerEmail}
+                    onChange={(event) => onFieldChange('customerEmail', event.target.value)}
+                    placeholder="vous@email.com"
+                    className="w-full rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-[#1a9a96] focus:ring-4 focus:ring-[#1a9a96]/10"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reservation-customer-phone" className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Téléphone
+                  </label>
+                  <input
+                    id="reservation-customer-phone"
+                    type="tel"
+                    required
+                    value={resForm.customerPhone}
+                    onChange={(event) => onFieldChange('customerPhone', event.target.value)}
+                    placeholder="+221 7X XXX XX XX"
+                    className="w-full rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-[#1a9a96] focus:ring-4 focus:ring-[#1a9a96]/10"
+                  />
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -93,6 +152,7 @@ export default function AlloPrestaProviderRequestModal({
                 </select>
               </div>
 
+              {!isContactMode ? (
               <div>
                 <label htmlFor="reservation-date" className="mb-1.5 block text-sm font-medium text-gray-700">
                   Date souhaitée
@@ -106,8 +166,10 @@ export default function AlloPrestaProviderRequestModal({
                   className="w-full rounded-xl border border-[#cbd5e1] bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-[#1a9a96] focus:ring-4 focus:ring-[#1a9a96]/10"
                 />
               </div>
+              ) : null}
             </div>
 
+            {!isContactMode ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="reservation-address" className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -139,6 +201,21 @@ export default function AlloPrestaProviderRequestModal({
                 />
               </div>
             </div>
+            ) : null}
+
+            <div className="mt-4">
+              <label htmlFor="reservation-description" className="mb-1.5 block text-sm font-medium text-gray-700">
+                {isContactMode ? 'Message' : 'Description du besoin'}
+              </label>
+              <textarea
+                id="reservation-description"
+                required
+                value={resForm.description}
+                onChange={(event) => onFieldChange('description', event.target.value)}
+                placeholder={isContactMode ? 'Expliquez pourquoi vous souhaitez contacter ce prestataire.' : 'Décrivez le travail attendu, les contraintes, les photos ou documents à préparer.'}
+                className="min-h-[132px] w-full resize-none rounded-xl border border-[#cbd5e1] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#1a9a96] focus:ring-4 focus:ring-[#1a9a96]/10"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col-reverse gap-3 border-t border-[#e2e8f0] bg-white px-4 py-3 sm:flex-row sm:justify-end sm:px-6">
@@ -146,7 +223,7 @@ export default function AlloPrestaProviderRequestModal({
               Annuler
             </button>
             <button type="submit" className="rounded-xl bg-[#1a9a96] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_14px_34px_rgba(26,154,150,0.24)] transition-all hover:bg-[#147f7b]">
-              Envoyer la demande de devis
+              {isContactMode ? 'Envoyer le message' : 'Envoyer la demande de devis'}
             </button>
           </div>
         </form>

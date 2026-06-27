@@ -17,6 +17,9 @@ export interface ProviderReview {
 }
 
 export interface ReservationFormData {
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
   service: string;
   date: string;
   description: string;

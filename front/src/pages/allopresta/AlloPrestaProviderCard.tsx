@@ -25,9 +25,15 @@ export default function AlloPrestaProviderCard({
   const remainingServicesCount = Math.max(prestataire.services.length - secondaryServices.length - 1, 0);
   const cardImage = prestataire.display_image || prestataire.image || '/images/brand/image7.jpeg';
   const cardLocation = prestataire.display_location || prestataire.location;
+  const profilePath = `/allopresta/prestataire/${prestataire.id}`;
 
   return (
-    <article className="group overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,28,53,0.08)]">
+    <Link
+      to={profilePath}
+      aria-label={`Voir le profil ${getProviderDisplayName(prestataire, viewerTier)}`}
+      className="group block overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-white text-inherit transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,28,53,0.08)] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1a9a96]/20"
+    >
+      <article>
       <div className="relative h-56 w-full overflow-hidden">
         <img
           src={cardImage}
@@ -120,14 +126,12 @@ export default function AlloPrestaProviderCard({
         </div>
 
         <div className="mt-6 flex justify-center">
-          <Link
-            to={`/allopresta/prestataire/${prestataire.id}`}
-            className="inline-flex w-full items-center justify-center rounded-full bg-[#0f1c35] px-5 py-2.5 text-sm font-black uppercase text-white transition-colors hover:bg-[#172b50] sm:w-auto"
-          >
+          <span className="inline-flex w-full items-center justify-center rounded-full bg-[#0f1c35] px-5 py-2.5 text-sm font-black uppercase text-white transition-colors group-hover:bg-[#172b50] sm:w-auto">
             Voir le profil
-          </Link>
+          </span>
         </div>
       </div>
     </article>
+    </Link>
   );
 }
