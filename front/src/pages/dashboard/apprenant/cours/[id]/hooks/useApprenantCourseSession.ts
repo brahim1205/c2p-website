@@ -12,7 +12,7 @@ import {
 } from '@/lib/apprenantDashboardApi';
 import { queryKeys } from '@/lib/queryKeys';
 import { XP_REWARDS } from '../storage';
-import type { Lesson } from '../types';
+import type { EntityId, Lesson } from '../types';
 import {
   findResumeLesson,
   getBookmarkedLessonIds,
@@ -32,13 +32,13 @@ export function useApprenantCourseSession(courseIdParam?: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
-  const [completedLessons, setCompletedLessons] = useState<Set<number>>(new Set());
-  const [bookmarkedLessons, setBookmarkedLessons] = useState<Set<number>>(new Set());
+  const [completedLessons, setCompletedLessons] = useState<Set<EntityId>>(new Set());
+  const [bookmarkedLessons, setBookmarkedLessons] = useState<Set<EntityId>>(new Set());
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [xpGained, setXpGained] = useState(0);
   const [showXpToast, setShowXpToast] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-  const videoPositionSyncRef = useRef<Record<number, number>>({});
+  const videoPositionSyncRef = useRef<Record<string, number>>({});
 
   const courseQueryKey = queryKeys.apprenant.courseDetail(user?.id, courseIdParam);
   const apprenantQueryKey = queryKeys.apprenant.root(user?.id);
@@ -50,7 +50,7 @@ export function useApprenantCourseSession(courseIdParam?: string) {
   });
 
   const enrollmentProgressMutation = useMutation({
-    mutationFn: (input: { progress: number; completedLessons: number; completedLessonIds?: number[] }) => {
+    mutationFn: (input: { progress: number; completedLessons: number; completedLessonIds?: EntityId[] }) => {
       if (!user?.id || !course?.id) throw new Error('Contexte apprenant incomplet.');
       return updateApprenantEnrollmentProgress(user.id, course.id, input);
     },
@@ -62,7 +62,7 @@ export function useApprenantCourseSession(courseIdParam?: string) {
 
   const lessonProgressMutation = useMutation({
     mutationFn: (input: {
-      lessonId: number;
+      lessonId: EntityId;
       progress?: number;
       completed?: boolean;
       bookmarked?: boolean;
@@ -126,7 +126,7 @@ export function useApprenantCourseSession(courseIdParam?: string) {
     syncLearningActivity,
   });
 
-  const syncEnrollmentProgress = useCallback((completedLessonIds: Set<number>) => {
+  const syncEnrollmentProgress = useCallback((completedLessonIds: Set<EntityId>) => {
     if (!user?.id || !course) return;
     const totalLessons = Math.max(0, course.totalLessons);
     const completedCount = Math.min(completedLessonIds.size, totalLessons);
@@ -151,7 +151,7 @@ export function useApprenantCourseSession(courseIdParam?: string) {
     }
   }, [course, resumeRequested, setNotes]);
 
-  const handleCompleteLesson = (lessonId: number) => {
+  const handleCompleteLesson = (lessonId: EntityId) => {
     if (!course) return;
     const next = new Set(completedLessons);
     const wasCompleted = next.has(lessonId);
@@ -183,7 +183,7 @@ export function useApprenantCourseSession(courseIdParam?: string) {
     setCompletedLessons(next);
   };
 
-  const toggleBookmark = (lessonId: number) => {
+  const toggleBookmark = (lessonId: EntityId) => {
     const next = new Set(bookmarkedLessons);
     if (next.has(lessonId)) {
       next.delete(lessonId);
@@ -204,9 +204,9 @@ export function useApprenantCourseSession(courseIdParam?: string) {
     lessonProgressMutation.mutate({ lessonId: lesson.id });
   };
 
-  const getInitialLessonVideoTime = (lessonId: number) => getInitialVideoTime(course, lessonId);
+  const getInitialLessonVideoTime = (lessonId: EntityId) => getInitialVideoTime(course, lessonId);
 
-  const handleVideoProgress = (lessonId: number, seconds: number) => {
+  const handleVideoProgress = (lessonId: EntityId, seconds: number) => {
     const normalized = Math.max(0, Math.floor(seconds));
     const previous = videoPositionSyncRef.current[lessonId] ?? getInitialLessonVideoTime(lessonId);
     if (Math.abs(normalized - previous) < 10) return;

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import type { Lesson } from '../types';
+import type { EntityId, Lesson } from '../types';
 
 type CourseNotesControlsArgs = {
-  saveLessonNote: (lessonId: number, note: string | null) => void;
+  saveLessonNote: (lessonId: EntityId, note: string | null) => void;
   success: (title: string, message?: string) => void;
 };
 
@@ -10,7 +10,7 @@ export function useCourseNotesControls({
   saveLessonNote,
   success,
 }: CourseNotesControlsArgs) {
-  const [notes, setNotes] = useState<Record<number, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [notesTargetLesson, setNotesTargetLesson] = useState<Lesson | null>(null);
 
@@ -24,7 +24,7 @@ export function useCourseNotesControls({
     setNotesTargetLesson(null);
   };
 
-  const handleSaveNote = (lessonId: number, note: string) => {
+  const handleSaveNote = (lessonId: EntityId, note: string) => {
     setNotes((prev) => {
       const next = { ...prev, [lessonId]: note };
       if (!note.trim()) {

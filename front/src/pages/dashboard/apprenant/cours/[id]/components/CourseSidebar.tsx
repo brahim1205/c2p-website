@@ -1,4 +1,4 @@
-import { Course, Lesson, Module } from '../types';
+import { Course, EntityId, Lesson, Module } from '../types';
 
 const typeIcons: Record<string, string> = {
   video: 'ri-play-circle-line',
@@ -9,13 +9,13 @@ const typeIcons: Record<string, string> = {
 
 interface Props {
   course: Course;
-  completedLessons: Set<number>;
-  bookmarkedLessons: Set<number>;
+  completedLessons: Set<EntityId>;
+  bookmarkedLessons: Set<EntityId>;
   activeLesson: Lesson | null;
-  notes: Record<number, string>;
+  notes: Record<string, string>;
   onSelectLesson: (lesson: Lesson) => void;
-  onToggleComplete: (lessonId: number) => void;
-  onToggleBookmark: (lessonId: number) => void;
+  onToggleComplete: (lessonId: EntityId) => void;
+  onToggleBookmark: (lessonId: EntityId) => void;
   onOpenNotes: (lesson: Lesson) => void;
   showMobile?: boolean;
   onCloseMobile?: () => void;

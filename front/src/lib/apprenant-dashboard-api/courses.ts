@@ -1,4 +1,4 @@
-import type { Course, QuizAttempt } from '@/pages/dashboard/apprenant/cours/[id]/types';
+import type { Course, EntityId, QuizAttempt } from '@/pages/dashboard/apprenant/cours/[id]/types';
 import { apiRequest, toApiError } from '../api';
 import type { ApprenantEnrollment } from './types';
 
@@ -24,7 +24,7 @@ export async function fetchApprenantCourseDetail(userId: string, courseId: strin
 export async function updateApprenantEnrollmentProgress(
   userId: string,
   courseId: string | number,
-  input: { progress: number; completedLessons: number; completedLessonIds?: number[] },
+  input: { progress: number; completedLessons: number; completedLessonIds?: EntityId[] },
 ) {
   const progress = Math.max(0, Math.min(100, Math.round(input.progress)));
   void userId;
@@ -41,7 +41,7 @@ export async function updateApprenantEnrollmentProgress(
 export async function updateApprenantLessonProgress(
   userId: string,
   courseId: string | number,
-  lessonId: string | number,
+    lessonId: EntityId,
   input: {
     section_id?: string | number | null;
     progress?: number;

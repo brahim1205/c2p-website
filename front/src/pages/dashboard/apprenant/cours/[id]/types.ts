@@ -1,10 +1,12 @@
+export type EntityId = string | number;
+
 export interface Chapter {
   time: number;
   label: string;
 }
 
 export interface Lesson {
-  id: number;
+  id: EntityId;
   title: string;
   duration: string;
   type: 'video' | 'quiz' | 'reading' | 'exercise';
@@ -33,7 +35,7 @@ export type LessonContentBlock =
   | { type: 'list'; items: string[] };
 
 export interface Module {
-  id: number;
+  id: EntityId;
   title: string;
   lessons: Lesson[];
 }
@@ -55,7 +57,7 @@ export interface QuizAttempt {
 }
 
 export interface Resource {
-  id: number;
+  id: EntityId;
   title: string;
   type: string;
   size: string;
@@ -66,7 +68,7 @@ export interface Resource {
 }
 
 export interface Comment {
-  id: number;
+  id: EntityId;
   user: string;
   avatar: string;
   content: string;
@@ -75,7 +77,7 @@ export interface Comment {
 }
 
 export interface Course {
-  id: number;
+  id: EntityId;
   title: string;
   instructor: string;
   instructorAvatar: string;

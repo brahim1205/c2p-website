@@ -1,4 +1,4 @@
-import { Course, Lesson } from '../types';
+import { Course, EntityId, Lesson } from '../types';
 import { useState } from 'react';
 import { createApprenantLessonComment } from '@/lib/apprenantDashboardApi';
 import ChapterQuizPrompt from './ChapterQuizPrompt';
@@ -23,19 +23,19 @@ const typeLabels: Record<string, string> = {
 
 interface Props {
   course: Course;
-  completedLessons: Set<number>;
-  bookmarkedLessons: Set<number>;
+  completedLessons: Set<EntityId>;
+  bookmarkedLessons: Set<EntityId>;
   activeLesson: Lesson | null;
-  notes: Record<number, string>;
+  notes: Record<string, string>;
   onOpenNotes: (lesson: Lesson) => void;
-  onToggleComplete: (lessonId: number) => void;
-  onToggleBookmark: (lessonId: number) => void;
+  onToggleComplete: (lessonId: EntityId) => void;
+  onToggleBookmark: (lessonId: EntityId) => void;
   onSelectLesson: (lesson: Lesson) => void;
-  getInitialVideoTime: (lessonId: number) => number;
-  onVideoProgress: (lessonId: number, seconds: number) => void;
+  getInitialVideoTime: (lessonId: EntityId) => number;
+  onVideoProgress: (lessonId: EntityId, seconds: number) => void;
 }
 
-function getActiveModule(course: Course, lessonId: number) {
+function getActiveModule(course: Course, lessonId: EntityId) {
   return course.modules.find((module) => module.lessons.some((lesson) => lesson.id === lessonId)) ?? null;
 }
 

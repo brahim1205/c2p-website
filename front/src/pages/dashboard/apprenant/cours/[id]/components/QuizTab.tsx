@@ -9,9 +9,9 @@ import { getScoreMessage } from './quizTabModel';
 
 interface Props {
   course: Course;
-  completedLessons: Set<number>;
-  bookmarkedLessons: Set<number>;
-  notes: Record<number, string>;
+  completedLessons: Set<EntityId>;
+  bookmarkedLessons: Set<EntityId>;
+  notes: Record<string, string>;
   onBadgesUnlocked?: (badgeIds: string[]) => void;
   onQuizComplete?: (score: number, total: number, answers: Record<number, number>) => void;
 }

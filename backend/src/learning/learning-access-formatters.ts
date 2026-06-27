@@ -8,7 +8,7 @@ export function position(row: Row) {
 }
 
 export function numberId(value: unknown) {
-  return toNumber(value) ?? 0;
+  return toNumber(value) ?? text(value);
 }
 
 export function text(value: unknown, fallback = '') {

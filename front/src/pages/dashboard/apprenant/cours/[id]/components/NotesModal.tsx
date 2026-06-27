@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Lesson } from '../types';
+import { EntityId, Lesson } from '../types';
 
 interface Props {
   isOpen: boolean;
   lesson: Lesson | null;
   initialNote: string;
   onClose: () => void;
-  onSave: (lessonId: number, note: string) => void;
+  onSave: (lessonId: EntityId, note: string) => void;
 }
 
 export default function NotesModal({ isOpen, lesson, initialNote, onClose, onSave }: Props) {
