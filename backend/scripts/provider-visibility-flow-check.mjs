@@ -140,6 +140,7 @@ async function main() {
     },
     body: JSON.stringify({
       product_id: 'visprod-premium-30',
+      idempotency_key: purchaseRequestId,
     }),
   });
   assert(purchased.response.ok, `expected 200 on visibility purchase, got ${purchased.response.status}`);
@@ -159,6 +160,7 @@ async function main() {
     },
     body: JSON.stringify({
       product_id: 'visprod-premium-30',
+      idempotency_key: purchaseRequestId,
     }),
   });
   assert(replayedPurchase.response.ok, `expected 200 on idempotent visibility purchase replay, got ${replayedPurchase.response.status}`);

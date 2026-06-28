@@ -439,7 +439,12 @@ export class PaymentsController {
     @Body(new ZodValidationPipe(providerVisibilityPurchaseSchema)) payload: ProviderVisibilityPurchaseDto,
   ) {
     const actor = this.getActor(request);
-    return this.paymentCommandsService.purchaseProviderVisibility(actor, payload, request.requestId ?? `req-${Date.now()}`);
+    const headerKey = request.headers['x-idempotency-key'];
+    const idempotencyKey = payload.idempotency_key
+      ?? (Array.isArray(headerKey) ? headerKey[0] : headerKey)
+      ?? request.requestId
+      ?? `req-${Date.now()}`;
+    return this.paymentCommandsService.purchaseProviderVisibility(actor, payload, idempotencyKey);
   }
 
   @Post('admin/escrows/:escrowId/status')

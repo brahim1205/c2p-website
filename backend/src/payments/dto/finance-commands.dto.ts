@@ -52,6 +52,7 @@ export const subscriptionActivateSchema = z.object({
 export const providerVisibilityPurchaseSchema = z.object({
   product_id: z.string().trim().min(1),
   payment_method: paymentMethodSchema.default('wallet'),
+  idempotency_key: z.string().trim().min(1).max(160).optional(),
 });
 
 export const adminEscrowStatusSchema = z.object({
