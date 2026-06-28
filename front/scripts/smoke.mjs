@@ -319,27 +319,15 @@ async function runRegistrationSmoke(browser, failures) {
 
     await gotoAndCheck(page, '/auth/register', `register:${role}`);
     await page.locator('button').filter({ hasText: title }).first().click();
-    await page.locator('#firstName').waitFor({ state: 'visible' });
+    await page.locator('#email').waitFor({ state: 'visible' });
 
-    await fillById(page, 'firstName', `Smoke${role}`);
-    await fillById(page, 'lastName', 'C2P');
     await fillById(page, 'email', `smoke-${role}-${stamp}@c2p.test`);
-    await fillById(page, 'phone', '+221 77 000 00 00');
     await fillById(page, 'password', NEW_USER_SECRET);
     await fillById(page, 'confirmPassword', NEW_USER_SECRET);
-    await fillById(page, 'role-location', 'Dakar, Senegal');
-    await fillById(page, 'role-publicTitle', role === 'formateur' ? 'Formateur smoke' : 'Profil smoke');
-    await fillById(page, 'role-skills', 'test, validation');
-    await fillById(page, 'role-bio', 'Profil cree pendant un smoke test.');
-    await fillById(page, 'role-preferredLanguage', 'Francais');
-    await fillById(page, 'role-website', 'https://c2p.sn');
-
-    const partnerType = page.locator('#role-partnerType');
-    if (await partnerType.count()) await partnerType.selectOption('technique');
 
     await page.locator('input[type="checkbox"]').last().check();
     await page.getByRole('button', { name: /Créer mon compte|Creer mon compte/i }).click();
-    await page.waitForTimeout(2500);
+    await page.waitForURL((url) => !url.pathname.includes('/auth/register'), { timeout: 10000 }).catch(() => {});
 
     const currentUrl = page.url();
     const bodyText = await page.locator('body').innerText();
