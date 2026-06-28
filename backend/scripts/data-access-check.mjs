@@ -1511,6 +1511,7 @@ async function main() {
       founderBio: 'Porteur de projet C2P.',
       teamSize: '2-3',
       fundingGoal: '2500000',
+      projectDurationMonths: 18,
       fundingType: 'mixte',
       currentFunding: '250000',
       useOfFunds: 'Produit, operations et lancement commercial.',
