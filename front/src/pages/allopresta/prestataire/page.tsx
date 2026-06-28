@@ -155,13 +155,11 @@ export default function PrestataireDetailPage() {
         }),
       }, { retryOnAuth: false });
       await notifyAdminPublicAlloPrestaRequest(
-        requestMode === 'contact' ? 'Visiteur AlloPresta' : 'Visiteur devis AlloPresta',
+        'Visiteur devis AlloPresta',
         prestataire?.name || 'un prestataire',
         undefined,
       );
-      setFormSuccess(requestMode === 'contact'
-        ? 'Votre message a été transmis à C2P. L’équipe vous orientera vers le bon contact.'
-        : 'Votre demande de devis a été transmise à C2P. L’équipe va vous recontacter.');
+      setFormSuccess('Votre demande de devis a été transmise à C2P. L’équipe va vous recontacter.');
       setShowReservationModal(false);
       setResForm({ customerName: '', customerEmail: '', customerPhone: '', service: '', date: '', description: '', budget: '', address: '' });
       setTimeout(() => setFormSuccess(null), 5000);
@@ -192,9 +190,7 @@ export default function PrestataireDetailPage() {
           user.avatar,
         );
       }
-      setFormSuccess(requestMode === 'contact'
-        ? 'Votre message a été transmis à C2P. L’équipe vous mettra en relation.'
-        : 'Votre demande de devis a été transmise à C2P. L’équipe va analyser le besoin et vous répondre.');
+      setFormSuccess('Votre demande de devis a été transmise à C2P. L’équipe va analyser le besoin et vous répondre.');
       setShowReservationModal(false);
       setResForm({ customerName: '', customerEmail: '', customerPhone: '', service: '', date: '', description: '', budget: '', address: '' });
       setTimeout(() => setFormSuccess(null), 5000);

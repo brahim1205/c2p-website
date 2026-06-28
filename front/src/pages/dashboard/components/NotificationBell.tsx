@@ -159,7 +159,16 @@ export default function NotificationBell() {
             </div>
 
             <div className="p-3 border-t border-gray-200 text-center">
-              <p className="text-xs text-gray-400">Les notifications récentes apparaissent ici.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/dashboard/notifications');
+                }}
+                className="text-xs font-semibold text-teal-600 hover:text-teal-700"
+              >
+                Voir toutes les notifications
+              </button>
             </div>
           </div>
         </>

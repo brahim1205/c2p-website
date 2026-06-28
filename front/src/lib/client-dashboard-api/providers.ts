@@ -1,5 +1,11 @@
 import { apiRequest } from '@/lib/api';
-import type { ClientDashboardProviderRow, ClientFavoriteRow, ClientPrestataire, ClientDashboardUser } from './types';
+import type {
+  ClientDashboardProviderRow,
+  ClientDashboardProviderServiceItem,
+  ClientFavoriteRow,
+  ClientPrestataire,
+  ClientDashboardUser,
+} from './types';
 
 const providerFallbackImage = '/images/brand/image1.jpeg';
 
@@ -44,7 +50,7 @@ function mapProviderRowToServiceCards(provider: ClientDashboardProviderRow): Cli
       .map((service) => String(service.title ?? '').trim().toLowerCase())
       .filter(Boolean),
   );
-  const fallbackItems = base.services
+  const fallbackItems: ClientDashboardProviderServiceItem[] = base.services
     .filter((title) => !detailedTitles.has(title.trim().toLowerCase()))
     .map((title, index) => ({ id: `fallback-${index}`, title }));
   const items = [...serviceItems, ...fallbackItems];

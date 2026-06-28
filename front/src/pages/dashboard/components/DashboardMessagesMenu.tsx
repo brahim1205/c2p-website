@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import type { Conversation } from '@/hooks/useBackendMessaging';
 
 export function DashboardMessagesMenu({
-  isApprenant,
   loading,
   markAsRead,
   messagesOpen,
@@ -18,74 +17,22 @@ export function DashboardMessagesMenu({
   setMessagesOpen: (value: boolean | ((current: boolean) => boolean)) => void;
   unreadCount: number;
 }) {
-  if (!isApprenant) {
-    return (
-      <Link
-        to="/dashboard/messages"
-        aria-label="Ouvrir les messages"
-        title="Messages"
-        className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100/80 active:scale-95 transition-all duration-200"
-      >
-        <MessageIcon />
-        <UnreadBadge unreadCount={unreadCount} />
-      </Link>
-    );
-  }
+  void loading;
+  void markAsRead;
+  void messagesOpen;
+  void recentConversations;
+  void setMessagesOpen;
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setMessagesOpen((value) => !value)}
-        aria-label="Ouvrir les messages"
-        aria-expanded={messagesOpen}
-        className={`relative w-10 h-10 flex items-center justify-center rounded-xl active:scale-95 transition-all duration-200 ${messagesOpen ? 'bg-gray-100' : 'hover:bg-gray-100/80'}`}
-      >
-        <MessageIcon />
-        <UnreadBadge unreadCount={unreadCount} />
-      </button>
-
-      {messagesOpen && (
-        <>
-          <button
-            type="button"
-            aria-label="Fermer les messages"
-            className="fixed inset-0 z-30 bg-black/10"
-            onClick={() => setMessagesOpen(false)}
-          />
-          <div className="absolute right-0 top-12 z-40 flex max-h-[520px] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-            <div className="border-b border-gray-200 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">Messages</h3>
-                  <p className="mt-0.5 text-xs text-gray-500">Questions de cours et retours formateur.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMessagesOpen(false)}
-                  aria-label="Fermer les messages"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
-                >
-                  <i className="ri-close-line"></i>
-                </button>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <MessagesContent
-                loading={loading}
-                markAsRead={markAsRead}
-                recentConversations={recentConversations}
-              />
-            </div>
-
-            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-5 text-gray-500">
-              Pour démarrer un échange, utilisez “Poser une question au formateur” dans une leçon ou le suivi d’un devoir.
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+    <Link
+      to="/dashboard/messages"
+      aria-label="Ouvrir les messages"
+      title="Messages"
+      className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100/80 active:scale-95 transition-all duration-200"
+    >
+      <MessageIcon />
+      <UnreadBadge unreadCount={unreadCount} />
+    </Link>
   );
 }
 

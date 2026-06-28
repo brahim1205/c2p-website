@@ -143,31 +143,38 @@ export default function PartenaireOpportunitesPage() {
                   <div className="rounded-lg bg-gray-50 p-3"><p className="text-xs text-gray-500">Equipe</p><p className="font-semibold text-gray-900">{project.team_size}</p></div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link to={`/project-center/projet/${project.id}`} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-center text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <Link to={`/project-center/projet/${project.id}`} className="min-w-[150px] flex-1 px-4 py-2 rounded-lg border border-gray-200 text-center text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Voir le detail
                   </Link>
-                  <button onClick={() => handleInterest(project, 'financier')} className="flex-1 px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b]">
+                  <button onClick={() => handleInterest(project, 'financier')} className="min-w-[150px] flex-1 px-4 py-2 bg-[#5fa6f3] text-white rounded-lg text-sm font-medium hover:bg-[#27346b]">
                     Interet financier
                   </button>
-                  <button onClick={() => handleInterest(project, 'technique')} className="flex-1 px-4 py-2 border border-[#5fa6f3]/25 text-[#27346b] rounded-lg text-sm font-medium hover:bg-[#5fa6f3]/5">
-                    Interet technique
-                  </button>
-                  <Link to={`/dashboard/partenaire/opportunites/${project.id}/financer`} className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-emerald-700">
+                  <Link to={`/dashboard/partenaire/opportunites/${project.id}/financer`} className="min-w-[150px] flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-emerald-700">
                     Simuler un financement
                   </Link>
-                  <button onClick={() => void handleAction(project, 'mentor')} className="flex-1 rounded-lg border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
-                    Rejoindre les mentors
-                  </button>
-                  <button onClick={() => void handleAction(project, 'coach')} className="flex-1 rounded-lg border border-sky-200 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50">
-                    Coacher
-                  </button>
-                  <button onClick={() => void handleAction(project, 'evaluate')} className="flex-1 rounded-lg border border-violet-200 px-4 py-2 text-sm font-medium text-violet-700 hover:bg-violet-50">
-                    Proposer une évaluation
-                  </button>
-                  <button onClick={() => void handleAction(project, 'carry')} className="flex-1 rounded-lg border border-amber-200 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50">
-                    Devenir co-porteur
-                  </button>
                 </div>
+                <details className="mt-3 rounded-lg border border-gray-200 bg-gray-50">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700">
+                    Actions partenaire
+                  </summary>
+                  <div className="grid gap-2 border-t border-gray-200 p-3 sm:grid-cols-2">
+                    <button onClick={() => handleInterest(project, 'technique')} className="rounded-lg border border-[#5fa6f3]/25 bg-white px-4 py-2 text-sm font-medium text-[#27346b] hover:bg-[#5fa6f3]/5">
+                      Interet technique
+                    </button>
+                    <button onClick={() => void handleAction(project, 'mentor')} className="rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                      Rejoindre les mentors
+                    </button>
+                    <button onClick={() => void handleAction(project, 'coach')} className="rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50">
+                      Coacher
+                    </button>
+                    <button onClick={() => void handleAction(project, 'evaluate')} className="rounded-lg border border-violet-200 bg-white px-4 py-2 text-sm font-medium text-violet-700 hover:bg-violet-50">
+                      Proposer une évaluation
+                    </button>
+                    <button onClick={() => void handleAction(project, 'carry')} className="rounded-lg border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50 sm:col-span-2">
+                      Devenir co-porteur
+                    </button>
+                  </div>
+                </details>
               </div>
             </div>
           ))}

@@ -96,7 +96,7 @@ const dashboardRoutes: RouteObject[] = [
   dashboardRoute('/dashboard/mes-projets', Pages.MesProjetsPage),
   dashboardRoute('/dashboard/mes-projets/:id', Pages.ProjetDetailPage),
   dashboardRoute('/dashboard/messages', Pages.DashboardMessagesPage),
-  redirectRoute('/dashboard/notifications', '/dashboard'),
+  dashboardRoute('/dashboard/notifications', Pages.DashboardNotificationsPage),
   dashboardRoute('/dashboard/paiements', Pages.DashboardPaiementsPage),
   dashboardRoute('/dashboard/factures', Pages.DashboardFacturesPage),
   dashboardRoute('/dashboard/securite', Pages.DashboardSecurityPage),

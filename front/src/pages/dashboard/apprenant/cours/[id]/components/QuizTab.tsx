@@ -1,4 +1,4 @@
-import { Course, QuizAttempt } from '../types';
+import { Course, EntityId, QuizAttempt } from '../types';
 import { useState, useCallback, useEffect } from 'react';
 import ConfirmModal from './ConfirmModal';
 import { useToast } from '@/hooks/useToast';

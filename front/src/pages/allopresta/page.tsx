@@ -6,6 +6,7 @@ import {
   normalizeViewerAccessTier,
   type ProviderCatalogRecord,
   type ProviderProfileLevel,
+  type ProviderServiceItemRecord,
 } from '@/lib/providerApi';
 import {
   AlloPrestaAccessBanner,
@@ -119,7 +120,7 @@ export default function AlloPrestPage() {
           .map((service) => String(service.title ?? '').trim().toLowerCase())
           .filter(Boolean),
       );
-      const fallbackServiceItems = (provider.services.length ? provider.services : [provider.title || 'Service professionnel'])
+      const fallbackServiceItems: ProviderServiceItemRecord[] = (provider.services.length ? provider.services : [provider.title || 'Service professionnel'])
         .filter((title) => !isTechnicalTestServiceTitle(String(title)))
         .filter((title) => !detailedServiceTitles.has(String(title).trim().toLowerCase()))
         .map((title) => ({ title }));

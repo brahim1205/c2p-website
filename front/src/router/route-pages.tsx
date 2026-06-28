@@ -38,6 +38,7 @@ export const DashboardParametresPage = lazy(() => import('../pages/dashboard/par
 export const MesProjetsPage = lazy(() => import('../pages/dashboard/mes-projets/page'));
 export const ProjetDetailPage = lazy(() => import('../pages/dashboard/mes-projets/[id]/page'));
 export const DashboardMessagesPage = lazy(() => import('../pages/dashboard/messages/page'));
+export const DashboardNotificationsPage = lazy(() => import('../pages/dashboard/notifications/page'));
 export const DashboardPaiementsPage = lazy(() => import('../pages/dashboard/paiements/page'));
 export const DashboardFacturesPage = lazy(() => import('../pages/dashboard/factures/page'));
 export const DashboardSecurityPage = lazy(() => import('../pages/dashboard/securite/page'));

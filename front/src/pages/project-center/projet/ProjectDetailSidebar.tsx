@@ -30,6 +30,9 @@ export default function ProjectDetailSidebar({ project }: { project: PublicProje
       <div className="rounded-[28px] border border-[#80bfdf] bg-[#ffffff] p-4 shadow-[0_20px_60px_rgba(39,52,107,0.08)] sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#27346b]">Actions</p>
         <div className="mt-5 space-y-3">
+          <Link to="/dashboard/partenaire/opportunites" className="c2p-btn-primary w-full px-6 py-3">
+            Voir les opportunités partenaires
+          </Link>
           <Link to="/project-center/soumettre" className="c2p-btn-accent w-full px-6 py-3">
             Soumettre un projet
           </Link>
