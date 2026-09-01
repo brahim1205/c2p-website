@@ -78,6 +78,30 @@ export interface SubscriptionActivatePayload {
   renew_now?: boolean;
   trial?: boolean;
   trial_days?: number;
+  confirmed_transaction_id?: string;
+}
+
+export interface WavePaymentIntentPayload {
+  amount: number;
+  currency?: string;
+  description: string;
+  target_type: 'formation' | 'abonnement' | 'prestation';
+  target_id: string;
+  return_to?: string;
+}
+
+export interface WavePaymentIntent {
+  transaction: {
+    id: string;
+    amount?: number;
+    currency?: string;
+    status?: 'completed' | 'pending' | 'failed' | 'cancelled';
+    method?: string;
+    reference?: string;
+    financial_operation_id?: string | null;
+  };
+  reference: string;
+  paymentUrl: string;
 }
 
 export interface ProviderVisibilityPurchasePayload {
@@ -166,6 +190,13 @@ export async function activateSubscriptionPlan(payload: SubscriptionActivatePayl
   return apiRequest<{
     subscription: Record<string, unknown>;
   }>('/payments/subscriptions/activate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createWavePaymentIntent(payload: WavePaymentIntentPayload) {
+  return apiRequest<WavePaymentIntent>('/payments/wave/intents', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

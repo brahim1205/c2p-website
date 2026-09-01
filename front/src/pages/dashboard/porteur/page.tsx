@@ -122,7 +122,7 @@ export default function PorteurDashboardPage() {
 
         <SubscriptionRequiredBanner gate={subscriptionGate} />
 
-        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="mb-6 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
           {stats.map((stat) => (
             <div key={stat.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
@@ -148,9 +148,9 @@ export default function PorteurDashboardPage() {
             </p>
           </div>
           <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-            <p className="text-sm text-gray-500">Wallet disponible</p>
-            <p className="mt-2 text-xl font-bold text-gray-900">{formatCurrency(Number(finance?.wallet?.available_balance ?? finance?.wallet?.balance ?? 0))}</p>
-            <p className="mt-2 text-sm text-gray-500">Retraits en attente {formatCurrency(Number(finance?.wallet?.pending_payout_amount ?? 0))}</p>
+            <p className="text-sm text-gray-500">Retraits en attente</p>
+            <p className="mt-2 text-xl font-bold text-gray-900">{formatCurrency(Number(finance?.wallet?.pending_payout_amount ?? 0))}</p>
+            <p className="mt-2 text-sm text-gray-500">Solde portefeuille visible en haut du tableau de bord.</p>
           </div>
           <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
             <p className="text-sm text-gray-500">Frais et services C2P</p>

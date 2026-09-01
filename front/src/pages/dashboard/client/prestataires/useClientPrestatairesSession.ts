@@ -6,12 +6,12 @@ import { useToast } from '@/hooks/useToast';
 import { REQUEST_TYPE_META, type BookingRequestType } from '@/lib/clientDashboard';
 import {
   addClientFavorite,
-  createClientManagedBooking,
   fetchClientProvidersAndFavorites,
   removeClientFavorite,
   type ClientFavoriteRow as FavoriteRow,
   type ClientPrestataire as Prestataire,
 } from '@/lib/clientDashboardApi';
+import { savePendingPrestationPayment } from '@/lib/paymentCheckoutStorage';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   buildSmartScore,
@@ -113,7 +113,7 @@ export function useClientPrestatairesSession() {
     const requestMeta = REQUEST_TYPE_META[requestForm.requestType];
     const price = requestForm.budget ? Number(requestForm.budget) : selectedPrestataire.pricePerHour;
     try {
-      await createClientManagedBooking({
+      savePendingPrestationPayment({
         user,
         requestedProviderId: selectedPrestataire.id,
         service: requestForm.service,
@@ -124,13 +124,14 @@ export function useClientPrestatairesSession() {
         address: requestForm.address.trim(),
         requestType: requestForm.requestType,
         price: Number.isFinite(price) ? price : null,
+        returnTo: '/dashboard/client/reservations',
+        label: requestMeta.label,
       });
 
-      await queryClient.invalidateQueries({ queryKey: queryKeys.client.root(user.id) });
-      success('Demande créée', `${requestMeta.label} envoyée à l équipe C2P pour traitement.`);
+      success('Paiement requis', `${requestMeta.label} préparée. Finalisez le paiement pour transmettre la demande.`);
       setShowRequestModal(false);
       setSelectedPrestataire(null);
-      navigate('/dashboard/client/reservations');
+      navigate(`/paiement?type=prestation&returnTo=${encodeURIComponent('/dashboard/client/reservations')}`);
     } catch (submitError) {
       console.error(submitError);
       error('Erreur', 'Impossible d enregistrer cette demande.');

@@ -6,7 +6,7 @@ export default function ProjectDetailSidebar({ project }: { project: PublicProje
   return (
     <aside className="space-y-6">
       <div className="rounded-[28px] border border-[#80bfdf] bg-white p-4 shadow-[0_20px_60px_rgba(39,52,107,0.08)] sm:p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#27346b]">Résumé dossier</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#27346b]">Fiche projet</p>
         <div className="mt-5 space-y-4 text-sm">
           <div className="flex items-center justify-between gap-4">
             <span className="text-[#5fa6f3]">Porteur</span>
@@ -23,6 +23,16 @@ export default function ProjectDetailSidebar({ project }: { project: PublicProje
           <div className="flex items-center justify-between gap-4">
             <span className="text-[#5fa6f3]">Jalon suivant</span>
             <span className="font-medium text-right text-[#06053a]">{project.next_milestone || 'Non défini'}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[#5fa6f3]">Durée estimée</span>
+            <span className="font-medium text-right text-[#06053a]">
+              {project.duration_months ? `${project.duration_months} mois` : 'Non renseignée'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[#5fa6f3]">Catégorie</span>
+            <span className="font-medium text-right text-[#06053a]">{project.project_tier || 'Non renseignée'}</span>
           </div>
         </div>
       </div>
@@ -41,7 +51,7 @@ export default function ProjectDetailSidebar({ project }: { project: PublicProje
           </Link>
         </div>
         <p className="mt-4 text-xs leading-6 text-[#27346b]">
-          Les mises en relation, l’étude du dossier et la structuration de l’accompagnement restent pilotées par l’équipe C2P.
+          Depuis cet espace, vous pouvez consulter le projet, contacter C2P ou rejoindre l’espace partenaire pour proposer un accompagnement.
         </p>
       </div>
     </aside>

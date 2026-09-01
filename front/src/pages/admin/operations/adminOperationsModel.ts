@@ -1,10 +1,11 @@
 import { ROLE_LABELS, type AuthUser } from '@/lib/roles';
 import type {
   AdminAccreditation,
+  AdminDashboardBooking,
+  AdminDashboardProviderOption,
   AdminContentItem,
   AdminReport,
 } from '@/lib/adminApi';
-import type { PublicContactSubmission } from '@/lib/communicationsApi';
 
 export type ManagedUser = AuthUser & { status: string };
 
@@ -13,7 +14,8 @@ export type OperationsSnapshot = {
   accreditations: AdminAccreditation[];
   contents: AdminContentItem[];
   users: ManagedUser[];
-  supportRequests: PublicContactSubmission[];
+  bookings: AdminDashboardBooking[];
+  providers: AdminDashboardProviderOption[];
   paymentAlerts: number;
 };
 
@@ -21,7 +23,7 @@ export type QueueItem = {
   id: string;
   title: string;
   subtitle: string;
-  kind: 'signalement' | 'accreditation' | 'contenu' | 'support' | 'compte' | 'paiement';
+  kind: 'assignation' | 'signalement' | 'accreditation' | 'contenu' | 'support' | 'compte' | 'paiement';
   priority: 'high' | 'medium' | 'low';
   createdAt: string;
   href: string;
@@ -40,6 +42,7 @@ export const priorityClassNames = {
 };
 
 export const kindLabels = {
+  assignation: 'Assignation',
   signalement: 'Signalement',
   accreditation: 'Accreditation',
   contenu: 'Contenu',
@@ -69,7 +72,7 @@ function sortByPriorityAndAge(left: QueueItem, right: QueueItem) {
 }
 
 export function buildOperationsQueue(input: Omit<OperationsSnapshot, 'paymentAlerts'>) {
-  const { reports, accreditations, contents, supportRequests, users } = input;
+  const { reports, accreditations, contents, users } = input;
   const pendingReports = reports
     .filter((report) => report.status === 'pending')
     .map((report) => ({
@@ -106,18 +109,6 @@ export function buildOperationsQueue(input: Omit<OperationsSnapshot, 'paymentAle
       href: '/admin/content',
     }));
 
-  const pendingSupport = supportRequests
-    .filter((item) => item.status === 'new')
-    .map((item) => ({
-      id: `support-${item.id}`,
-      title: item.subject,
-      subtitle: `${item.firstName} ${item.lastName} - ${item.email}`,
-      kind: 'support' as const,
-      priority: getAgeHours(item.createdAt) > 24 ? 'high' as const : 'medium' as const,
-      createdAt: item.createdAt,
-      href: '/admin/messages',
-    }));
-
   const pendingUsers = users
     .filter((item) => item.status === 'pending' || item.status === 'suspended')
     .map((item) => ({
@@ -130,17 +121,16 @@ export function buildOperationsQueue(input: Omit<OperationsSnapshot, 'paymentAle
       href: '/admin/users',
     }));
 
-  return [...pendingReports, ...pendingAccreditations, ...pendingContents, ...pendingSupport, ...pendingUsers]
+  return [...pendingReports, ...pendingAccreditations, ...pendingContents, ...pendingUsers]
     .sort(sortByPriorityAndAge);
 }
 
 export function buildOperationsStats(input: Omit<OperationsSnapshot, 'paymentAlerts'>) {
-  const { reports, accreditations, contents, supportRequests, users } = input;
+  const { reports, accreditations, contents, users } = input;
   return {
     pendingReports: reports.filter((report) => report.status === 'pending').length,
     pendingAccreditations: accreditations.filter((item) => item.status === 'pending').length,
     pendingContents: contents.filter((item) => item.status === 'pending').length,
-    pendingSupport: supportRequests.filter((item) => item.status === 'new').length,
     pendingUsers: users.filter((item) => item.status === 'pending').length,
     suspendedUsers: users.filter((item) => item.status === 'suspended').length,
   };

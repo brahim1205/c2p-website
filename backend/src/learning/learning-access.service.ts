@@ -5,6 +5,7 @@ import { PrismaService } from '../database/prisma.service.js';
 import {
   appendAppRows,
   clone,
+  listAppRows,
   patchAppRows,
   store,
   syncAppStoreFromDatabase,
@@ -295,10 +296,17 @@ export class LearningAccessService {
     }));
     const persisted = appendAppRows('course_quiz_attempts', [created])[0] ?? created;
 
-    await this.platformPersistenceService.persistRows({ course_quiz_attempts: [persisted] }, {
+    const certificate = this.ensureCompletionCertificate(course, actor);
+    await this.platformPersistenceService.persistRows({
+      course_quiz_attempts: [persisted],
+      ...(certificate ? { certificates: [certificate] } : {}),
+    }, {
       actorId: actor.id,
       reason: 'learning:apprenant:course-quiz-attempt:create',
-      afterRowsByTable: { course_quiz_attempts: [persisted] },
+      afterRowsByTable: {
+        course_quiz_attempts: [persisted],
+        ...(certificate ? { certificates: [certificate] } : {}),
+      },
     });
 
     return toQuizAttempt(persisted);
@@ -394,6 +402,69 @@ export class LearningAccessService {
     });
   }
 
+  async purchaseApprenantCourseWithExternalPayment(courseId: string, payload: unknown, user: AuthUser | null) {
+    const actor = requireLearningActor(user);
+    if (actor.role !== 'apprenant' && !isAdminRole(actor)) {
+      throw new ForbiddenException('Seul un apprenant peut acheter cette formation.');
+    }
+    const input = requireObject(payload, 'Paiement invalide.');
+    const transactionId = text(input.transaction_id ?? input.transactionId, '');
+    if (!transactionId) {
+      throw new BadRequestException('Transaction de paiement requise.');
+    }
+    await syncAppStoreFromDatabase(this.prisma);
+    const course = hydrateRows('courses', store.courses ?? []).find((row) =>
+      String(row.id) === String(courseId)
+      && String(row.status ?? '').toLowerCase() === 'published'
+    );
+    if (!course) {
+      throw new NotFoundException('Formation introuvable.');
+    }
+    const price = this.getCoursePrice(course);
+    if (price <= 0) {
+      return this.createEnrollment(course, actor);
+    }
+    const transaction = listAppRows('payment_transactions').find((row) => (
+      String(row.id) === String(transactionId)
+      && String(row.user_id) === String(actor.id)
+      && String(row.status) === 'completed'
+      && Number(row.amount ?? 0) >= price
+    ));
+    if (!transaction) {
+      throw new HttpException('Paiement Wave non confirmé.', HttpStatus.PAYMENT_REQUIRED);
+    }
+
+    const existing = getAccessibleEnrollment(courseId, actor);
+    if (existing?.payment_transaction_id) {
+      return existing;
+    }
+    if (existing) {
+      const previous = clone(existing);
+      const updated = patchAppRows('course_enrollments', (row) => String(row.id) === String(existing.id), {
+        payment_transaction_id: transaction.id,
+        financial_operation_id: transaction.financial_operation_id ?? null,
+        amount_paid: price,
+        payment_status: 'completed',
+        payment_method: String(transaction.method ?? 'wave'),
+        paid_at: new Date().toISOString(),
+      });
+      await this.platformPersistenceService.persistRows({ course_enrollments: updated }, {
+        actorId: actor.id,
+        reason: 'learning:apprenant:course:purchase-external-existing',
+        beforeRowsByTable: { course_enrollments: [previous] },
+        afterRowsByTable: { course_enrollments: updated },
+      });
+      return updated[0] ?? existing;
+    }
+
+    return this.createEnrollment(course, actor, {
+      transactionId: String(transaction.id),
+      financialOperationId: String(transaction.financial_operation_id ?? ''),
+      amount: price,
+      method: String(transaction.method ?? 'wave'),
+    });
+  }
+
   private getCoursePrice(course: Row) {
     if (course.is_free === true || String(course.access_type ?? '') === 'free') return 0;
     return Math.max(0, Number(course.current_price ?? course.price ?? 0));
@@ -402,7 +473,7 @@ export class LearningAccessService {
   private async createEnrollment(
     course: Row,
     actor: AuthUser,
-    payment?: { transactionId: string; financialOperationId: string; amount: number },
+    payment?: { transactionId: string; financialOperationId: string; amount: number; method?: string },
   ) {
     const existing = getAccessibleEnrollment(String(course.id), actor);
     if (existing) return existing;
@@ -422,7 +493,7 @@ export class LearningAccessService {
       financial_operation_id: payment?.financialOperationId ?? null,
       amount_paid: payment?.amount ?? 0,
       payment_status: payment ? 'completed' : 'not_required',
-      payment_method: payment ? 'wallet' : null,
+      payment_method: payment ? (payment.method ?? 'wallet') : null,
       paid_at: payment ? now : null,
       enrolled_at: now,
       last_active: now,
@@ -537,6 +608,10 @@ export class LearningAccessService {
     const rowsToPersist: Record<string, Row[]> = { course_enrollments: [updated] };
     if (lessonProgressMutation.afterRows.length > 0) {
       rowsToPersist.lesson_progress = lessonProgressMutation.afterRows;
+    }
+    const certificate = this.ensureCompletionCertificate(getAccessibleCourse(courseId, actor), actor);
+    if (certificate) {
+      rowsToPersist.certificates = [certificate];
     }
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
@@ -655,9 +730,11 @@ export class LearningAccessService {
       status: enrollmentProgress >= 100 ? 'completed' : 'active',
       last_active: now,
     });
+    const certificate = this.ensureCompletionCertificate(getAccessibleCourse(courseId, actor), actor);
     await this.platformPersistenceService.persistRows({
       lesson_progress: [persistedProgress],
       course_enrollments: updatedEnrollments,
+      ...(certificate ? { certificates: [certificate] } : {}),
     }, {
       actorId: actor.id,
       reason: 'learning:apprenant:lesson-progress:update',
@@ -668,6 +745,7 @@ export class LearningAccessService {
       afterRowsByTable: {
         lesson_progress: [persistedProgress],
         course_enrollments: updatedEnrollments,
+        ...(certificate ? { certificates: [certificate] } : {}),
       },
     });
     return persistedProgress;
@@ -708,6 +786,75 @@ export class LearningAccessService {
       afterRowsByTable: { lesson_comments: [comment] },
     });
     return created[0] ?? comment;
+  }
+
+  private ensureCompletionCertificate(course: Row, actor: AuthUser) {
+    if (actor.role !== 'apprenant' && !isAdminRole(actor)) return null;
+    const courseId = String(course.id);
+    const enrollment = getAccessibleEnrollment(courseId, actor);
+    if (!enrollment) return null;
+    if (String(enrollment.status) !== 'completed' && clampProgress(enrollment.progress) < 100) return null;
+
+    const quiz = buildCourseQuiz(courseId, actor);
+    if (quiz.length > 0 && !this.hasPassingQuizAttempt(courseId, actor, quiz.length)) return null;
+
+    const existing = (store.certificates ?? []).find((row) =>
+      String(row.course_id) === courseId && String(row.student_id) === String(actor.id)
+    );
+    if (existing) return null;
+
+    const now = new Date().toISOString();
+    const certificateNumber = this.buildAutoCertificateNumber(course, actor, now);
+    const finalGrade = this.getBestQuizGrade(courseId, actor, quiz.length);
+    const certificate = withId(prepareInsert('certificates', {
+      student_id: actor.id,
+      student_name: `${actor.firstName} ${actor.lastName}`.trim() || actor.email || actor.id,
+      student_avatar: actor.avatar ?? null,
+      course_id: course.id,
+      course_name: text(course.title, 'Formation C2P'),
+      title: text(course.title, 'Formation C2P'),
+      completion_date: now,
+      final_grade: finalGrade,
+      grade: finalGrade,
+      status: 'issued',
+      certificate_id: certificateNumber,
+      certificate_number: certificateNumber,
+      issued_at: now,
+      created_at: now,
+      updated_at: now,
+    }));
+    return appendAppRows('certificates', [certificate])[0] ?? certificate;
+  }
+
+  private hasPassingQuizAttempt(courseId: string, actor: AuthUser, totalQuestions: number) {
+    const bestScore = this.getBestQuizScorePercent(courseId, actor, totalQuestions);
+    return bestScore >= 70;
+  }
+
+  private getBestQuizGrade(courseId: string, actor: AuthUser, totalQuestions: number) {
+    if (totalQuestions <= 0) return null;
+    const bestScore = this.getBestQuizScorePercent(courseId, actor, totalQuestions);
+    if (bestScore < 0) return null;
+    return Math.round((bestScore / 100) * 20);
+  }
+
+  private getBestQuizScorePercent(courseId: string, actor: AuthUser, totalQuestions: number) {
+    const attempts = hydrateRows('course_quiz_attempts', store.course_quiz_attempts ?? []).filter((row) =>
+      String(row.course_id) === String(courseId) && String(row.student_id) === String(actor.id)
+    );
+    return attempts.reduce((best, attempt) => {
+      const score = toNumber(attempt.score) ?? 0;
+      const total = toNumber(attempt.total) ?? totalQuestions;
+      if (total <= 0) return best;
+      return Math.max(best, (score / total) * 100);
+    }, -1);
+  }
+
+  private buildAutoCertificateNumber(course: Row, actor: AuthUser, issuedAt: string) {
+    const year = new Date(issuedAt).getUTCFullYear();
+    const coursePart = String(course.id).replace(/[^a-zA-Z0-9]/g, '').slice(-8).toUpperCase() || 'COURSE';
+    const studentPart = String(actor.id).replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase() || 'USER';
+    return `C2P-${year}-${coursePart}-${studentPart}`;
   }
 
 }

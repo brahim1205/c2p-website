@@ -3,11 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import {
-  enrollEspaceCourse,
   fetchEspaceCourseContext,
   fetchEspaceCourseDetail,
   publishEspaceCourseReview,
-  purchaseEspaceCourse,
 } from '@/lib/espaceNumeriqueApi';
 import {
   readMetadataList,
@@ -29,7 +27,6 @@ export function useFormationDetailPageSession() {
   const { success, error: toastError } = useToast();
 
   const [activeTab, setActiveTab] = useState<FormationDetailTab>('overview');
-  const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [course, setCourse] = useState<Course | null>(null);
   const [sections, setSections] = useState<CourseSection[]>([]);
   const [lessons, setLessons] = useState<CourseLesson[]>([]);
@@ -182,37 +179,11 @@ export function useFormationDetailPageSession() {
       navigate('/espace-numerique/mon-apprentissage');
       return;
     }
-    setShowEnrollModal(true);
+    navigate(`/paiement?type=formation&course=${encodeURIComponent(String(course.id))}&returnTo=${encodeURIComponent(`/espace-numerique/formation/${course.id}`)}`);
   };
 
   const handleEnroll = async () => {
-    if (!course || !user?.id) return;
-    if (user.role !== 'apprenant' && user.role !== 'admin') return;
-
-    setEnrolling(true);
-    try {
-      const paid = isPaidCourse(course);
-      const data = paid
-        ? await purchaseEspaceCourse(course.id)
-        : await enrollEspaceCourse(course.id);
-      success(
-        paid ? 'Paiement confirmé' : 'Inscription réussie',
-        paid
-          ? `Le paiement de "${course.title}" est confirmé et votre accès est actif.`
-          : `Vous êtes maintenant inscrit à "${course.title}".`,
-      );
-      setExistingEnrollment({ id: Number((data as any)?.id ?? 0) || Date.now() });
-      setShowEnrollModal(false);
-      navigate('/espace-numerique/mon-apprentissage');
-    } catch (err) {
-      console.error(err);
-      const message = err && typeof err === 'object' && 'message' in err
-        ? String(err.message)
-        : 'Impossible de confirmer votre inscription pour le moment.';
-      toastError('Paiement impossible', message);
-    } finally {
-      setEnrolling(false);
-    }
+    openEnrollFlow();
   };
 
   const handleReviewSubmit = async () => {
@@ -271,8 +242,6 @@ export function useFormationDetailPageSession() {
     reviews,
     setActiveTab,
     setReviewDraft,
-    setShowEnrollModal,
-    showEnrollModal,
     tools,
     totalLessons,
     user,

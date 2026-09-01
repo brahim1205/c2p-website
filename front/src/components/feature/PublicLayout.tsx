@@ -82,7 +82,7 @@ export default function PublicLayout({ children, hideFooter = false, hideHeader 
         />
       )}
 
-      <main className="flex-1 bg-white">{children}</main>
+      <main className={`flex-1 ${hideFooter ? 'bg-[#e8f5d8]' : 'bg-white'}`}>{children}</main>
 
       {!hideFooter && (
         <PublicLayoutFooter onInternalLinkClick={handleInternalLinkClick} />

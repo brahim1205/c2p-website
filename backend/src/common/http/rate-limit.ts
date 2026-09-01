@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type { ConfigService } from '../../config/config.service.js';
 import type { MonitoringService } from '../../monitoring/monitoring.service.js';
 
-type RateLimitScope = 'global' | 'login' | 'auth' | 'finance' | 'provider_webhook';
+type RateLimitScope = 'global' | 'login' | 'auth' | 'finance' | 'upload' | 'provider_webhook';
 
 interface RateLimitEntry {
   count: number;
@@ -33,6 +33,7 @@ export function createRateLimitMiddleware(config: ConfigService, monitoring: Mon
     login: new Map(),
     auth: new Map(),
     finance: new Map(),
+    upload: new Map(),
     provider_webhook: new Map(),
   };
   let requestCounter = 0;
@@ -66,6 +67,16 @@ export function createRateLimitMiddleware(config: ConfigService, monitoring: Mon
         bucket: buckets.provider_webhook,
         limit: config.providerWebhookRateLimitMax,
         scope: 'provider_webhook',
+        windowMs: 60_000,
+        keySuffix: normalizedPath,
+      };
+    }
+
+    if (normalizedPath === '/api/uploads/local' && MUTATING_METHODS.has(normalizedMethod)) {
+      return {
+        bucket: buckets.upload,
+        limit: config.uploadRateLimitMax,
+        scope: 'upload',
         windowMs: 60_000,
         keySuffix: normalizedPath,
       };

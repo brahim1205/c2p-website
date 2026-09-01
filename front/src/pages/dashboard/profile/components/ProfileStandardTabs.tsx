@@ -126,31 +126,6 @@ export function ProfileProfessionalTab({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Entreprise / Organisation</label>
-          <input
-            type="text"
-            value={formData.company}
-            onChange={(event) => onFormDataChange({ ...formData, company: event.target.value })}
-            disabled={!isEditing}
-            className={fieldClassName}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Années d&apos;expérience</label>
-          <select
-            value={formData.experience}
-            onChange={(event) => onFormDataChange({ ...formData, experience: event.target.value })}
-            disabled={!isEditing}
-            className={`${fieldClassName} cursor-pointer`}
-          >
-            <option value="Moins d&apos;un an">Moins d&apos;un an</option>
-            <option value="1-3 ans">1-3 ans</option>
-            <option value="3-5 ans">3-5 ans</option>
-            <option value="5-10 ans">5-10 ans</option>
-            <option value="Plus de 10 ans">Plus de 10 ans</option>
-          </select>
-        </div>
-        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Site web</label>
           <input
             type="url"

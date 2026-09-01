@@ -47,6 +47,16 @@ export const subscriptionActivateSchema = z.object({
   renew_now: z.boolean().optional(),
   trial: z.boolean().optional(),
   trial_days: z.number().int().min(1).max(30).optional(),
+  confirmed_transaction_id: z.string().trim().min(1).max(160).optional(),
+});
+
+export const waveIntentCreateSchema = z.object({
+  amount: z.number().int().positive().max(1_000_000_000),
+  currency: z.string().trim().min(1).max(12).default('XAF'),
+  description: z.string().trim().min(1).max(180),
+  target_type: z.enum(['formation', 'abonnement', 'prestation']),
+  target_id: z.string().trim().min(1).max(180),
+  return_to: z.string().trim().max(500).optional(),
 });
 
 export const providerVisibilityPurchaseSchema = z.object({
@@ -72,6 +82,7 @@ export type WalletWithdrawDto = z.infer<typeof walletWithdrawSchema>;
 export type PayoutAccountCreateDto = z.infer<typeof payoutAccountCreateSchema>;
 export type PayoutRequestCreateDto = z.infer<typeof payoutRequestCreateSchema>;
 export type SubscriptionActivateDto = z.infer<typeof subscriptionActivateSchema>;
+export type WaveIntentCreateDto = z.infer<typeof waveIntentCreateSchema>;
 export type ProviderVisibilityPurchaseDto = z.infer<typeof providerVisibilityPurchaseSchema>;
 export type AdminEscrowStatusDto = z.infer<typeof adminEscrowStatusSchema>;
 export type AdminPayoutStatusDto = z.infer<typeof adminPayoutStatusSchema>;

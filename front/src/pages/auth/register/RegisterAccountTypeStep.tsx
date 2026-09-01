@@ -28,20 +28,20 @@ export default function RegisterAccountTypeStep({
   onSelectUserType,
 }: RegisterAccountTypeStepProps) {
   return (
-    <section className="c2p-card rounded-[22px] bg-white/92 p-4 shadow-c2p-lg backdrop-blur sm:rounded-[30px] sm:p-8">
-      <div className="mb-6 text-center sm:mb-8">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-[#d5b46f]">Votre acces</p>
-        <h2 className="text-xl font-semibold text-[#172033] sm:text-2xl">Choisissez votre type de compte</h2>
-        <p className="mt-3 text-sm leading-7 text-[#5b6778]">
+    <section className="rounded-[18px] border border-[#eadfce] bg-[#fbf7f1]/45 p-3 shadow-sm backdrop-blur sm:rounded-[22px] sm:p-4">
+      <div className="mb-3 text-center">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.26em] text-[#d5b46f]">Votre acces</p>
+        <h2 className="text-lg font-semibold text-[#172033] sm:text-xl">Choisissez votre type de compte</h2>
+        <p className="mx-auto mt-1.5 max-w-3xl text-xs leading-5 text-[#5b6778] sm:text-sm">
           Vous pouvez creer le compte sans payer. Les plans publics concernent surtout les prestataires,
           formateurs et porteurs de projet quand ils veulent activer leurs fonctions premium.
         </p>
-        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-[#b68b3f]">
+        <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#b68b3f]">
           Touchez une carte pour ouvrir le formulaire
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {userTypes.map((type) => (
           <button
             key={type.id}
@@ -49,17 +49,17 @@ export default function RegisterAccountTypeStep({
             aria-pressed={userType === type.id}
             onClick={() => onSelectUserType(type.id)}
             disabled={isLoading}
-            className={`group rounded-[18px] border p-5 text-left transition-all hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d5b46f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-[22px] sm:p-6 ${
+            className={`group rounded-[16px] border p-3 text-left transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d5b46f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:p-3.5 ${
               userType === type.id
                 ? 'border-[#d5b46f] bg-[#d5b46f]/12 shadow-[0_22px_60px_rgba(213,180,111,0.14)]'
                 : 'border-[#eadfce] bg-[#fbf7f1] hover:border-[#d5b46f]/45'
             }`}
           >
-            <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-full ${userType === type.id ? 'bg-[#d5b46f] text-[#111]' : 'bg-white text-[#d5b46f] border border-[#eadfce]'} transition-all`}>
-              <i className={`${type.icon} text-xl`}></i>
+            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-full sm:h-9 sm:w-9 ${userType === type.id ? 'bg-[#d5b46f] text-[#111]' : 'bg-white text-[#d5b46f] border border-[#eadfce]'} transition-all`}>
+              <i className={`${type.icon} text-base`}></i>
             </div>
-            <h3 className="mb-2 text-lg font-semibold text-[#172033]">{type.title}</h3>
-            <p className="text-sm leading-6 text-[#5b6778]">{type.description}</p>
+            <h3 className="mb-1 text-sm font-semibold text-[#172033] sm:text-base">{type.title}</h3>
+            <p className="text-xs leading-5 text-[#5b6778] sm:text-sm">{type.description}</p>
           </button>
         ))}
       </div>
@@ -82,8 +82,12 @@ function RegisterPlanHint({
   selectedRolePlanSummary: SelectedRolePlanSummary | null;
   userType: string | null;
 }) {
+  if (!userType) {
+    return null;
+  }
+
   return (
-    <div className="mt-6 rounded-[24px] border border-[#eadfce] bg-[#fbf7f1] px-5 py-5">
+    <div className="mt-4 rounded-[20px] border border-[#eadfce] bg-[#fbf7f1] px-4 py-4">
       {selectedRolePlanSummary ? (
         <div className="space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -117,7 +121,7 @@ function RegisterPlanHint({
             </Link>
           </div>
         </div>
-      ) : userType ? (
+      ) : (
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d5b46f]">
             Aucun abonnement mensuel requis
@@ -128,18 +132,6 @@ function RegisterPlanHint({
           </p>
           <Link to="/tarifs" className="c2p-link text-sm font-medium">
             Voir les tarifs C2P
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d5b46f]">
-            Besoin de comparer avant de choisir
-          </p>
-          <p className="text-sm leading-7 text-[#5b6778]">
-            La page tarifs explique quels roles ont un abonnement, combien il coute, et a quoi il sert.
-          </p>
-          <Link to="/tarifs" className="c2p-link text-sm font-medium">
-            Consulter les abonnements
           </Link>
         </div>
       )}

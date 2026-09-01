@@ -13,6 +13,7 @@ export const PrestatairePage = lazy(() => import('../pages/allopresta/prestatair
 export const PublicInstructorProfilePage = lazy(() => import('../pages/formateurs/[id]/page'));
 export const EspaceNumeriquePage = lazy(() => import('../pages/espace-numerique/page'));
 export const FormationPage = lazy(() => import('../pages/espace-numerique/formation/page'));
+export const FormationPaymentPage = lazy(() => import('../pages/espace-numerique/formation/paiement/page'));
 export const MonApprentissagePage = lazy(() => import('../pages/espace-numerique/mon-apprentissage/page'));
 export const ClasseVirtuellePage = lazy(() => import('../pages/espace-numerique/classe-virtuelle/page'));
 export const ProjectCenterPage = lazy(() => import('../pages/project-center/page'));
@@ -26,6 +27,7 @@ export const OnboardingProfilePage = lazy(() => import('../pages/auth/onboarding
 export const ForgotPasswordPage = lazy(() => import('../pages/auth/forgot-password/page'));
 export const TwoFactorPage = lazy(() => import('../pages/auth/two-factor/page'));
 export const PricingPage = lazy(() => import('../pages/tarifs/page'));
+export const PaymentCheckoutPage = lazy(() => import('../pages/paiement/page'));
 export const DashboardPage = lazy(() => import('../pages/dashboard/page'));
 export const PrestataireDashboardPage = lazy(() => import('../pages/dashboard/prestataire/page'));
 export const FormateurDashboardPage = lazy(() => import('../pages/dashboard/formateur/page'));

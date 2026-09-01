@@ -11,6 +11,12 @@ export interface AdminPaymentTransaction {
   description: string;
   date: string;
   reference?: string;
+  financial_operation_id?: string | null;
+  target_type?: 'formation' | 'abonnement' | 'prestation' | string | null;
+  target_id?: string | null;
+  return_to?: string | null;
+  operation_kind?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface AdminFinanceOverview {

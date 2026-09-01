@@ -9,8 +9,10 @@ import { formatDate, formatDateTime } from '@/lib/formatters';
 import { downloadCertificatePdf } from '@/lib/downloads';
 import CertificateViewer, { type CertificateData } from '../../profile/components/CertificateViewer';
 import {
+  fetchApprenantEnrollments,
   fetchApprenantCertificates,
   type ApprenantCertificate as Certificate,
+  type ApprenantEnrollment as Enrollment,
 } from '@/lib/apprenantDashboardApi';
 import { queryKeys } from '@/lib/queryKeys';
 
@@ -22,6 +24,7 @@ type CertificateStatus = 'issued' | 'ready' | 'pending';
 
 type CertificateView = {
   id: string;
+  studentName: string;
   courseName: string;
   instructor: string;
   grade: number | null;
@@ -40,6 +43,7 @@ function normalizeStatus(status: string | undefined): CertificateStatus {
 function fromDatabaseCertificate(certificate: Certificate): CertificateView {
   return {
     id: `db-${certificate.id}`,
+    studentName: certificate.student_name?.trim() || 'Apprenant C2P',
     courseName: certificate.course_name || certificate.title || 'Formation C2P',
     instructor: 'C2P Academy',
     grade: certificate.final_grade ?? certificate.grade ?? null,
@@ -47,6 +51,28 @@ function fromDatabaseCertificate(certificate: Certificate): CertificateView {
     certificateNumber: certificate.certificate_number || certificate.certificate_id || null,
     issuedAt: certificate.issued_at,
     completionDate: certificate.completion_date || null,
+  };
+}
+
+function buildPreviewCertificate(enrollment: Enrollment, user: { firstName?: string; lastName?: string } | null | undefined): CertificateView {
+  const completionDate = enrollment.last_active || enrollment.enrolled_at || new Date().toISOString();
+  const studentName =
+    enrollment.student_name?.trim()
+    || `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
+    || 'Apprenant C2P';
+  const courseName = enrollment.courses?.title || enrollment.course_name || 'Formation C2P';
+  const generatedId = `PREVIEW-${String(enrollment.course_id)}-${studentName.replace(/\s+/g, '-').toUpperCase()}`;
+
+  return {
+    id: `preview-${enrollment.id}`,
+    studentName,
+    courseName,
+    instructor: 'C2P Academy',
+    grade: enrollment.grade ?? null,
+    status: 'ready',
+    certificateNumber: generatedId,
+    issuedAt: null,
+    completionDate,
   };
 }
 
@@ -74,6 +100,11 @@ export default function ApprenantCertificatsPage() {
     queryFn: () => fetchApprenantCertificates(user?.id ?? ''),
     enabled: Boolean(user?.id),
   });
+  const { data: enrollments = [] } = useQuery<Enrollment[]>({
+    queryKey: queryKeys.apprenant.enrollments(user?.id),
+    queryFn: () => fetchApprenantEnrollments(user?.id ?? ''),
+    enabled: Boolean(user?.id),
+  });
 
   useEffect(() => {
     if (isError) {
@@ -83,8 +114,18 @@ export default function ApprenantCertificatsPage() {
 
   const certificates = useMemo(() => {
     const normalized = databaseCertificates.map(fromDatabaseCertificate);
+    const hasCertificateForCourse = new Set(
+      databaseCertificates.map((certificate) => String(certificate.course_name || certificate.title || '').toLowerCase().trim()),
+    );
+    const previewCertificates = enrollments
+      .filter((enrollment) => Number(enrollment.progress || 0) >= 100 || String(enrollment.status || '').toLowerCase() === 'completed')
+      .filter((enrollment) => {
+        const key = String(enrollment.courses?.title || enrollment.course_name || '').toLowerCase().trim();
+        return key && !hasCertificateForCourse.has(key);
+      })
+      .map((enrollment) => buildPreviewCertificate(enrollment, user));
     const seen = new Set<string>();
-    return normalized
+    return [...normalized, ...previewCertificates]
       .filter((certificate) => {
         const key = certificate.certificateNumber || certificate.courseName.toLowerCase();
         if (seen.has(key)) return false;
@@ -92,7 +133,7 @@ export default function ApprenantCertificatsPage() {
         return true;
       })
       .sort((a, b) => new Date(getCertificateDate(b) || 0).getTime() - new Date(getCertificateDate(a) || 0).getTime());
-  }, [databaseCertificates]);
+  }, [databaseCertificates, enrollments, user]);
 
   const filteredCertificates = useMemo(() => {
     if (statusFilter === 'all') return certificates;
@@ -113,18 +154,18 @@ export default function ApprenantCertificatsPage() {
   }, [certificates]);
 
   const latestIssuedCertificate = useMemo(
-    () => certificates.find((certificate) => certificate.status === 'issued'),
+    () => certificates.find((certificate) => certificate.status === 'issued' || certificate.status === 'ready'),
     [certificates],
   );
 
   const openViewer = (certificate: CertificateView) => {
-    if (certificate.status !== 'issued') {
+    if (certificate.status === 'pending') {
       error('Certificat indisponible', 'Ce certificat n est pas encore emissible.');
       return;
     }
 
     setViewerData({
-      studentName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Apprenant C2P',
+      studentName: certificate.studentName,
       courseTitle: certificate.courseName,
       instructor: certificate.instructor,
       date: getCertificateCompletionDate(certificate) ? formatDate(getCertificateCompletionDate(certificate)) : '',
@@ -134,18 +175,18 @@ export default function ApprenantCertificatsPage() {
   };
 
   const handleDownload = (certificate: CertificateView) => {
-    if (certificate.status !== 'issued') {
+    if (certificate.status === 'pending') {
       error('Indisponible', 'Le telechargement sera disponible apres emission.');
       return;
     }
     downloadCertificatePdf(`${certificate.certificateNumber || `certificat-${certificate.id}`}.pdf`, {
-      studentName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Apprenant C2P',
+      studentName: certificate.studentName,
       courseTitle: certificate.courseName,
       instructor: certificate.instructor,
       date: getCertificateCompletionDate(certificate) ? formatDate(getCertificateCompletionDate(certificate)) : '-',
       certificateId: certificate.certificateNumber || certificate.id,
     });
-    success('Telechargement', `Le certificat ${certificate.certificateNumber || certificate.id} a ete telecharge.`);
+    success('Certificat prêt', 'La version imprimable s ouvre pour enregistrement en PDF.');
   };
 
   return (
@@ -243,14 +284,14 @@ export default function ApprenantCertificatsPage() {
                   <div className="mt-5 flex flex-wrap justify-end gap-2">
                     <button
                       onClick={() => openViewer(certificate)}
-                      disabled={certificate.status !== 'issued'}
+                      disabled={certificate.status === 'pending'}
                       className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Voir
                     </button>
                     <button
                       onClick={() => handleDownload(certificate)}
-                      disabled={certificate.status !== 'issued'}
+                      disabled={certificate.status === 'pending'}
                       className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Telecharger
@@ -280,7 +321,9 @@ export default function ApprenantCertificatsPage() {
           <p className="text-sm text-gray-600 mt-1">
             {latestIssuedCertificate?.issuedAt
               ? `Dernier certificat emis le ${formatDateTime(latestIssuedCertificate.issuedAt)}.`
-              : 'Aucun certificat emis pour le moment.'}
+              : latestIssuedCertificate?.completionDate
+                ? `Un certificat pret est disponible depuis le ${formatDateTime(latestIssuedCertificate.completionDate)}.`
+                : 'Aucun certificat emis pour le moment.'}
           </p>
         </div>
       </div>

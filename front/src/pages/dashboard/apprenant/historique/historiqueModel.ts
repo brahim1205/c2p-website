@@ -45,7 +45,7 @@ export function mergeHistoryWithEnrollments(enrollments: ApprenantEnrollment[]):
         courseId,
         title: enrollment.courses?.title || enrollment.course_name || 'Formation',
         category: enrollment.courses?.category || enrollment.course_category || 'Général',
-        thumbnail: enrollment.courses?.thumbnail || '/images/home/academy.jpg',
+        thumbnail: enrollment.courses?.thumbnail || '/images/home/front-view-stacked-book-with-glasses-academic-cap-optimized.webp',
         instructor: 'C2P Formation',
         totalLessons,
         completedLessons: backendCompleted,

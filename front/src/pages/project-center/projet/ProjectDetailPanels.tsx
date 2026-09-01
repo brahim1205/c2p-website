@@ -22,17 +22,17 @@ export function ProjectOverviewPanel({
     <div className="space-y-8" role="tabpanel" id="project-panel-overview" aria-labelledby="project-tab-overview">
       <div>
         <h2 className="text-xl font-semibold text-[#06053a] sm:text-2xl">À propos du projet</h2>
-        <p className="mt-4 text-sm leading-8 text-[#27346b]">{project.description || 'Aucune description détaillée n’a encore été publiée.'}</p>
+        <p className="mt-4 text-sm leading-8 text-[#27346b]">{project.description || 'Aucune description publique n’a été renseignée.'}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 md:gap-5">
         <div className="rounded-[24px] border border-[#80bfdf] bg-[#ffffff] p-4 sm:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#27346b]">Impact actuel</p>
-          <p className="mt-3 text-sm leading-7 text-[#27346b]">{project.impact || 'Impact en cours de qualification par l’équipe C2P.'}</p>
+          <p className="mt-3 text-sm leading-7 text-[#27346b]">{project.impact || 'Non renseigné'}</p>
         </div>
         <div className="rounded-[24px] border border-[#80bfdf] bg-[#ffffff] p-4 sm:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#27346b]">Prochaine étape</p>
-          <p className="mt-3 text-sm leading-7 text-[#27346b]">{project.next_milestone || 'Aucun jalon prioritaire publié pour le moment.'}</p>
+          <p className="mt-3 text-sm leading-7 text-[#27346b]">{project.next_milestone || 'Non renseignée'}</p>
         </div>
       </div>
 
@@ -57,7 +57,7 @@ function ProjectMilestonesList({ milestones }: { milestones: ProjectMilestone[] 
                     <span className={`mt-1 h-3 w-3 rounded-full ${meta.dot}`}></span>
                     <div>
                       <h4 className="font-semibold text-[#06053a]">{milestone.title}</h4>
-                      <p className="mt-1 text-sm leading-6 text-[#27346b]">{milestone.description || 'Jalon en cours de structuration.'}</p>
+                      <p className="mt-1 text-sm leading-6 text-[#27346b]">{milestone.description || 'Description non renseignée.'}</p>
                     </div>
                   </div>
                   <div className="sm:text-right">

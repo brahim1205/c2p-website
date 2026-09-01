@@ -33,6 +33,7 @@ import type {
   PayoutRequestCreateDto,
   ProviderVisibilityPurchaseDto,
   SubscriptionActivateDto,
+  WaveIntentCreateDto,
   WalletTopupDto,
   WalletWithdrawDto,
 } from './dto/finance-commands.dto.js';
@@ -124,6 +125,61 @@ export class PaymentCommandsService {
       wallet: getWalletRow(actor.id),
       transaction: operation.transaction,
       financialOperationId: operation.financialOperationId,
+    };
+  }
+
+  async createWavePaymentIntent(actor: AuthUser, payload: WaveIntentCreateDto, requestId: string) {
+    await syncAppStoreFromDatabase(this.prisma);
+    const intentId = commandScopedId('wave', actor.id, requestId);
+    const existing = listAppRows('payment_transactions').find((row) => (
+      String(row.id) === intentId && String(row.user_id) === String(actor.id)
+    ));
+    if (existing) {
+      return {
+        transaction: existing,
+        reference: String(existing.reference ?? intentId),
+        paymentUrl: 'https://pay.wave.com/m/M_sn_kUcGiCor22EL/c/sn/',
+      };
+    }
+
+    const rowsToPersist: Record<string, Row[]> = {};
+    const financialOperationId = `finop_wave_${Date.now()}_${commandScopedId('direct', actor.id, requestId)}`;
+    const reference = `C2P-${intentId.slice(-10).toUpperCase()}`;
+    const transaction = withId(prepareInsert('payment_transactions', {
+      id: intentId,
+      user_id: actor.id,
+      type: 'payment',
+      amount: payload.amount,
+      currency: payload.currency ?? 'XAF',
+      method: 'wave',
+      status: 'pending',
+      description: payload.description,
+      date: new Date().toISOString(),
+      reference,
+      provider_order_id: reference,
+      financial_operation_id: financialOperationId,
+      metadata: {
+        operation_kind: 'wave_checkout',
+        target_type: payload.target_type,
+        target_id: payload.target_id,
+        return_to: payload.return_to ?? null,
+        payment_method: 'wave',
+        financial_operation_id: financialOperationId,
+      },
+    }));
+
+    appendAppRows('payment_transactions', [transaction]);
+    mergeRowsToPersist(rowsToPersist, 'payment_transactions', collectRowsByIds('payment_transactions', [String(transaction.id)]));
+
+    await this.platformPersistenceService.persistRows(rowsToPersist, {
+      actorId: actor.id,
+      reason: 'wave_payment_intent_create_command',
+    });
+
+    return {
+      transaction: listAppRows('payment_transactions').find((row) => String(row.id) === String(transaction.id)) ?? transaction,
+      reference,
+      paymentUrl: 'https://pay.wave.com/m/M_sn_kUcGiCor22EL/c/sn/',
     };
   }
 
@@ -309,6 +365,23 @@ export class PaymentCommandsService {
         this.walletService,
         actor.id,
       );
+    } else if (payload.confirmed_transaction_id) {
+      const confirmedTransaction = listAppRows('payment_transactions').find((row) => (
+        String(row.id) === String(payload.confirmed_transaction_id)
+        && String(row.user_id) === String(actor.id)
+        && String(row.status) === 'completed'
+        && Number(row.amount ?? 0) >= Number(candidate.amount ?? 0)
+      ));
+      if (!confirmedTransaction) {
+        throw new BadRequestException('Paiement Wave non confirme pour cet abonnement.');
+      }
+      patchAppRows('user_subscriptions', (row) => String(row.id) === String(candidate.id), {
+        financial_operation_id: confirmedTransaction.financial_operation_id ?? null,
+        payment_transaction_id: confirmedTransaction.id,
+        payment_method: paymentMethod,
+        updated_at: new Date().toISOString(),
+      });
+      mergeRowsToPersist(rowsToPersist, 'user_subscriptions', collectRowsByIds('user_subscriptions', [String(candidate.id)]));
     } else {
       const operation = appendDirectPaymentTransaction(rowsToPersist, {
         actorId: actor.id,

@@ -54,10 +54,9 @@ export default function PaiementsPage() {
         currency={session.walletDetails?.currency ?? 'XAF'}
         loading={session.loadingPayments}
         hasWallet={Boolean(session.walletId)}
-        dexPayAvailable={session.dexPayAvailable}
         onRecharge={() => actions.setShowRechargeModal(true)}
-        onOpenDexPay={() => actions.setShowDexPayModal(true)}
         onWithdraw={() => actions.setShowWithdrawModal(true)}
+        compactOnMobile
       />
 
       {session.loadingPayments ? <PaymentsSkeleton /> : null}
@@ -80,7 +79,7 @@ export default function PaiementsPage() {
         ) : null}
 
         {session.activeTab === 'methods' ? (
-          <PaymentMethodsPanel dexPayStatus={session.dexPayStatus} dexPayAvailable={session.dexPayAvailable} />
+          <PaymentMethodsPanel />
         ) : null}
 
         {session.activeTab === 'wallet' ? (
@@ -93,7 +92,6 @@ export default function PaiementsPage() {
             currency={session.walletDetails?.currency ?? 'XAF'}
             activeSubscription={session.activeSubscription}
             monetizedRole={session.monetizedRole}
-            dexPayAvailable={session.dexPayAvailable}
             providerBackedTransactions={session.providerBackedTransactions}
             activeProviderTransactions={session.activeProviderTransactions}
             reconciledProviderTransactionsCount={session.reconciledProviderTransactions.length}
@@ -102,7 +100,6 @@ export default function PaiementsPage() {
             defaultPayoutAccount={session.defaultPayoutAccount}
             subscriptionPlans={session.subscriptionPlans}
             selectedPlanId={session.selectedPlanId}
-            selectedPlan={session.selectedPlan}
             selectedPlanUnavailable={session.selectedPlanUnavailable}
             selectedPlanName={session.selectedPlanName}
             selectedPlanRole={session.selectedPlanRole}
@@ -116,14 +113,13 @@ export default function PaiementsPage() {
             payoutRequests={session.payoutRequests}
             commissionEntries={session.commissionEntries}
             onRecharge={() => actions.setShowRechargeModal(true)}
-            onOpenDexPay={() => actions.setShowDexPayModal(true)}
             onWithdraw={() => actions.setShowWithdrawModal(true)}
             getTransactionLifecycleState={session.getTransactionLifecycleState}
             getProviderCapabilitySummary={(transaction) => session.getSelfServiceCapabilities(transaction, 'provider_console').summary}
             canSyncProvider={(transaction) => session.getSelfServiceCapabilities(transaction, 'provider_console').actions.sync_provider}
             onSyncDexPayTransaction={(transaction) => void actions.handleSyncDexPayTransaction(transaction)}
-            onActivatePlan={(plan) => void actions.handleActivatePlan(plan)}
-            onPurchaseVisibilityProduct={(product) => void actions.handlePurchaseVisibilityProduct(product)}
+            onActivatePlan={(plan, paymentMethod) => void actions.handleActivatePlan(plan, paymentMethod)}
+            onPurchaseVisibilityProduct={(product, paymentMethod) => void actions.handlePurchaseVisibilityProduct(product, paymentMethod)}
           />
         ) : null}
       </PaymentTabs>
@@ -131,7 +127,9 @@ export default function PaiementsPage() {
       {actions.showRechargeModal ? (
         <RechargeWalletModal
           amount={actions.rechargeAmount}
+          paymentMethod={actions.rechargePaymentMethod}
           onAmountChange={actions.setRechargeAmount}
+          onPaymentMethodChange={actions.setRechargePaymentMethod}
           onClose={actions.closeRechargeModal}
           onSubmit={actions.handleRecharge}
         />

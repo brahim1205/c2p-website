@@ -124,8 +124,8 @@ export default function PublicLayoutFooter({ onInternalLinkClick }: PublicLayout
               <li><Link to="/allopresta" onClick={onInternalLinkClick('/allopresta')} className="text-[14px] text-[#64748b] transition-colors duration-200 hover:text-[#0f1c35]">AlloPresta</Link></li>
               <li><Link to="/espace-numerique" onClick={onInternalLinkClick('/espace-numerique')} className="text-[14px] text-[#64748b] transition-colors duration-200 hover:text-[#0f1c35]">Espace Numerique</Link></li>
               <li><Link to="/project-center" onClick={onInternalLinkClick('/project-center')} className="text-[14px] text-[#64748b] transition-colors duration-200 hover:text-[#0f1c35]">ProjectCenter</Link></li>
-              <li><Link to="/dashboard/apprenant/mes-cours" onClick={onInternalLinkClick('/dashboard/apprenant/mes-cours')} className="text-[14px] text-[#64748b] transition-colors duration-200 hover:text-[#0f1c35]">Mes Cours</Link></li>
-              <li><Link to="/dashboard" onClick={onInternalLinkClick('/dashboard')} className="text-[14px] text-[#64748b] transition-colors duration-200 hover:text-[#0f1c35]">Mon Dashboard</Link></li>
+              <li><Link to="/tarifs" onClick={onInternalLinkClick('/tarifs')} className="text-[14px] text-[#64748b] transition-colors duration-200 hover:text-[#0f1c35]">Tarifs</Link></li>
+              <li><Link to="/auth/login" onClick={onInternalLinkClick('/auth/login')} className="text-[14px] text-[#64748b] transition-colors duration-200 hover:text-[#0f1c35]">Mon espace</Link></li>
             </ul>
           </div>
 

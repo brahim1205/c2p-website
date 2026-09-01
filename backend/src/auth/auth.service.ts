@@ -1269,6 +1269,33 @@ export class AuthService {
       const nextPendingChallenges = pendingChallenges.filter((challenge) => challenge.userId !== user.id);
       const nextAuditLogs = auditLogs.filter((entry) => entry.userId !== user.id);
 
+      // Anonymisation des profils publics associés pour effacer les PII (RGPD)
+      if (this.prisma.isConnected) {
+        try {
+          await this.prisma.marketplaceProvider.updateMany({
+            where: { userId: user.id },
+            data: {
+              name: 'Anonyme',
+              title: 'Profil supprimé',
+              location: null,
+              avatar: null,
+              coverImage: null,
+              active: false,
+              verified: false,
+            },
+          });
+
+          await this.prisma.learningCourse.updateMany({
+            where: { instructorId: user.id },
+            data: {
+              status: 'archived',
+            },
+          });
+        } catch (error) {
+          // Ignorer si la table n'est pas encore migrée ou vide
+        }
+      }
+
       await Promise.all([
         this.saveUsers(nextUsers),
         this.saveSessions(nextSessions),

@@ -10,7 +10,7 @@ import type {
 const providerFallbackImage = '/images/brand/image1.jpeg';
 
 export async function publishClientProviderDirectReview(params: {
-  providerId: number;
+  providerId: string | number;
   user: ClientDashboardUser;
   service: string;
   rating: number;

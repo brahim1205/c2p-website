@@ -90,7 +90,7 @@ export function AlloPrestaHero({
 
             <div className="absolute inset-x-8 bottom-2 h-[72%] rounded-t-full bg-[#ffcf63]" />
             <img
-              src="/images/home/pesta.png"
+              src="/images/home/presta.png"
               alt="Services professionnels AlloPresta"
               className="absolute bottom-6 right-0 h-[80%] w-full rounded-[28px] object-contain object-center drop-shadow-[0_24px_45px_rgba(15,28,53,0.14)] lg:bottom-10 lg:w-[86%]"
             />

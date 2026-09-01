@@ -46,20 +46,20 @@ export function useProfilePageSession() {
   const [certificate, setCertificate] = useState<CertificateData | null>(null);
 
   const [formData, setFormData] = useState<ProfileFormData>({
-    firstName: user?.firstName ?? 'Jean',
-    lastName: user?.lastName ?? 'Dupont',
-    email: user?.email ?? 'jean.dupont@example.com',
-    phone: user?.phone ?? '+221 77 XXX XX XX',
-    bio: 'Professionnel passionné par le développement et l\'innovation. Spécialisé dans les solutions digitales pour les PME africaines.',
-    location: 'Dakar, Sénégal',
-    website: 'www.jeandupont.com',
-    linkedin: 'linkedin.com/in/jeandupont',
-    twitter: 'twitter.com/jeandupont',
-    profession: 'Consultant Digital',
-    company: 'C2P Consulting',
-    experience: '5 ans',
-    skills: ['Développement Web', 'Marketing Digital', 'Gestion de Projet', 'UI/UX Design'],
-    languages: ['Français', 'Anglais', 'Wolof'],
+    firstName: user?.firstName ?? '',
+    lastName: user?.lastName ?? '',
+    email: user?.email ?? '',
+    phone: user?.phone ?? '',
+    bio: user?.bio ?? '',
+    location: user?.location ?? '',
+    website: user?.website ?? '',
+    linkedin: user?.socialLinks?.linkedin ?? '',
+    twitter: user?.socialLinks?.twitter ?? '',
+    profession: user?.publicTitle ?? '',
+    company: '',
+    experience: '',
+    skills: user?.skills ?? [],
+    languages: user?.languages ?? [],
   });
 
   const profileQueryKey = queryKeys.account.profile(user?.id);
@@ -111,6 +111,12 @@ export function useProfilePageSession() {
         phone: profile.phone || '',
         bio: profile.bio || '',
         location: profile.location || '',
+        website: profile.website || '',
+        linkedin: profile.socialLinks?.linkedin || '',
+        twitter: profile.socialLinks?.twitter || '',
+        profession: profile.publicTitle || '',
+        skills: profile.skills ?? [],
+        languages: profile.languages ?? [],
       }));
       updateUser(profile);
     }
@@ -136,6 +142,14 @@ export function useProfilePageSession() {
         phone: formData.phone,
         bio: formData.bio,
         location: formData.location,
+        publicTitle: formData.profession,
+        website: formData.website,
+        languages: formData.languages.filter(Boolean),
+        skills: formData.skills.filter(Boolean),
+        socialLinks: {
+          linkedin: formData.linkedin || undefined,
+          twitter: formData.twitter || undefined,
+        },
       });
 
       updateUser(updated);

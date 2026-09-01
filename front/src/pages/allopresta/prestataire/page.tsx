@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
   notifyAdminPublicAlloPrestaRequest,
-  notifyClientManagedBookingReceipt,
 } from '@/hooks/useCreateNotification';
 import {
-  createClientManagedBooking,
   publishClientProviderDirectReview,
 } from '@/lib/clientDashboardApi';
+import { savePendingPrestationPayment } from '@/lib/paymentCheckoutStorage';
 import { apiRequest } from '@/lib/api';
+import { createConversation, sendConversationMessage } from '@/lib/messagingApi';
 import {
   canAccessProviderProfile,
   fetchPublicProviderReviews,
   fetchPublicProvider,
   getProviderDisplayName,
   normalizeViewerAccessTier,
+  type ProviderServiceItemRecord,
 } from '@/lib/providerApi';
 import {
   ProviderBreadcrumb,
@@ -33,7 +34,8 @@ import type { ProviderDetailRecord, ProviderReview, ReservationFormData } from '
 export default function PrestataireDetailPage() {
   const { user } = useAuth();
   const { id } = useParams();
-  const providerId = Number(id);
+  const navigate = useNavigate();
+  const providerId = String(id ?? '').trim();
   const viewerTier = normalizeViewerAccessTier(user);
   const [prestataire, setPrestataire] = useState<ProviderDetailRecord | null>(null);
   const [reviews, setReviews] = useState<ProviderReview[]>([]);
@@ -83,7 +85,7 @@ export default function PrestataireDetailPage() {
           const mapped = {
             ...provider,
             skills: [],
-            member_since: provider.created_at ? new Date(provider.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : 'Janvier 2022',
+            member_since: provider.created_at ? new Date(provider.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : 'Non renseigné',
           };
           setPrestataire(mapped);
         }
@@ -102,6 +104,32 @@ export default function PrestataireDetailPage() {
   const handleReservationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (requestMode === 'contact') {
+      if (user?.id && prestataire?.user_id && prestataire.user_id !== user.id) {
+        try {
+          const conversation = await createConversation({
+            name: displayName,
+            role: prestataire.title || prestataire.category || 'Prestataire',
+            avatar: prestataire.image ?? undefined,
+            participants: [user.id, prestataire.user_id],
+            type: 'individual',
+            members: 2,
+          });
+          const message = [
+            `Bonjour, je souhaite vous contacter depuis AlloPresta.`,
+            `Service: ${resForm.service || prestataire.services[0] || 'Service général'}`,
+            '',
+            resForm.description,
+          ].filter(Boolean).join('\n');
+          await sendConversationMessage(conversation.id, message);
+          setShowReservationModal(false);
+          setResForm({ customerName: '', customerEmail: '', customerPhone: '', service: '', date: '', description: '', budget: '', address: '' });
+          navigate(`/dashboard/messages?conversation=${encodeURIComponent(conversation.id)}`);
+          return;
+        } catch (err) {
+          console.error(err);
+          setFormSuccess('Impossible d’ouvrir la conversation. Votre message va être transmis à C2P.');
+        }
+      }
       await apiRequest('/public/contact', {
         method: 'POST',
         body: JSON.stringify({
@@ -166,10 +194,11 @@ export default function PrestataireDetailPage() {
       return;
     }
     try {
-      await createClientManagedBooking({
+      const service = resForm.service || prestataire?.services[0] || 'Service général';
+      savePendingPrestationPayment({
         user,
         requestedProviderId: providerId,
-        service: resForm.service || prestataire?.services[0] || 'Service général',
+        service,
         description: resForm.description,
         bookingDate: resForm.date,
         bookingTime: '09:00',
@@ -177,23 +206,17 @@ export default function PrestataireDetailPage() {
         address: resForm.address,
         requestType: 'quote',
         price: Number(resForm.budget) || prestataire?.price_per_hour || 0,
+        returnTo: '/dashboard/client/reservations',
+        label: 'Demande de devis',
       });
       await notifyAdminPublicAlloPrestaRequest(
         user ? `${user.firstName} ${user.lastName}` : 'Un visiteur',
         prestataire?.name || 'un prestataire',
         user?.avatar,
       );
-      if (user?.id) {
-        await notifyClientManagedBookingReceipt(
-          user.id,
-          prestataire?.name || 'ce prestataire',
-          user.avatar,
-        );
-      }
-      setFormSuccess('Votre demande de devis a été transmise à C2P. L’équipe va analyser le besoin et vous répondre.');
+      setFormSuccess('Votre demande est prête. Finalisez le paiement pour la transmettre à C2P.');
       setShowReservationModal(false);
-      setResForm({ customerName: '', customerEmail: '', customerPhone: '', service: '', date: '', description: '', budget: '', address: '' });
-      setTimeout(() => setFormSuccess(null), 5000);
+      navigate(`/paiement?type=prestation&returnTo=${encodeURIComponent('/dashboard/client/reservations')}`);
     } catch (err) {
       console.error(err);
       setFormSuccess('Erreur lors de l\'envoi. Veuillez réessayer.');
@@ -234,6 +257,20 @@ export default function PrestataireDetailPage() {
   const profileUnlocked = prestataire ? canAccessProviderProfile(viewerTier, prestataire.public_profile_level) : false;
   const displayName = prestataire ? getProviderDisplayName(prestataire, viewerTier) : 'Prestataire C2P';
   const visibleServiceOptions = profileUnlocked ? serviceOptions : serviceOptions.slice(0, 2);
+  const serviceCards: ProviderServiceItemRecord[] = prestataire
+    ? (
+        prestataire.service_items.length
+          ? prestataire.service_items.filter((item) => String(item.title ?? '').trim().length > 0)
+          : visibleServiceOptions.map((service) => ({
+              title: service,
+              description: prestataire.bio || undefined,
+              location: prestataire.location || undefined,
+              image: prestataire.image || undefined,
+              category: prestataire.category || undefined,
+              price: prestataire.price_per_hour || undefined,
+            }))
+      )
+    : [];
   if (loading) {
     return <ProviderLoadingState />;
   }
@@ -267,8 +304,7 @@ export default function PrestataireDetailPage() {
 
                 <AlloPrestaProviderServices
                   prestataire={prestataire}
-                  profileUnlocked={profileUnlocked}
-                  visibleServiceOptions={visibleServiceOptions}
+                  serviceCards={serviceCards}
                   onSelectService={(service) => {
                     setResForm((state) => ({ ...state, service }));
                     openReservationFlow();

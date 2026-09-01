@@ -9,6 +9,7 @@ import {
   topupWallet,
   withdrawWallet,
 } from '@/lib/paymentsApi';
+import { openC2PWavePayment } from '@/lib/wavePayment';
 import {
   getPaymentLifecycleLabel,
   resolvePaymentLifecycleStatus,
@@ -65,6 +66,7 @@ export function usePaymentActions({
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [rechargeAmount, setRechargeAmount] = useState('');
+  const [rechargePaymentMethod, setRechargePaymentMethod] = useState<PaymentMethodId>('wave');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showDexPayModal, setShowDexPayModal] = useState(false);
@@ -83,7 +85,11 @@ export function usePaymentActions({
     recipientWallet: '',
   });
 
-  const closeRechargeModal = () => { setShowRechargeModal(false); setRechargeAmount(''); };
+  const closeRechargeModal = () => {
+    setShowRechargeModal(false);
+    setRechargeAmount('');
+    setRechargePaymentMethod('wave');
+  };
   const closeWithdrawModal = () => { setShowWithdrawModal(false); setWithdrawAmount(''); };
   const updateDexPayForm = (patch: Partial<DexPayCheckoutForm>) => setDexPayForm((current) => ({ ...current, ...patch }));
 
@@ -100,10 +106,13 @@ export function usePaymentActions({
 
     void (async () => {
       try {
+        if (rechargePaymentMethod === 'wave') {
+          openC2PWavePayment();
+        }
         await topupWallet({
           amount,
-          method: 'wallet',
-          description: 'Rechargement portefeuille C2P',
+          method: rechargePaymentMethod,
+          description: `Rechargement portefeuille C2P via ${rechargePaymentMethod === 'wave' ? 'Wave' : rechargePaymentMethod === 'orange_money' ? 'Orange Money' : 'carte bancaire'}`,
         });
         await refreshPayments();
         success('Rechargement effectué', `${amount.toLocaleString('fr-FR')} XAF ont été ajoutés à votre portefeuille.`);
@@ -231,6 +240,9 @@ export function usePaymentActions({
   const handleActivatePlan = async (plan: SubscriptionPlan, paymentMethod: PaymentMethodId = 'dexpay') => {
     if (!user?.id) return;
     try {
+      if (paymentMethod === 'wave') {
+        openC2PWavePayment();
+      }
       await activateSubscriptionPlan({
         plan_id: plan.id,
         payment_method: paymentMethod,
@@ -253,6 +265,9 @@ export function usePaymentActions({
     if (user?.role !== 'prestataire') return;
     setPurchasingVisibilityProductId(product.id);
     try {
+      if (paymentMethod === 'wave') {
+        openC2PWavePayment();
+      }
       const result = await purchaseProviderVisibility({ product_id: product.id, payment_method: paymentMethod });
       await refreshPayments();
       success(
@@ -280,8 +295,10 @@ export function usePaymentActions({
     handleWithdraw,
     purchasingVisibilityProductId,
     rechargeAmount,
+    rechargePaymentMethod,
     selectedTransaction,
     setRechargeAmount,
+    setRechargePaymentMethod,
     setSelectedTransaction,
     setShowDexPayModal,
     setShowRechargeModal,

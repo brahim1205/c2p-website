@@ -49,33 +49,30 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-dvh bg-[#e8f5d8] px-4 py-6 text-c2p-text sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-7xl flex-col justify-center">
-        <div className="mb-5 text-center">
-          <span className="inline-flex rounded-lg bg-white/85 px-4 py-2 text-lg font-semibold text-[#0f1c35] shadow-sm">
+    <main className="min-h-dvh bg-[#e8f5d8] px-4 pb-3 pt-8 text-c2p-text sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100dvh-2.75rem)] max-w-6xl flex-col justify-center">
+        <div className="mb-3 text-center">
+          <span className="inline-flex rounded-lg bg-white/85 px-4 py-1.5 text-base font-semibold text-[#0f1c35] shadow-sm">
             Se connecter
           </span>
         </div>
 
-        <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)] lg:min-h-[620px] lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]">
-        <section className="p-4 sm:p-7 lg:p-9">
-          <div className="mb-6 flex items-center justify-between">
+        <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[24px] bg-white shadow-[0_24px_70px_rgba(15,28,53,0.10)] lg:min-h-[540px] lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,1.05fr)]">
+        <section className="p-4 sm:p-6 lg:p-7">
+          <div className="mb-4 flex items-center">
             <Link to="/">
-              <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-10 w-auto" />
-            </Link>
-            <Link to="/auth/register" className="rounded-full border border-[#dbe7ca] px-4 py-2 text-sm font-semibold text-[#0f1c35] hover:bg-[#f7fbef]">
-              S&apos;inscrire
+              <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-9 w-auto" />
             </Link>
           </div>
 
-          <div className="mb-4 sm:mb-6">
-            <h1 className="text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Connexion</h1>
-            <p className="mt-3 text-sm leading-7 text-[#64748b]">
+          <div className="mb-4">
+            <h1 className="text-3xl font-semibold text-[#0f1c35]">Connexion</h1>
+            <p className="mt-2 text-sm leading-6 text-[#64748b]">
               Accédez à vos services, formations, projets, messages et paiements C2P.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <label htmlFor="email" className="mb-2 block text-sm font-medium text-[#27346b]">Adresse email</label>
               <div className="relative">
@@ -105,7 +102,7 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <button type="submit" disabled={isLoading} className="c2p-btn-accent w-full px-6 py-3.5">
+            <button type="submit" disabled={isLoading} className="c2p-btn-accent w-full px-6 py-3">
               {isLoading ? (
                 <span className="flex items-center justify-center">
                   <i className="ri-loader-4-line mr-2 animate-spin"></i>
@@ -117,7 +114,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="my-5 flex items-center gap-3">
+          <div className="my-4 flex items-center gap-3">
             <span className="h-px flex-1 bg-[#d6dbe1]" />
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748b]">ou</span>
             <span className="h-px flex-1 bg-[#d6dbe1]" />
@@ -127,14 +124,14 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => startSocialAuth('google', { returnTo })}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#d6dbe1] bg-white px-4 py-3 text-sm font-semibold text-[#0f1c35] transition-colors hover:bg-[#f7f8fc]"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#d6dbe1] bg-white px-4 py-2.5 text-sm font-semibold text-[#0f1c35] transition-colors hover:bg-[#f7f8fc]"
             >
               <i className="ri-google-fill text-lg" />
               Google
             </button>
           </div>
 
-          <p className="mt-4 text-center text-sm text-[#27346b] sm:mt-6">
+          <p className="mt-3 text-center text-sm text-[#27346b]">
             Vous n&apos;avez pas de compte ?{' '}
             <Link
               to="/auth/register"
@@ -145,12 +142,12 @@ export default function LoginPage() {
           </p>
         </section>
 
-        <aside className="relative hidden bg-[#f7faf4] p-8 lg:flex lg:items-center lg:justify-center">
+        <aside className="relative hidden bg-[#f7faf4] p-7 lg:flex lg:items-center lg:justify-center">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_22%,rgba(26,154,150,0.13),transparent_28%),radial-gradient(circle_at_80%_74%,rgba(249,200,70,0.22),transparent_30%)]"></div>
           <div className="relative max-w-md text-center">
-            <img src="/images/home/numerique.png" alt="Connexion C2P" className="mx-auto h-80 w-full object-contain drop-shadow-[0_24px_45px_rgba(15,28,53,0.14)]" />
-            <h2 className="mt-8 text-3xl font-semibold text-[#0f1c35]">Oser rêver et devenir autonome</h2>
-            <p className="mt-4 text-sm leading-7 text-[#64748b]">
+            <img src="/images/home/front-view-stacked-book-with-glasses-academic-cap-optimized.webp" alt="Connexion C2P" className="mx-auto h-56 w-full rounded-3xl object-cover drop-shadow-[0_20px_38px_rgba(15,28,53,0.12)]" />
+            <h2 className="mt-6 text-2xl font-semibold text-[#0f1c35]">Oser rêver et devenir autonome</h2>
+            <p className="mt-3 text-sm leading-6 text-[#64748b]">
               Un seul espace pour piloter votre parcours selon votre rôle : client, prestataire, formateur, apprenant, porteur de projet ou partenaire.
             </p>
           </div>

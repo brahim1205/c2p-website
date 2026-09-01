@@ -48,12 +48,12 @@ export default function AlloPrestaProviderProfileCard({
                   <span>{getProviderTierLabel(prestataire.public_profile_level)}</span>
                 </div>
               </div>
-              <p className="mb-2 text-base text-gray-600 sm:text-lg">{prestataire.title}</p>
+              <p className="mb-2 text-base text-gray-600 sm:text-lg">{prestataire.title || prestataire.category || 'Prestataire C2P'}</p>
               <div className="flex items-center gap-2 text-gray-600 text-sm">
                 <div className="w-4 h-4 flex items-center justify-center">
                   <i className="ri-map-pin-line"></i>
                 </div>
-                <span>{prestataire.location}</span>
+                <span>{prestataire.location || prestataire.city || 'Localisation non renseignée'}</span>
               </div>
             </div>
           </div>
@@ -67,6 +67,9 @@ export default function AlloPrestaProviderProfileCard({
               <span className="text-gray-500 text-sm">({reviewsCount} avis)</span>
             </div>
             <div className="text-gray-600 text-sm">{prestataire.completed_jobs} prestations réalisées</div>
+            {prestataire.response_time ? (
+              <div className="text-gray-600 text-sm">Réponse : {prestataire.response_time}</div>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -104,7 +107,7 @@ export default function AlloPrestaProviderProfileCard({
             </div>
           </div>
           <div className="rounded-2xl bg-white px-4 py-3 text-sm leading-6 text-[#31445f] shadow-sm sm:max-w-[260px]">
-            C2P protège la mise en relation : la demande est d’abord qualifiée, puis orientée vers le bon intervenant selon le niveau d’accès.
+            Utilisez les boutons ci-dessus pour contacter le prestataire ou envoyer une demande de devis avec vos vraies informations.
           </div>
         </div>
       ) : null}
@@ -113,8 +116,8 @@ export default function AlloPrestaProviderProfileCard({
         <h3 className="text-[#0f1c35] font-bold text-lg mb-3">À propos</h3>
         <p className="text-gray-700 text-[15px] leading-relaxed">
           {profileUnlocked
-            ? (prestataire.bio || 'Professionnel qualifié et vérifié sur la plateforme C2P.')
-            : 'Profil résumé diffusé par C2P. Le détail complet, les signaux de fiabilité et la mise en relation sont cadrés par l’équipe C2P.'}
+            ? (prestataire.bio || 'Aucune présentation publique n’a encore été renseignée.')
+            : 'Le détail complet du profil n’est pas public pour ce niveau d’accès.'}
         </p>
       </div>
     </div>

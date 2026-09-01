@@ -146,6 +146,13 @@ export async function purchaseEspaceCourse(courseId: string | number) {
   });
 }
 
+export async function purchaseEspaceCourseWithExternalPayment(courseId: string | number, transactionId: string) {
+  return apiRequest<EspaceEnrollment>(`/learning/apprenant/courses/${encodeURIComponent(String(courseId))}/purchase/external`, {
+    method: 'POST',
+    body: JSON.stringify({ transaction_id: transactionId }),
+  });
+}
+
 export async function publishEspaceCourseReview(courseId: string | number, payload: { rating: number; comment: string }) {
   return apiRequest<EspaceCourseReview>(`/learning/apprenant/courses/${encodeURIComponent(String(courseId))}/reviews`, {
     method: 'POST',

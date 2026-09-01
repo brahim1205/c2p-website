@@ -3,9 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLE_LABELS } from '@/lib/roles';
 import { useBackendMessaging } from '@/hooks/useBackendMessaging';
-import { useNotifications } from '@/hooks/useNotifications';
 import BrandLogo from '@/components/base/BrandLogo';
-import LiveNotifications from '@/components/feature/LiveNotifications';
 import AvatarUpload from '@/components/base/AvatarUpload';
 import { DashboardMessagesMenu } from './DashboardMessagesMenu';
 import NotificationBell from './NotificationBell';
@@ -31,7 +29,6 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
     loading: messagesLoading,
     markAsRead,
   } = useBackendMessaging();
-  const { notifications } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
 
@@ -58,14 +55,13 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
 
   return (
     <div className="dashboard-layout h-screen overflow-hidden bg-[#f8f9fa]">
-      <LiveNotifications notifications={notifications} />
       {/* Top Bar - Glassmorphism */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/60 h-16 flex items-center px-4 lg:px-6">
+      <header className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center border-b border-gray-200/60 bg-white/92 px-3 backdrop-blur-md lg:h-16 lg:px-6">
         <div className="flex items-center justify-between w-full">
           {/* Left: Logo + hamburger */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 lg:space-x-3">
             <button
-              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100/80 active:scale-95 transition-all duration-200 cursor-pointer"
+              className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 hover:bg-gray-100/80 active:scale-95 lg:hidden"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               <div className="w-5 h-5 flex items-center justify-center">
@@ -75,12 +71,12 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
             <BrandLogo
               to="/"
               className="flex items-center group"
-              imageClassName="h-10 w-auto object-contain transition-all duration-300 group-hover:scale-[1.02]"
+              imageClassName="h-8 w-auto object-contain transition-all duration-300 group-hover:scale-[1.02] lg:h-10"
             />
           </div>
 
           {/* Right: messages + notifications + user */}
-          <div className="ml-auto flex items-center space-x-1">
+          <div className="ml-auto flex items-center space-x-0.5 sm:space-x-1">
             <DashboardMessagesMenu
               isApprenant={isApprenant}
               loading={messagesLoading}
@@ -95,7 +91,7 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
             <NotificationBell />
 
             {/* User profile */}
-            <Link to={profileTarget} className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-gray-100/80 active:scale-95 transition-all duration-200 ml-1">
+            <Link to={profileTarget} className="ml-0.5 flex items-center space-x-1 rounded-xl p-1 transition-all duration-200 hover:bg-gray-100/80 active:scale-95 sm:space-x-2 sm:p-1.5 sm:ml-1">
               <AvatarUpload
                 src={user?.avatar ?? null}
                 initials={userInitials}

@@ -25,6 +25,9 @@ export default function EspaceNumeriqueCourseCard({
           <img
             src={getCourseImage(formation)}
             alt={formation.title}
+            onError={(event) => {
+              event.currentTarget.src = '/images/home/photo-editor-using-editing-software-digital-workspace-home-optimized.webp';
+            }}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
           />
           <span className="absolute left-3 top-3 rounded-full bg-[#6f63d8] px-3 py-1 text-[10px] font-black text-white">

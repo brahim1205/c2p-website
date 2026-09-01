@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import {
   getPaymentLifecycleLabel,
   getPaymentLifecycleTone,
@@ -39,10 +40,13 @@ export default function TransactionDetailModal({
   onDownloadReceipt,
 }: TransactionDetailModalProps) {
   const lifecycleState = getLifecycleState(transaction);
+  const providerProfilePath = transaction.provider_reference
+    ? `/allopresta/prestataire/${encodeURIComponent(transaction.provider_reference)}`
+    : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl sm:p-6">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${transaction.type === 'payment' ? 'bg-red-100' : transaction.type === 'refund' ? 'bg-green-100' : transaction.type === 'deposit' ? 'bg-blue-100' : 'bg-purple-100'}`}>
@@ -63,7 +67,7 @@ export default function TransactionDetailModal({
               {transaction.type === 'payment' || transaction.type === 'withdrawal' ? '-' : '+'}{formatAmount(transaction.amount, transaction.currency)}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg bg-gray-50 p-3">
               <p className="mb-1 text-xs text-gray-500">Statut</p>
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(transaction.status)}`}>{getStatusLabel(transaction.status)}</span>
@@ -85,29 +89,23 @@ export default function TransactionDetailModal({
                 </div>
               </>
             )}
-            <div className="col-span-2 rounded-lg bg-gray-50 p-3"><p className="mb-1 text-xs text-gray-500">Description</p><p className="text-sm font-medium text-gray-900">{transaction.description}</p></div>
+            <div className="rounded-lg bg-gray-50 p-3 sm:col-span-2"><p className="mb-1 text-xs text-gray-500">Description</p><p className="text-sm font-medium text-gray-900">{transaction.description}</p></div>
             <div className="rounded-lg bg-gray-50 p-3"><p className="mb-1 text-xs text-gray-500">Date</p><p className="text-sm font-medium text-gray-900">{formatDate(transaction.date)}</p></div>
-            <div className="rounded-lg bg-gray-50 p-3"><p className="mb-1 text-xs text-gray-500">Référence</p><p className="text-sm font-medium text-gray-900">{transaction.reference}</p></div>
-            {(transaction.financial_operation_id || transaction.provider_reference || transaction.payment_intent_id) && (
-              <div className="col-span-2 rounded-lg bg-gray-50 p-3">
-                <p className="mb-2 text-xs text-gray-500">Objets liés</p>
-                <div className="flex flex-wrap gap-2">
-                  {transaction.financial_operation_id && <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">Opération {transaction.financial_operation_id}</span>}
-                  {transaction.payment_intent_id && <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">Intent {transaction.payment_intent_id}</span>}
-                  {transaction.provider_reference && <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700">Provider {transaction.provider_reference}</span>}
-                </div>
-              </div>
-            )}
-            {transaction.payment_account && <div className="col-span-2 rounded-lg bg-gray-50 p-3"><p className="mb-1 text-xs text-gray-500">Instructions de paiement DexPay</p><p className="text-sm font-medium text-gray-900">{transaction.payment_account.accountName} · {transaction.payment_account.accountNumber} · {transaction.payment_account.bankName}</p></div>}
-            {transaction.deposit_address && <div className="col-span-2 rounded-lg bg-gray-50 p-3"><p className="mb-1 text-xs text-gray-500">Adresse de depot DexPay</p><p className="break-all text-sm font-medium text-gray-900">{transaction.deposit_address}</p></div>}
+            {transaction.payment_account && <div className="rounded-lg bg-gray-50 p-3 sm:col-span-2"><p className="mb-1 text-xs text-gray-500">Instructions de paiement DexPay</p><p className="text-sm font-medium text-gray-900">{transaction.payment_account.accountName} · {transaction.payment_account.accountNumber} · {transaction.payment_account.bankName}</p></div>}
+            {transaction.deposit_address && <div className="rounded-lg bg-gray-50 p-3 sm:col-span-2"><p className="mb-1 text-xs text-gray-500">Adresse de depot DexPay</p><p className="break-all text-sm font-medium text-gray-900">{transaction.deposit_address}</p></div>}
           </div>
         </div>
 
-        <div className="flex space-x-3">
-          <button onClick={onClose} className="flex-1 whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Fermer</button>
-          {(transaction.financial_operation_id || transaction.reference) && canOpenLinkedInvoices(transaction) && <button onClick={() => onOpenRelatedInvoices(transaction)} className="flex-1 whitespace-nowrap rounded-lg border border-teal-200 px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50">Voir les factures liées</button>}
-          {transaction.method === 'dexpay' && canSyncProvider(transaction) && <button onClick={onSyncDexPay} disabled={syncingDexPay} className="flex-1 whitespace-nowrap rounded-lg border border-[#0f766e]/30 px-4 py-2 text-sm font-medium text-[#0f766e] transition-colors hover:bg-[#f5faf9] disabled:opacity-60">{syncingDexPay ? 'Synchronisation...' : 'Synchroniser DexPay'}</button>}
-          <button onClick={() => onDownloadReceipt(transaction)} className="flex-1 whitespace-nowrap rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"><i className="ri-download-line mr-1" />Télécharger le reçu</button>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button onClick={onClose} className="w-full whitespace-nowrap rounded-xl border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Fermer</button>
+          {providerProfilePath ? (
+            <Link to={providerProfilePath} className="inline-flex w-full items-center justify-center whitespace-nowrap rounded-xl border border-sky-200 px-4 py-3 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-50">
+              Voir le profil public
+            </Link>
+          ) : null}
+          {(transaction.financial_operation_id || transaction.reference) && canOpenLinkedInvoices(transaction) && <button onClick={() => onOpenRelatedInvoices(transaction)} className="w-full whitespace-nowrap rounded-xl border border-teal-200 px-4 py-3 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50">Voir les factures liées</button>}
+          {transaction.method === 'dexpay' && canSyncProvider(transaction) && <button onClick={onSyncDexPay} disabled={syncingDexPay} className="w-full whitespace-nowrap rounded-xl border border-[#0f766e]/30 px-4 py-3 text-sm font-medium text-[#0f766e] transition-colors hover:bg-[#f5faf9] disabled:opacity-60">{syncingDexPay ? 'Synchronisation...' : 'Synchroniser DexPay'}</button>}
+          <button onClick={() => onDownloadReceipt(transaction)} className="w-full whitespace-nowrap rounded-xl bg-teal-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-teal-700 sm:col-span-2"><i className="ri-download-line mr-1" />Télécharger le reçu</button>
         </div>
       </div>
     </div>

@@ -258,12 +258,39 @@ export class MarketplaceService {
       request_type: this.readString(input.request_type ?? input.requestType) ?? 'booking',
       price: this.numberOrNull(input.price),
       payment_method: this.readString(input.payment_method ?? input.paymentMethod) ?? 'wallet',
+      payment_transaction_id: this.readString(input.payment_transaction_id ?? input.paymentTransactionId) ?? null,
+      financial_operation_id: this.readString(input.financial_operation_id ?? input.financialOperationId) ?? null,
       address: this.readString(input.address) ?? '',
       request_channel: 'c2p_managed',
       wallet_flow: 'escrow',
       created_at: new Date().toISOString(),
     });
-    await this.persist('bookings', [booking], actor, 'marketplace:client:booking:create');
+    const provider = requestedProviderId !== null ? findRow('providers', String(requestedProviderId)) : null;
+    const providerUserId = provider?.user_id ? String(provider.user_id) : null;
+    const providerNotifications = providerUserId ? appendAppRows('notifications', [createAppNotificationRow({
+      userId: providerUserId,
+      title: booking.request_type === 'quote' ? 'Nouvelle demande de devis' : 'Nouvelle demande de reservation',
+      message: `${String(booking.client_name ?? 'Un client')} demande "${String(booking.service)}".`,
+      type: 'booking',
+      link: '/dashboard/prestataire/demandes',
+      metadata: {
+        booking_id: booking.id,
+        provider_id: requestedProviderId,
+        client_id: actor.id,
+        request_type: booking.request_type,
+      },
+    })]) : [];
+    await this.platformPersistenceService.persistRows({
+      bookings: [booking],
+      ...(providerNotifications.length ? { notifications: providerNotifications } : {}),
+    }, {
+      actorId: actor.id,
+      reason: 'marketplace:client:booking:create',
+      afterRowsByTable: {
+        bookings: [booking],
+        ...(providerNotifications.length ? { notifications: providerNotifications } : {}),
+      },
+    });
     return booking;
   }
 
@@ -380,6 +407,8 @@ export class MarketplaceService {
     const previous = clone(booking);
     const updated = patchAppRows('bookings', (row) => String(row.id) === String(booking.id), {
       status,
+      provider_id: booking.provider_id ?? provider.id,
+      assignment_status: 'assigned',
       updated_at: new Date().toISOString(),
     });
     await this.persist('bookings', updated, actor, 'marketplace:prestataire:booking-status:update', [previous]);
@@ -518,7 +547,12 @@ export class MarketplaceService {
 
   private providerRows(table: string, provider: Row) {
     return hydrateRows(table, store[table] ?? [])
-      .filter((row) => String(row.provider_id) === String(provider.id))
+      .filter((row) => {
+        if (table === 'bookings') {
+          return String(row.provider_id) === String(provider.id) || String(row.requested_provider_id) === String(provider.id);
+        }
+        return String(row.provider_id) === String(provider.id);
+      })
       .sort((left, right) => this.compareDatesDesc(left.created_at ?? left.booking_date, right.created_at ?? right.booking_date));
   }
 
@@ -607,7 +641,13 @@ export class MarketplaceService {
   }
 
   private findProviderRow(table: string, rowId: string, provider: Row, notFoundMessage: string) {
-    const row = (store[table] ?? []).find((entry) => String(entry.id) === String(rowId) && String(entry.provider_id) === String(provider.id));
+    const row = (store[table] ?? []).find((entry) => {
+      if (String(entry.id) !== String(rowId)) return false;
+      if (table === 'bookings') {
+        return String(entry.provider_id) === String(provider.id) || String(entry.requested_provider_id) === String(provider.id);
+      }
+      return String(entry.provider_id) === String(provider.id);
+    });
     if (!row) throw new NotFoundException(notFoundMessage);
     return row;
   }

@@ -57,7 +57,7 @@ export default function ContactPage() {
     title: 'Contact C2P Sénégal | Parler à l’équipe',
     description: "Contactez C2P pour une demande de service, une formation, un projet d'incubation ou un partenariat.",
     path: '/contact',
-    image: 'https://c2p.sn/images/brand/images10.jpeg',
+    image: 'https://c2p.sn/images/home/portrait-happy-curly-woman-calls-friend-holds-mobile-phone-near-ear-looks-aside-with-broad-toothy-smile-wears-knitted-yellow-jumper-blank-space-optimized.webp',
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -141,7 +141,7 @@ export default function ContactPage() {
 
           <div className="relative">
             <img
-              src="/images/brand/images10.jpeg"
+              src="/images/home/portrait-happy-curly-woman-calls-friend-holds-mobile-phone-near-ear-looks-aside-with-broad-toothy-smile-wears-knitted-yellow-jumper-blank-space-optimized.webp"
               alt="Contact C2P"
               className="h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
             />

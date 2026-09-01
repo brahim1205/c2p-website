@@ -1,10 +1,5 @@
 import type { AuthUser } from '../auth/auth.store.js';
 
-const DIRECT_MESSAGING_PAIRS = new Set([
-  'formateur:apprenant',
-  'apprenant:formateur',
-]);
-
 function normalizeParticipantIds(participants: unknown) {
   if (!Array.isArray(participants)) {
     return [];
@@ -42,12 +37,27 @@ function getConversationRoleLabel(role: AuthUser['role']) {
   }
 }
 
+const DIRECT_MESSAGE_ROLE_PAIRS = new Set([
+  'apprenant:formateur',
+  'parent:formateur',
+  'partenaire:porteur',
+]);
+
+function pairKey(actorRole: AuthUser['role'], targetRole: AuthUser['role']) {
+  return [actorRole, targetRole].sort().join(':');
+}
+
 export function canMessageRole(actorRole: AuthUser['role'], targetRole: AuthUser['role']) {
-  if (actorRole === 'admin' || targetRole === 'admin') {
+  if (
+    actorRole === 'admin'
+    || actorRole === 'superadmin'
+    || targetRole === 'admin'
+    || targetRole === 'superadmin'
+  ) {
     return true;
   }
 
-  return DIRECT_MESSAGING_PAIRS.has(`${actorRole}:${targetRole}`);
+  return DIRECT_MESSAGE_ROLE_PAIRS.has(pairKey(actorRole, targetRole));
 }
 
 export function isConversationAllowedForActor(

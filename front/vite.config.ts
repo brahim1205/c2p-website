@@ -65,6 +65,9 @@ export default defineConfig({
     }),
   ],
   base,
+  esbuild: process.env.NODE_ENV === "production" ? {
+    drop: ["console", "debugger"],
+  } : undefined,
   build: {
     sourcemap: process.env.GENERATE_SOURCEMAP === "true",
     outDir: "out",

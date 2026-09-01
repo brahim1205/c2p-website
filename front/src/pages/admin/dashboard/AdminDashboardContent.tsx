@@ -1,6 +1,5 @@
 import {
   BreakdownPanel,
-  C2PRequestsPanel,
   CommandCenterPanel,
   DashboardHeader,
   DashboardSectionDisclosure,
@@ -8,7 +7,7 @@ import {
   MonetizationPanel,
   PendingActionsPanel,
   ProviderHealthPanel,
-  QuickAccessGrid,
+  RecentRegistrationsPanel,
   RecentActivityPanel,
   RevenueBarsPanel,
 } from './AdminDashboardPanels';
@@ -20,36 +19,28 @@ import type {
   HistoryItem,
   KpiCard,
   PendingAction,
-  ProviderOption,
   ProviderRuntimeBadge,
-  QuickAccessItem,
+  RecentRegistrationItem,
   RevenueBar,
   TimeRange,
 } from './adminDashboardContentModel';
 
 interface AdminDashboardContentProps {
-  assigningBookingId: number | null;
   breakdown: BreakdownItem[];
   commissionTotal: number;
   dexPayStatus: DexPayStatus | null;
   financeProviderSignals: FinanceProviderSignal[];
-  getRequestedProviderLabel: (booking: Booking) => string;
-  getSuggestedProviderId: (booking: Booking) => string;
   history: HistoryItem[];
   isSuperAdmin: boolean;
   kpis: KpiCard[];
   loading: boolean;
   managerName: string;
-  onAssignProvider: (booking: Booking) => void;
   onExport: () => void;
   onRefreshActivity: () => void;
-  onSelectProvider: (bookingId: number, providerId: string) => void;
   onTimeRangeChange: (timeRange: TimeRange) => void;
   pendingActions: PendingAction[];
-  pendingC2PRequests: Booking[];
   providerRuntimeBadge: ProviderRuntimeBadge;
-  providers: ProviderOption[];
-  quickAccess: QuickAccessItem[];
+  recentRegistrations: RecentRegistrationItem[];
   revenueBars: RevenueBar[];
   activeEscrowCount: number;
   activeSubscriptionCount: number;
@@ -57,28 +48,21 @@ interface AdminDashboardContentProps {
 }
 
 export default function AdminDashboardContent({
-  assigningBookingId,
   breakdown,
   commissionTotal,
   dexPayStatus,
   financeProviderSignals,
-  getRequestedProviderLabel,
-  getSuggestedProviderId,
   history,
   isSuperAdmin,
   kpis,
   loading,
   managerName,
-  onAssignProvider,
   onExport,
   onRefreshActivity,
-  onSelectProvider,
   onTimeRangeChange,
   pendingActions,
-  pendingC2PRequests,
   providerRuntimeBadge,
-  providers,
-  quickAccess,
+  recentRegistrations,
   revenueBars,
   activeEscrowCount,
   activeSubscriptionCount,
@@ -96,40 +80,34 @@ export default function AdminDashboardContent({
       <CommandCenterPanel
         loading={loading}
         pendingActions={pendingActions}
-        pendingRequestCount={pendingC2PRequests.length}
+        pendingRequestCount={pendingActions.find((item) => item.label === 'Demandes a assigner')?.count ?? 0}
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr),360px]">
-        <div className="space-y-4">
-          <C2PRequestsPanel
-            assigningBookingId={assigningBookingId}
-            getRequestedProviderLabel={getRequestedProviderLabel}
-            getSuggestedProviderId={getSuggestedProviderId}
-            loading={loading}
-            onAssignProvider={onAssignProvider}
-            onSelectProvider={onSelectProvider}
-            pendingC2PRequests={pendingC2PRequests}
-            providers={providers}
-          />
-        </div>
-
-        <div className="space-y-4">
-          <QuickAccessGrid quickAccess={quickAccess} />
-        </div>
+      <div className="grid gap-4">
+        <KpiGrid kpis={kpis} />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <DashboardSectionDisclosure title="Toutes les priorités" summary="Liste complète des actions à traiter">
-          <PendingActionsPanel pendingActions={pendingActions} />
-        </DashboardSectionDisclosure>
+        <PendingActionsPanel pendingActions={pendingActions} />
+        <RecentRegistrationsPanel recentRegistrations={recentRegistrations} />
+      </div>
 
-        <DashboardSectionDisclosure title="Supervision" summary="Monétisation et santé provider">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr),340px]">
+        <RecentActivityPanel history={history} loading={loading} onRefreshActivity={onRefreshActivity} />
+        <MonetizationPanel
+          activeEscrowCount={activeEscrowCount}
+          activeSubscriptionCount={activeSubscriptionCount}
+          commissionTotal={commissionTotal}
+        />
+      </div>
+
+      <div className="mt-4">
+        <DashboardSectionDisclosure title="Pilotage avancé" summary="Analytique, répartition et supervision technique">
           <div className="space-y-4">
-            <MonetizationPanel
-              activeEscrowCount={activeEscrowCount}
-              activeSubscriptionCount={activeSubscriptionCount}
-              commissionTotal={commissionTotal}
-            />
+            <div className="grid gap-4 xl:grid-cols-[1fr,340px]">
+              <RevenueBarsPanel revenueBars={revenueBars} />
+              <BreakdownPanel breakdown={breakdown} />
+            </div>
             {isSuperAdmin ? (
               <ProviderHealthPanel
                 dexPayStatus={dexPayStatus}
@@ -137,19 +115,6 @@ export default function AdminDashboardContent({
                 providerRuntimeBadge={providerRuntimeBadge}
               />
             ) : null}
-          </div>
-        </DashboardSectionDisclosure>
-      </div>
-
-      <div className="mt-4">
-        <DashboardSectionDisclosure title="Pilotage avancé" summary="Revenus, activité récente, KPI et répartition détaillée">
-          <div className="space-y-4">
-            <KpiGrid kpis={kpis} />
-            <div className="grid gap-4 xl:grid-cols-[1fr,340px]">
-              <RevenueBarsPanel revenueBars={revenueBars} />
-              <RecentActivityPanel history={history} loading={loading} onRefreshActivity={onRefreshActivity} />
-            </div>
-            <BreakdownPanel breakdown={breakdown} />
           </div>
         </DashboardSectionDisclosure>
       </div>

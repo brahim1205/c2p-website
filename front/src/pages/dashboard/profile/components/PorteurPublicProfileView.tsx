@@ -63,9 +63,11 @@ export default function PorteurPublicProfileView({
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-2xl font-bold text-gray-900">{publicName}</h2>
-                  <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">Verifie C2P</span>
+                  {user?.expertVerified ? (
+                    <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">Verifie C2P</span>
+                  ) : null}
                 </div>
-                <p className="mt-2 text-gray-600">{formData.profession || 'Porteur de projet'}{formData.company ? ` · ${formData.company}` : ''}</p>
+                <p className="mt-2 text-gray-600">{formData.profession || 'Porteur de projet'}</p>
                 <p className="mt-1 text-sm text-gray-500">{formData.location || 'Localisation non renseignee'}</p>
                 <p className="mt-4 max-w-3xl text-gray-700">
                   {formData.bio || 'Ajoutez une presentation courte pour expliquer votre parcours, votre vision et la valeur de vos projets.'}
@@ -104,7 +106,6 @@ export default function PorteurPublicProfileView({
               <PublicField label="Prenom" value={formData.firstName} onChange={(value) => onFormDataChange({ ...formData, firstName: value })} />
               <PublicField label="Nom" value={formData.lastName} onChange={(value) => onFormDataChange({ ...formData, lastName: value })} />
               <PublicField label="Titre public" value={formData.profession} placeholder="Ex: Fondateur, Porteur de projet, CEO" onChange={(value) => onFormDataChange({ ...formData, profession: value })} />
-              <PublicField label="Organisation" value={formData.company} placeholder="Nom du projet ou structure" onChange={(value) => onFormDataChange({ ...formData, company: value })} />
               <PublicField label="Localisation publique" value={formData.location} onChange={(value) => onFormDataChange({ ...formData, location: value })} />
               <PublicField label="LinkedIn ou site public" value={formData.linkedin || formData.website} onChange={(value) => onFormDataChange({ ...formData, linkedin: value })} />
               <div className="md:col-span-2">

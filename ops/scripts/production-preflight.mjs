@@ -302,6 +302,13 @@ function main() {
   if (uploadTmpMaxAgeHours !== null && uploadTmpMaxAgeHours > 168) {
     fail(failures, 'UPLOAD_TMP_MAX_AGE_HOURS doit être <= 168 en production.');
   }
+  const uploadRateLimitMax = requirePositiveInteger(backendEnv, 'UPLOAD_RATE_LIMIT_MAX', failures);
+  if (uploadRateLimitMax !== null && uploadRateLimitMax > 60) {
+    fail(failures, 'UPLOAD_RATE_LIMIT_MAX doit être <= 60 en production.');
+  }
+  if (String(backendEnv.SWAGGER_ENABLED ?? '').trim().toLowerCase() === 'true') {
+    fail(failures, 'SWAGGER_ENABLED doit rester false ou absent en production.');
+  }
 
   requireNonPlaceholder(composeEnv, 'POSTGRES_PASSWORD', failures);
   requireNonPlaceholder(composeEnv, 'REDIS_PASSWORD', failures);

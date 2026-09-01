@@ -129,6 +129,11 @@ export function usePaiementsSession() {
       return;
     }
 
+    if (selectedPlanId) {
+      setActiveTab('wallet');
+      return;
+    }
+
     if (contextFinancialOperationId || contextInvoiceNumber || contextTransactionId || contextProviderReference) {
       setActiveTab('transactions');
     }
@@ -138,6 +143,7 @@ export function usePaiementsSession() {
     contextProviderReference,
     contextTransactionId,
     contextView,
+    selectedPlanId,
   ]);
 
   useEffect(() => {

@@ -1,27 +1,20 @@
+import WavePaymentQr from '@/components/feature/WavePaymentQr';
 import { paymentMethods } from './paymentPageModel';
 
-interface PaymentMethodsPanelProps {
-  dexPayStatus: { configured: boolean; reachable?: boolean; enabled?: boolean } | null;
-  dexPayAvailable: boolean;
-}
+export default function PaymentMethodsPanel() {
+  const visibleMethods = paymentMethods.filter((method) => method.id !== 'dexpay');
 
-export default function PaymentMethodsPanel({ dexPayStatus, dexPayAvailable }: PaymentMethodsPanelProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-sm text-gray-600">Canaux acceptés par C2P pour les paiements et retraits.</p>
-          {dexPayStatus && (
-            <p className="mt-1 text-xs text-gray-500">
-              DexPay {dexPayStatus.configured ? 'configure' : 'non configure'}
-              {dexPayStatus.reachable === false ? ' · verification distante en echec' : ''}
-            </p>
-          )}
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {paymentMethods.map((method) => {
-          const methodAvailable = method.active && (method.id !== 'dexpay' || dexPayAvailable);
+        <WavePaymentQr compact />
+        {visibleMethods.map((method) => {
+          const methodAvailable = method.active;
           return (
             <div
               key={method.id}
@@ -37,9 +30,7 @@ export default function PaymentMethodsPanel({ dexPayStatus, dexPayAvailable }: P
                   <div>
                     <h3 className="font-medium text-gray-900">{method.name}</h3>
                     <p className="text-sm text-gray-500 mt-1">
-                      {method.id === 'dexpay'
-                        ? dexPayAvailable ? 'Provider opérationnel' : 'Provider non configuré'
-                        : method.active ? 'Disponible via C2P' : 'À connecter ultérieurement'}
+                      {method.active ? 'Disponible via C2P' : 'À connecter ultérieurement'}
                     </p>
                   </div>
                 </div>
@@ -47,13 +38,11 @@ export default function PaymentMethodsPanel({ dexPayStatus, dexPayAvailable }: P
                   methodAvailable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
                 }`}>
                   <div className={`w-2 h-2 rounded-full mr-1 ${methodAvailable ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                  {method.id === 'dexpay' && !dexPayAvailable ? 'Non configuré' : method.active ? 'Actif' : 'Inactif'}
+                  {method.active ? 'Actif' : 'Inactif'}
                 </span>
               </div>
               <p className="text-sm text-gray-600">
-                {method.id === 'dexpay'
-                  ? 'Les opérations DexPay sont pilotées par la configuration provider de la plateforme.'
-                  : 'Les informations sensibles sont validées au moment de la transaction ou du retrait.'}
+                Les informations sensibles sont validées au moment de la transaction ou du retrait.
               </p>
             </div>
           );

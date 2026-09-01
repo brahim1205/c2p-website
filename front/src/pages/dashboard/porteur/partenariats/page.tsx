@@ -74,7 +74,7 @@ export default function PorteurPartenariatsPage() {
           <p className="text-gray-600">Mentors, partenaires techniques et soutiens financiers rattaches a vos projets.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 mb-8">
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-gray-900">{partners.length}</p><p className="text-sm text-gray-600">Relations actives</p></div>
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-blue-600">{partners.filter((partner) => partner.type === 'mentor').length}</p><p className="text-sm text-gray-600">Mentors</p></div>
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-green-600">{partners.filter((partner) => partner.type === 'financier').length}</p><p className="text-sm text-gray-600">Financiers</p></div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { getDashboardPathForRole } from '@/hooks/useAuth';
@@ -135,32 +135,10 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-dvh bg-[#e8f5d8] px-4 py-6 text-c2p-text sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-7xl flex-col justify-center">
-        <div className="mb-5 text-center">
-          <span className="inline-flex rounded-lg bg-white/85 px-4 py-2 text-lg font-semibold text-[#0f1c35] shadow-sm">
-            S&apos;inscrire
-          </span>
-        </div>
-
-        <div className="mx-auto w-full max-w-4xl overflow-hidden rounded-[24px] bg-white shadow-[0_28px_90px_rgba(15,28,53,0.10)]">
-          <section className="min-w-0 p-4 sm:p-7 lg:p-9">
-            <div className="mb-6 flex items-center justify-between gap-4">
-              <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f766e]">
-                <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-9 w-auto" />
-              </Link>
-              <Link to="/auth/login" className="rounded-full border border-[#dbe7ca] px-4 py-2 text-sm font-semibold text-[#0f1c35] hover:bg-[#f7fbef]">
-                Connexion
-              </Link>
-            </div>
-
-            <div className="mb-6">
-              <h1 className="text-3xl font-semibold leading-tight text-[#0f1c35] sm:text-4xl">Créer un compte C2P</h1>
-              <p className="mt-3 text-sm leading-7 text-[#64748b]">
-                Choisissez votre rôle. C2P adapte ensuite les informations demandées selon votre parcours.
-              </p>
-            </div>
-
+    <main className="min-h-dvh bg-[#e8f5d8] px-3 pb-5 pt-24 text-c2p-text sm:px-5 sm:pb-6 sm:pt-28 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-6xl flex-col justify-center">
+        <div className={`mx-auto w-full rounded-[24px] bg-white p-3.5 shadow-[0_18px_54px_rgba(15,28,53,0.10)] sm:p-5 lg:p-6 ${step === 1 ? 'max-w-5xl' : 'max-w-xl'}`}>
+          <section className="min-w-0">
             <RegisterStepIndicator step={step} />
 
             {step === 1 && (

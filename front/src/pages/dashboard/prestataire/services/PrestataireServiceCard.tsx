@@ -19,7 +19,7 @@ export default function PrestataireServiceCard({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
       <div className="relative h-40 sm:h-44 overflow-hidden">
-        <img src={service.image || '/images/home/service.jpg'} alt={service.title} className="w-full h-full object-cover" />
+        <img src={service.image || '/images/home/mechanic-with-spanners-pockets-optimized.webp'} alt={service.title} className="w-full h-full object-cover" />
         <div className="absolute top-3 right-3">
           <ServiceStatusBadge status={service.status} />
         </div>

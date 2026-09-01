@@ -12,7 +12,6 @@ interface ProviderVisibilityPanelProps {
   orders: ProviderVisibilityOrder[];
   purchasingProductId: string | null;
   availableBalance: number;
-  dexPayAvailable: boolean;
   onPurchaseProduct: (product: ProviderVisibilityProduct, paymentMethod: PaymentMethodId) => void;
 }
 
@@ -23,7 +22,6 @@ export default function ProviderVisibilityPanel({
   orders,
   purchasingProductId,
   availableBalance,
-  dexPayAvailable,
   onPurchaseProduct,
 }: ProviderVisibilityPanelProps) {
   if (products.length === 0) {
@@ -91,7 +89,7 @@ export default function ProviderVisibilityPanel({
               </div>
               <div className="mt-5 grid gap-2">
                 <button
-                  onClick={() => onPurchaseProduct(product, dexPayAvailable ? 'dexpay' : 'wave')}
+                  onClick={() => onPurchaseProduct(product, 'wave')}
                   disabled={isBusy}
                   className="w-full rounded-lg bg-[#27346b] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1d2854] disabled:cursor-not-allowed disabled:opacity-60"
                 >

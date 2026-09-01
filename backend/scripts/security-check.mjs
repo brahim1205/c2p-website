@@ -52,20 +52,37 @@ function readCookie(cookieJar, name) {
     ?.slice(prefix.length) || null;
 }
 
-async function loginAs(email, password = PASSWORD) {
-  const response = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      password,
-    }),
-  });
+async function delay(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  assert(response.ok, `login failed for ${email} (${response.status})`);
-  const payload = await response.json();
-  const cookies = extractCookies(response);
-  return { payload, cookieJar: mergeCookieJar(cookies) };
+async function loginAs(email, password = PASSWORD) {
+  const maxAttempts = 6;
+  const baseDelayMs = 1500;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+
+    if (response.status === 429 && attempt < maxAttempts) {
+      const retryDelay = baseDelayMs * 2 ** (attempt - 1);
+      await delay(retryDelay);
+      continue;
+    }
+
+    assert(response.ok, `login failed for ${email} (${response.status})`);
+    const payload = await response.json();
+    const cookies = extractCookies(response);
+    return { payload, cookieJar: mergeCookieJar(cookies) };
+  }
+
+  assert(false, `login failed for ${email} after retries`);
 }
 
 async function request(path, init = {}) {

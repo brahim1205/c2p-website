@@ -16,6 +16,7 @@ import type {
   PendingAction,
   ProviderRuntimeBadge,
   QuickAccessItem,
+  RecentRegistrationItem,
   RevenueBar,
   TimeRange,
 } from './adminDashboardContentModel';
@@ -123,8 +124,10 @@ export function createKpis(input: {
   scopedRevenue: number;
   filteredBookings: Booking[];
   pendingAssignments: number;
+  totalUsers: number;
   activeUsers: number;
   pendingUsers: number;
+  newUsers: number;
   moderationRate: number;
   publishedCourses: number;
 }): KpiCard[] {
@@ -132,8 +135,10 @@ export function createKpis(input: {
     scopedRevenue,
     filteredBookings,
     pendingAssignments,
+    totalUsers,
     activeUsers,
     pendingUsers,
+    newUsers,
     moderationRate,
     publishedCourses,
   } = input;
@@ -157,9 +162,9 @@ export function createKpis(input: {
     },
     {
       label: 'Utilisateurs',
-      value: String(activeUsers),
-      detail: `${pendingUsers} à valider`,
-      trend: `+${Math.max(1, activeUsers % 7 || 1)}`,
+      value: String(totalUsers),
+      detail: `${activeUsers} actifs · ${pendingUsers} à valider`,
+      trend: `+${Math.max(0, newUsers)} récents`,
       icon: 'ri-team-line',
       surface: 'bg-sky-50 text-sky-700',
     },
@@ -172,6 +177,28 @@ export function createKpis(input: {
       surface: 'bg-amber-50 text-amber-700',
     },
   ];
+}
+
+export function createRecentRegistrations(
+  users: AdminDashboardManagedUser[],
+  limit = 6,
+): RecentRegistrationItem[] {
+  return [...users]
+    .sort((left, right) => {
+      const leftDate = left.createdAt ? Date.parse(left.createdAt) : 0;
+      const rightDate = right.createdAt ? Date.parse(right.createdAt) : 0;
+      return rightDate - leftDate;
+    })
+    .slice(0, limit)
+    .map((user) => ({
+      id: user.id,
+      firstName: user.firstName?.trim() || 'Utilisateur',
+      lastName: user.lastName?.trim() || '',
+      email: user.email?.trim() || '',
+      role: user.role,
+      status: user.status,
+      createdAt: user.createdAt ?? null,
+    }));
 }
 
 export function createQuickAccess(isSuperAdmin: boolean): QuickAccessItem[] {

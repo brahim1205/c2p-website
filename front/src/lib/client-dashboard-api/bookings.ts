@@ -47,7 +47,7 @@ export async function publishClientProviderReview(params: {
 
 export async function createClientManagedBooking(params: {
   user: ClientDashboardUser;
-  requestedProviderId: number;
+  requestedProviderId: string | number;
   service: string;
   description: string;
   bookingDate: string;
@@ -56,8 +56,23 @@ export async function createClientManagedBooking(params: {
   address: string;
   requestType: BookingRequestType;
   price: number | null;
+  paymentTransactionId?: string | null;
+  financialOperationId?: string | null;
 }) {
-  const { user, requestedProviderId, service, description, bookingDate, bookingTime, paymentMethod, address, requestType, price } = params;
+  const {
+    user,
+    requestedProviderId,
+    service,
+    description,
+    bookingDate,
+    bookingTime,
+    paymentMethod,
+    address,
+    requestType,
+    price,
+    paymentTransactionId,
+    financialOperationId,
+  } = params;
   await apiRequest<ClientDashboardBooking>('/marketplace/client/bookings', {
     method: 'POST',
     body: JSON.stringify({
@@ -74,6 +89,8 @@ export async function createClientManagedBooking(params: {
       request_type: requestType,
       price,
       payment_method: paymentMethod,
+      payment_transaction_id: paymentTransactionId ?? null,
+      financial_operation_id: financialOperationId ?? null,
       address,
       request_channel: 'c2p_managed',
       wallet_flow: 'escrow',

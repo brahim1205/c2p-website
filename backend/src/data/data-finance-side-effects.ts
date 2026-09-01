@@ -222,7 +222,19 @@ async function applyBookingCreateSideEffectsInternal(
     let financialOperationId: string | null = null;
     const hooks = createWalletMutationHooks(ctx, rowsToPersist);
 
-    if (amountTotal > 0 && String(booking.payment_method) === 'wallet') {
+    if (amountTotal > 0 && booking.payment_transaction_id) {
+      const confirmedTransaction = ctx.findRow('payment_transactions', booking.payment_transaction_id);
+      if (
+        confirmedTransaction
+        && String(confirmedTransaction.user_id) === String(booking.client_id)
+        && String(confirmedTransaction.status) === 'completed'
+        && Number(confirmedTransaction.amount ?? 0) >= amountTotal
+      ) {
+        paymentTransactionId = String(confirmedTransaction.id);
+        financialOperationId = String(confirmedTransaction.financial_operation_id ?? booking.financial_operation_id ?? walletService.nextFinancialOperationId('external_funding'));
+        fundingStatus = booking.provider_id ? 'assigned' : 'funded';
+      }
+    } else if (amountTotal > 0 && String(booking.payment_method) === 'wallet') {
       const wallet = ctx.ensureWalletAccount(String(booking.client_id), rowsToPersist);
       const balance = ctx.requireNumberOrFallback(wallet.balance, 0);
       if (balance >= amountTotal) {

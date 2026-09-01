@@ -67,7 +67,7 @@ export function InvoiceStatsGrid({ stats }: { stats: InvoiceStats }) {
   };
 
   return (
-    <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
+    <div className="mb-8 grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-4">
       {cards.map((card) => (
         <div key={card.label} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-2 flex items-center justify-between">

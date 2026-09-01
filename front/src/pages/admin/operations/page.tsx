@@ -5,8 +5,10 @@ import AdminLayout from '@/components/feature/AdminLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import {
+  assignAdminBookingProvider,
   fetchAdminAccreditations,
   fetchAdminContentItems,
+  fetchAdminDashboardSnapshot,
   fetchAdminFinanceOverview,
   fetchAdminReports,
   updateAdminAccreditation,
@@ -14,7 +16,6 @@ import {
   updateAdminReport,
 } from '@/lib/adminApi';
 import { fetchUsers } from '@/lib/accountApi';
-import { fetchPublicContactSubmissions, markPublicContactSubmissionHandled } from '@/lib/communicationsApi';
 import { downloadCsvFile } from '@/lib/downloads';
 import { formatDate } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
@@ -102,13 +103,13 @@ export default function AdminOperationsPage() {
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
     queryFn: async (): Promise<OperationsSnapshot> => {
-      const [reportsData, accreditationsData, contentsData, usersData, supportData, financeOverview] = await Promise.all([
+      const [reportsData, accreditationsData, contentsData, usersData, financeOverview, dashboardSnapshot] = await Promise.all([
         fetchAdminReports(),
         fetchAdminAccreditations(),
         fetchAdminContentItems(),
         fetchUsers(),
-        fetchPublicContactSubmissions(50),
         fetchAdminFinanceOverview(),
+        fetchAdminDashboardSnapshot(),
       ]);
 
       return {
@@ -116,7 +117,8 @@ export default function AdminOperationsPage() {
         accreditations: accreditationsData,
         contents: contentsData,
         users: usersData.filter((entry) => entry.role !== 'superadmin') as ManagedUser[],
-        supportRequests: supportData,
+        bookings: dashboardSnapshot.bookings,
+        providers: dashboardSnapshot.providers,
         paymentAlerts:
         (financeOverview.payoutRequests ?? []).filter((entry) => String(entry.status) === 'pending').length
         + (financeOverview.escrowCases ?? []).filter((entry) => ['awaiting_funding', 'delivery_review'].includes(String(entry.status))).length,
@@ -136,7 +138,8 @@ export default function AdminOperationsPage() {
   const accreditations = useMemo(() => operationsQuery.data?.accreditations ?? [], [operationsQuery.data?.accreditations]);
   const contents = useMemo(() => operationsQuery.data?.contents ?? [], [operationsQuery.data?.contents]);
   const users = useMemo(() => operationsQuery.data?.users ?? [], [operationsQuery.data?.users]);
-  const supportRequests = useMemo(() => operationsQuery.data?.supportRequests ?? [], [operationsQuery.data?.supportRequests]);
+  const bookings = useMemo(() => operationsQuery.data?.bookings ?? [], [operationsQuery.data?.bookings]);
+  const providers = useMemo(() => operationsQuery.data?.providers ?? [], [operationsQuery.data?.providers]);
   const paymentAlerts = operationsQuery.data?.paymentAlerts ?? 0;
 
   const updateOperationsCache = (updater: (snapshot: OperationsSnapshot) => OperationsSnapshot) => {
@@ -146,19 +149,27 @@ export default function AdminOperationsPage() {
 
   const operationsInput = useMemo(() => ({
     accreditations,
+    bookings,
     contents,
+    providers,
     reports,
-    supportRequests,
     users,
-  }), [accreditations, contents, reports, supportRequests, users]);
+  }), [accreditations, bookings, contents, providers, reports, users]);
   const queues = useMemo(() => buildOperationsQueue(operationsInput), [operationsInput]);
   const stats = useMemo(() => buildOperationsStats(operationsInput), [operationsInput]);
   const pendingContents = useMemo(() => contents.filter((item) => item.status === 'pending'), [contents]);
   const pendingAccreditations = useMemo(() => accreditations.filter((item) => item.status === 'pending'), [accreditations]);
   const pendingReports = useMemo(() => reports.filter((item) => item.status === 'pending'), [reports]);
-  const pendingSupport = useMemo(() => supportRequests.filter((item) => item.status === 'new'), [supportRequests]);
   const pendingUsers = useMemo(() => users.filter((item) => item.status === 'pending' || item.status === 'suspended'), [users]);
-  const totalPending = pendingContents.length + pendingAccreditations.length + pendingReports.length + pendingSupport.length + pendingUsers.length;
+  const pendingAssignments = useMemo(
+    () => bookings.filter((item) => item.status === 'pending' && !item.provider_id),
+    [bookings],
+  );
+  const totalPending = pendingAssignments.length + pendingContents.length + pendingAccreditations.length + pendingReports.length + pendingUsers.length;
+
+  const [selectedProviderByBooking, setSelectedProviderByBooking] = useState<Record<number, string>>({});
+
+  const getSuggestedProviderId = (bookingId: number) => selectedProviderByBooking[bookingId] ?? '';
 
   const runOperation = async (key: string, action: () => Promise<void>) => {
     setBusyKey(key);
@@ -205,13 +216,32 @@ export default function AdminOperationsPage() {
     success(status === 'resolved' ? 'Signalement résolu' : 'Signalement ignoré', updated.reported);
   };
 
-  const markSupportHandled = async (id: string) => {
-    const updated = await markPublicContactSubmissionHandled(id);
-    updateOperationsCache((snapshot) => ({
-      ...snapshot,
-      supportRequests: snapshot.supportRequests.map((item) => (item.id === updated.id ? updated : item)),
-    }));
-    success('Support traité', updated.subject);
+  const handleAssignProvider = async (booking: typeof pendingAssignments[number]) => {
+    const providerId = Number(getSuggestedProviderId(booking.id));
+    if (!providerId) {
+      error('Assignation impossible', 'Choisissez un prestataire avant de confirmer.');
+      return;
+    }
+
+    const provider = providers.find((entry) => Number(entry.id) === providerId);
+    if (!provider) {
+      error('Prestataire introuvable', 'Le prestataire sélectionné est indisponible.');
+      return;
+    }
+
+    const updated = await assignAdminBookingProvider({
+      booking,
+      provider,
+      adminUserId: 'usr-admin',
+    });
+
+    queryClient.setQueryData(queryKeys.admin.operations(), (current: typeof operationsQuery.data) => current ? {
+      ...current,
+      bookings: current.bookings.map((entry) => entry.id === booking.id ? { ...entry, ...updated } : entry),
+    } : current);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.admin.operations() });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.admin.dashboard('admin') });
+    success('Mission assignée', `${provider.name} reçoit maintenant cette demande.`);
   };
 
   const handleExportQueue = () => {
@@ -253,10 +283,10 @@ export default function AdminOperationsPage() {
 
         <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-5">
           {[
+            { label: 'Assignations', value: pendingAssignments.length, icon: 'ri-route-line', tone: 'text-cyan-700 bg-cyan-50' },
             { label: 'Publications', value: stats.pendingContents, icon: 'ri-file-list-line', tone: 'text-sky-700 bg-sky-50' },
             { label: 'Accréditations', value: stats.pendingAccreditations, icon: 'ri-shield-check-line', tone: 'text-amber-700 bg-amber-50' },
             { label: 'Signalements', value: stats.pendingReports, icon: 'ri-alert-line', tone: 'text-red-700 bg-red-50' },
-            { label: 'Support', value: stats.pendingSupport, icon: 'ri-customer-service-2-line', tone: 'text-teal-700 bg-teal-50' },
             { label: 'Comptes', value: stats.pendingUsers + stats.suspendedUsers, icon: 'ri-user-settings-line', tone: 'text-purple-700 bg-purple-50' },
           ].map((item) => (
             <article key={item.label} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -272,6 +302,68 @@ export default function AdminOperationsPage() {
         <section className="space-y-3">
           {loading && <p className="rounded-2xl border border-gray-200 bg-white px-4 py-6 text-sm text-gray-500">Chargement des opérations...</p>}
           {!loading && totalPending === 0 && <p className="rounded-2xl border border-gray-200 bg-white px-4 py-6 text-sm text-gray-500">Aucune action en attente.</p>}
+
+          {!loading && pendingAssignments.length > 0 ? (
+            <div className="mb-2 rounded-2xl border border-cyan-100 bg-cyan-50/60 px-4 py-3">
+              <h2 className="text-sm font-black uppercase tracking-[0.18em] text-cyan-800">Assignations C2P</h2>
+              <p className="mt-1 text-sm text-cyan-700">Les demandes client qui attendent un prestataire sont traitées ici.</p>
+            </div>
+          ) : null}
+
+          {pendingAssignments.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {pendingAssignments.slice(0, 9).map((booking) => (
+                <article key={`booking-${booking.id}`} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="inline-flex rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700">Demande à assigner</span>
+                      <h3 className="mt-2 line-clamp-2 text-sm font-bold text-gray-900">{booking.service || 'Mission client'}</h3>
+                    </div>
+                    <div className="shrink-0 rounded-xl bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-800">
+                      {Number(booking.price || 0).toLocaleString('fr-FR')} FCFA
+                    </div>
+                  </div>
+
+                  <div className="mt-3 space-y-1 text-sm text-gray-500">
+                    <p className="truncate">{booking.client_name || 'Client'}</p>
+                    <p>{formatDate(booking.created_at || new Date().toISOString())}</p>
+                    <p>{booking.booking_date || 'Date à confirmer'}</p>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <select
+                      value={getSuggestedProviderId(booking.id)}
+                      onChange={(event) => setSelectedProviderByBooking((current) => ({ ...current, [booking.id]: event.target.value }))}
+                      className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-3 text-sm text-gray-700 focus:border-cyan-500 focus:outline-none"
+                    >
+                      <option value="">Choisir un prestataire</option>
+                      {providers.map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.name}{provider.category ? ` · ${provider.category}` : ''}{provider.verified ? ' · vérifié' : ''}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      disabled={busyKey === `assign-${booking.id}`}
+                      onClick={() => void runOperation(`assign-${booking.id}`, () => handleAssignProvider(booking))}
+                      className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      {busyKey === `assign-${booking.id}` ? 'Assignation...' : 'Assigner'}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+
+          {!loading && pendingContents.length > 0 ? (
+            <div className="mb-2 mt-6 rounded-2xl border border-sky-100 bg-sky-50/60 px-4 py-3">
+              <h2 className="text-sm font-black uppercase tracking-[0.18em] text-sky-800">Publications à valider</h2>
+              <p className="mt-1 text-sm text-sky-700">Formations et services publiés par les acteurs en attente de décision.</p>
+            </div>
+          ) : null}
 
           {pendingContents.slice(0, 8).map((content) => {
             const isService = String(content.source_table).includes('provider_services') || String(content.type).toLowerCase().includes('service');
@@ -337,23 +429,6 @@ export default function AdminOperationsPage() {
                   <SmallActionButton tone="success" disabled={busyKey === `report-resolve-${report.id}`} onClick={() => void runOperation(`report-resolve-${report.id}`, () => updateReportStatus(report.id, 'resolved'))}>Résoudre</SmallActionButton>
                   <SmallActionButton disabled={busyKey === `report-dismiss-${report.id}`} onClick={() => void runOperation(`report-dismiss-${report.id}`, () => updateReportStatus(report.id, 'dismissed'))}>Ignorer</SmallActionButton>
                   <Link to="/admin/reports" className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">Voir</Link>
-                </>
-              )}
-            />
-          ))}
-
-          {pendingSupport.slice(0, 6).map((request) => (
-            <OperationCard
-              key={`support-${request.id}`}
-              badge="Support"
-              date={request.createdAt}
-              detail={`${request.firstName} ${request.lastName} · ${request.email}`}
-              title={request.subject}
-              tone="bg-teal-50 text-teal-700"
-              actions={(
-                <>
-                  <SmallActionButton tone="success" disabled={busyKey === `support-${request.id}`} onClick={() => void runOperation(`support-${request.id}`, () => markSupportHandled(request.id))}>Marquer traité</SmallActionButton>
-                  <Link to="/admin/messages" className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">Ouvrir</Link>
                 </>
               )}
             />

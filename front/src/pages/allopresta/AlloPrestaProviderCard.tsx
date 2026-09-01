@@ -34,7 +34,7 @@ export default function AlloPrestaProviderCard({
       className="group block overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-white text-inherit transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,28,53,0.08)] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1a9a96]/20"
     >
       <article>
-      <div className="relative h-56 w-full overflow-hidden">
+      <div className="relative h-32 w-full overflow-hidden sm:h-56">
         <img
           src={cardImage}
           alt={primaryService}
@@ -51,8 +51,8 @@ export default function AlloPrestaProviderCard({
         )}
       </div>
 
-      <div className="px-5 pb-6 pt-6 text-center">
-        <div className="mb-3 flex flex-wrap justify-center gap-2">
+      <div className="px-3 pb-4 pt-4 text-center sm:px-5 sm:pb-6 sm:pt-6">
+        <div className="mb-3 flex flex-wrap justify-center gap-1.5 sm:gap-2">
               <span className="rounded-full bg-[#f8fafc] px-3 py-1 text-[11px] font-black text-[#0f1c35]">
                 {getProviderTierLabel(prestataire.public_profile_level)}
               </span>
@@ -61,17 +61,17 @@ export default function AlloPrestaProviderCard({
               </span>
             </div>
 
-        <h3 className="mx-auto min-h-[56px] max-w-sm text-xl font-black uppercase leading-tight text-[#111827]">
+        <h3 className="mx-auto min-h-[48px] max-w-sm text-base font-black uppercase leading-tight text-[#111827] sm:min-h-[56px] sm:text-xl">
               {primaryService}
         </h3>
             {prestataire.title && prestataire.title !== primaryService ? (
-          <p className="mt-2 text-base font-bold text-[#0f766e]">
+          <p className="mt-2 text-sm font-bold text-[#0f766e] sm:text-base">
                 {prestataire.title}
               </p>
             ) : null}
-        <p className="mt-2 text-sm font-medium text-[#626b7a]">{getProviderDisplayName(prestataire, viewerTier)}</p>
+        <p className="mt-2 line-clamp-2 text-xs font-medium text-[#626b7a] sm:text-sm">{getProviderDisplayName(prestataire, viewerTier)}</p>
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-[#626b7a]">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs text-[#626b7a] sm:mt-4 sm:gap-2 sm:text-sm">
           <div className="flex items-center gap-1 font-bold">
             <div className="w-4 h-4 flex items-center justify-center">
               <i className="ri-star-fill text-[#141827] text-sm"></i>
@@ -87,7 +87,7 @@ export default function AlloPrestaProviderCard({
           <span>{prestataire.completed_jobs} missions</span>
         </div>
 
-        <div className="mt-3 flex items-center justify-center gap-2 text-sm font-semibold text-[#626b7a]">
+        <div className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold text-[#626b7a] sm:text-sm">
           <div className="w-4 h-4 flex items-center justify-center">
             <i className="ri-map-pin-line"></i>
           </div>
@@ -95,7 +95,7 @@ export default function AlloPrestaProviderCard({
         </div>
 
         {secondaryServices.length > 0 || remainingServicesCount > 0 ? (
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <div className="mt-3 hidden flex-wrap justify-center gap-2 sm:mt-4 sm:flex">
             {secondaryServices.map((service) => (
               <span
                 key={service}
@@ -112,7 +112,7 @@ export default function AlloPrestaProviderCard({
           </div>
         ) : null}
 
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <div className="mt-3 flex flex-wrap justify-center gap-1.5 sm:mt-4 sm:gap-2">
           {prestataire.operations_managed ? (
             <span className="rounded-full bg-[#f8fafc] px-3 py-1 text-[11px] font-bold text-[#0f766e]">
               C2P gère la mise en relation
@@ -125,8 +125,8 @@ export default function AlloPrestaProviderCard({
           ) : null}
         </div>
 
-        <div className="mt-6 flex justify-center">
-          <span className="inline-flex w-full items-center justify-center rounded-full bg-[#0f1c35] px-5 py-2.5 text-sm font-black uppercase text-white transition-colors group-hover:bg-[#172b50] sm:w-auto">
+        <div className="mt-4 flex justify-center sm:mt-6">
+          <span className="inline-flex w-full items-center justify-center rounded-full bg-[#0f1c35] px-4 py-2 text-xs font-black uppercase text-white transition-colors group-hover:bg-[#172b50] sm:w-auto sm:px-5 sm:py-2.5 sm:text-sm">
             Voir le profil
           </span>
         </div>

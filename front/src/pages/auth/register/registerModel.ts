@@ -1,4 +1,4 @@
-export const inputClass = 'c2p-input block px-4 py-3 text-sm';
+export const inputClass = 'c2p-input block px-4 py-2.5 text-sm';
 
 export type RoleProfileData = {
   firstName: string;

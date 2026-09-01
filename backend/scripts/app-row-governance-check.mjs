@@ -46,6 +46,7 @@ const trackedAppRowDebtTables = new Set([
   'project_partnerships',
   'project_tracking',
   'projects',
+  'provider_availability_blocks',
   'provider_visibility_orders',
   'provider_visibility_passes',
   'provider_visibility_products',

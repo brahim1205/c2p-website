@@ -42,6 +42,7 @@ export const roleNavOverrides: Record<string, DashboardNavItem[]> = {
     { label: 'Revenus', icon: 'ri-wallet-3-line', path: '/dashboard/formateur/revenus' },
     { label: 'Communauté', icon: 'ri-chat-3-line', path: '/dashboard/formateur/communaute' },
     { label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
+    { label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
   ],
   apprenant: [
     { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/apprenant' },

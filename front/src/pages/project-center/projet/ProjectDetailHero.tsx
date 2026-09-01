@@ -38,7 +38,7 @@ export default function ProjectDetailHero({ documents, fundingPercent, partnersh
             {project.title}
           </h1>
           <p className="mt-5 max-w-3xl text-base leading-8 text-[#27346b] sm:text-lg">
-            {project.description || 'Projet en cours de structuration au sein de ProjectCenter.'}
+            {project.description || 'Description non renseignée.'}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -49,11 +49,11 @@ export default function ProjectDetailHero({ documents, fundingPercent, partnersh
             ))}
           </div>
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+          <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
             <div className="rounded-[22px] border border-[#80bfdf] bg-white/90 px-4 py-4 shadow-[0_18px_45px_rgba(39,52,107,0.08)] sm:px-5 sm:py-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5fa6f3]">Financement</p>
               <p className="mt-2 text-2xl font-semibold text-[#06053a]">{fundingPercent}%</p>
-              <p className="mt-1 text-sm text-[#27346b]">{formatCompactCurrency(project.funding)} leve sur {formatCompactCurrency(project.funding_goal)}</p>
+              <p className="mt-1 text-sm text-[#27346b]">{formatCompactCurrency(project.funding)} levé sur {formatCompactCurrency(project.funding_goal)}</p>
             </div>
             <div className="rounded-[22px] border border-[#80bfdf] bg-white/90 px-4 py-4 shadow-[0_18px_45px_rgba(39,52,107,0.08)] sm:px-5 sm:py-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5fa6f3]">Equipe</p>
@@ -63,7 +63,7 @@ export default function ProjectDetailHero({ documents, fundingPercent, partnersh
             <div className="rounded-[22px] border border-[#80bfdf] bg-white/90 px-4 py-4 shadow-[0_18px_45px_rgba(39,52,107,0.08)] sm:px-5 sm:py-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5fa6f3]">Réseau C2P</p>
               <p className="mt-2 text-2xl font-semibold text-[#06053a]">{partnerships.length}</p>
-              <p className="mt-1 text-sm text-[#27346b]">partenaires et mentors visibles</p>
+              <p className="mt-1 text-sm text-[#27346b]">partenaires et mentors publiés</p>
             </div>
             <div className="rounded-[22px] border border-[#80bfdf] bg-white/90 px-4 py-4 shadow-[0_18px_45px_rgba(39,52,107,0.08)] sm:px-5 sm:py-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5fa6f3]">Documentation</p>

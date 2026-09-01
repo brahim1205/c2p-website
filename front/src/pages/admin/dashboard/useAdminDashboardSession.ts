@@ -21,6 +21,7 @@ import {
   createFinanceProviderSignals,
   createKpis,
   createPendingActions,
+  createRecentRegistrations,
   createProviderRuntimeBadge,
   createQuickAccess,
   createRevenueBars,
@@ -91,6 +92,21 @@ export function useAdminDashboardSession() {
     [users],
   );
 
+  const recentRegistrations = useMemo(
+    () => createRecentRegistrations(users),
+    [users],
+  );
+
+  const recentUsersCount = useMemo(() => {
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    return users.filter((entry) => {
+      if (!entry.createdAt) return false;
+      const createdAt = Date.parse(entry.createdAt);
+      return Number.isFinite(createdAt) && now - createdAt <= sevenDays;
+    }).length;
+  }, [users]);
+
   const moderationRate = useMemo(() => {
     return calculateModerationRate(courses);
   }, [courses]);
@@ -112,12 +128,14 @@ export function useAdminDashboardSession() {
   const kpis = useMemo(() => createKpis({
     activeUsers,
     filteredBookings,
+    totalUsers: users.length,
     moderationRate,
+    newUsers: recentUsersCount,
     pendingAssignments: pendingActions[1].count,
     pendingUsers: users.filter((entry) => entry.status === 'pending').length,
     publishedCourses: courses.filter((course) => course.status === 'published').length,
     scopedRevenue,
-  }), [activeUsers, courses, filteredBookings, moderationRate, pendingActions, scopedRevenue, users]);
+  }), [activeUsers, courses, filteredBookings, moderationRate, pendingActions, recentUsersCount, scopedRevenue, users]);
 
   const quickAccess = useMemo(() => createQuickAccess(isSuperAdmin), [isSuperAdmin]);
   const financeProviderSignals = useMemo(() => createFinanceProviderSignals(providerHealth), [providerHealth]);
@@ -237,6 +255,7 @@ export function useAdminDashboardSession() {
     providerRuntimeBadge,
     providers,
     quickAccess,
+    recentRegistrations,
     revenueBars,
     timeRange,
   };

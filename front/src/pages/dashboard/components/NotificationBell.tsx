@@ -1,12 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'unread'>('unread');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(unreadCount > 0 ? 'unread' : 'all');
+    }
+  }, [isOpen, unreadCount]);
 
   const getIconByType = (type: string) => {
     switch (type) {
@@ -32,7 +38,8 @@ export default function NotificationBell() {
     }
   };
 
-  const filtered = activeTab === 'unread' ? notifications.filter((n) => !n.read) : notifications;
+  const unreadNotifications = notifications.filter((n) => !n.read);
+  const filtered = activeTab === 'unread' ? unreadNotifications : unreadNotifications;
   const recent = filtered.slice(0, 6);
 
   return (
@@ -61,41 +68,41 @@ export default function NotificationBell() {
             className="fixed inset-0 bg-black/10 z-30"
             onClick={() => setIsOpen(false)}
           ></button>
-          <div className="absolute right-0 top-12 w-[min(24rem,calc(100vw-2rem))] max-h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-40 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-3">
+          <div className="fixed left-3 right-3 top-[4.7rem] z-40 flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-[24rem] sm:max-h-[520px]">
+            <div className="border-b border-gray-200 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-base font-bold text-gray-900">
                   Notifications
                   {unreadCount > 0 && (
-                    <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-[10px] rounded-full">
+                    <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-[10px] text-white">
                       {unreadCount}
                     </span>
                   )}
                 </h3>
-                <button onClick={() => setIsOpen(false)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors">
+                <button onClick={() => setIsOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-gray-100">
                   <div className="w-5 h-5 flex items-center justify-center">
                     <i className="ri-close-line text-gray-500"></i>
                   </div>
                 </button>
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${activeTab === 'all' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  className={`rounded-xl px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap ${activeTab === 'all' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
-                  Toutes
+                  Toutes ({unreadNotifications.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('unread')}
-                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${activeTab === 'unread' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                  className={`rounded-xl px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap ${activeTab === 'unread' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
                   Non lues ({unreadCount})
                 </button>
               </div>
               {unreadCount > 0 && (
                 <button
-                  onClick={markAllAsRead}
-                  className="mt-2 text-xs text-teal-600 hover:text-teal-700 font-medium"
+                  onClick={() => void markAllAsRead()}
+                  className="mt-3 text-xs font-medium text-teal-600 hover:text-teal-700"
                 >
                   Tout marquer comme lu
                 </button>
@@ -118,9 +125,9 @@ export default function NotificationBell() {
                     <button
                       type="button"
                       key={n.id}
-                      className={`w-full p-3 text-left hover:bg-gray-50 transition-colors cursor-pointer ${!n.read ? 'bg-teal-50/40' : ''}`}
-                      onClick={() => {
-                        markAsRead(n.id);
+                      className={`w-full cursor-pointer p-3 text-left transition-colors hover:bg-gray-50 ${!n.read ? 'bg-teal-50/40' : ''}`}
+                    onClick={() => {
+                        void markAsRead(n.id);
                         setIsOpen(false);
                         if (n.link) navigate(n.link);
                       }}
@@ -129,7 +136,7 @@ export default function NotificationBell() {
                         {n.avatar ? (
                           <img src={n.avatar} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                         ) : (
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${getColorByType(n.type)}`}>
+                          <div className={`h-9 w-9 flex-shrink-0 rounded-full flex items-center justify-center ${getColorByType(n.type)}`}>
                             <div className="w-5 h-5 flex items-center justify-center">
                               <i className={`${getIconByType(n.type)} text-sm`}></i>
                             </div>
@@ -137,18 +144,34 @@ export default function NotificationBell() {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-semibold text-gray-900 leading-snug">{n.title}</p>
-                            {!n.read && <div className="w-2 h-2 bg-teal-500 rounded-full flex-shrink-0 mt-1.5"></div>}
+                            <p className="pr-1 text-sm font-semibold leading-snug text-gray-900">{n.title}</p>
+                            {!n.read && <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-teal-500"></div>}
                           </div>
                           <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{n.message}</p>
-                          <div className="flex items-center justify-between mt-1.5">
+                          <div className="mt-2 flex items-center justify-between gap-3">
                             <span className="text-[11px] text-gray-400">{n.timestamp}</span>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}
-                              className="text-[11px] text-red-500 hover:text-red-600"
-                            >
-                              Supprimer
-                            </button>
+                            <div className="flex items-center gap-3">
+                              {!n.read ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void markAsRead(n.id);
+                                  }}
+                                  className="text-[11px] font-medium text-teal-600 hover:text-teal-700"
+                                >
+                                  Marquer lu
+                                </button>
+                              ) : null}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void deleteNotification(n.id);
+                                }}
+                                className="text-[11px] font-medium text-red-500 hover:text-red-600"
+                              >
+                                Supprimer
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -158,7 +181,7 @@ export default function NotificationBell() {
               )}
             </div>
 
-            <div className="p-3 border-t border-gray-200 text-center">
+            <div className="border-t border-gray-200 p-3 text-center">
               <button
                 type="button"
                 onClick={() => {

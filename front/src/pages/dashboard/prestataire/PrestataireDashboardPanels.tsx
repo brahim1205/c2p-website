@@ -99,7 +99,7 @@ export function PrestataireHero({ firstName }: PrestataireHeroProps) {
 
 export function PrestataireStatsGrid({ stats }: PrestataireStatsGridProps) {
   return (
-    <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="mb-6 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
       {stats.map((stat) => (
         <div key={stat.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
           <div className="flex items-start justify-between gap-4">

@@ -15,25 +15,29 @@ const paymentTabs: Array<{ id: PaymentTab; label: string; icon: string }> = [
 
 export default function PaymentTabs({ activeTab, onTabChange, children }: PaymentTabsProps) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+    <div className="mb-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
       <div className="border-b border-gray-200">
-        <div className="flex space-x-8 px-6">
+        <div className="flex gap-2 overflow-x-auto px-3 py-3 sm:px-6 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
           {paymentTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'border-teal-600 bg-teal-50 text-teal-700'
+                  : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+              }`}
             >
-              <div className="w-5 h-5 inline-flex items-center justify-center mr-2">
+              <div className="inline-flex h-5 w-5 items-center justify-center">
                 <i className={`${tab.icon} text-base`}></i>
               </div>
-              {tab.label}
+              <span className="whitespace-nowrap">{tab.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="p-6">{children}</div>
+      <div className="p-4 sm:p-6">{children}</div>
     </div>
   );
 }

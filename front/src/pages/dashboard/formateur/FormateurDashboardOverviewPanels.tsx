@@ -25,24 +25,24 @@ export function FormateurHero({ firstName }: { firstName?: string }) {
 export function FormateurStatsGrid({ loading, stats }: { loading: boolean; stats: DashboardStat[] }) {
   if (loading) {
     return (
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
         <SkeletonCard count={4} />
       </div>
     );
   }
 
   return (
-    <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
       {stats.map((stat) => (
-        <div key={stat.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
+        <div key={stat.label} className="rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-sm sm:rounded-3xl sm:px-5 sm:py-5">
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
             <div>
-              <p className="text-sm text-gray-500">{stat.label}</p>
-              <p className="mt-2 text-2xl font-bold text-gray-900">{stat.value}</p>
-              <p className="mt-2 text-sm text-gray-500">{stat.detail}</p>
+              <p className="text-xs text-gray-500 sm:text-sm">{stat.label}</p>
+              <p className="mt-1 text-xl font-bold text-gray-900 sm:mt-2 sm:text-2xl">{stat.value}</p>
+              <p className="mt-1 text-xs text-gray-500 sm:mt-2 sm:text-sm">{stat.detail}</p>
             </div>
-            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${stat.surface}`}>
-              <i className={`${stat.icon} text-xl`}></i>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${stat.surface} sm:h-12 sm:w-12`}>
+              <i className={`${stat.icon} text-lg sm:text-xl`}></i>
             </div>
           </div>
         </div>
@@ -60,17 +60,17 @@ export function QuickLinksPanel({ quickLinks }: { quickLinks: DashboardQuickLink
           Voir le profil public
         </Link>
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-6">
         {quickLinks.map((item) => (
           <Link
             key={`${item.label}-${item.path}`}
             to={item.path}
-            className={`rounded-2xl border border-transparent px-4 py-4 transition-all hover:border-gray-200 hover:bg-white ${item.tone}`}
+            className={`rounded-2xl border border-transparent px-3 py-3 transition-all hover:border-gray-200 hover:bg-white sm:px-4 sm:py-4 ${item.tone}`}
           >
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white">
-              <i className={`${item.icon} text-lg`}></i>
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white sm:mb-3 sm:h-10 sm:w-10">
+              <i className={`${item.icon} text-base sm:text-lg`}></i>
             </div>
-            <p className="text-sm font-medium">{item.label}</p>
+            <p className="text-xs font-medium sm:text-sm">{item.label}</p>
           </Link>
         ))}
       </div>
@@ -95,15 +95,15 @@ export function ComplementLinksPanel({ latestUpdatedCourse }: { latestUpdatedCou
   return (
     <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
       <h2 className="mb-6 text-lg font-bold text-gray-900">Compléments</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-6">
         {links.map((link) => (
-          <Link key={link.label} to={link.path} className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 transition-all text-center">
-            <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <div className="w-6 h-6 flex items-center justify-center">
-                <i className={`${link.icon} text-xl text-teal-600`}></i>
+          <Link key={link.label} to={link.path} className="rounded-lg border-2 border-gray-200 p-3 text-center transition-all hover:border-teal-500 sm:p-4">
+            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100 sm:mb-3 sm:h-12 sm:w-12">
+              <div className="flex h-5 w-5 items-center justify-center sm:h-6 sm:w-6">
+                <i className={`${link.icon} text-lg text-teal-600 sm:text-xl`}></i>
               </div>
             </div>
-            <p className="font-medium text-gray-900 text-sm">{link.label}</p>
+            <p className="text-xs font-medium text-gray-900 sm:text-sm">{link.label}</p>
           </Link>
         ))}
       </div>

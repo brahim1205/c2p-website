@@ -126,7 +126,7 @@ export function ClientPrestatairesList({
 }: ProvidersListProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <SkeletonCard count={6} />
       </div>
     );
@@ -141,7 +141,7 @@ export function ClientPrestatairesList({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {filtered.map((provider) => (
           <ClientProviderCard
             key={provider.resultKey ?? provider.id}

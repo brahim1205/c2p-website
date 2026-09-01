@@ -31,7 +31,6 @@ interface WalletTabPanelProps {
   currency: string;
   activeSubscription: UserSubscription | null;
   monetizedRole: boolean;
-  dexPayAvailable: boolean;
   providerBackedTransactions: Transaction[];
   activeProviderTransactions: Transaction[];
   reconciledProviderTransactionsCount: number;
@@ -40,7 +39,6 @@ interface WalletTabPanelProps {
   defaultPayoutAccount: PayoutAccount | null;
   subscriptionPlans: SubscriptionPlan[];
   selectedPlanId: string;
-  selectedPlan: SubscriptionPlan | null;
   selectedPlanUnavailable: boolean;
   selectedPlanName: string;
   selectedPlanRole: string;
@@ -54,7 +52,6 @@ interface WalletTabPanelProps {
   payoutRequests: PayoutRequest[];
   commissionEntries: CommissionEntry[];
   onRecharge: () => void;
-  onOpenDexPay: () => void;
   onWithdraw: () => void;
   getTransactionLifecycleState: (transaction: Transaction) => NonNullable<Transaction['lifecycle_status']>;
   getProviderCapabilitySummary: (transaction: Transaction) => string;
@@ -73,7 +70,6 @@ export default function WalletTabPanel({
   currency,
   activeSubscription,
   monetizedRole,
-  dexPayAvailable,
   providerBackedTransactions,
   activeProviderTransactions,
   reconciledProviderTransactionsCount,
@@ -82,7 +78,6 @@ export default function WalletTabPanel({
   defaultPayoutAccount,
   subscriptionPlans,
   selectedPlanId,
-  selectedPlan,
   selectedPlanUnavailable,
   selectedPlanName,
   selectedPlanRole,
@@ -96,7 +91,6 @@ export default function WalletTabPanel({
   payoutRequests,
   commissionEntries,
   onRecharge,
-  onOpenDexPay,
   onWithdraw,
   getTransactionLifecycleState,
   getProviderCapabilitySummary,
@@ -148,20 +142,6 @@ export default function WalletTabPanel({
           </button>
         </div>
         <div className="border border-gray-200 rounded-lg p-6">
-          <div className="w-12 h-12 bg-[#0f766e]/10 rounded-lg flex items-center justify-center mb-4">
-            <div className="w-6 h-6 flex items-center justify-center"><i className="ri-secure-payment-line text-xl text-[#0f766e]"></i></div>
-          </div>
-          <h3 className="font-medium text-gray-900 mb-2">Operation DexPay</h3>
-          <p className="text-sm text-gray-600 mb-4">Demarrez un on-ramp ou un off-ramp avec instructions bancaires ou adresse de depot.</p>
-          <button
-            onClick={onOpenDexPay}
-            disabled={!dexPayAvailable}
-            className="w-full px-4 py-2 border border-[#0f766e]/20 text-[#0f766e] text-sm font-medium rounded-lg hover:bg-[#f5faf9] transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
-          >
-            {dexPayAvailable ? 'Ouvrir DexPay' : 'DexPay non configuré'}
-          </button>
-        </div>
-        <div className="border border-gray-200 rounded-lg p-6">
           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
             <div className="w-6 h-6 flex items-center justify-center"><i className="ri-arrow-up-line text-xl text-purple-600"></i></div>
           </div>
@@ -194,12 +174,10 @@ export default function WalletTabPanel({
           defaultPayoutAccount={defaultPayoutAccount}
           plans={subscriptionPlans}
           selectedPlanId={selectedPlanId}
-          selectedPlan={selectedPlan}
           selectedPlanUnavailable={selectedPlanUnavailable}
           selectedPlanName={selectedPlanName}
           selectedPlanRole={selectedPlanRole}
           availableBalance={availableBalance}
-          dexPayAvailable={dexPayAvailable}
           onActivatePlan={onActivatePlan}
         />
       )}
@@ -212,7 +190,6 @@ export default function WalletTabPanel({
           orders={providerVisibilityOrders}
           purchasingProductId={purchasingVisibilityProductId}
           availableBalance={availableBalance}
-          dexPayAvailable={dexPayAvailable}
           onPurchaseProduct={onPurchaseVisibilityProduct}
         />
       )}

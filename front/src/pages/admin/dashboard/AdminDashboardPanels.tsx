@@ -7,6 +7,7 @@ import type {
   KpiCard,
   PendingAction,
   QuickAccessItem,
+  RecentRegistrationItem,
   RevenueBar,
   TimeRange,
 } from './adminDashboardContentModel';
@@ -367,6 +368,60 @@ export function RecentActivityPanel({
               <p className="text-sm font-medium text-gray-900">{entry.action}</p>
               <p className="mt-1 text-sm text-gray-600">{entry.user}</p>
               <p className="mt-1 text-xs text-gray-500">{entry.date}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function RecentRegistrationsPanel({
+  recentRegistrations,
+}: {
+  recentRegistrations: RecentRegistrationItem[];
+}) {
+  const statusLabel: Record<string, string> = {
+    active: 'Actif',
+    pending: 'En attente',
+    suspended: 'Suspendu',
+  };
+
+  const statusTone: Record<string, string> = {
+    active: 'bg-emerald-50 text-emerald-700',
+    pending: 'bg-amber-50 text-amber-700',
+    suspended: 'bg-rose-50 text-rose-700',
+  };
+
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white px-4 py-4">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Dernières inscriptions</h2>
+          <p className="text-sm text-gray-500">Les comptes créés les plus récents</p>
+        </div>
+        <Link to="/admin/users" className="text-sm font-medium text-teal-600 hover:text-teal-700">Voir la liste</Link>
+      </div>
+
+      <div className="space-y-2">
+        {recentRegistrations.length === 0 ? (
+          <p className="rounded-2xl bg-gray-50 px-4 py-4 text-sm text-gray-500">Aucune inscription récente à afficher.</p>
+        ) : recentRegistrations.map((entry) => (
+          <div key={entry.id} className="flex flex-col gap-3 rounded-2xl border border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-gray-900">
+                {[entry.firstName, entry.lastName].filter(Boolean).join(' ')}
+              </p>
+              <p className="truncate text-sm text-gray-600">{entry.email || 'Email indisponible'}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-gray-400">{entry.role}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusTone[entry.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                {statusLabel[entry.status] ?? entry.status}
+              </span>
+              <span className="text-xs text-gray-500">
+                {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('fr-FR') : 'Date inconnue'}
+              </span>
             </div>
           </div>
         ))}

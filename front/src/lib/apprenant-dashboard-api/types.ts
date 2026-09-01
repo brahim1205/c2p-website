@@ -34,6 +34,7 @@ export interface ApprenantEnrollment {
 export interface ApprenantCertificate {
   id: number;
   student_id: string;
+  student_name?: string | null;
   title: string;
   course_name: string | null;
   final_grade?: number | null;

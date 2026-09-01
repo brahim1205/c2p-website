@@ -158,6 +158,15 @@ export class ConfigService {
     return Number(this.configService.get('PROVIDER_WEBHOOK_RATE_LIMIT_MAX') ?? '120');
   }
 
+  get uploadRateLimitMax(): number {
+    return Number(this.configService.get('UPLOAD_RATE_LIMIT_MAX') ?? '30');
+  }
+
+  get swaggerEnabled(): boolean {
+    const configured = this.configService.get('SWAGGER_ENABLED');
+    return configured === undefined ? !this.isProduction : configured === 'true';
+  }
+
   get csrfCookieName(): string {
     return String(this.configService.get('CSRF_COOKIE_NAME') ?? 'c2p_csrf');
   }

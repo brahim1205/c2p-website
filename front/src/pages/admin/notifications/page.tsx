@@ -61,6 +61,7 @@ export default function AdminNotificationsPage() {
       })
       .sort((a, b) => Number(a.read) - Number(b.read));
   }, [filter, notifications, searchQuery, statusFilter]);
+  const queueNotifications = filteredNotifications.filter((notification) => !notification.read);
 
   const typeFilters: Array<{ type: NotificationType; label: string }> = [
     { type: 'message', label: 'Messages' },
@@ -161,10 +162,18 @@ export default function AdminNotificationsPage() {
               <p className="mt-4 text-sm font-semibold text-gray-900">Aucune notification</p>
               <p className="mt-1 text-sm text-gray-500">Modifiez le filtre ou la recherche.</p>
             </div>
+          ) : queueNotifications.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
+                <i className="ri-mail-check-line text-xl"></i>
+              </div>
+              <p className="mt-4 text-sm font-semibold text-gray-900">File vide</p>
+              <p className="mt-1 text-sm text-gray-500">Les notifications lues sortent automatiquement de la file active.</p>
+            </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {filteredNotifications.map((notification) => (
-                <div key={notification.id} className={`p-5 ${notification.read ? 'bg-white' : 'bg-teal-50/40'}`}>
+              {queueNotifications.map((notification) => (
+                <div key={notification.id} className="bg-teal-50/40 p-5">
                   <div className="flex items-start gap-4">
                     {notification.avatar ? (
                       <img src={notification.avatar} alt="" className="h-12 w-12 rounded-full object-cover" />
@@ -198,7 +207,11 @@ export default function AdminNotificationsPage() {
                           </button>
                         )}
                         {notification.link && (
-                          <Link to={notification.link} className="font-medium text-teal-700 hover:text-teal-800">
+                          <Link
+                            to={notification.link}
+                            onClick={() => void markAsRead(notification.id)}
+                            className="font-medium text-teal-700 hover:text-teal-800"
+                          >
                             Ouvrir
                           </Link>
                         )}

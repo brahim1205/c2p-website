@@ -31,7 +31,7 @@ export function getLatestSubscription(userId: string) {
 }
 
 export function assertMonetizedRole(actor: AuthUser) {
-  if (!new Set(['prestataire', 'formateur', 'porteur']).has(actor.role)) {
+  if (!new Set(['prestataire', 'formateur', 'porteur', 'partenaire']).has(actor.role)) {
     throw new UnauthorizedException('Ce role ne peut pas utiliser cette commande.');
   }
 }

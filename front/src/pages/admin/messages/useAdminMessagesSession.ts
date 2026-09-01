@@ -32,6 +32,7 @@ export function useAdminMessagesSession() {
   const [activeTab, setActiveTab] = useState<AdminMessagesTabKey>('internal');
   const [replyText, setReplyText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showConversationSidebar, setShowConversationSidebar] = useState(false);
 
   const directoryQuery = useQuery({
     queryKey: queryKeys.admin.messageDirectory(),
@@ -85,6 +86,10 @@ export function useAdminMessagesSession() {
       void markAsRead(activeConversationId);
     }
   }, [activeConversationId, markAsRead]);
+
+  useEffect(() => {
+    setShowConversationSidebar(false);
+  }, [activeConversationId]);
 
   const directoryMap = useMemo(
     () => new Map(directoryUsers.map((entry) => [entry.id, entry])),
@@ -167,6 +172,8 @@ export function useAdminMessagesSession() {
     openPublicRequests,
     loading,
     setActiveConversationId,
+    showConversationSidebar,
+    setShowConversationSidebar,
     conversationDisplay,
     handleReply,
     handleMarkHandled,

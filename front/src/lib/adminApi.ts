@@ -26,6 +26,11 @@ export * from './adminResourceApi';
 export * from './adminFinanceApi';
 
 export interface AdminDashboardManagedUser {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  createdAt?: string;
   status: 'active' | 'pending' | 'suspended';
   role: string;
 }

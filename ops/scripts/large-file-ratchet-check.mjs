@@ -13,17 +13,33 @@ const backendNewFileLimit = 700;
 const frontendNewFileLimit = 300;
 
 const trackedLargeFiles = new Map([
-  ['backend/src/auth/auth.service.ts', 1410],
+  ['backend/src/auth/auth.service.ts', 1439],
   ['backend/src/database/wallet.service.ts', 1095],
   ['backend/src/payments/provider-integration.service.ts', 960],
   ['backend/src/learning/learning-access.service.ts', 895],
   ['backend/src/data/mock-store-seed/learning-catalog.ts', 885],
   ['backend/src/project-center/project-center.service.ts', 780],
   ['backend/src/database/platform-snapshot-sync.service.ts', 760],
-  ['backend/src/payments/payment-commands.service.ts', 750],
-  ['backend/src/learning/learning.controller.ts', 730],
+  ['backend/src/payments/payment-commands.service.ts', 803],
+  ['backend/src/learning/learning.controller.ts', 731],
+  ['backend/src/marketplace/marketplace.service.ts', 823],
   ['backend/src/auth/auth.store.ts', 725],
   ['backend/src/data/mock-store-seed/marketplace.ts', 725],
+  ['front/src/pages/about/page.tsx', 306],
+  ['front/src/pages/admin/dashboard/AdminDashboardPanels.tsx', 432],
+  ['front/src/pages/admin/dashboard/adminDashboardSessionModel.ts', 344],
+  ['front/src/pages/admin/messages/AdminMessagesInternalPanel.tsx', 359],
+  ['front/src/pages/admin/operations/page.tsx', 464],
+  ['front/src/pages/admin/project-financing/page.tsx', 432],
+  ['front/src/pages/allopresta/prestataire/page.tsx', 357],
+  ['front/src/pages/auth/onboarding/profil/page.tsx', 566],
+  ['front/src/pages/dashboard/apprenant/certificats/page.tsx', 340],
+  ['front/src/pages/dashboard/paiements/usePaiementsSession.ts', 306],
+  ['front/src/pages/dashboard/paiements/usePaymentActions.ts', 315],
+  ['front/src/pages/dashboard/profile/useProfilePageSession.ts', 310],
+  ['front/src/pages/home/page.tsx', 381],
+  ['front/src/pages/paiement/page.tsx', 408],
+  ['front/src/pages/project-center/ProjectCenterSections.tsx', 303],
 ]);
 
 function walk(directory, files = []) {

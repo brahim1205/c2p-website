@@ -26,6 +26,7 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [inspectedUser, setInspectedUser] = useState<ManagedUser | null>(null);
 
   const usersQuery = useQuery({
     queryKey: queryKeys.admin.users(currentUser?.role ?? 'anonymous'),
@@ -133,13 +134,60 @@ export default function AdminUsersPage() {
           loading={loading}
           selectedUsers={selectedUsers}
           onBulkStatus={(status) => void applyBulkStatus(status)}
+          onInspectUser={setInspectedUser}
           onSelectAll={handleSelectAll}
           onStatusChange={setActiveTab}
           onToggleTrainerVerification={(user) => void toggleTrainerVerification(user)}
           onToggleUser={handleToggleUser}
           onUserStatusChange={(id, status) => void syncUserStatus(id, status)}
         />
+
+        {inspectedUser ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-600">Fiche admin</p>
+                  <h2 className="mt-2 text-2xl font-bold text-gray-900">
+                    {inspectedUser.firstName} {inspectedUser.lastName}
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500">{inspectedUser.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectedUser(null)}
+                  className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Fermer
+                </button>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <AdminInfo label="Rôle" value={inspectedUser.role} />
+                <AdminInfo label="Statut" value={statusLabels[inspectedUser.status]} />
+                <AdminInfo label="Téléphone" value={inspectedUser.phone || 'Non renseigné'} />
+                <AdminInfo label="Localisation" value={inspectedUser.location || 'Non renseignée'} />
+                <AdminInfo label="Inscription" value={inspectedUser.createdAt ? new Date(inspectedUser.createdAt).toLocaleString('fr-FR') : 'Inconnue'} />
+                <AdminInfo label="Compte vérifié" value={inspectedUser.expertVerified ? 'Oui' : 'Non'} />
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-sm font-semibold text-gray-900">Bio</p>
+                <p className="mt-2 text-sm leading-6 text-gray-600">{inspectedUser.bio || 'Aucune biographie fournie.'}</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </AdminLayout>
+  );
+}
+
+function AdminInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-gray-900">{value}</p>
+    </div>
   );
 }

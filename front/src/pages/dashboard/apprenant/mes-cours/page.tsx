@@ -78,7 +78,7 @@ export default function ApprenantCoursPage() {
 
   const getCourseImage = (course: Enrollment['courses']) => {
     if (course?.thumbnail) return course.thumbnail;
-    return '/images/home/academy.jpg';
+    return '/images/home/front-view-stacked-book-with-glasses-academic-cap-optimized.webp';
   };
 
   const formatLastAccessed = (dateStr: string) => {

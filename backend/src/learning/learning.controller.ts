@@ -72,6 +72,17 @@ export class LearningController {
     return this.learningAccessService.purchaseApprenantCourse(courseId, request.auth?.user ?? null);
   }
 
+  @Post('apprenant/courses/:courseId/purchase/external')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.learning.write')
+  purchaseApprenantCourseWithExternalPayment(
+    @Req() request: AuthenticatedRequest,
+    @Param('courseId') courseId: string,
+    @Body() payload: unknown,
+  ) {
+    return this.learningAccessService.purchaseApprenantCourseWithExternalPayment(courseId, payload, request.auth?.user ?? null);
+  }
+
   @Post('apprenant/courses/:courseId/reviews')
   @UseGuards(PermissionGuard)
   @RequirePermission('data.learning.write')

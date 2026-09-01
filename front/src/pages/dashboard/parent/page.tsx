@@ -64,7 +64,7 @@ export default function ParentDashboardPage() {
           </p>
         </section>
 
-        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="mb-6 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
           {[
             { label: 'Enfants rattaches', value: String(trackedStudentIds.length), icon: 'ri-parent-line', tone: 'bg-[#eef6ff] text-[#27346b]' },
             { label: 'Parcours actifs', value: String(activeEnrollments.length), icon: 'ri-book-open-line', tone: 'bg-teal-50 text-teal-700' },

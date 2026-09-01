@@ -43,7 +43,7 @@ export function AlloPrestaResults({
       {loading ? <AlloPrestaResultsSkeleton /> : null}
       {!loading && providers.length === 0 ? <AlloPrestaNoResults onResetFilters={onResetFilters} /> : null}
       {!loading && providers.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
           {providers.map((prestataire) => (
             <AlloPrestaProviderCard
               key={prestataire.result_key ?? prestataire.id}
@@ -59,7 +59,7 @@ export function AlloPrestaResults({
 
 function AlloPrestaResultsSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
       {[...Array(4)].map((_, index) => (
         <div key={index} className="animate-pulse overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-white shadow-[0_18px_45px_rgba(12,14,58,0.05)]">
           <div className="h-44 bg-[#e9eef5] sm:h-64" />

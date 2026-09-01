@@ -38,33 +38,32 @@ export default function ConversationListPanel({
   onSelectConversation,
 }: ConversationListPanelProps) {
   return (
-    <div className="max-h-[28rem] w-full rounded-xl border border-gray-200 bg-white shadow-sm lg:flex lg:max-h-none lg:w-96 lg:flex-shrink-0 lg:flex-col">
-      <div className="border-b border-gray-200 p-6">
+    <aside className="max-h-none w-full border-b border-slate-200 bg-white lg:flex lg:h-full lg:w-[380px] lg:flex-shrink-0 lg:flex-col lg:border-b-0 lg:border-r xl:w-[424px]">
+      <div className="border-b border-slate-100 p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-gray-900">Messages</h2>
-            {totalUnread > 0 && <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">{totalUnread}</span>}
-          </div>
-          <button type="button" onClick={onOpenCompose} aria-label="Ouvrir une nouvelle conversation" title="Nouvelle conversation" className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#5fa6f3] text-white transition-colors hover:bg-[#27346b]">
-            <i className="ri-add-line text-xl" />
-          </button>
+          <h2 className="text-lg font-bold text-slate-950 sm:text-xl">Messages</h2>
+          {totalUnread > 0 ? <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">{totalUnread}</span> : null}
         </div>
         <div className="relative">
-          <div className="absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center">
-            <i className="ri-search-line text-sm text-gray-400" />
+          <div className="absolute left-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center">
+            <i className="ri-search-line text-xl text-slate-400" />
           </div>
           <input
             type="text"
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
             aria-label="Rechercher une conversation"
-            placeholder="Rechercher une conversation..."
-            className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-[#5fa6f3] focus:outline-none"
+            placeholder="Rechercher une conversation"
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-12 pr-4 text-sm text-slate-700 outline-none transition focus:border-teal-400 focus:bg-white sm:h-14 sm:text-base"
           />
         </div>
+        <button type="button" onClick={onOpenCompose} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">
+          <i className="ri-add-line text-lg" />
+          Nouvelle conversation
+        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto [scrollbar-color:#64748b_transparent]">
         {loading ? (
           <div className="space-y-3 p-4">
             {[1, 2, 3, 4].map((item) => (
@@ -85,14 +84,14 @@ export default function ConversationListPanel({
               onClick={() => onSelectConversation(conversation.id)}
               aria-pressed={activeConversationId === conversation.id}
               aria-label={`Ouvrir la conversation avec ${conversation.name}`}
-              className={`flex w-full items-start gap-3 border-b border-gray-100 p-4 text-left transition-colors hover:bg-gray-50 ${activeConversationId === conversation.id ? 'bg-[#5fa6f3]/10' : ''}`}
+              className={`mx-3 my-2 flex w-[calc(100%-1.5rem)] items-start gap-3 rounded-2xl border p-3 text-left transition-colors sm:gap-4 sm:p-4 ${activeConversationId === conversation.id ? 'border-teal-400 bg-teal-50/70' : 'border-transparent hover:bg-slate-50'}`}
             >
               <div className="relative flex-shrink-0">
                 {conversation.avatar ? (
-                  <img src={conversation.avatar} alt={conversation.name} className="h-12 w-12 rounded-full object-cover" />
+                  <img src={conversation.avatar} alt={conversation.name} className="h-12 w-12 rounded-full object-cover sm:h-14 sm:w-14" />
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fa6f3]/20">
-                    <span className="text-sm font-bold text-[#5fa6f3]">{conversation.name.split(' ').map((name) => name[0]).join('').substring(0, 2)}</span>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2f7624] sm:h-14 sm:w-14">
+                    <span className="text-base font-bold text-white sm:text-xl">{conversation.name.split(' ').map((name) => name[0]).join('').substring(0, 2)}</span>
                   </div>
                 )}
                 {conversation.online && <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />}
@@ -100,20 +99,20 @@ export default function ConversationListPanel({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex items-center justify-between">
-                  <h3 className="truncate text-sm font-semibold text-gray-900">
+                  <h3 className="truncate text-sm font-bold text-slate-950 sm:text-base">
                     {conversation.name}
                     {conversation.type === 'group' && <span className="ml-1 text-xs text-gray-500">({conversation.members})</span>}
                   </h3>
-                  <span className="ml-2 flex-shrink-0 text-xs text-gray-500">{formatConversationTimestamp(conversation.lastMessageAt)}</span>
                 </div>
-                <p className="mb-1 text-xs text-[#5fa6f3]">{conversation.role}</p>
-                <p className="truncate text-sm text-gray-600">{conversation.lastMessage}</p>
+                <p className="mb-1 text-xs text-slate-500 sm:text-sm">{conversation.role}</p>
+                <p className="truncate text-sm text-slate-700">{conversation.lastMessage}</p>
+                <p className="mt-1 text-xs text-slate-400">{formatConversationTimestamp(conversation.lastMessageAt)}</p>
               </div>
               {conversation.unreadCount > 0 && <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">{conversation.unreadCount}</div>}
             </button>
           ))
         )}
       </div>
-    </div>
+    </aside>
   );
 }

@@ -109,7 +109,7 @@ export default function LessonsTab({
 
   return (
     <div className="space-y-6">
-      {activeLesson.type === 'video' && (
+      {activeLesson.videoUrl && (
         <VideoPlayer
           key={activeLesson.id}
           duration={activeLesson.duration}

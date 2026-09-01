@@ -71,7 +71,7 @@ export function EspaceNumeriqueHero({ branchCopy, searchQuery, onSearchChange }:
 
           <div className="relative min-h-[330px] overflow-hidden rounded-[30px] bg-white lg:min-h-[430px]">
             <img
-              src="/images/home/numerique.png"
+              src="/images/home/impressed-points-up-holding-idea-bubble-young-africanamerican-guy-wearing-headphones-neck-isolated-blue-background-optimized.webp"
               alt="Espace numérique C2P"
               className="absolute inset-0 h-full w-full object-cover"
             />
@@ -97,14 +97,14 @@ export function EspaceNumeriqueCategories({ selectedCategory, onSelectCategory }
       <div className="mx-auto max-w-7xl">
         <h2 className="text-center text-2xl font-black text-[#10183f]">Top catégories</h2>
         <div className="mx-auto mt-3 h-1 w-14 rounded-full bg-[#f6c847]" />
-        <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {courseCategories.map((category) => (
             <button
               key={category.id}
               type="button"
               aria-pressed={selectedCategory === category.id}
               onClick={() => onSelectCategory(category.id)}
-              className={`flex cursor-pointer items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-bold transition ${
+              className={`flex min-h-[92px] cursor-pointer flex-col items-start gap-3 rounded-2xl px-4 py-3 text-left text-sm font-bold transition sm:min-h-0 sm:flex-row sm:items-center ${
                 selectedCategory === category.id
                   ? 'bg-[#efeefe] text-[#6f63d8] ring-1 ring-[#6f63d8]/20'
                   : 'bg-[#f7fbfa] text-[#64708a] hover:bg-[#efeefe] hover:text-[#6f63d8]'
@@ -113,7 +113,7 @@ export function EspaceNumeriqueCategories({ selectedCategory, onSelectCategory }
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#6f63d8]">
                 <i className={`${category.icon} text-lg`} />
               </span>
-              {category.name}
+              <span className="leading-5">{category.name}</span>
             </button>
           ))}
         </div>
@@ -224,7 +224,7 @@ export function EspaceNumeriqueCoursesGrid({
               Commencer
             </Link>
           </div>
-          <img src="/images/home/numerique.png" alt="" className="h-72 w-full object-cover lg:h-full" />
+          <img src="/images/home/shocked-international-student-holding-pen-notebook-optimized.webp" alt="" className="h-72 w-full object-cover lg:h-full" />
         </div>
 
         <CourseStrip title="Cours populaires" courses={popular} onEnroll={onEnroll} />

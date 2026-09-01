@@ -55,6 +55,19 @@ import {
 } from './project-center.helpers.js';
 const C2P_SUPPORT_USER_ID = 'usr-admin';
 
+function isPublicProjectNoise(row: Row) {
+  const title = String(row.title ?? '').trim().toLowerCase();
+  const description = String(row.description ?? '').trim().toLowerCase();
+  const haystack = `${title} ${description}`;
+  return (
+    /^v+$/.test(title)
+    || title.includes('smoke projectcenter')
+    || haystack.includes('projet smoke')
+    || haystack.includes('smoke projectcenter debug')
+    || haystack.includes('verifier le flux de soumission')
+  );
+}
+
 @Injectable()
 export class ProjectCenterService {
   constructor(
@@ -65,7 +78,7 @@ export class ProjectCenterService {
   async listPublicProjects(query: PublicProjectQuery = {}) {
     await syncAppStoreFromDatabase(this.prisma);
 
-    let rows = publicRows('projects', clone(store.projects ?? []));
+    let rows = publicRows('projects', clone(store.projects ?? [])).filter((row) => !isPublicProjectNoise(row));
     rows = applyProjectFilters(rows, query);
     rows = applyProjectSorting(rows, query.sort);
     return rows.slice(0, resolvePublicProjectsLimit(query.limit));
@@ -74,7 +87,7 @@ export class ProjectCenterService {
   async getPublicProjectDetail(projectId: string) {
     await syncAppStoreFromDatabase(this.prisma);
 
-    const projects = publicRows('projects', clone(store.projects ?? []));
+    const projects = publicRows('projects', clone(store.projects ?? [])).filter((row) => !isPublicProjectNoise(row));
     const project = projects.find((row) => String(row.id) === String(projectId)) ?? null;
     if (!project) {
       return {

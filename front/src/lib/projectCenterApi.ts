@@ -33,9 +33,22 @@ export interface PublicProject {
   created_at: string;
 }
 
+function isProjectCenterNoise(project: Pick<PublicProject, 'title' | 'description'>) {
+  const title = String(project.title ?? '').trim().toLowerCase();
+  const description = String(project.description ?? '').trim().toLowerCase();
+  const haystack = `${title} ${description}`;
+  return (
+    /^v+$/.test(title)
+    || title.includes('smoke projectcenter')
+    || haystack.includes('projet smoke')
+    || haystack.includes('smoke projectcenter debug')
+    || haystack.includes('verifier le flux de soumission')
+  );
+}
+
 export async function fetchPublicProjectCenterProjects() {
   const projects = await apiRequest<PublicProject[]>('/project-center/projects');
-  return projects.map((project) => ({
+  return projects.filter((project) => !isProjectCenterNoise(project)).map((project) => ({
     ...project,
     looking_for: Array.isArray(project.looking_for) ? project.looking_for : [],
   }));
@@ -62,7 +75,7 @@ export async function fetchPublicProjectCenterDetail(projectId: number | string)
           looking_for: Array.isArray(detail.project.looking_for) ? detail.project.looking_for : [],
         }
       : null,
-    relatedProjects: (detail.relatedProjects || []).map((project) => ({
+    relatedProjects: (detail.relatedProjects || []).filter((project) => !isProjectCenterNoise(project)).map((project) => ({
       ...project,
       looking_for: Array.isArray(project.looking_for) ? project.looking_for : [],
     })),

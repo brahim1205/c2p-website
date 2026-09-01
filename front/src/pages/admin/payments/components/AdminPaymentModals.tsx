@@ -10,6 +10,10 @@ type PaymentModalTransaction = {
   method: string;
   status: 'completed' | 'pending' | 'failed';
   description: string;
+  reference?: string;
+  target_type?: string | null;
+  target_id?: string | null;
+  financial_operation_id?: string | null;
 };
 
 type AdminPaymentModalsProps = {
@@ -53,12 +57,16 @@ export function AdminPaymentModals({
             </div>
             <div className="space-y-4 text-sm">
               <TransactionDetailRow label="ID">{transaction.id}</TransactionDetailRow>
+              {transaction.reference ? <TransactionDetailRow label="Référence">{transaction.reference}</TransactionDetailRow> : null}
               <TransactionDetailRow label="Utilisateur">{transaction.user}</TransactionDetailRow>
               <TransactionDetailRow label="Email">{transaction.email}</TransactionDetailRow>
               <TransactionDetailRow label="Montant">{transaction.amount.toLocaleString('fr-FR')} FCFA</TransactionDetailRow>
               <TransactionDetailRow label="Frais">{transaction.fee.toLocaleString('fr-FR')} FCFA</TransactionDetailRow>
               <div className="flex justify-between border-b border-gray-100 py-2"><span className="text-gray-500">Net</span><span className="font-medium text-green-600">{transaction.net.toLocaleString('fr-FR')} FCFA</span></div>
               <TransactionDetailRow label="Methode">{transaction.method}</TransactionDetailRow>
+              {transaction.target_type ? <TransactionDetailRow label="Cible">{transaction.target_type}</TransactionDetailRow> : null}
+              {transaction.target_id ? <TransactionDetailRow label="ID cible">{transaction.target_id}</TransactionDetailRow> : null}
+              {transaction.financial_operation_id ? <TransactionDetailRow label="Opération">{transaction.financial_operation_id}</TransactionDetailRow> : null}
               <div className="flex justify-between border-b border-gray-100 py-2"><span className="text-gray-500">Statut</span><span>{renderStatusBadge(transaction.status)}</span></div>
               <div className="py-2"><span className="mb-1 block text-gray-500">Description</span><span className="font-medium text-gray-900">{transaction.description}</span></div>
             </div>

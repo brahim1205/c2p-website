@@ -53,8 +53,8 @@ export default function RegisterDetailsStep({
   onTogglePassword,
 }: RegisterDetailsStepProps) {
   return (
-    <section className="c2p-card mx-auto max-w-4xl rounded-[22px] bg-white/92 p-4 shadow-c2p-lg backdrop-blur sm:rounded-[30px] sm:p-8">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <section className="mx-auto max-w-lg rounded-[18px] border border-[#eadfce] bg-[#fbf7f1]/45 p-3 shadow-sm backdrop-blur sm:rounded-[22px] sm:p-4">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <button onClick={onBack} disabled={isLoading} className="text-sm text-[#5b6778] transition-colors hover:text-[#b68b3f] disabled:opacity-50">
           <i className="ri-arrow-left-line mr-1"></i>
           Retour
@@ -64,19 +64,19 @@ export default function RegisterDetailsStep({
         </span>
       </div>
 
-      <div className="mb-6 grid gap-3">
+      <div className="mb-3 grid gap-3">
         <button
           type="button"
           onClick={() => startSocialAuth('google', { role: selectedUserTypeId, returnTo: socialReturnTo })}
           disabled={isLoading}
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-4 py-3 text-sm font-semibold text-[#172033] transition-colors hover:bg-[#fbf7f1] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#eadfce] bg-white px-4 py-2 text-sm font-semibold text-[#172033] transition-colors hover:bg-[#fbf7f1] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <i className="ri-google-fill text-lg" />
           Continuer avec Google
         </button>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-5">
+      <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <TextInput
             id="email"
@@ -89,7 +89,7 @@ export default function RegisterDetailsStep({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           <PasswordInput
             id="password"
             label="Mot de passe"
@@ -113,12 +113,12 @@ export default function RegisterDetailsStep({
 
         <label className="flex cursor-pointer items-start">
           <input type="checkbox" checked={formData.acceptTerms} onChange={(event) => onFormDataChange({ ...formData, acceptTerms: event.target.checked })} className="mt-1 h-4 w-4 cursor-pointer rounded border-[#d8c8af] bg-white text-[#d5b46f] focus:ring-[#d5b46f]" disabled={isLoading} />
-          <span className="ml-2 text-sm leading-6 text-[#5b6778]">
+          <span className="ml-2 text-xs leading-5 text-[#5b6778] sm:text-sm">
             J&apos;accepte les <Link to="/cgu" className="c2p-link font-medium">conditions d&apos;utilisation</Link> et la <Link to="/confidentialite" className="c2p-link font-medium">politique de confidentialite</Link>
           </span>
         </label>
 
-        <button type="submit" disabled={!formData.acceptTerms || isLoading} className="c2p-btn-accent w-full px-6 py-3.5">
+        <button type="submit" disabled={!formData.acceptTerms || isLoading} className="c2p-btn-accent w-full px-6 py-2.5">
           {isLoading ? (
             <span className="flex items-center justify-center">
               <i className="ri-loader-4-line mr-2 animate-spin"></i>
@@ -130,7 +130,7 @@ export default function RegisterDetailsStep({
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-[#5b6778]">
+      <p className="mt-3 text-center text-sm text-[#5b6778]">
         Vous avez deja un compte ?{' '}
         <Link to="/auth/login" className="c2p-link font-medium">
           Se connecter
@@ -159,7 +159,7 @@ function TextInput({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-medium text-[#475569]">{label}</label>
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-[#475569]">{label}</label>
       <input id={id} type={type} required value={value} onChange={(event) => onChange(event.target.value)} className={inputClass} placeholder={placeholder} disabled={disabled} />
     </div>
   );
@@ -186,14 +186,14 @@ function PasswordInput({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-medium text-[#475569]">{label}</label>
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-[#475569]">{label}</label>
       <div className="relative">
         <input id={id} type={visible ? 'text' : 'password'} required value={value} onChange={(event) => onChange(event.target.value)} className={`${inputClass} pr-10`} placeholder="••••••••" disabled={disabled} />
         <button type="button" onClick={onToggle} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] transition-colors hover:text-[#b68b3f]">
           <i className={visible ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
         </button>
       </div>
-      {hint ? <p className="mt-2 text-xs text-[#7c8698]">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-[11px] leading-4 text-[#7c8698]">{hint}</p> : null}
     </div>
   );
 }

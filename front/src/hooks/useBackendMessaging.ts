@@ -15,6 +15,10 @@ export interface Attachment {
   name: string;
   size: string;
   type: string;
+  url?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  uploadId?: string | null;
 }
 
 export interface Message {
@@ -140,7 +144,7 @@ export function useBackendMessaging(options: UseBackendMessagingOptions = {}) {
         return {
           conversations: moveConversationToTop(current.conversations, conversationId, (conversation) => ({
             ...conversation,
-            lastMessage: createdMessage.content,
+            lastMessage: createdMessage.content || (createdMessage.attachments?.length ? 'Pièce jointe' : 'Nouveau message'),
             lastMessageAt: createdMessage.timestamp,
           })),
           messages: {

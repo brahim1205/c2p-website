@@ -1,13 +1,24 @@
+import WavePaymentQr from '@/components/feature/WavePaymentQr';
+import type { PaymentMethodId } from './paymentPageModel';
 import { formatAmount } from './paymentPageModel';
 
 interface RechargeWalletModalProps {
   amount: string;
+  paymentMethod: PaymentMethodId;
   onAmountChange: (value: string) => void;
+  onPaymentMethodChange: (value: PaymentMethodId) => void;
   onClose: () => void;
   onSubmit: () => void;
 }
 
-export function RechargeWalletModal({ amount, onAmountChange, onClose, onSubmit }: RechargeWalletModalProps) {
+export function RechargeWalletModal({
+  amount,
+  paymentMethod,
+  onAmountChange,
+  onPaymentMethodChange,
+  onClose,
+  onSubmit,
+}: RechargeWalletModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
@@ -32,12 +43,17 @@ export function RechargeWalletModal({ amount, onAmountChange, onClose, onSubmit 
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Moyen de paiement</label>
-            <select className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-teal-500 focus:outline-none">
-              <option>Orange Money</option>
-              <option>Wave</option>
-              <option>Carte Bancaire</option>
+            <select
+              value={paymentMethod}
+              onChange={(event) => onPaymentMethodChange(event.target.value as PaymentMethodId)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+            >
+              <option value="wave">Wave</option>
+              <option value="orange_money">Orange Money</option>
+              <option value="card">Carte Bancaire</option>
             </select>
           </div>
+          {paymentMethod === 'wave' ? <WavePaymentQr compact /> : null}
         </div>
         <div className="flex space-x-3">
           <button onClick={onClose} className="flex-1 whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">

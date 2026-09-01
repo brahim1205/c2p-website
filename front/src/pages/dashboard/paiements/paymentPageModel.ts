@@ -130,9 +130,8 @@ export const buildReceiptHtml = (transaction: Transaction) => `<!DOCTYPE html>
       <div class="card"><strong>Type</strong><br />${getTypeLabel(transaction.type)}</div>
       <div class="card"><strong>Methode</strong><br />${getMethodName(transaction.method)}</div>
       <div class="card"><strong>Date</strong><br />${formatDate(transaction.date)}</div>
-      <div class="card"><strong>Reference</strong><br />${transaction.reference}</div>
+      <div class="card"><strong>Description</strong><br />${transaction.description}</div>
     </div>
-    <p style="margin-top: 24px;">${transaction.description}</p>
   </main>
 </body>
 </html>`;

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { getPaymentLifecycleLabel, getPaymentLifecycleTone } from '@/lib/paymentStatus';
 import {
   formatAmount,
@@ -39,9 +40,12 @@ export default function TransactionsPanel({
   getTransactionLifecycleState,
   onOpenTransaction,
 }: TransactionsPanelProps) {
+  const resolveProviderProfilePath = (transaction: Transaction) =>
+    transaction.provider_reference ? `/allopresta/prestataire/${encodeURIComponent(transaction.provider_reference)}` : null;
+
   return (
     <div>
-      <div className="mb-6 flex flex-wrap gap-4">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-[220px_220px_1fr]">
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">Type</label>
           <select
@@ -70,10 +74,10 @@ export default function TransactionsPanel({
             <option value="cancelled">Annulés</option>
           </select>
         </div>
-        <div className="ml-auto flex items-end">
+        <div className="flex items-end xl:justify-end">
           <button
             onClick={onExport}
-            className="whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="w-full whitespace-nowrap rounded-xl border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 xl:w-auto"
           >
             <div className="mr-2 inline-flex h-4 w-4 items-center justify-center">
               <i className="ri-download-line text-base"></i>
@@ -107,14 +111,14 @@ export default function TransactionsPanel({
           return (
             <div
               key={transaction.id}
-              className={`rounded-lg border p-4 transition-colors ${
+              className={`rounded-2xl border p-4 transition-colors ${
                 isContextTransaction ? 'border-teal-300 bg-teal-50/40' : 'border-gray-200 hover:border-teal-300'
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex flex-1 items-start space-x-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex min-w-0 flex-1 items-start gap-4">
                   <div
-                    className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg ${
+                    className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${
                       transaction.type === 'payment'
                         ? 'bg-red-100'
                         : transaction.type === 'refund'
@@ -139,9 +143,15 @@ export default function TransactionsPanel({
                     </div>
                   </div>
 
-                  <div className="flex-1">
-                    <div className="mb-1 flex items-center space-x-3">
-                      <h3 className="font-medium text-gray-900">{transaction.description}</h3>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-start gap-2">
+                      {resolveProviderProfilePath(transaction) ? (
+                        <Link to={resolveProviderProfilePath(transaction)!} className="line-clamp-2 text-base font-semibold text-gray-900 hover:text-teal-700">
+                          {transaction.description}
+                        </Link>
+                      ) : (
+                        <h3 className="line-clamp-2 text-base font-semibold text-gray-900">{transaction.description}</h3>
+                      )}
                       {isProviderBackedTransaction(transaction) ? (
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getPaymentLifecycleTone(
@@ -156,26 +166,22 @@ export default function TransactionsPanel({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 sm:gap-4">
                       <span>{getTypeLabel(transaction.type)}</span>
                       <span>•</span>
                       <span>{getMethodName(transaction.method)}</span>
                       <span>•</span>
                       <span>{formatDate(transaction.date)}</span>
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">Réf: {transaction.reference}</p>
-                    {isProviderBackedTransaction(transaction) && transaction.provider_status ? (
-                      <p className="mt-1 text-xs text-gray-500">Provider: {transaction.provider_status}</p>
-                    ) : null}
                   </div>
                 </div>
 
-                <div className="ml-4 text-right">
-                  <p className={`text-lg font-bold ${isDebit ? 'text-red-600' : 'text-green-600'}`}>
+                <div className="flex items-end justify-between gap-4 border-t border-gray-100 pt-3 lg:ml-4 lg:min-w-[150px] lg:flex-col lg:items-end lg:border-t-0 lg:pt-0">
+                  <p className={`text-right text-xl font-bold ${isDebit ? 'text-red-600' : 'text-green-600'}`}>
                     {isDebit ? '-' : '+'}
                     {formatAmount(transaction.amount, transaction.currency)}
                   </p>
-                  <button onClick={() => onOpenTransaction(transaction)} className="mt-2 cursor-pointer text-sm text-teal-600 hover:text-teal-700">
+                  <button onClick={() => onOpenTransaction(transaction)} className="cursor-pointer text-sm font-medium text-teal-600 hover:text-teal-700">
                     Voir détails
                   </button>
                 </div>

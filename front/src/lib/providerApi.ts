@@ -5,7 +5,7 @@ export type ProviderViewerAccessTier = 'visitor' | 'subscriber' | 'verified';
 export type ProviderProfileLevel = 'visitor' | 'subscriber' | 'verified';
 
 export interface ProviderRecord {
-  id: number;
+  id: string | number;
   user_id?: string;
   name: string;
   public_alias?: string | null;
@@ -49,8 +49,8 @@ export interface ProviderServiceItemRecord {
 }
 
 export interface ProviderReviewRecord {
-  id: number;
-  provider_id: number;
+  id: string | number;
+  provider_id: string | number;
   client_id?: string | null;
   client_name: string;
   client_avatar?: string | null;
@@ -129,7 +129,7 @@ export function normalizeProviderCatalogRecord(provider: ProviderRecord | Record
   const verifiedBadgeEnabled = Boolean(provider.verified_badge_enabled);
 
   return {
-    id: toNumber(provider.id),
+    id: typeof provider.id === 'string' || typeof provider.id === 'number' ? provider.id : '',
     user_id: typeof provider.user_id === 'string' ? provider.user_id : undefined,
     name: String(provider.name ?? raw.full_name ?? 'Prestataire C2P'),
     public_alias: String(provider.public_alias ?? provider.name ?? `Profil C2P #${String(provider.id ?? '').trim() || 'senprest'}`),
@@ -248,11 +248,11 @@ export async function fetchPublicProviders() {
   return data.map(normalizeProviderCatalogRecord);
 }
 
-export async function fetchPublicProvider(id: number) {
+export async function fetchPublicProvider(id: string | number) {
   const data = await apiRequest<ProviderRecord | null>(`/marketplace/providers/public/${encodeURIComponent(String(id))}`);
   return data ? normalizeProviderCatalogRecord(data) : null;
 }
 
-export async function fetchPublicProviderReviews(id: number) {
+export async function fetchPublicProviderReviews(id: string | number) {
   return apiRequest<ProviderReviewRecord[]>(`/marketplace/providers/public/${encodeURIComponent(String(id))}/reviews`);
 }

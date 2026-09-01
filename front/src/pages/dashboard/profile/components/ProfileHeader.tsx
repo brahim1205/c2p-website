@@ -37,6 +37,11 @@ export default function ProfileHeader({
   onAddLanguage,
   onRemoveLanguage,
 }: ProfileHeaderProps) {
+  const titleLine = formData.profession.trim();
+  const memberSinceLabel = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    : null;
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 md:p-8 mb-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
@@ -52,17 +57,17 @@ export default function ProfileHeader({
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
               {user ? `${user.firstName} ${user.lastName}` : `${formData.firstName} ${formData.lastName}`}
             </h1>
-            <p className="text-gray-600 text-sm mb-2">
-              {formData.profession} @ {formData.company}
-            </p>
+            {titleLine ? <p className="text-gray-600 text-sm mb-2">{titleLine}</p> : null}
             {profileLoading && <p className="text-xs text-gray-400 mb-2">Synchronisation du profil...</p>}
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
-                <span className="w-2 h-2 bg-teal-500 rounded-full mr-2"></span>
-                Compte vérifié
-              </span>
-              <span className="text-sm text-gray-500">Membre depuis 2024</span>
-              <span className="text-sm text-gray-500">{formData.experience} d&apos;expérience</span>
+              {user?.expertVerified ? (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                  <span className="w-2 h-2 bg-teal-500 rounded-full mr-2"></span>
+                  Compte vérifié
+                </span>
+              ) : null}
+              {memberSinceLabel ? <span className="text-sm text-gray-500">Membre depuis {memberSinceLabel}</span> : null}
+              {formData.experience.trim() ? <span className="text-sm text-gray-500">{formData.experience} d&apos;expérience</span> : null}
             </div>
           </div>
         </div>
@@ -74,7 +79,8 @@ export default function ProfileHeader({
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      {formData.skills.length > 0 || isEditing ? (
+        <div className="flex flex-wrap gap-2 mb-4">
         {formData.skills.map((skill) => (
           <span key={skill} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
             {skill}
@@ -100,9 +106,11 @@ export default function ProfileHeader({
             </button>
           </div>
         )}
-      </div>
+        </div>
+      ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
+      {formData.languages.length > 0 || isEditing ? (
+        <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-gray-500 mr-1">Langues:</span>
         {formData.languages.map((lang) => (
           <span key={lang} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs">
@@ -129,7 +137,8 @@ export default function ProfileHeader({
             </button>
           </div>
         )}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

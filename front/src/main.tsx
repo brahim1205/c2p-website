@@ -1,5 +1,4 @@
 import { StrictMode } from 'react'
-import './i18n'
 import { createRoot } from 'react-dom/client'
 import 'remixicon/fonts/remixicon.css'
 import './index.css'

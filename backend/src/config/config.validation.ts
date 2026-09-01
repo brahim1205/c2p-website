@@ -54,6 +54,8 @@ export const configValidationSchema = z.object({
   GLOBAL_RATE_LIMIT_MAX: z.string().default('180'),
   FINANCE_RATE_LIMIT_MAX: z.string().default('90'),
   PROVIDER_WEBHOOK_RATE_LIMIT_MAX: z.string().default('120'),
+  UPLOAD_RATE_LIMIT_MAX: z.string().default('30'),
+  SWAGGER_ENABLED: booleanString.optional(),
   CSRF_COOKIE_NAME: z.string().default('c2p_csrf'),
   SESSION_COOKIE_NAME: z.string().default('c2p_at'),
   REFRESH_COOKIE_NAME: z.string().default('c2p_rt'),
@@ -190,6 +192,23 @@ export const configValidationSchema = z.object({
         code: 'custom',
         path: ['DATA_LEGACY_API_MODE'],
         message: 'DATA_LEGACY_API_MODE must be read-only or disabled in production.',
+      });
+    }
+
+    const uploadRateLimitMax = Number(config.UPLOAD_RATE_LIMIT_MAX);
+    if (!Number.isInteger(uploadRateLimitMax) || uploadRateLimitMax < 1 || uploadRateLimitMax > 60) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['UPLOAD_RATE_LIMIT_MAX'],
+        message: 'UPLOAD_RATE_LIMIT_MAX must be an integer between 1 and 60 in production.',
+      });
+    }
+
+    if (config.SWAGGER_ENABLED === 'true') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SWAGGER_ENABLED'],
+        message: 'SWAGGER_ENABLED must not be true in production.',
       });
     }
 

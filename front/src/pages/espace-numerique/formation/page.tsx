@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import FormationEnrollModal from './FormationEnrollModal';
 import {
   CurriculumTab,
   FormationContextSidebar,
@@ -84,16 +83,6 @@ export default function FormationDetailPage() {
           <FormationContextSidebar course={session.course} relatedClasses={session.relatedClasses} />
         </div>
       </div>
-
-      {session.showEnrollModal && session.user && (
-        <FormationEnrollModal
-          course={session.course}
-          user={session.user}
-          enrolling={session.enrolling}
-          onClose={() => session.setShowEnrollModal(false)}
-          onConfirm={session.handleEnroll}
-        />
-      )}
     </div>
   );
 }

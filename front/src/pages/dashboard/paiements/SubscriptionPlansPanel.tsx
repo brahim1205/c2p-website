@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { PayoutAccount, SubscriptionPlan, UserSubscription } from '@/lib/saasApi';
 import { formatAmount, type PaymentMethodId } from './paymentPageModel';
 
@@ -6,12 +7,10 @@ interface SubscriptionPlansPanelProps {
   defaultPayoutAccount: PayoutAccount | null;
   plans: SubscriptionPlan[];
   selectedPlanId: string;
-  selectedPlan: SubscriptionPlan | null;
   selectedPlanUnavailable: boolean;
   selectedPlanName: string;
   selectedPlanRole: string;
   availableBalance: number;
-  dexPayAvailable: boolean;
   onActivatePlan: (plan: SubscriptionPlan, paymentMethod: PaymentMethodId) => void;
 }
 
@@ -20,12 +19,10 @@ export default function SubscriptionPlansPanel({
   defaultPayoutAccount,
   plans,
   selectedPlanId,
-  selectedPlan,
   selectedPlanUnavailable,
   selectedPlanName,
   selectedPlanRole,
   availableBalance,
-  dexPayAvailable,
   onActivatePlan,
 }: SubscriptionPlansPanelProps) {
   return (
@@ -42,11 +39,7 @@ export default function SubscriptionPlansPanel({
         ) : null}
       </div>
 
-      {selectedPlan ? (
-        <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
-          Plan cible : <strong>{selectedPlan.name}</strong>. Vous pouvez l’activer directement ci-dessous.
-        </div>
-      ) : selectedPlanUnavailable ? (
+      {selectedPlanUnavailable ? (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {selectedPlanName ? `Le plan ${selectedPlanName}` : 'Ce plan'} n’est pas disponible pour votre compte actuel{selectedPlanRole ? ` (${selectedPlanRole})` : ''}.
         </div>
@@ -76,21 +69,12 @@ export default function SubscriptionPlansPanel({
                   </li>
                 ))}
               </ul>
-              <div className="mt-5 grid gap-2">
-                <button
-                  onClick={() => onActivatePlan(plan, dexPayAvailable ? 'dexpay' : 'wave')}
-                  className="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
-                >
-                  {isActive ? 'Renouveler directement' : 'Payer directement'}
-                </button>
-                <button
-                  onClick={() => onActivatePlan(plan, 'wallet')}
-                  disabled={!canUseWallet}
-                  className="w-full rounded-lg border border-teal-200 bg-white px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Utiliser mon solde C2P
-                </button>
-              </div>
+              <Link
+                to={`/paiement?type=abonnement&plan=${encodeURIComponent(plan.id)}&planName=${encodeURIComponent(plan.name)}&planRole=${encodeURIComponent(plan.role)}&returnTo=${encodeURIComponent('/dashboard/paiements')}`}
+                className="mt-5 inline-flex w-full justify-center rounded-lg bg-[#0f1c35] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#17233f]"
+              >
+                Continuer vers le paiement
+              </Link>
             </div>
           );
         })}

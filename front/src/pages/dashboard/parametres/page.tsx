@@ -70,6 +70,14 @@ export default function ParametresPage() {
     () => [accountForm.firstName, accountForm.lastName].filter(Boolean).join(' ') || 'Utilisateur C2P',
     [accountForm.firstName, accountForm.lastName],
   );
+  const userInitials = useMemo(
+    () => [accountForm.firstName, accountForm.lastName]
+      .filter(Boolean)
+      .map((value) => value.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 2) || 'C2',
+    [accountForm.firstName, accountForm.lastName],
+  );
 
   const profileQueryKey = queryKeys.account.profile(user?.id);
   const profileQuery = useQuery({
@@ -204,11 +212,32 @@ export default function ParametresPage() {
     }
   };
 
+  const handleAvatarChange = async (url: string) => {
+    if (!user?.id) return;
+    updateUser({ avatar: url });
+    try {
+      const updated = await updateProfile(user.id, { avatar: url });
+      updateUser(updated);
+      queryClient.setQueryData(profileQueryKey, updated);
+      success('Photo mise à jour', 'Votre photo de profil est enregistrée.');
+    } catch (err) {
+      console.error(err);
+      error('Erreur', 'La photo de profil n a pas pu etre enregistrée.');
+    }
+  };
+
   return (
     <DashboardLayout>
       <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Paramètres' }]} />
       <SettingsHeader />
-      <AccountSummary displayName={displayName} email={accountForm.email} loading={loading} user={user} />
+      <AccountSummary
+        displayName={displayName}
+        email={accountForm.email}
+        loading={loading}
+        user={user}
+        userInitials={userInitials}
+        onAvatarChange={handleAvatarChange}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
         <SettingsSidebar activeTab={activeTab} onChangeTab={setActiveTab} />

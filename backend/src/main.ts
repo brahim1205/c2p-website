@@ -169,10 +169,10 @@ async function bootstrap() {
 
     const path = req.path;
     const actor = (req as AuthenticatedRequest).auth?.user;
-    const isSwaggerRoute = path === '/api/docs'
+    const isSwaggerRoute = configService.swaggerEnabled && (path === '/api/docs'
       || path === '/api/docs-json'
       || path === '/api/docs-yaml'
-      || path.startsWith('/api/docs/');
+      || path.startsWith('/api/docs/'));
     const exempt = [
       '/api/healthz',
       '/api/public/platform-status',
@@ -257,46 +257,48 @@ async function bootstrap() {
   });
   app.setGlobalPrefix('api');
 
-  const swaggerDocument = SwaggerModule.createDocument(
-    app,
-    new DocumentBuilder()
-      .setTitle('C2P API')
-      .setDescription('Documentation OpenAPI des endpoints publics, metier, financiers, monitoring et administration C2P.')
-      .setVersion('2.0.0')
-      .addBearerAuth(
-        {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-          description: 'Jeton Bearer pour les clients API.',
-        },
-        'bearer',
-      )
-      .addCookieAuth(configService.sessionCookieName, {
-        type: 'apiKey',
-        in: 'cookie',
-        name: configService.sessionCookieName,
-        description: 'Cookie de session utilise par le frontend C2P.',
-      }, 'session')
-      .addApiKey({
-        type: 'apiKey',
-        in: 'header',
-        name: 'x-csrf-token',
-        description: 'Jeton CSRF requis pour les mutations authentifiees.',
-      }, 'csrf')
-      .build(),
-    { deepScanRoutes: true },
-  );
-  SwaggerModule.setup('api/docs', app, swaggerDocument, {
-    customSiteTitle: 'C2P API Docs',
-    jsonDocumentUrl: '/api/docs-json',
-    yamlDocumentUrl: '/api/docs-yaml',
-    swaggerOptions: {
-      persistAuthorization: true,
-      tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
-    },
-  });
+  if (configService.swaggerEnabled) {
+    const swaggerDocument = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder()
+        .setTitle('C2P API')
+        .setDescription('Documentation OpenAPI des endpoints publics, metier, financiers, monitoring et administration C2P.')
+        .setVersion('2.0.0')
+        .addBearerAuth(
+          {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            description: 'Jeton Bearer pour les clients API.',
+          },
+          'bearer',
+        )
+        .addCookieAuth(configService.sessionCookieName, {
+          type: 'apiKey',
+          in: 'cookie',
+          name: configService.sessionCookieName,
+          description: 'Cookie de session utilise par le frontend C2P.',
+        }, 'session')
+        .addApiKey({
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-csrf-token',
+          description: 'Jeton CSRF requis pour les mutations authentifiees.',
+        }, 'csrf')
+        .build(),
+      { deepScanRoutes: true },
+    );
+    SwaggerModule.setup('api/docs', app, swaggerDocument, {
+      customSiteTitle: 'C2P API Docs',
+      jsonDocumentUrl: '/api/docs-json',
+      yamlDocumentUrl: '/api/docs-yaml',
+      swaggerOptions: {
+        persistAuthorization: true,
+        tagsSorter: 'alpha',
+        operationsSorter: 'alpha',
+      },
+    });
+  }
 
   const port = configService.port || 3000;
   await app.listen(port);

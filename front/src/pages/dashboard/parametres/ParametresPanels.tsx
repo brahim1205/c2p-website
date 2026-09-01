@@ -1,3 +1,4 @@
+import AvatarUpload from '@/components/base/AvatarUpload';
 import { ROLE_LABELS, type AuthUser } from '@/lib/roles';
 import { settingsTabs, type SettingsTab } from './parametresModel';
 
@@ -16,20 +17,33 @@ export function AccountSummary({
   email,
   loading,
   user,
+  userInitials,
+  onAvatarChange,
 }: {
   displayName: string;
   email: string;
   loading: boolean;
   user: AuthUser | null;
+  userInitials: string;
+  onAvatarChange: (url: string) => void | Promise<void>;
 }) {
   return (
     <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">{displayName}</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            {user ? ROLE_LABELS[user.role] : 'Compte C2P'} · {email || 'Email non renseigné'}
-          </p>
+        <div className="flex items-center gap-4">
+          <AvatarUpload
+            src={user?.avatar ?? null}
+            initials={userInitials}
+            size="lg"
+            editable={true}
+            onChange={onAvatarChange}
+          />
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">{displayName}</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              {user ? ROLE_LABELS[user.role] : 'Compte C2P'} · {email || 'Email non renseigné'}
+            </p>
+          </div>
         </div>
         {loading ? (
           <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-500">Synchronisation...</span>

@@ -1,9 +1,5 @@
 import { Link } from 'react-router-dom';
-import {
-  getPlanPeriod,
-  type MonetizedRole,
-  type PublicSubscriptionPlan,
-} from '@/lib/publicSubscriptions';
+import { type MonetizedRole, type PublicSubscriptionPlan } from '@/lib/publicSubscriptions';
 
 function formatAmountOnly(amount: number) {
   return new Intl.NumberFormat('fr-SN').format(amount);
@@ -31,7 +27,7 @@ function getPlanCta(
 
   if (currentRole === plan.role || currentRole === 'admin') {
     return {
-      to: `/dashboard/paiements?plan=${encodeURIComponent(plan.id)}&planName=${encodeURIComponent(plan.name)}&planRole=${encodeURIComponent(plan.role)}`,
+      to: `/paiement?type=abonnement&plan=${encodeURIComponent(plan.id)}&planName=${encodeURIComponent(plan.name)}&planRole=${encodeURIComponent(plan.role)}&returnTo=${encodeURIComponent(`/dashboard/${plan.role}`)}`,
       label: 'Activer ce plan',
       variant: 'featured_orange' as const,
     };
@@ -75,7 +71,6 @@ export function PaidPlanCard({ plan, contentSummary, index, isAuthenticated, cur
   const isPopular = index === 0;
   const isBestValue = index === 1;
   const cta = getPlanCta(plan, isAuthenticated, currentRole);
-  const period = getPlanPeriod(plan);
 
   return (
     <article className={`relative flex min-h-[440px] flex-col justify-between rounded-[28px] border bg-white px-6 py-7 shadow-[0_18px_50px_rgba(15,28,53,0.06)] sm:px-8 ${isPopular ? 'border-[#147f7b]' : isBestValue ? 'border-[#f5bb00]' : 'border-[#dce8cf]'}`}>
@@ -88,13 +83,8 @@ export function PaidPlanCard({ plan, contentSummary, index, isAuthenticated, cur
         <h4 className="text-xl font-black text-[#0f1c35]">{plan.name}</h4>
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <span className="text-5xl font-semibold tracking-tight text-[#0f1c35]">{formatAmountOnly(plan.price_monthly)}</span>
-          <span className="pb-2 text-base text-[#64748b]">{formatCurrencyLabel(plan.currency)}{period.suffix}</span>
+          <span className="pb-2 text-base text-[#64748b]">{formatCurrencyLabel(plan.currency)}</span>
         </div>
-        {period.label || plan.promotional ? (
-          <p className="mt-2 text-sm font-medium text-[#1a9a96]">
-            {[period.label, plan.promotional ? 'Tarif promotionnel' : ''].filter(Boolean).join(' · ')}
-          </p>
-        ) : null}
         <p className="mt-4 max-w-xs text-base leading-7 text-[#475569]">{plan.description || contentSummary}</p>
         <ul className="mt-7 space-y-4 text-sm leading-6 text-[#0f1c35]">
           {plan.features.map((feature) => (

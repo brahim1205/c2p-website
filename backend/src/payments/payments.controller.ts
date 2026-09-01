@@ -43,6 +43,7 @@ import {
   payoutRequestCreateSchema,
   providerVisibilityPurchaseSchema,
   subscriptionActivateSchema,
+  waveIntentCreateSchema,
   adminEscrowStatusSchema,
   adminPayoutStatusSchema,
   adminTransactionStatusSchema,
@@ -55,6 +56,7 @@ import {
   type PayoutRequestCreateDto,
   type ProviderVisibilityPurchaseDto,
   type SubscriptionActivateDto,
+  type WaveIntentCreateDto,
   type WalletTopupDto,
   type WalletWithdrawDto,
 } from './dto/finance-commands.dto.js';
@@ -385,6 +387,17 @@ export class PaymentsController {
   ) {
     const actor = this.getActor(request);
     return this.paymentCommandsService.withdrawWallet(actor, payload, request.requestId ?? `req-${Date.now()}`);
+  }
+
+  @Post('wave/intents')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('finance.self_service')
+  async createWavePaymentIntent(
+    @Req() request: AuthenticatedRequest,
+    @Body(new ZodValidationPipe(waveIntentCreateSchema)) payload: WaveIntentCreateDto,
+  ) {
+    const actor = this.getActor(request);
+    return this.paymentCommandsService.createWavePaymentIntent(actor, payload, request.requestId ?? `req-${Date.now()}`);
   }
 
   @Post('payout-accounts')

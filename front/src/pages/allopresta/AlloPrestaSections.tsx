@@ -48,14 +48,14 @@ export function AlloPrestaCategoriesBar({ selectedCategory, onSelectCategory }: 
           <h2 className="text-2xl font-black text-[#08084f] sm:text-3xl">Catégories de services</h2>
           <div className="mx-auto mt-3 h-1 w-14 rounded-full bg-[#ffb41f]" />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" role="group" aria-label="Filtrer les prestataires par categorie">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5" role="group" aria-label="Filtrer les prestataires par categorie">
           {alloprestaCategories.map((category) => (
             <button
               key={category.id}
               type="button"
               aria-pressed={selectedCategory === category.id}
               onClick={() => onSelectCategory(category.id)}
-              className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-black transition-all ${
+              className={`flex min-h-[92px] cursor-pointer flex-col items-start gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-black transition-all sm:min-h-0 sm:flex-row sm:items-center ${
                 selectedCategory === category.id
                   ? 'border-[#ffb41f] bg-[#fff4e3] text-[#08084f] shadow-sm'
                   : 'border-[#f0e2ca] bg-[#fffaf2] text-[#626b7a] hover:border-[#ffb41f]/70 hover:bg-white'
@@ -64,7 +64,7 @@ export function AlloPrestaCategoriesBar({ selectedCategory, onSelectCategory }: 
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#ff9f0a]">
                 <i className={`${category.icon} text-xl`} />
               </span>
-              <span>{category.name}</span>
+              <span className="leading-5">{category.name}</span>
             </button>
           ))}
         </div>
@@ -130,22 +130,22 @@ export function AlloPrestaHowItWorks() {
           </h2>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-5 lg:grid-cols-3">
           {steps.map((step, index) => (
-            <div key={step.number} className="relative text-center">
+            <div key={step.number} className={`relative rounded-[28px] border border-[#eef2f7] bg-white p-4 text-center shadow-sm ${index === steps.length - 1 ? 'col-span-2 lg:col-span-1' : ''}`}>
               {index < steps.length - 1 ? (
                 <div className="pointer-events-none absolute left-[62%] top-16 hidden h-px w-[76%] border-t-2 border-dashed border-[#9ca3af] lg:block" />
               ) : null}
-              <div className="relative z-10 mx-auto flex h-36 w-36 items-center justify-center rounded-full border border-dashed border-[#08084f]/45 bg-white">
-                <div className="flex h-20 w-20 rotate-45 items-center justify-center rounded-2xl bg-[#ffb41f] text-[#08084f]">
+              <div className="relative z-10 mx-auto flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-[#08084f]/45 bg-white sm:h-28 sm:w-28">
+                <div className="flex h-16 w-16 rotate-45 items-center justify-center rounded-2xl bg-[#ffb41f] text-[#08084f] sm:h-20 sm:w-20">
                   <div className="-rotate-45 text-center">
-                    <p className="text-sm font-black">ÉTAPE</p>
-                    <p className="text-xl font-black">{step.number}</p>
+                    <p className="text-[10px] font-black sm:text-sm">ÉTAPE</p>
+                    <p className="text-lg font-black sm:text-xl">{step.number}</p>
                   </div>
                 </div>
               </div>
-              <h3 className="mt-7 text-2xl font-black text-[#141827]">{step.title}</h3>
-              <p className="mx-auto mt-4 max-w-sm text-base leading-7 text-[#6b7280]">{step.text}</p>
+              <h3 className="mt-5 text-lg font-black text-[#141827] sm:text-2xl">{step.title}</h3>
+              <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#6b7280] sm:text-base sm:leading-7">{step.text}</p>
             </div>
           ))}
         </div>

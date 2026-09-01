@@ -13,6 +13,7 @@ import {
 } from '@/lib/projectApi';
 import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
+import { fetchFinanceSnapshot } from '@/lib/saasApi';
 
 function getPartnerTypeLabel(type: string | null | undefined) {
   return type === 'technique' ? 'Technique' : 'Financier';
@@ -25,7 +26,13 @@ export default function PartenaireDashboardPage() {
 
   const dashboardQuery = useQuery({
     queryKey: queryKeys.partenaire.dashboard(user?.id),
-    queryFn: () => fetchPartnerDashboardSnapshot(user!.id),
+    queryFn: async () => {
+      const [snapshot, finance] = await Promise.all([
+        fetchPartnerDashboardSnapshot(user!.id),
+        fetchFinanceSnapshot(user!.id, user!.role),
+      ]);
+      return { ...snapshot, finance };
+    },
     enabled: Boolean(user?.id),
   });
 
@@ -125,8 +132,7 @@ export default function PartenaireDashboardPage() {
             </p>
           </div>
         </section>
-
-        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="mb-6 grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
           {stats.map((stat) => (
             <div key={stat.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">

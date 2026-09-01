@@ -80,7 +80,7 @@ export default function PricingPage() {
 
           <div className="relative">
             <img
-              src="/images/home/tarif.png"
+              src="/images/home/elegant-man-reviewing-checklist-removebg-preview.png"
               alt="Plans d'abonnement C2P"
               className="h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
             />
@@ -125,9 +125,10 @@ export default function PricingPage() {
               {monetizedRoles.map((role) => {
                 const content = monetizedRoleContent[role];
                 const rolePlans = [...plansByRole[role]].sort((left, right) => left.price_monthly - right.price_monthly);
-                const visibleRolePlans = role === 'prestataire'
+                const visibleRolePlans = (role === 'prestataire'
                   ? rolePlans.filter((plan) => plan.price_monthly > 0)
-                  : rolePlans;
+                  : rolePlans)
+                  .filter((plan) => !(role === 'partenaire' && String(plan.name).trim().toLowerCase() === 'partenaire pro'));
                 return (
                   <section
                     id={`${role}-plans`}

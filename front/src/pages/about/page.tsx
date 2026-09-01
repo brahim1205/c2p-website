@@ -1,4 +1,5 @@
 import { usePageMeta } from '@/lib/usePageMeta';
+import { Link } from 'react-router-dom';
 
 const pillars = [
   {
@@ -66,6 +67,33 @@ const milestones = [
   },
 ];
 
+const quickLinks = [
+  {
+    id: 'services',
+    title: 'Trouver un service',
+    text: 'Chercher un prestataire, demander un devis, réserver un créneau et suivre la prestation.',
+    to: '/allopresta',
+  },
+  {
+    id: 'formations',
+    title: 'Suivre ou publier une formation',
+    text: 'Accéder aux cours, ressources, classes virtuelles, quiz et certificats.',
+    to: '/espace-numerique',
+  },
+  {
+    id: 'projets',
+    title: 'Soumettre un projet',
+    text: 'Déposer un dossier, structurer le financement et mobiliser des partenaires.',
+    to: '/project-center',
+  },
+  {
+    id: 'tarifs',
+    title: 'Comprendre les accès',
+    text: 'Voir quels rôles ont un abonnement et ce que chaque accès débloque.',
+    to: '/tarifs',
+  },
+];
+
 export default function AboutPage() {
   usePageMeta({
     title: 'À propos de C2P | Écosystème professionnel au Sénégal',
@@ -95,12 +123,12 @@ export default function AboutPage() {
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {[
-                ['2,500+', 'Professionnels'],
-                ['150+', 'Projets accompagnés'],
-                ['98%', 'Satisfaction'],
-              ].map(([value, label]) => (
-                <div key={label} className="rounded-3xl border border-white/70 bg-white/82 p-5 text-center shadow-sm backdrop-blur">
-                  <div className="text-3xl font-black text-[#147f7b]">{value}</div>
+                ['Un seul compte', 'pour évoluer selon votre rôle'],
+                ['Des parcours réels', 'services, cours, projets et partenariats'],
+                ['Une logique progressive', 'de découverte vers l’autonomie'],
+              ].map(([title, label]) => (
+                <div key={title} className="rounded-3xl border border-white/70 bg-white/82 p-5 text-center shadow-sm backdrop-blur">
+                  <div className="text-lg font-black text-[#147f7b]">{title}</div>
                   <div className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-[#64748b]">{label}</div>
                 </div>
               ))}
@@ -117,6 +145,31 @@ export default function AboutPage() {
               <p className="text-sm font-black text-[#0f1c35]">AlloPresta • Espace Numérique • ProjectCenter</p>
               <p className="mt-1 text-xs leading-5 text-[#64748b]">Un seul compte pour évoluer selon votre parcours.</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white px-4 py-14 sm:px-6 lg:px-20 lg:py-18">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8 max-w-2xl">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.34em] text-[#1a9a96]">Repères utiles</p>
+            <h2 className="text-3xl font-semibold text-[#0f1c35] sm:text-4xl">Tout ce qu’un utilisateur doit savoir avant de démarrer.</h2>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {quickLinks.map((item) => (
+              <Link
+                key={item.id}
+                to={item.to}
+                className="rounded-[24px] border border-[#d6dbe1] bg-[#fbfdf7] p-6 transition hover:-translate-y-1 hover:border-[#1a9a96]/35 hover:shadow-[0_24px_60px_rgba(15,28,53,0.08)]"
+              >
+                <h3 className="text-lg font-semibold text-[#0f1c35]">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[#64748b]">{item.text}</p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#1a9a96]">
+                  Ouvrir la page
+                  <i className="ri-arrow-right-line"></i>
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -140,6 +193,14 @@ export default function AboutPage() {
             <p className="mt-6 text-base leading-8 text-[#64748b]">
               C2P part d’une conviction simple : les talents ont besoin d’un cadre fiable, de bons outils, de réseaux solides et d’un accompagnement concret. La plateforme organise ces besoins autour de parcours clairs pour les apprenants, prestataires, formateurs, porteurs de projet et partenaires.
             </p>
+            <div className="mt-8 rounded-[24px] border border-[#d6dbe1] bg-[#fbfdf7] p-6">
+              <h3 className="text-lg font-semibold text-[#0f1c35]">Ce que vous trouverez sur cette page</h3>
+              <ul className="mt-4 space-y-3 text-sm leading-7 text-[#64748b]">
+                <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Le rôle de chaque espace : AlloPresta, Espace Numérique et ProjectCenter.</span></li>
+                <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>La logique d’autonomisation C2P et les parcours possibles selon votre rôle.</span></li>
+                <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Des redirections simples vers les pages où agir : s’inscrire, publier, suivre ou financer.</span></li>
+              </ul>
+            </div>
             <div className="mt-8 grid gap-4">
               {pillars.map((pillar) => (
                 <div key={pillar.title} className="c2p-card rounded-2xl p-5">

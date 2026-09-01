@@ -16,7 +16,7 @@ import { type ProjectTab } from './projectDetailModel';
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
-  const projectId = Number(id);
+  const projectId = String(id ?? '').trim();
   const [activeTab, setActiveTab] = useState<ProjectTab>('overview');
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function ProjectDetailPage() {
   const [relatedProjects, setRelatedProjects] = useState<PublicProject[]>([]);
 
   useEffect(() => {
-    if (!Number.isFinite(projectId)) {
+    if (!projectId) {
       setErrorMessage('Projet introuvable.');
       setLoading(false);
       return;

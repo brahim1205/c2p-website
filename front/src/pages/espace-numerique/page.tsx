@@ -143,7 +143,7 @@ export default function EspaceNumeriquePage() {
       return;
     }
     if (!course.is_free && Number(course.current_price ?? course.price ?? 0) > 0) {
-      navigate(`/espace-numerique/formation/${course.id}`);
+      navigate(`/paiement?type=formation&course=${encodeURIComponent(String(course.id))}&returnTo=${encodeURIComponent(`/espace-numerique/formation/${course.id}`)}`);
       return;
     }
 

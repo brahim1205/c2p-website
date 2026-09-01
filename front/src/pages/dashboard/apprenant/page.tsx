@@ -28,7 +28,6 @@ export default function ApprenantDashboardPage() {
     enabled: Boolean(user?.id),
   });
   const loading = enrollmentsLoading || certificatesLoading;
-
   const totalEnrolled = enrollments.length;
   const inProgressCount = enrollments.filter((e) => e.progress > 0 && e.progress < 100).length;
   const completedCount = enrollments.filter((e) => e.progress >= 100).length;
@@ -71,11 +70,11 @@ export default function ApprenantDashboardPage() {
         <ResumeCourseBanner />
 
         {loading ? (
-          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
             <SkeletonCard count={4} />
           </div>
         ) : (
-          <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <section className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
             {[
               { label: 'Formations en cours', value: String(inProgressCount), detail: `${totalEnrolled} inscription(s)`, icon: 'ri-book-open-line', surface: 'bg-teal-50 text-teal-700' },
               { label: 'Formations terminées', value: String(completedCount), detail: `${averageProgress}% de progression moyenne`, icon: 'ri-checkbox-circle-line', surface: 'bg-emerald-50 text-emerald-700' },

@@ -43,6 +43,8 @@ export function sanitizeBookingCreateRecord(row: Row, user: AuthUser) {
     booking_time: bookingTime,
     request_type: normalizeBookingRequestType(row.request_type),
     payment_method: trimText(row.payment_method) ?? 'wallet',
+    payment_transaction_id: trimText(row.payment_transaction_id) ?? null,
+    financial_operation_id: trimText(row.financial_operation_id) ?? null,
     status: 'pending',
     request_channel: 'c2p_managed',
     assignment_status: 'pending_review',

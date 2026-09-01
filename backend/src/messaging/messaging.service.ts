@@ -51,7 +51,7 @@ export class MessagingService {
         name: conversation.name,
         avatar: conversation.avatar,
         role: conversation.role ?? 'Conversation',
-        lastMessage: lastMessage?.content ?? 'Nouvelle conversation',
+        lastMessage: this.getMessagePreview(lastMessage),
         lastMessageAt: lastMessage?.created_at ?? conversation.updated_at ?? conversation.created_at,
         unreadCount,
         online: Boolean(conversation.online ?? false),
@@ -220,7 +220,7 @@ export class MessagingService {
       name: conversation.name,
       avatar: conversation.avatar,
       role: conversation.role ?? 'Conversation',
-      lastMessage: lastMessage?.content ?? 'Nouvelle conversation',
+      lastMessage: this.getMessagePreview(lastMessage),
       lastMessageAt: lastMessage?.created_at ?? conversation.updated_at ?? conversation.created_at,
       unreadCount: conversationMessages.filter((message) =>
         message.read !== true && String(message.sender_id) !== String(actorId),
@@ -244,6 +244,17 @@ export class MessagingService {
       read: Boolean(message.read),
       attachments: Array.isArray(message.attachments) ? message.attachments : [],
     };
+  }
+
+  private getMessagePreview(message: Row | undefined) {
+    if (!message) return 'Nouvelle conversation';
+    const content = typeof message.content === 'string' || typeof message.content === 'number'
+      ? String(message.content).trim()
+      : '';
+    if (content) return content;
+    const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+    if (attachments.length > 0) return attachments.length === 1 ? 'Pièce jointe' : `${attachments.length} pièces jointes`;
+    return 'Nouveau message';
   }
 
   private buildMessageNotifications(conversation: Row, message: Row, actor: AuthUser, createdAt: string) {

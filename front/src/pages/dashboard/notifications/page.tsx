@@ -91,24 +91,20 @@ export default function DashboardNotificationsPage() {
             <h3 className="text-lg font-bold text-gray-900">Aucune notification</h3>
             <p className="mt-2 text-sm text-gray-500">Les nouvelles activités apparaîtront ici automatiquement.</p>
           </div>
+        ) : unreadNotifications.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-gray-300 bg-white p-10 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+              <i className="ri-mail-check-line text-2xl"></i>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Toutes les notifications ont été traitées</h3>
+            <p className="mt-2 text-sm text-gray-500">Les notifications lues disparaissent automatiquement de cette file.</p>
+          </div>
         ) : (
           <div className="grid gap-4">
-            {unreadNotifications.length > 0 && (
-              <SectionTitle title="À traiter" count={unreadNotifications.length} />
-            )}
+            <SectionTitle title="À traiter" count={unreadNotifications.length} />
             {unreadNotifications.map((notification) => (
               <NotificationCard
                 key={notification.id}
-                notification={notification}
-                onDelete={deleteNotification}
-                onOpen={openNotification}
-              />
-            ))}
-
-            <SectionTitle title="Toutes les notifications" count={notifications.length} />
-            {notifications.map((notification) => (
-              <NotificationCard
-                key={`all-${notification.id}`}
                 notification={notification}
                 onDelete={deleteNotification}
                 onOpen={openNotification}

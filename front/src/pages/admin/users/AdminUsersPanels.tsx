@@ -90,6 +90,7 @@ export function AdminUsersTable({
   counts,
   filteredUsers,
   loading,
+  onInspectUser,
   selectedUsers,
   onBulkStatus,
   onSelectAll,
@@ -102,6 +103,7 @@ export function AdminUsersTable({
   counts: Record<AdminUsersStatusFilter, number>;
   filteredUsers: ManagedUser[];
   loading: boolean;
+  onInspectUser: (user: ManagedUser) => void;
   selectedUsers: string[];
   onBulkStatus: (status: ManagedUser['status']) => void;
   onSelectAll: () => void;
@@ -147,6 +149,7 @@ export function AdminUsersTable({
             {!loading && filteredUsers.map((user) => (
               <UserRow
                 key={user.id}
+                onInspectUser={onInspectUser}
                 selected={selectedUsers.includes(user.id)}
                 user={user}
                 onStatusChange={onUserStatusChange}
@@ -210,12 +213,14 @@ function BulkActionBar({ selectedCount, onBulkStatus }: { selectedCount: number;
 }
 
 function UserRow({
+  onInspectUser,
   selected,
   user,
   onStatusChange,
   onToggleTrainerVerification,
   onToggleUser,
 }: {
+  onInspectUser: (user: ManagedUser) => void;
   selected: boolean;
   user: ManagedUser;
   onStatusChange: (id: string, status: ManagedUser['status']) => void;
@@ -237,7 +242,11 @@ function UserRow({
         />
       </td>
       <td className="px-6 py-4">
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onInspectUser(user)}
+          className="flex items-center gap-3 rounded-2xl text-left transition hover:bg-gray-50"
+        >
           {user.avatar ? (
             <img src={user.avatar} alt={user.firstName} className="h-10 w-10 rounded-full object-cover" />
           ) : (
@@ -249,7 +258,7 @@ function UserRow({
             <p className="font-medium text-gray-900">{user.firstName} {user.lastName}</p>
             <p className="text-sm text-gray-500">{user.email}</p>
           </div>
-        </div>
+        </button>
       </td>
       <td className="px-6 py-4 text-sm text-gray-700">{ROLE_LABELS[user.role]}</td>
       <td className="px-6 py-4">

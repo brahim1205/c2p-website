@@ -58,9 +58,9 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
             </a>
           </div>
 
-          <div className="mt-7 grid gap-2 sm:grid-cols-3">
+          <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {projectCenterSteps.map((step, index) => (
-              <div key={step} className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3 shadow-sm backdrop-blur">
+              <div key={step} className={`rounded-2xl border border-white/70 bg-white/75 px-4 py-3 shadow-sm backdrop-blur ${index === projectCenterSteps.length - 1 ? 'col-span-2 sm:col-span-1' : ''}`}>
                 <span className="text-xs font-black uppercase tracking-[0.18em] text-[#147f7b]">Étape {index + 1}</span>
                 <p className="mt-1 text-sm font-bold text-[#0f1c35]">{step}</p>
               </div>
@@ -85,7 +85,7 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
         <div className="relative">
           <div className="absolute -left-5 bottom-12 hidden h-44 w-20 rounded-full bg-[#ffd166] lg:block" />
           <img
-            src="/images/home/project.png"
+            src="/images/home/hand-holding-money-finance-concept-optimized.webp"
             alt="ProjectCenter"
             className="relative h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
           />
@@ -107,14 +107,14 @@ export function ProjectCenterCategoryBar({ selectedCategory, onSelectCategory }:
   return (
     <section className="bg-white px-4 py-5 sm:px-6 lg:px-20">
       <div className="mx-auto max-w-7xl">
-        <div className="flex items-center gap-3 overflow-x-auto pb-2" role="group" aria-label="Filtrer les projets par categorie">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-3 sm:overflow-visible sm:pb-0 overflow-x-auto pb-2" role="group" aria-label="Filtrer les projets par categorie">
           {projectCenterCategories.map((category) => (
             <button
               key={category.id}
               type="button"
               aria-pressed={selectedCategory === category.id}
               onClick={() => onSelectCategory(category.id)}
-              className={`flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-sm font-medium transition-all ${
+              className={`flex min-h-[52px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-2xl border px-4 py-2.5 text-sm font-medium transition-all sm:min-h-0 sm:rounded-full ${
                 selectedCategory === category.id
                   ? 'border-[#0f1c35] bg-[#0f1c35] text-white'
                   : 'border-[#d6dbe1] bg-white text-[#64748b] hover:border-[#1a9a96] hover:text-[#0f1c35]'

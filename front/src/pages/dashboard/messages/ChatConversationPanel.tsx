@@ -10,15 +10,15 @@ export default function ChatConversationPanel(props: ChatConversationPanelProps)
   const session = useChatConversationSession(props);
 
   return (
-    <div className="min-h-[28rem] min-w-0 flex-1 rounded-xl border border-gray-200 bg-white shadow-sm">
-      <ChatConversationHeader conversation={props.conversation} onCall={props.onCall} session={session} />
+    <section className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
+      <ChatConversationHeader conversation={props.conversation} onCall={props.onCall} session={session} onBack={props.onBack} />
 
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
+      <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6">
         <ChatConversationPanelDrawer conversation={props.conversation} session={session} />
         <ChatMessageList currentUserId={props.currentUserId} session={session} />
       </div>
 
       <ChatComposer session={session} />
-    </div>
+    </section>
   );
 }
