@@ -109,7 +109,7 @@
   "overrides": {
     "body-parser": "2.3.0",
     "js-yaml": "5.4.1",
-    "multer": "2.2.0",
-    "qs": "6.15.2"
+    "multer": "2.4.0",
+    "qs": "6.16.0"
   }
 }
