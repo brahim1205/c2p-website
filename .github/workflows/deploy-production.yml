@@ -102,6 +102,13 @@ jobs:
           cd "$DEPLOY_PATH"
 
           previous_ref="$(git rev-parse --verify HEAD 2>/dev/null || true)"
+          dirty_status="$(git status --porcelain)"
+          if [ -n "$dirty_status" ]; then
+            stash_name="pre-production-deploy-${DEPLOY_REF}-$(date -u +%Y%m%dT%H%M%SZ)"
+            echo "Worktree production modifié; sauvegarde dans git stash: $stash_name"
+            git stash push --include-untracked -m "$stash_name"
+          fi
+
           git fetch --all --tags --prune
           git checkout --detach "$DEPLOY_REF"
           chmod +x ops/scripts/deploy-production.sh ops/scripts/rollback-production.sh
