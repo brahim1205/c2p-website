@@ -178,8 +178,8 @@ export default function HomePage() {
 
               <div className="absolute inset-x-6 bottom-0 h-[74%] rounded-t-full bg-[#ffd15a] sm:inset-x-16" />
               <img
-                src="/images/home/acceuil.png?v=20261005"
-                alt="Utilisateur C2P"
+                src="/images/home/etudiante-souriante-gauche.png?v=20261005-2"
+                alt="Etudiante C2P"
                 className="absolute bottom-0 right-0 h-[88%] w-full rounded-b-[28px] object-cover object-center sm:h-[92%] lg:w-[82%]"
               />
             </div>
