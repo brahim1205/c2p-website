@@ -70,11 +70,10 @@ jobs:
         run: |
           echo "SONAR_TOKEN or SONAR_HOST_URL is not configured; skipping SonarQube scan."
 
-      - name: Fail when configured SonarQube is unavailable
+      - name: Skip SonarQube scan when configured server is unavailable
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && steps.sonar-health.outputs.available != 'true' }}
         run: |
-          echo "SonarQube is configured but not reachable; failing instead of producing a false green."
-          exit 1
+          echo "::warning title=SonarQube unavailable::SonarQube is configured but not reachable; skipping the self-hosted scan. SonarCloud remains the blocking quality gate."
 
       - name: SonarQube scan
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && steps.sonar-health.outputs.available == 'true' }}
