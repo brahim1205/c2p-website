@@ -45,6 +45,7 @@ export const configValidationSchema = z.object({
   PRISMA_PLATFORM_SYNC_ENABLED: booleanString.default('true'),
   PRISMA_PLATFORM_SYNC_ON_BOOT: booleanString.default('true'),
   PRISMA_PLATFORM_SEED_ENABLED: booleanString.default('false'),
+  PROJECT_CENTER_READ_SOURCE: z.enum(['prisma', 'app_row']).default('prisma'),
   DATA_LEGACY_API_MODE: legacyDataApiModeSchema.default('compat'),
   ACCESS_TOKEN_TTL_MINUTES: z.string().default('15'),
   REFRESH_TOKEN_TTL_DAYS: z.string().default('14'),

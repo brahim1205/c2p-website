@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service.js';
+import { isMissingProjectionError, readProjectCenterProjection } from '../database/platform-project-center-projection.js';
 import { createInitialStore, type Row, type Store } from './mock-store.js';
 import { toNumber } from './data-normalizers.js';
 
@@ -163,6 +164,29 @@ function buildAppRows() {
   );
 }
 
+/**
+ * AppRow -> Prisma migration, Project Center lot: the Prisma projection is the read source for
+ * the 9 Project Center tables. Writes still go to AppRow + Prisma (double-run), so both hold the
+ * same rows (`npm run project-center:prisma-consistency:check`).
+ * Rollback lever without redeploy: PROJECT_CENTER_READ_SOURCE=app_row.
+ */
+export function projectCenterReadsFromPrisma() {
+  return (process.env.PROJECT_CENTER_READ_SOURCE ?? 'prisma') !== 'app_row';
+}
+
+async function overlayProjectCenterFromPrisma(prisma: PrismaService, nextStore: Store) {
+  if (!projectCenterReadsFromPrisma()) return;
+  try {
+    const projected = await readProjectCenterProjection(prisma);
+    for (const [table, rows] of Object.entries(projected)) {
+      nextStore[table] = rows;
+    }
+  } catch (error) {
+    if (isMissingProjectionError(error)) return;
+    throw error;
+  }
+}
+
 export async function syncAppStoreFromDatabase(prisma: PrismaService, options: { force?: boolean } = {}) {
   if (!prisma.isConnected) {
     resetStore(Object.fromEntries(Object.keys(initialStore).map((table) => [table, []])));
@@ -194,6 +218,8 @@ export async function syncAppStoreFromDatabase(prisma: PrismaService, options: {
         nextStore[table] = [];
       }
     }
+
+    await overlayProjectCenterFromPrisma(prisma, nextStore);
 
     resetStore(nextStore);
     recomputeAppStoreDerivedData();

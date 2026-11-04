@@ -14,17 +14,49 @@ const projections = [
   { appRowTable: 'project_collaborations', model: 'projectCenterCollaboration' },
 ];
 
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, stable(value[key])]));
+  }
+  return value;
+}
+
+function rowId(row, fallback) {
+  return String(row?.id ?? fallback);
+}
+
 async function main() {
   const rows = [];
   const failures = [];
 
   for (const projection of projections) {
-    const appRows = await prisma.appRow.count({ where: { table: projection.appRowTable } });
-    const prismaRows = await prisma[projection.model].count({ where: { source: 'app_row' } });
-    rows.push({ table: projection.appRowTable, appRows, prismaRows });
+    const appRows = await prisma.appRow.findMany({ where: { table: projection.appRowTable }, select: { rowId: true, data: true } });
+    const prismaRows = await prisma[projection.model].findMany({ where: { source: 'app_row' }, select: { id: true, metadata: true } });
+    const prismaById = new Map(prismaRows.map((row) => [rowId(row.metadata, row.id), JSON.stringify(stable(row.metadata))]));
+    const missing = [];
+    const diverging = [];
 
-    if (appRows !== prismaRows) {
-      failures.push(`${projection.appRowTable}: AppRow=${appRows}, Prisma=${prismaRows}`);
+    for (const appRow of appRows) {
+      const id = rowId(appRow.data, appRow.rowId);
+      const projected = prismaById.get(id);
+      if (projected === undefined) {
+        missing.push(id);
+      } else if (projected !== JSON.stringify(stable(appRow.data))) {
+        diverging.push(id);
+      }
+    }
+
+    rows.push({ table: projection.appRowTable, appRows: appRows.length, prismaRows: prismaRows.length, missing: missing.length, diverging: diverging.length });
+
+    if (appRows.length !== prismaRows.length) {
+      failures.push(`${projection.appRowTable}: AppRow=${appRows.length}, Prisma=${prismaRows.length}`);
+    }
+    if (missing.length > 0) {
+      failures.push(`${projection.appRowTable}: absent de Prisma -> ${missing.slice(0, 5).join(', ')}`);
+    }
+    if (diverging.length > 0) {
+      failures.push(`${projection.appRowTable}: contenu divergent -> ${diverging.slice(0, 5).join(', ')}`);
     }
   }
 

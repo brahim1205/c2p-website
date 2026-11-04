@@ -160,67 +160,11 @@ export function requireOwnerProject(ownerId: string, projectId: string) {
   return project;
 }
 
-export function getRowsForProjectIds(table: string, projectIds: Set<string>) {
-  return clone(store[table] ?? []).filter((row) => projectIds.has(String(row.project_id)));
-}
-
-export function buildOwnerProjectDetail(project: Row) {
-  return {
-    project,
-    milestones: rowsForProject('project_milestones', String(project.id))
-      .sort((left, right) => compareValues(left.due_date, right.due_date)),
-    documents: rowsForProject('project_documents', String(project.id))
-      .sort((left, right) => compareValues(right.date, left.date)),
-    history: rowsForProject('project_history', String(project.id))
-      .sort((left, right) => compareValues(right.date, left.date)),
-    partnerships: rowsForProject('project_partnerships', String(project.id))
-      .sort((left, right) => compareValues(left.id, right.id)),
-    rounds: rowsForProject('project_funding_rounds', String(project.id))
-      .sort((left, right) => compareValues(right.deadline, left.deadline)),
-  };
-}
-
 export function getPartnerTrackedProjects(partnerId: string) {
   return hydrateRows(
     'project_tracking',
     clone(store.project_tracking ?? []).filter((row) => String(row.partner_id) === String(partnerId)),
   ).sort((left, right) => compareValues(right.last_update, left.last_update));
-}
-
-export function getPartnerCollaborations(partnerId: string) {
-  return hydrateRows(
-    'project_collaborations',
-    clone(store.project_collaborations ?? []).filter((row) => String(row.partner_id) === String(partnerId)),
-  ).sort((left, right) => compareValues(right.start_date, left.start_date));
-}
-
-export function getOpenProjectsForPartners() {
-  return publicRows('projects', clone(store.projects ?? []))
-    .filter((project) => String(project.status ?? '').toLowerCase() !== 'termine')
-    .sort((left, right) => compareValues(right.created_at, left.created_at));
-}
-
-export function buildProjectDetailForAuthenticatedProject(projectId: string) {
-  const project = hydrateRows(
-    'projects',
-    clone(store.projects ?? []).filter((row) => String(row.id) === String(projectId)),
-  )[0] ?? null;
-  if (!project) {
-    throw new BadRequestException('PROJECT_NOT_FOUND');
-  }
-  return {
-    project,
-    milestones: hydrateRows('project_milestones', rowsForProject('project_milestones', projectId))
-      .sort((left, right) => compareValues(left.due_date, right.due_date)),
-    documents: hydrateRows('project_documents', rowsForProject('project_documents', projectId))
-      .sort((left, right) => compareValues(right.date, left.date)),
-    history: hydrateRows('project_history', rowsForProject('project_history', projectId))
-      .sort((left, right) => compareValues(right.date, left.date)),
-    partnerships: hydrateRows('project_partnerships', rowsForProject('project_partnerships', projectId))
-      .sort((left, right) => compareValues(left.id, right.id)),
-    rounds: hydrateRows('project_funding_rounds', rowsForProject('project_funding_rounds', projectId))
-      .sort((left, right) => compareValues(right.deadline, left.deadline)),
-  };
 }
 
 export function normalizeCategory(category: string) {

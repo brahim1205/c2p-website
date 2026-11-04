@@ -418,6 +418,67 @@ export function recomputeDerivedData(store: Store, deps: RecomputeDerivedDataDep
     conversation.updated_at = lastMessage?.created_at ?? conversation.updated_at ?? conversation.created_at;
   }
 
+  deriveProjectCenterRows(
+    {
+      projects,
+      project_milestones: projectMilestones,
+      project_documents: projectDocuments,
+      project_history: projectHistory,
+      project_funding_rounds: projectFundingRounds,
+      funding_investors: fundingInvestors,
+      project_partnerships: projectPartnerships,
+      project_tracking: projectTracking,
+      project_collaborations: projectCollaborations,
+    },
+    { compareValues, normalizeText, toNumber },
+  );
+}
+
+function getPendingPayoutReservations(userId: string, store: Store, requireNumberOrFallback: (value: unknown, fallback: number) => number) {
+  return (store.payout_requests ?? [])
+    .filter((entry) => String(entry.user_id) === userId && String(entry.status ?? 'pending') === 'pending')
+    .reduce((sum, entry) => sum + requireNumberOrFallback(entry.amount, 0), 0);
+}
+
+export type ProjectCenterTables = {
+  projects: Row[];
+  project_milestones: Row[];
+  project_documents: Row[];
+  project_history: Row[];
+  project_funding_rounds: Row[];
+  funding_investors: Row[];
+  project_partnerships: Row[];
+  project_tracking: Row[];
+  project_collaborations: Row[];
+};
+
+/**
+ * Computes the Project Center fields that are never stored (counters, progress, titles copied
+ * from the parent project...). Mutates the rows in place. Shared by the AppRow store and the
+ * Prisma read path so both return the same payloads.
+ */
+export function deriveProjectCenterRows(
+  tables: ProjectCenterTables,
+  deps: Pick<RecomputeDerivedDataDeps, 'compareValues' | 'normalizeText' | 'toNumber'>,
+) {
+  const { compareValues, normalizeText, toNumber } = deps;
+  const {
+    projects,
+    project_milestones: projectMilestones,
+    project_documents: projectDocuments,
+    project_history: projectHistory,
+    project_funding_rounds: projectFundingRounds,
+    funding_investors: fundingInvestors,
+    project_partnerships: projectPartnerships,
+    project_tracking: projectTracking,
+    project_collaborations: projectCollaborations,
+  } = tables;
+  const projectsById = new Map<string, Row>();
+  for (const project of projects) {
+    if (!projectsById.has(String(project.id))) projectsById.set(String(project.id), project);
+  }
+  const findProject = (id: unknown) => projectsById.get(String(id));
+
   for (const project of projects) {
     const docs = projectDocuments.filter((document) => String(document.project_id) === String(project.id));
     const history = projectHistory.filter((entry) => String(entry.project_id) === String(project.id));
@@ -441,7 +502,7 @@ export function recomputeDerivedData(store: Store, deps: RecomputeDerivedDataDep
   }
 
   for (const round of projectFundingRounds) {
-    const project = findRow('projects', round.project_id);
+    const project = findProject(round.project_id);
     const investors = fundingInvestors.filter((investor) => String(investor.funding_round_id) === String(round.id));
     round.project_title = round.project_title ?? project?.title ?? null;
     round.project_name = round.project_name ?? project?.title ?? null;
@@ -452,7 +513,7 @@ export function recomputeDerivedData(store: Store, deps: RecomputeDerivedDataDep
   }
 
   for (const tracking of projectTracking) {
-    const project = findRow('projects', tracking.project_id);
+    const project = findProject(tracking.project_id);
     tracking.title = tracking.title ?? project?.title ?? null;
     tracking.description = tracking.description ?? project?.description ?? null;
     tracking.sector = tracking.sector ?? project?.sector ?? project?.category ?? null;
@@ -469,13 +530,7 @@ export function recomputeDerivedData(store: Store, deps: RecomputeDerivedDataDep
   }
 
   for (const collaboration of projectCollaborations) {
-    const project = findRow('projects', collaboration.project_id);
+    const project = findProject(collaboration.project_id);
     collaboration.project_title = collaboration.project_title ?? project?.title ?? null;
   }
-}
-
-function getPendingPayoutReservations(userId: string, store: Store, requireNumberOrFallback: (value: unknown, fallback: number) => number) {
-  return (store.payout_requests ?? [])
-    .filter((entry) => String(entry.user_id) === userId && String(entry.status ?? 'pending') === 'pending')
-    .reduce((sum, entry) => sum + requireNumberOrFallback(entry.amount, 0), 0);
 }
