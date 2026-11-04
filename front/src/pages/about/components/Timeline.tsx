@@ -28,13 +28,13 @@ const milestones = [
   {
     year: '2023',
     title: 'Expansion Régionale',
-    desc: "C2P s'étend à 10 pays d'Afrique de l'Ouest avec des partenariats stratégiques. Le réseau compte désormais 1,500 professionnels actifs.",
+    desc: "C2P s'étend à 10 pays d'Afrique de l'Ouest avec des partenariats stratégiques. Le réseau compte désormais 1 500 professionnels actifs.",
     icon: 'ri-map-pin-add-line',
   },
   {
     year: '2024',
-    title: '2,500+ Membres',
-    desc: "Cap des 2,500 membres franchi. Lancement du programme de mentorat international et des bourses de formation pour les jeunes talents.",
+    title: '2 500+ Membres',
+    desc: "Cap des 2 500 membres franchi. Lancement du programme de mentorat international et des bourses de formation pour les jeunes talents.",
     icon: 'ri-trophy-line',
   },
   {
@@ -46,7 +46,7 @@ const milestones = [
   {
     year: '2026',
     title: 'Vision 2030',
-    desc: "Objectif : 10,000 professionnels formés, 500 projets incubés et une présence dans 25 pays africains. C2P devient le leader du développement professionnel en Afrique.",
+    desc: "Objectif : 10 000 professionnels formés, 500 projets incubés et une présence dans 25 pays africains. C2P devient le leader du développement professionnel en Afrique.",
     icon: 'ri-eye-line',
   },
 ];

@@ -111,10 +111,10 @@ export default function AdminCommunicationsPage() {
       updateCampaignsCache((prev) => [created, ...prev]);
       setShowCompose(false);
       resetCompose();
-      success(composeForm.schedule ? 'Campagne planifiee' : 'Campagne envoyee', `${created.title}.${smsDispatchSummary}`);
+      success(composeForm.schedule ? 'Campagne planifiée' : 'Campagne envoyée', `${created.title}.${smsDispatchSummary}`);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La campagne n a pas pu etre enregistree.');
+      error('Erreur', 'La campagne n’a pas pu être enregistrée.');
     }
   };
 
@@ -122,7 +122,7 @@ export default function AdminCommunicationsPage() {
     try {
       await deleteAdminCampaign(id);
       updateCampaignsCache((prev) => prev.filter((campaign) => campaign.id !== id));
-      success('Campagne supprimee', 'La campagne a ete retiree.');
+      success('Campagne supprimée', 'La campagne a été retirée.');
     } catch (err) {
       console.error(err);
       error('Erreur', 'Suppression impossible.');
@@ -141,7 +141,7 @@ export default function AdminCommunicationsPage() {
         createdAt: new Date().toISOString().split('T')[0],
       });
       updateCampaignsCache((prev) => [duplicated, ...prev]);
-      success('Campagne dupliquee', 'Une copie brouillon a ete creee.');
+      success('Campagne dupliquée', 'Une copie brouillon a été créée.');
     } catch (err) {
       console.error(err);
       error('Erreur', 'Duplication impossible.');
@@ -152,10 +152,10 @@ export default function AdminCommunicationsPage() {
     try {
       const updated = await updateAdminCampaign(campaign.id, { status: 'cancelled' });
       updateCampaignsCache((prev) => prev.map((item) => (item.id === campaign.id ? updated : item)));
-      success('Campagne annulee', campaign.title);
+      success('Campagne annulée', campaign.title);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Mise a jour impossible.');
+      error('Erreur', 'Mise à jour impossible.');
     }
   };
 
@@ -195,7 +195,7 @@ export default function AdminCommunicationsPage() {
             { label: 'Campagnes envoyees', value: campaigns.filter((campaign) => campaign.status === 'sent').length, icon: 'ri-send-plane-line', color: 'bg-teal-500' },
             { label: 'En brouillon', value: campaigns.filter((campaign) => campaign.status === 'draft').length, icon: 'ri-draft-line', color: 'bg-gray-500' },
             { label: 'Planifiees', value: campaigns.filter((campaign) => campaign.status === 'scheduled').length, icon: 'ri-calendar-schedule-line', color: 'bg-amber-500' },
-            { label: 'Taux moyen d ouverture', value: averageOpenRate, icon: 'ri-eye-line', color: 'bg-teal-500' },
+            { label: 'Taux moyen d’ouverture', value: averageOpenRate, icon: 'ri-eye-line', color: 'bg-teal-500' },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <div className="flex items-center gap-3">

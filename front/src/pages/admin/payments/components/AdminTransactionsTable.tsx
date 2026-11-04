@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { plural } from '@/lib/formatters';
 export type AdminPaymentsTab = 'all' | 'completed' | 'pending' | 'failed';
 
 interface AdminTransactionTableRow {
@@ -56,7 +57,7 @@ export default function AdminTransactionsTable<TRow extends AdminTransactionTabl
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-sky-700">Wave à confirmer</p>
-              <h2 className="mt-1 text-xl font-black text-[#0f1c35]">{wavePendingTransactions.length} paiement(s) en attente</h2>
+              <h2 className="mt-1 text-xl font-black text-[#0f1c35]">{plural(wavePendingTransactions.length, 'paiement(s)')} en attente</h2>
               <p className="mt-1 text-sm text-slate-600">
                 Confirmez uniquement après vérification du paiement sur le compte Wave C2P.
               </p>

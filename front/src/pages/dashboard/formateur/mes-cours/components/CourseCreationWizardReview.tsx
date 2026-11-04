@@ -5,6 +5,7 @@ import {
   type WizardDraftState,
 } from './courseWizardModel';
 
+import { plural } from '@/lib/formatters';
 interface CourseCreationWizardReviewProps {
   wizard: WizardDraftState;
   tableOfContents: ReactNode;
@@ -44,8 +45,8 @@ export default function CourseCreationWizardReview({
             </div>
           </div>
 
-          <SummaryTile label="Programme" leftValue={wizard.sections.length} leftCaption="partie(s)" rightValue={lessonsCount} rightCaption="leçon(s)" />
-          <SummaryTile label="Contenus" leftValue={readyAssets} leftCaption="prêt(s)" rightValue={wizard.exams.length} rightCaption="évaluation(s)" />
+          <SummaryTile label="Programme" leftValue={wizard.sections.length} leftCaption={plural(wizard.sections.length, 'partie(s)', { withCount: false })} rightValue={lessonsCount} rightCaption={plural(lessonsCount, 'leçon(s)', { withCount: false })} />
+          <SummaryTile label="Contenus" leftValue={readyAssets} leftCaption={plural(readyAssets, 'prêt(s)', { withCount: false })} rightValue={wizard.exams.length} rightCaption={plural(wizard.exams.length, 'évaluation(s)', { withCount: false })} />
         </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-3">

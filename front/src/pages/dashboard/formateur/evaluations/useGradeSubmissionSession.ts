@@ -185,8 +185,8 @@ export function useGradeSubmissionSession({
       await refreshEvaluations();
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      setGradeFormMessage('Impossible d attribuer la note.');
-      error('Erreur', 'Impossible d attribuer la note.');
+      setGradeFormMessage('Impossible d’attribuer la note.');
+      error('Erreur', 'Impossible d’attribuer la note.');
       console.error(err);
     } finally {
       if (isMountedRef.current) {

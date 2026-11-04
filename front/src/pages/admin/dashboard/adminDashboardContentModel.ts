@@ -13,7 +13,8 @@ export interface KpiCard {
   label: string;
   value: string;
   detail: string;
-  trend: string;
+  /** Real figure shown as a chip; `positive` only when something actually increased. Omitted when there is nothing to say. */
+  highlight?: { text: string; positive: boolean };
   icon: string;
   surface: string;
 }
@@ -67,4 +68,9 @@ export interface RecentRegistrationItem {
   role: string;
   status: string;
   createdAt: string | null;
+}
+
+/** KPI chip for a real count; nothing is shown when the count is 0. */
+export function countHighlight(count: number, singular: string, plural: string) {
+  return count > 0 ? { text: `${count} ${count > 1 ? plural : singular}`, positive: false } : undefined;
 }

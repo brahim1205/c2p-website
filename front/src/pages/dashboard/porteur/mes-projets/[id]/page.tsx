@@ -29,7 +29,7 @@ export default function PorteurProjetDetailPage() {
   useEffect(() => {
     if (detailQuery.isError) {
       console.error(detailQuery.error);
-      error('Erreur', 'Impossible de charger le detail de ce projet.');
+      error('Erreur', 'Impossible de charger le détail de ce projet.');
     }
   }, [detailQuery.error, detailQuery.isError, error]);
 
@@ -65,11 +65,11 @@ export default function PorteurProjetDetailPage() {
     <p>Categorie : ${document.category}</p>
     <p>Taille : ${document.size}</p>
     <p>Date : ${formatDate(document.date)}</p>
-    <p style="margin-top: 24px;">Document de travail genere pour consultation rapide dans l espace porteur.</p>
+    <p style="margin-top: 24px;">Document de travail généré pour consultation rapide dans l’espace porteur.</p>
   </main>
 </body>
 </html>`);
-    success('Telechargement', `Le document "${document.name}" a ete ouvert.`);
+    success('Telechargement', `Le document "${document.name}" a été ouvert.`);
   };
 
   if (!loading && !project) {
@@ -131,7 +131,7 @@ export default function PorteurProjetDetailPage() {
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               <div className="flex flex-wrap gap-2 border-b border-gray-200 px-6 py-4">
                 {[
-                  ['overview', 'Vue generale'],
+                  ['overview', 'Vue générale'],
                   ['milestones', 'Jalons'],
                   ['funding', 'Financement'],
                   ['documents', 'Documents'],

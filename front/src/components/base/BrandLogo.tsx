@@ -22,7 +22,7 @@ function BrandLogoInner({
   return (
     <>
       <img
-        src="/images/brand/c2p-admin-logo.png"
+        src="/images/brand/c2p-admin-logo.webp"
         alt={title ?? 'Centre C2P'}
         className={imageClassName ?? 'h-10 w-auto object-contain'}
       />

@@ -75,7 +75,7 @@ export default function PartenaireProjetSuiviDetailPage() {
   </main>
 </body>
 </html>`);
-    success('Document pret', `Le document "${document.name}" a ete ouvert.`);
+    success('Document prêt', `Le document "${document.name}" a été ouvert.`);
   };
 
   const handleContactOwner = async () => {
@@ -93,11 +93,11 @@ export default function PartenaireProjetSuiviDetailPage() {
         projectTitle: project.title,
       });
 
-      success('Message envoye', 'Votre demande de point projet a ete transmise a l equipe C2P.');
+      success('Message envoyé', 'Votre demande de point projet a été transmise à l’équipe C2P.');
       navigate('/dashboard/messages');
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible d ouvrir la conversation avec C2P.');
+      error('Erreur', 'Impossible d’ouvrir la conversation avec C2P.');
     }
   };
 
@@ -159,7 +159,7 @@ export default function PartenaireProjetSuiviDetailPage() {
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               <div className="flex gap-2 border-b border-gray-200 px-6 py-4">
                 {[
-                  ['overview', 'Vue generale'],
+                  ['overview', 'Vue générale'],
                   ['milestones', 'Jalons'],
                   ['funding', 'Financement'],
                   ['documents', 'Documents'],

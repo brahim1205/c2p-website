@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { useNotifications, type Notification } from '@/hooks/useNotifications';
 
+import { plural } from '@/lib/formatters';
 const notificationMeta: Record<string, { icon: string; tone: string; label: string }> = {
   message: { icon: 'ri-message-3-line', tone: 'bg-teal-50 text-teal-700', label: 'Message' },
   prestation: { icon: 'ri-briefcase-line', tone: 'bg-sky-50 text-sky-700', label: 'Prestation' },
@@ -61,7 +62,7 @@ export default function DashboardNotificationsPage() {
           <div>
             <h2 className="text-lg font-bold text-gray-900">Boîte de notifications</h2>
             <p className="text-sm text-gray-500">
-              {unreadCount > 0 ? `${unreadCount} notification(s) à traiter.` : 'Aucune notification non lue.'}
+              {unreadCount > 0 ? `${plural(unreadCount, 'notification(s)')} à traiter.` : 'Aucune notification non lue.'}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

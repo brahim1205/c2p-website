@@ -146,7 +146,7 @@ export function useMessagesPageSession() {
       }
       if (!canMessageDirectoryUser(user.role, targetContact)) {
         participantBootstrapDoneRef.current = true;
-        error('Conversation indisponible', 'Ce role ne peut pas etre contacte directement.');
+        error('Conversation indisponible', 'Ce rôle ne peut pas être contacte directement.');
         return;
       }
     }
@@ -160,7 +160,7 @@ export function useMessagesPageSession() {
         setActiveConversationId(existingConversation.id);
       }
       if (shouldNotify) {
-        success('Conversation ouverte', `Conversation avec ${existingConversation.name} prete.`);
+        success('Conversation ouverte', `Conversation avec ${existingConversation.name} prête.`);
       }
       return;
     }
@@ -182,10 +182,10 @@ export function useMessagesPageSession() {
 
       if (created) {
         setActiveConversationId(created.id);
-        success('Conversation creee', `Conversation avec ${created.name} prete.`);
+        success('Conversation créée', `Conversation avec ${created.name} prête.`);
       } else {
         participantBootstrapDoneRef.current = false;
-        error('Conversation indisponible', 'Impossible d ouvrir cette conversation.');
+        error('Conversation indisponible', 'Impossible d’ouvrir cette conversation.');
       }
     })();
   }, [activeConversationId, contacts, conversations, createConversation, error, loading, searchParams, setActiveConversationId, success, user]);
@@ -237,10 +237,10 @@ export function useMessagesPageSession() {
         await sendMessage(created.id, composeMessage.trim());
       }
       closeComposeModal();
-      success('Conversation creee', `Nouvelle conversation avec ${contact.firstName} ${contact.lastName}.`);
+      success('Conversation créée', `Nouvelle conversation avec ${contact.firstName} ${contact.lastName}.`);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de creer la conversation.');
+      error('Erreur', 'Impossible de créer la conversation.');
     } finally {
       setCreatingConversation(false);
     }

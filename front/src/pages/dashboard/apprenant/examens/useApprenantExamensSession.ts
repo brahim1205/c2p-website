@@ -112,7 +112,7 @@ export function useApprenantExamensSession() {
 
   const openSubmit = (exam: Exam) => {
     if (exam.type === 'quiz' && (exam.questions_count ?? 0) === 0) {
-      toastError('Quiz indisponible', 'Ce quiz n est pas encore configure par le formateur.');
+      toastError('Quiz indisponible', 'Ce quiz n’est pas encore configure par le formateur.');
       return;
     }
 
@@ -151,7 +151,7 @@ export function useApprenantExamensSession() {
     event.preventDefault();
     if (!selectedExam) return;
     if (!studentId || !studentName) {
-      toastError('Session invalide', 'Impossible d identifier votre compte apprenant.');
+      toastError('Session invalide', 'Impossible d’identifier votre compte apprenant.');
       return;
     }
 
@@ -202,7 +202,7 @@ export function useApprenantExamensSession() {
         exam_id: selectedExam.id,
         student_id: studentId,
         student_name: studentName,
-        file_name: answerFile?.name || 'Reponse texte',
+        file_name: answerFile?.name || 'Réponse texte',
         file_url: answerText.trim(),
         answer_text: answerText.trim() || null,
         status: 'pending',

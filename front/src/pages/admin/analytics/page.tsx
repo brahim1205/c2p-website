@@ -53,7 +53,7 @@ export default function AdminAnalyticsPage() {
         revenue: item.revenue,
       })),
     ]);
-    success('Rapport exporte', 'Le rapport analytics a ete telecharge.');
+    success('Rapport exporté', 'Le rapport analytics a été téléchargé.');
   };
 
   return (

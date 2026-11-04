@@ -25,7 +25,7 @@ export default function AdminSecurityPage() {
   useEffect(() => {
     if (securityQuery.isError) {
       console.error(securityQuery.error);
-      error('Erreur', 'Impossible de charger le bloc securite.');
+      error('Erreur', 'Impossible de charger le bloc sécurité.');
     }
   }, [error, securityQuery.error, securityQuery.isError]);
 
@@ -48,10 +48,10 @@ export default function AdminSecurityPage() {
         ...snapshot,
         rules: snapshot.rules.map((rule) => rule.id === id ? updated : rule),
       }));
-      success('Parametre mis a jour', updated.label);
+      success('Paramètre mis à jour', updated.label);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Mise a jour impossible.');
+      error('Erreur', 'Mise à jour impossible.');
     }
   };
 
@@ -71,10 +71,10 @@ export default function AdminSecurityPage() {
         ...snapshot,
         backups: [created, ...snapshot.backups],
       }));
-      success('Sauvegarde creee', 'La sauvegarde manuelle a ete enregistree.');
+      success('Sauvegarde créée', 'La sauvegarde manuelle a été enregistrée.');
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La sauvegarde n a pas pu etre creee.');
+      error('Erreur', 'La sauvegarde n’a pas pu être créée.');
     }
   };
 
@@ -88,7 +88,7 @@ export default function AdminSecurityPage() {
       ip: log.ip,
       statut: log.status,
     })));
-    success('Export demarre', 'Le journal d audit a ete telecharge.');
+    success('Export démarré', 'Le journal d’audit a été téléchargé.');
   };
 
   return (
@@ -104,7 +104,7 @@ export default function AdminSecurityPage() {
                 { label: 'Utilisateurs actifs', value: securityStats.activeUsers, color: 'bg-teal-100', icon: 'ri-user-line text-teal-600' },
                 { label: 'Reset SMS protege', value: securityStats.passwordResetProtected, color: 'bg-green-100', icon: 'ri-shield-check-line text-green-600' },
                 { label: 'Alertes actives', value: securityStats.securityAlerts, color: 'bg-red-100', icon: 'ri-alert-line text-red-600' },
-                { label: 'Connexions echouees', value: securityStats.failedLogins, color: 'bg-yellow-100', icon: 'ri-error-warning-line text-yellow-600' },
+                { label: 'Connexions échouées', value: securityStats.failedLogins, color: 'bg-yellow-100', icon: 'ri-error-warning-line text-yellow-600' },
                 { label: 'Comptes suspendus', value: securityStats.suspendedAccounts, color: 'bg-orange-100', icon: 'ri-user-forbid-line text-orange-600' },
                 { label: 'Total utilisateurs', value: securityStats.totalUsers, color: 'bg-teal-100', icon: 'ri-group-line text-teal-600' },
               ].map((stat) => (
@@ -257,7 +257,7 @@ export default function AdminSecurityPage() {
               );
             })}
             {[
-              { id: 'session_timeout', label: 'Duree de session (min)' },
+              { id: 'session_timeout', label: 'Durée de session (min)' },
               { id: 'max_login_attempts', label: 'Tentatives de connexion max' },
               { id: 'backup_retention_days', label: 'Retention des sauvegardes (jours)' },
             ].map((item) => {

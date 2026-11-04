@@ -13,7 +13,7 @@ const cardSelector = [
   'a.group',
   '.group.cursor-pointer',
   'section a[href*="/allopresta/"]',
-  'section a[href*="/espace-numerique/"]',
+  'section a[href*="/espace-numérique/"]',
   'section a[href*="/project-center/"]',
   '[class*="rounded-[22px]"]',
   '[class*="rounded-[24px]"]',

@@ -90,11 +90,11 @@ export default function OnboardingSubscriptionPage() {
           <div className="mb-5">
             <div className="flex max-w-[270px] gap-1.5" aria-hidden="true">
               {Array.from({ length: 4 }, (_, item) => (
-                <span key={item} className="h-1.5 flex-1 rounded-full bg-[#4d7f16]" />
+                <span key={item} className="h-1.5 flex-1 rounded-full bg-[#1a9a96]" />
               ))}
             </div>
             <div className="mt-3 flex items-center gap-2 text-xs font-bold text-[#64748b]">
-              <span className="rounded-full bg-[#e8f5d8] px-2.5 py-1 text-[#4d7f16]">Étape 4/4</span>
+              <span className="rounded-full bg-[#e8f5d8] px-2.5 py-1 text-[#1a9a96]">Étape 4/4</span>
               <span>Accès {content.shortLabel.toLowerCase()}</span>
             </div>
           </div>

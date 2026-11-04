@@ -134,7 +134,7 @@ export default function EspaceNumeriquePage() {
 
   const handleEnroll = async (course: Course) => {
     if (!user?.id) {
-      toastError('Connexion requise', 'Connectez-vous pour vous inscrire a cette formation.');
+      toastError('Connexion requise', 'Connectez-vous pour vous inscrire à cette formation.');
       navigate('/auth/login', { state: { from: `/espace-numerique/formation/${course.id}` } });
       return;
     }

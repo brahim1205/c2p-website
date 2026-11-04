@@ -43,7 +43,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (settingsQuery.isError) {
       console.error(settingsQuery.error);
-      error('Erreur', 'Impossible de charger le parametrage plateforme.');
+      error('Erreur', 'Impossible de charger le paramétrage plateforme.');
     }
   }, [error, settingsQuery.error, settingsQuery.isError]);
 
@@ -71,10 +71,10 @@ export default function AdminSettingsPage() {
         ...snapshot,
         categories: snapshot.categories.map((category) => category.id === id ? updated : category),
       }));
-      success('Categorie mise a jour', updated.name);
+      success('Catégorie mise à jour', updated.name);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La categorie n a pas pu etre modifiee.');
+      error('Erreur', 'La catégorie n’a pas pu être modifiée.');
     }
   };
 
@@ -85,7 +85,7 @@ export default function AdminSettingsPage() {
         ...snapshot,
         categories: snapshot.categories.filter((category) => category.id !== id),
       }));
-      success('Categorie supprimee', 'La categorie a ete retiree.');
+      success('Catégorie supprimée', 'La catégorie a été retirée.');
     } catch (err) {
       console.error(err);
       error('Erreur', 'Suppression impossible.');
@@ -102,10 +102,10 @@ export default function AdminSettingsPage() {
       }));
       setNewCategory({ name: '', type: 'service' });
       setShowAddCategory(false);
-      success('Categorie ajoutee', created.name);
+      success('Catégorie ajoutée', created.name);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Creation impossible.');
+      error('Erreur', 'Création impossible.');
     }
   };
 
@@ -122,10 +122,10 @@ export default function AdminSettingsPage() {
       }));
       setEditingRule(null);
       setEditValues({});
-      success('Regle enregistree', updated.label);
+      success('Règle enregistrée', updated.label);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La regle n a pas pu etre enregistree.');
+      error('Erreur', 'La règle n’a pas pu être enregistrée.');
     }
   };
 
@@ -142,7 +142,7 @@ export default function AdminSettingsPage() {
       success(updated.status === 'connected' ? 'Integration connectee' : 'Integration deconnectee', updated.name);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Mise a jour integration impossible.');
+      error('Erreur', 'Mise à jour intégration impossible.');
     }
   };
 
@@ -155,7 +155,7 @@ export default function AdminSettingsPage() {
         ...snapshot,
         integrations: snapshot.integrations.map((item) => item.id === integration.id ? updated : item),
       }));
-      success('Synchronisation terminee', updated.name);
+      success('Synchronisation terminée', updated.name);
     } catch (err) {
       console.error(err);
       error('Erreur', 'Synchronisation impossible.');
@@ -174,7 +174,7 @@ export default function AdminSettingsPage() {
       rules,
       integrations,
     });
-    success('Configuration exportee', 'Le snapshot de configuration a ete telecharge.');
+    success('Configuration exportée', 'Le snapshot de configuration a été téléchargé.');
   };
 
   return (

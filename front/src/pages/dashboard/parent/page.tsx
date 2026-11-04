@@ -10,7 +10,7 @@ import { getCourseBranchLabel } from '@/lib/courseBranch';
 import { queryKeys } from '@/lib/queryKeys';
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return 'Aucune activite recente';
+  if (!value) return 'Aucune activité récente';
   return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
@@ -69,7 +69,7 @@ export default function ParentDashboardPage() {
             { label: 'Enfants rattaches', value: String(trackedStudentIds.length), icon: 'ri-parent-line', tone: 'bg-[#eef6ff] text-[#27346b]' },
             { label: 'Parcours actifs', value: String(activeEnrollments.length), icon: 'ri-book-open-line', tone: 'bg-teal-50 text-teal-700' },
             { label: 'Progression moyenne', value: `${averageProgress}%`, icon: 'ri-bar-chart-grouped-line', tone: 'bg-emerald-50 text-emerald-700' },
-            { label: 'Certificats emis', value: String(recentCertificates.length), icon: 'ri-award-line', tone: 'bg-amber-50 text-amber-700' },
+            { label: 'Certificats émis', value: String(recentCertificates.length), icon: 'ri-award-line', tone: 'bg-amber-50 text-amber-700' },
           ].map((item) => (
             <div key={item.label} className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">

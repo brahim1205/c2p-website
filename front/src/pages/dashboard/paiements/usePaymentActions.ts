@@ -95,7 +95,7 @@ export function usePaymentActions({
 
   const handleRecharge = () => {
     if (!walletId) {
-      error('Portefeuille indisponible', 'Votre portefeuille C2P n est pas encore pret.');
+      error('Portefeuille indisponible', 'Votre portefeuille C2P n’est pas encore prêt.');
       return;
     }
     const amount = parseInt(rechargeAmount.replace(/\s/g, ''), 10);
@@ -118,14 +118,14 @@ export function usePaymentActions({
         success('Rechargement effectué', `${amount.toLocaleString('fr-FR')} XAF ont été ajoutés à votre portefeuille.`);
         closeRechargeModal();
       } catch (requestError) {
-        error('Erreur', getRequestErrorMessage(requestError, 'Le rechargement n a pas pu etre enregistre.'));
+        error('Erreur', getRequestErrorMessage(requestError, 'Le rechargement n’a pas pu être enregistré.'));
       }
     })();
   };
 
   const handleWithdraw = () => {
     if (!walletId) {
-      error('Portefeuille indisponible', 'Votre portefeuille C2P n est pas encore pret.');
+      error('Portefeuille indisponible', 'Votre portefeuille C2P n’est pas encore prêt.');
       return;
     }
     const amount = parseInt(withdrawAmount.replace(/\s/g, ''), 10);
@@ -139,7 +139,7 @@ export function usePaymentActions({
     }
     if (monetizedRole) {
       if (!defaultPayoutAccount) {
-        error('Compte de retrait manquant', 'Ajoutez d abord un compte de retrait pour recevoir vos virements C2P.');
+        error('Compte de retrait manquant', 'Ajoutez d’abord un compte de retrait pour recevoir vos virements C2P.');
         return;
       }
 
@@ -148,13 +148,13 @@ export function usePaymentActions({
           await createPayoutRequest({
             amount,
             account_id: defaultPayoutAccount.id,
-            note: 'Demande initiee depuis le dashboard',
+            note: 'Demande initiée depuis le dashboard',
           });
           await refreshPayments();
           success('Demande envoyée', 'C2P a bien reçu votre demande de retrait.');
           closeWithdrawModal();
         } catch (requestError) {
-          error('Erreur', getRequestErrorMessage(requestError, 'La demande de retrait n a pas pu etre enregistree.'));
+          error('Erreur', getRequestErrorMessage(requestError, 'La demande de retrait n’a pas pu être enregistrée.'));
         }
       })();
       return;
@@ -171,14 +171,14 @@ export function usePaymentActions({
         success('Retrait effectué', `${amount.toLocaleString('fr-FR')} XAF ont été retirés de votre portefeuille.`);
         closeWithdrawModal();
       } catch (requestError) {
-        error('Erreur', getRequestErrorMessage(requestError, 'Le retrait n a pas pu etre enregistre.'));
+        error('Erreur', getRequestErrorMessage(requestError, 'Le retrait n’a pas pu être enregistré.'));
       }
     })();
   };
 
   const handleStartDexPayCheckout = async () => {
     if (!dexPayAvailable) {
-      error('DexPay indisponible', 'Le provider DexPay n est pas encore configure.');
+      error('DexPay indisponible', 'Le provider DexPay n’est pas encore configure.');
       return;
     }
     setDexPaySubmitting(true);
@@ -199,13 +199,13 @@ export function usePaymentActions({
       await refreshPayments();
       setShowDexPayModal(false);
       success(
-        'Operation DexPay creee',
+        'Opération DexPay créée',
         transaction.payment_account
-          ? 'Les instructions de paiement bancaire sont disponibles dans le detail.'
-          : 'L adresse de depot DexPay est disponible dans le detail.',
+          ? 'Les instructions de paiement bancaire sont disponibles dans le détail.'
+          : 'L’adresse de dépôt DexPay est disponible dans le détail.',
       );
     } catch (requestError) {
-      error('DexPay indisponible', getRequestErrorMessage(requestError, 'Impossible de demarrer l operation DexPay.'));
+      error('DexPay indisponible', getRequestErrorMessage(requestError, 'Impossible de démarrer l’opération DexPay.'));
     } finally {
       setDexPaySubmitting(false);
     }
@@ -257,7 +257,7 @@ export function usePaymentActions({
           : `Le plan ${plan.name} a été réglé directement via ${paymentMethod === 'dexpay' ? 'DexPay' : paymentMethod}.`,
       );
     } catch (requestError) {
-      error('Abonnement impossible', getRequestErrorMessage(requestError, 'Impossible d activer ce plan.'));
+      error('Abonnement impossible', getRequestErrorMessage(requestError, 'Impossible d’activer ce plan.'));
     }
   };
 
@@ -275,7 +275,7 @@ export function usePaymentActions({
         `${product.name} est actif${result.pass?.code ? ` avec le code ${result.pass.code}` : ''}. Paiement ${paymentMethod === 'wallet' ? 'par solde C2P' : 'direct'}.`,
       );
     } catch (requestError) {
-      error('Achat impossible', getRequestErrorMessage(requestError, 'Impossible d acheter ce billet SenPresta.'));
+      error('Achat impossible', getRequestErrorMessage(requestError, 'Impossible d’acheter ce billet SenPresta.'));
     } finally {
       setPurchasingVisibilityProductId(null);
     }

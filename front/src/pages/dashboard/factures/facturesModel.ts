@@ -165,7 +165,7 @@ export function buildInvoiceHtml(invoice: Invoice): string {
     <p>${invoice.description}</p>
     <table>
       <thead>
-        <tr><th>Ligne</th><th>Quantite</th><th>Prix unitaire</th><th>Total</th></tr>
+        <tr><th>Ligne</th><th>Quantité</th><th>Prix unitaire</th><th>Total</th></tr>
       </thead>
       <tbody>
         ${invoice.items.map((item) => `<tr><td>${item.description}</td><td>${item.quantity}</td><td>${formatAmount(item.unitPrice, invoice.currency)}</td><td>${formatAmount(item.total, invoice.currency)}</td></tr>`).join('')}

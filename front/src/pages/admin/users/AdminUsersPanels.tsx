@@ -1,5 +1,5 @@
 import { ROLE_LABELS, type UserRole } from '@/lib/roles';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, plural } from '@/lib/formatters';
 import {
   getStatusBadgeClass,
   statusLabels,
@@ -61,7 +61,7 @@ export function AdminUsersFilters({
           onChange={(event) => onRoleFilterChange(event.target.value as AdminUsersRoleFilter)}
           className="rounded-2xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm focus:border-[#5fa6f3] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#5fa6f3]/20"
         >
-          <option value="all">Tous les roles</option>
+          <option value="all">Tous les rôles</option>
           {Object.entries(ROLE_LABELS)
             .filter(([role]) => currentRole === 'superadmin' || role !== 'superadmin')
             .map(([role, label]) => (
@@ -203,7 +203,7 @@ function StatusTabs({
 function BulkActionBar({ selectedCount, onBulkStatus }: { selectedCount: number; onBulkStatus: (status: ManagedUser['status']) => void }) {
   return (
     <div className="flex flex-col gap-3 border-b border-[#5fa6f3]/20 bg-[#5fa6f3]/10 px-6 py-4 md:flex-row md:items-center md:justify-between">
-      <p className="text-sm font-medium text-[#27346b]">{selectedCount} compte(s) selectionne(s)</p>
+      <p className="text-sm font-medium text-[#27346b]">{plural(selectedCount, 'compte(s) sélectionné(s)')}</p>
       <div className="flex gap-2">
         <button onClick={() => onBulkStatus('active')} className="rounded-lg border border-[#5fa6f3]/30 bg-white px-4 py-2 text-sm font-medium text-[#27346b] hover:bg-[#5fa6f3]/5">Valider</button>
         <button onClick={() => onBulkStatus('suspended')} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Suspendre</button>

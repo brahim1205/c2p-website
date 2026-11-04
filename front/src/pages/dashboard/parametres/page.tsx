@@ -123,7 +123,7 @@ export default function ParametresPage() {
           })
           .catch((err) => {
             console.error(err);
-            error('Erreur', 'Impossible d enregistrer ces préférences.');
+            error('Erreur', 'Impossible d’enregistrer ces préférences.');
           })
           .finally(() => setSavingPreferences(false));
       }
@@ -143,7 +143,7 @@ export default function ParametresPage() {
       success('Paramètres enregistrés', 'Vos informations de compte ont été mises à jour.');
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Impossible d enregistrer ces paramètres.');
+      error('Erreur', err instanceof Error ? err.message : 'Impossible d’enregistrer ces paramètres.');
     } finally {
       setSaving(false);
     }
@@ -206,7 +206,7 @@ export default function ParametresPage() {
       navigate(ROLE_DASHBOARD_PATHS[role]);
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Impossible de changer d activité.');
+      error('Erreur', err instanceof Error ? err.message : 'Impossible de changer d’activité.');
     } finally {
       setSwitchingActivity(false);
     }
@@ -222,7 +222,7 @@ export default function ParametresPage() {
       success('Photo mise à jour', 'Votre photo de profil est enregistrée.');
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La photo de profil n a pas pu etre enregistrée.');
+      error('Erreur', 'La photo de profil n’a pas pu être enregistrée.');
     }
   };
 

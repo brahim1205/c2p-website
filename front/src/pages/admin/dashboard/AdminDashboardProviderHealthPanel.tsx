@@ -44,7 +44,7 @@ export function ProviderHealthPanel({
               value={dexPayStatus?.configured ? (dexPayStatus.reachable === false ? 'Config OK / ping KO' : 'Config OK') : 'Non configurée'}
             />
             <ProviderRuntimeMetric
-              label="Webhook verification"
+              label="Webhook vérification"
               value={dexPayStatus?.webhookVerification === 'strict' ? 'Signature stricte' : 'Sans secret'}
             />
             <ProviderRuntimeMetric

@@ -101,7 +101,7 @@ export default function LessonsTab({
       setInstructorQuestion('');
       setQuestionSent(true);
     } catch (error) {
-      setQuestionError(error instanceof Error ? error.message : 'Impossible d envoyer la question.');
+      setQuestionError(error instanceof Error ? error.message : 'Impossible d’envoyer la question.');
     } finally {
       setQuestionSubmitting(false);
     }

@@ -51,7 +51,7 @@ export default function RegisterAccountTypeStep({
             disabled={isLoading}
             className={`group rounded-[16px] border p-3 text-left transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d5b46f] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:p-3.5 ${
               userType === type.id
-                ? 'border-[#d5b46f] bg-[#d5b46f]/12 shadow-[0_22px_60px_rgba(213,180,111,0.14)]'
+                ? 'border-[#d5b46f] bg-[#d5b46f]/[0.12] shadow-[0_22px_60px_rgba(213,180,111,0.14)]'
                 : 'border-[#eadfce] bg-[#fbf7f1] hover:border-[#d5b46f]/45'
             }`}
           >

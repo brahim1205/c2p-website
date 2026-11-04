@@ -1,4 +1,5 @@
-interface AdminEscrowOperationRow {
+
+import { plural } from '@/lib/formatters';interface AdminEscrowOperationRow {
   id: string | number;
   booking_id: string | number;
   booking_title?: string | null;
@@ -60,7 +61,7 @@ export default function AdminFinanceOperationsPanel<TEscrow extends AdminEscrowO
             <h2 className="text-lg font-bold text-gray-900">Séquestres C2P</h2>
             <p className="text-sm text-gray-500">Validation finale avant libération ou remboursement.</p>
           </div>
-          <span className="text-sm text-gray-500">{pendingEscrows.length} dossier(s)</span>
+          <span className="text-sm text-gray-500">{plural(pendingEscrows.length, 'dossier(s)')}</span>
         </div>
         <div className="space-y-3">
           {pendingEscrows.slice(0, 5).map((escrow) => (
@@ -100,7 +101,7 @@ export default function AdminFinanceOperationsPanel<TEscrow extends AdminEscrowO
             <h2 className="text-lg font-bold text-gray-900">Retraits et abonnements</h2>
             <p className="text-sm text-gray-500">Décaissements à approuver et base récurrente active.</p>
           </div>
-          <span className="text-sm text-gray-500">{pendingPayouts.length} retrait(s)</span>
+          <span className="text-sm text-gray-500">{plural(pendingPayouts.length, 'retrait(s)')}</span>
         </div>
         <div className="space-y-3">
           {pendingPayouts.slice(0, 4).map((request) => (

@@ -17,7 +17,7 @@ import {
 } from '@/lib/adminApi';
 import { fetchUsers } from '@/lib/accountApi';
 import { downloadCsvFile } from '@/lib/downloads';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, plural } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   buildOperationsQueue,
@@ -129,7 +129,7 @@ export default function AdminOperationsPage() {
   useEffect(() => {
     if (operationsQuery.isError) {
       console.error(operationsQuery.error);
-      error('Erreur', 'Impossible de charger les operations admin.');
+      error('Erreur', 'Impossible de charger les opérations admin.');
     }
   }, [error, operationsQuery.error, operationsQuery.isError]);
 
@@ -255,7 +255,7 @@ export default function AdminOperationsPage() {
       age_heures: getAgeHours(item.createdAt),
       page: item.href,
     })));
-    success('Export pret', 'La file operationnelle a ete telechargee.');
+    success('Export prêt', 'La file opérationnelle a été téléchargée.');
   };
 
   return (
@@ -273,7 +273,7 @@ export default function AdminOperationsPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-teal-50 px-3 py-2 text-sm font-bold text-teal-700">{totalPending} action(s)</span>
+              <span className="rounded-full bg-teal-50 px-3 py-2 text-sm font-bold text-teal-700">{plural(totalPending, 'action(s)')}</span>
               <button onClick={handleExportQueue} className="rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Export CSV
               </button>
@@ -451,7 +451,7 @@ export default function AdminOperationsPage() {
               badge="Paiement"
               date={new Date().toISOString()}
               detail="Séquestres, retraits ou transactions qui demandent une vérification."
-              title={`${paymentAlerts} alerte(s) paiement à vérifier`}
+              title={`${plural(paymentAlerts, 'alerte(s)')} paiement à vérifier`}
               tone="bg-orange-50 text-orange-700"
               actions={<Link to="/admin/payments" className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">Ouvrir paiements</Link>}
             />

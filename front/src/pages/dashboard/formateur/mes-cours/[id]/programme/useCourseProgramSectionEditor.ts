@@ -128,7 +128,7 @@ export function useCourseProgramSectionEditor({
       setSectionFormMessage(null);
       await onRefresh();
     } catch (reason: unknown) {
-      const message = getErrorMessage(reason, 'Impossible d enregistrer la section.');
+      const message = getErrorMessage(reason, 'Impossible d’enregistrer la section.');
       setSectionFormMessage(message);
       error('Erreur', message);
       console.error(reason);

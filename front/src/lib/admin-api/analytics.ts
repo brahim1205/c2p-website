@@ -46,7 +46,7 @@ export async function fetchAdminAnalytics() {
       color: 'bg-[#5fa6f3]',
     },
     {
-      name: 'Espace Numerique',
+      name: 'Espace Numérique',
       users: enrollments.length,
       revenue: `${transactions.filter((item) => item.description.toLowerCase().includes('formation')).reduce((sum, item) => sum + Number(item.amount || 0), 0).toLocaleString('fr-FR')} FCFA`,
       growth: `+${Math.max(10, Math.round(enrollments.length / 3))}%`,

@@ -66,7 +66,7 @@ export function useCourseProgramLessonEditor({
       return;
     }
     if (!groupedSections.length) {
-      info('Programme requis', 'Créez d abord une section avant d ajouter une leçon.');
+      info('Programme requis', 'Créez d’abord une section avant d’ajouter une leçon.');
       return;
     }
     setEditingLesson(null);
@@ -149,7 +149,7 @@ export function useCourseProgramLessonEditor({
       setLessonFormMessage(null);
       await onRefresh();
     } catch (reason: unknown) {
-      const message = getErrorMessage(reason, 'Impossible d enregistrer la leçon.');
+      const message = getErrorMessage(reason, 'Impossible d’enregistrer la leçon.');
       setLessonFormMessage(message);
       error('Erreur', message);
       console.error(reason);

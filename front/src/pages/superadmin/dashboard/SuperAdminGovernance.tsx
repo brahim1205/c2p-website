@@ -33,6 +33,7 @@ import {
   type ManagedUser,
 } from './superAdminGovernanceModel';
 
+import { plural } from '@/lib/formatters';
 export default function SuperAdminGovernance() {
   const { user: actor } = useAuth();
   const { success, error } = useToast();
@@ -86,7 +87,7 @@ export default function SuperAdminGovernance() {
       success('Accès mis à jour', `${target.email} · ${label}`);
     } catch (patchError) {
       console.error(patchError);
-      error('Action refusée', 'La modification superadmin n a pas pu être appliquée.');
+      error('Action refusée', 'La modification superadmin n’a pas pu être appliquée.');
     } finally {
       setBusy(null);
     }
@@ -96,7 +97,7 @@ export default function SuperAdminGovernance() {
     setBusy(`${target.id}:sessions`);
     try {
       const result = await revokeOtherAccountSessions(target.id);
-      success('Sessions révoquées', `${result.removed} session(s) fermée(s).`);
+      success('Sessions révoquées', `${plural(result.removed, 'session(s) fermée(s)')}.`);
       const security = await fetchSecurity(target.id);
       setSessionsByUser((previous) => ({ ...previous, [target.id]: security.sessions }));
     } catch (revokeError) {
@@ -169,7 +170,7 @@ export default function SuperAdminGovernance() {
         automatic: false,
       });
       setBackups((previous) => [created, ...previous]);
-      success('Sauvegarde enregistrée', 'Le snapshot manuel est disponible dans l historique.');
+      success('Sauvegarde enregistrée', 'Le snapshot manuel est disponible dans l’historique.');
     } catch (backupError) {
       console.error(backupError);
       error('Erreur', 'Impossible de créer la sauvegarde.');

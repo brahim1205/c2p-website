@@ -56,10 +56,6 @@ export default defineConfig({
             "Outlet",
           ],
         },
-        // React i18n
-        {
-          "react-i18next": ["useTranslation", "Trans"],
-        },
       ],
       dts: true,
     }),

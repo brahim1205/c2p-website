@@ -96,7 +96,7 @@ export default function VirtualClassMainViewer({
               className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
             >
               <i className="ri-check-line mr-2"></i>
-              {currentLesson?.completed ? 'Lecon terminee' : (progressSaving ? 'Enregistrement...' : 'Marquer terminee')}
+              {currentLesson?.completed ? 'Leçon terminée' : (progressSaving ? 'Enregistrement...' : 'Marquer terminée')}
             </button>
           </div>
         </div>

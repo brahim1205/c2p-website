@@ -35,14 +35,14 @@ export default function CertificateVerificationPage() {
         <div className="mt-6 text-center">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-700">C2P Academy</p>
           <h1 className="mt-3 text-3xl font-extrabold text-slate-900">
-            {loading ? 'Verification du certificat' : certificate?.valid ? 'Certificat authentique' : 'Certificat introuvable'}
+            {loading ? 'Vérification du certificat' : certificate?.valid ? 'Certificat authentique' : 'Certificat introuvable'}
           </h1>
           <p className="mt-3 text-slate-600">
             {loading
-              ? 'Controle de l identifiant de certification en cours.'
+              ? 'Contrôle de l’identifiant de certification en cours.'
               : certificate?.valid
-                ? 'Ce certificat a bien ete emis par C2P Academy.'
-                : 'Cet identifiant ne correspond a aucun certificat emis.'}
+                ? 'Ce certificat a bien été émis par C2P Academy.'
+                : 'Cet identifiant ne correspond a aucun certificat émis.'}
           </p>
         </div>
 

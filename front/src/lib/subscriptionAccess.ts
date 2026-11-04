@@ -156,7 +156,7 @@ export function resolveSubscriptionGate(input: {
         action: input.action,
         reason: 'renewal_required',
         title: 'Abonnement complet requis',
-        message: `${copy.message} Votre essai gratuit permet seulement de démarrer et de tester l espace.`,
+        message: `${copy.message} Votre essai gratuit permet seulement de démarrer et de tester l’espace.`,
         ctaLabel: copy.ctaLabel,
         recommendedPlanId: recommendedPlan?.id ?? activeSubscription.plan_id ?? null,
         recommendedPlanName: recommendedPlan?.name ?? activeSubscription.plan_name ?? null,

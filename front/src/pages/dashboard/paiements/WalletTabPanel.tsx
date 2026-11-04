@@ -22,6 +22,7 @@ import ProviderCyclePanel from './ProviderCyclePanel';
 import ProviderVisibilityPanel from './ProviderVisibilityPanel';
 import SubscriptionPlansPanel from './SubscriptionPlansPanel';
 
+import { plural } from '@/lib/formatters';
 interface WalletTabPanelProps {
   availableBalance: number;
   heldBalance: number;
@@ -198,7 +199,7 @@ export default function WalletTabPanel({
         <div className="rounded-2xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Séquestres et paiements C2P</h3>
-            <span className="text-sm text-gray-500">{activeEscrows.length} actif(s)</span>
+            <span className="text-sm text-gray-500">{plural(activeEscrows.length, 'actif(s)')}</span>
           </div>
           <div className="space-y-3">
             {activeEscrows.length === 0 ? (
@@ -228,7 +229,7 @@ export default function WalletTabPanel({
         <div className="rounded-2xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Retraits et ledger</h3>
-            <span className="text-sm text-gray-500">{payoutRequests.length} demande(s)</span>
+            <span className="text-sm text-gray-500">{plural(payoutRequests.length, 'demande(s)')}</span>
           </div>
           <div className="space-y-3">
             {payoutRequests.slice(0, 4).map((request) => (

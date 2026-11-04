@@ -5,6 +5,7 @@ import type {
 } from '@/lib/saasApi';
 import { formatAmount, formatDate, type PaymentMethodId } from './paymentPageModel';
 
+import { plural } from '@/lib/formatters';
 interface ProviderVisibilityPanelProps {
   products: ProviderVisibilityProduct[];
   activePass: ProviderVisibilityPassRecord | null;
@@ -125,7 +126,7 @@ export default function ProviderVisibilityPanel({
         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-medium text-gray-900">Historique des achats</p>
-            <span className="text-xs text-gray-500">{orders.length} achat(s)</span>
+            <span className="text-xs text-gray-500">{plural(orders.length, 'achat(s)')}</span>
           </div>
           <div className="space-y-3">
             {orders.length === 0 ? (

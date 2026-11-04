@@ -9,6 +9,7 @@ import {
   requeueOutboxEvent,
 } from '@/lib/adminApi';
 
+import { plural } from '@/lib/formatters';
 type ToastFn = (title: string, message?: string) => void;
 
 type AdminPaymentOperatorActionsArgs = {
@@ -43,7 +44,7 @@ export function useAdminPaymentOperatorActions({
     try {
       setProcessingOutbox(true);
       const result = await processOutboxNow(25);
-      success('Worker outbox relancé', `${result.processed} traite(s), ${result.failed} echec(s).`);
+      success('Worker outbox relancé', `${plural(result.processed, 'traité(s)')}, ${plural(result.failed, 'échec(s)')}.`);
       await refetchPayments();
     } catch (err) {
       console.error(err);

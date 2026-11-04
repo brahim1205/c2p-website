@@ -61,7 +61,7 @@ export default function LoginPage() {
         <section className="p-4 sm:p-6 lg:p-7">
           <div className="mb-4 flex items-center">
             <Link to="/">
-              <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-9 w-auto" />
+              <img src="/images/brand/c2p-admin-logo.webp" alt="C2P" className="h-9 w-auto" />
             </Link>
           </div>
 

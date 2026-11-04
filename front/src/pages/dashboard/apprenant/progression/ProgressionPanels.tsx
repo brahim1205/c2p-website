@@ -8,6 +8,7 @@ import {
   type WeeklyActivityPoint,
 } from './progressionModel';
 
+import { plural } from '@/lib/formatters';
 export { FocusDetailModal } from './FocusDetailModal';
 
 type ProgressionSummary = {
@@ -151,7 +152,7 @@ export function FocusAreasPanel({ focusAreas, onSelect }: { focusAreas: FocusAre
           <h2 className="text-lg font-bold text-gray-900">Mes compétences par domaine</h2>
           <p className="text-sm text-gray-500">Basé sur vos formations suivies et votre progression réelle.</p>
         </div>
-        <span className="text-sm text-gray-500">{focusAreas.length} domaine(s)</span>
+        <span className="text-sm text-gray-500">{plural(focusAreas.length, 'domaine(s)')}</span>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -195,7 +196,7 @@ export function PrioritiesPanel({ priorities }: { priorities: LearningCourse[] }
             <div className="mb-3 flex flex-wrap gap-3 text-xs text-gray-500">
               <span>{course.completedLessons}/{course.totalLessons} leçons</span>
               <span>{formatRelativeActivity(course.lastActive)}</span>
-              {course.pendingGradingCount > 0 ? <span>{course.pendingGradingCount} correction(s) en attente</span> : null}
+              {course.pendingGradingCount > 0 ? <span>{plural(course.pendingGradingCount, 'correction(s)')} en attente</span> : null}
             </div>
             <Link to={`/dashboard/apprenant/cours/${course.courseId}`} className="inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-700">
               Continuer
@@ -238,7 +239,7 @@ function FocusAreaCard({ focus, onSelect }: { focus: FocusArea; onSelect: (focus
         <div className={`h-2.5 rounded-full transition-all ${getProgressTone(focus.progress)}`} style={{ width: `${focus.progress}%` }}></div>
       </div>
       <p className="text-xs text-gray-500">
-        {focus.completedLessons}/{focus.totalLessons} leçons estimées • {focus.completedCourses} terminé(s)
+        {focus.completedLessons}/{focus.totalLessons} leçons estimées • {plural(focus.completedCourses, 'terminé(s)')}
       </p>
     </button>
   );

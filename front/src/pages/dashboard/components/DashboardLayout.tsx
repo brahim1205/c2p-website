@@ -56,7 +56,7 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
   return (
     <div className="dashboard-layout h-screen overflow-hidden bg-[#f8f9fa]">
       {/* Top Bar - Glassmorphism */}
-      <header className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center border-b border-gray-200/60 bg-white/92 px-3 backdrop-blur-md lg:h-16 lg:px-6">
+      <header className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center border-b border-gray-200/60 bg-white/[0.92] px-3 backdrop-blur-md lg:h-16 lg:px-6">
         <div className="flex items-center justify-between w-full">
           {/* Left: Logo + hamburger */}
           <div className="flex items-center space-x-2 lg:space-x-3">

@@ -69,7 +69,7 @@ export default function CTASection() {
           </h2>
 
           <p className="text-white/75 text-sm sm:text-base lg:text-lg leading-relaxed mb-6 sm:mb-10 max-w-xl">
-            Accédez à un écosystème complet de services, formations et opportunités professionnelles. Plus de 2,500 membres nous font déjà confiance.
+            Accédez à un écosystème complet de services, formations et opportunités professionnelles. Plus de 2 500 membres nous font déjà confiance.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">

@@ -54,13 +54,6 @@ export default function PublicLayoutHeader({
   onToggleMobileMenu,
   user,
 }: PublicLayoutHeaderProps) {
-  const mobilePrimaryLinks = PUBLIC_NAV_ITEMS.slice(0, 4);
-  const mobilePrimaryIcons: Record<string, string> = {
-    '/': 'ri-home-5-line',
-    '/allopresta': 'ri-briefcase-4-line',
-    '/espace-numerique': 'ri-book-open-line',
-    '/project-center': 'ri-rocket-2-line',
-  };
 
   return (
     <nav aria-label="Navigation publique principale" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}>
@@ -68,33 +61,14 @@ export default function PublicLayoutHeader({
         <div className="flex h-[64px] items-center justify-between gap-2 lg:h-20">
           <BrandLogo to="/" className="flex shrink-0 items-center" imageClassName="h-8 w-auto object-contain lg:h-10" />
 
-          <div className="mx-1 grid flex-1 grid-cols-5 gap-1 md:hidden">
-            {mobilePrimaryLinks.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={onInternalLinkClick(item.href)}
-                className={`flex h-8 min-w-0 items-center justify-center rounded-full px-0 transition-colors ${
-                  currentPath === item.href
-                    ? 'bg-[#0f1c35] text-white'
-                    : 'border border-[#d6dbe1] bg-white text-[#0f1c35]'
-                }`}
-                aria-label={item.label}
-                title={item.label}
-              >
-                <i className={`${mobilePrimaryIcons[item.href] ?? 'ri-link'} text-[13px]`}></i>
-              </Link>
-            ))}
-            <Link
-              to={isAuthenticated ? accountPath : '/auth/login'}
-              onClick={onInternalLinkClick(isAuthenticated ? accountPath : '/auth/login')}
-              className="flex h-8 min-w-0 items-center justify-center rounded-full bg-[#1a9a96] px-0 text-white"
-              aria-label={isAuthenticated ? 'Mon espace' : 'Connexion'}
-              title={isAuthenticated ? 'Mon espace' : 'Connexion'}
-            >
-              <i className={`${isAuthenticated ? 'ri-user-3-line' : 'ri-login-box-line'} text-[13px]`}></i>
-            </Link>
-          </div>
+          <Link
+            to={isAuthenticated ? accountPath : '/auth/login'}
+            onClick={onInternalLinkClick(isAuthenticated ? accountPath : '/auth/login')}
+            className="ml-auto inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#1a9a96] px-4 text-sm font-bold text-white md:hidden"
+          >
+            <i className={`${isAuthenticated ? 'ri-user-3-line' : 'ri-login-box-line'} text-base`} aria-hidden="true"></i>
+            {isAuthenticated ? 'Mon espace' : 'Connexion'}
+          </Link>
 
           <div className="hidden md:flex items-center gap-1 lg:gap-3">
             {PUBLIC_NAV_ITEMS.map((item) => (
@@ -149,7 +123,7 @@ export default function PublicLayoutHeader({
             aria-expanded={mobileMenuOpen}
             aria-controls="public-mobile-menu"
             aria-label={mobileMenuOpen ? 'Fermer le menu de navigation' : 'Ouvrir le menu de navigation'}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[#f7f6f4] md:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-[#f7f6f4] md:hidden"
             onClick={onToggleMobileMenu}
           >
             <div className="flex h-4 w-4 items-center justify-center">
@@ -160,7 +134,7 @@ export default function PublicLayoutHeader({
       </div>
 
       {mobileMenuOpen && (
-        <div id="public-mobile-menu" className="md:hidden max-h-[calc(100svh-80px)] overflow-y-auto border-t border-[#d6dbe1] bg-[#ffffff]/96 shadow-[0_24px_80px_rgba(15,28,53,0.08)] backdrop-blur-md">
+        <div id="public-mobile-menu" className="md:hidden max-h-[calc(100svh-80px)] overflow-y-auto border-t border-[#d6dbe1] bg-[#ffffff]/[0.96] shadow-[0_24px_80px_rgba(15,28,53,0.08)] backdrop-blur-md">
           <div className="space-y-3 px-4 py-4">
             <div className="grid gap-2">
               <Link to="/auth/register" onClick={onInternalLinkClick('/auth/register', true)} className="flex min-h-12 items-center justify-center rounded-xl bg-[#0f1c35] px-4 py-3 text-sm font-bold text-white">

@@ -15,6 +15,7 @@ import {
   MetricTile,
 } from './FormateurDashboardShared';
 
+import { plural } from '@/lib/formatters';
 export function PublicationPipelinePanel({ loading, courses }: { loading: boolean; courses: CourseInsight[] }) {
   return (
     <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
@@ -163,7 +164,7 @@ function StudentFollowUpCard({ student }: { student: Enrollment }) {
       <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-3">
         <span>{student.progress}% complété</span>
         <span>{formatRelativeActivity(student.last_active)}</span>
-        {student.pending_grading_count ? <span>{student.pending_grading_count} correction(s) à rendre</span> : null}
+        {student.pending_grading_count ? <span>{plural(student.pending_grading_count, 'correction(s)')} à rendre</span> : null}
         {student.certificate_status === 'issued' ? <span>Certifié</span> : null}
       </div>
 
@@ -258,7 +259,7 @@ function LatestCourseCard({ course }: { course: CourseInsight }) {
       <CourseReadinessBox course={course} className="mb-3" />
 
       <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
-        <span>{course.published_lessons_count || 0} leçon(s) publiées</span>
+        <span>{plural(course.published_lessons_count || 0, 'leçon(s) publiée(s)')}</span>
         <span>{course.preview_lessons_count || 0} preview</span>
         <span>Mis à jour le {formatDate(course.updated_at)}</span>
       </div>

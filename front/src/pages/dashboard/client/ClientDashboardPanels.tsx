@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, plural } from '@/lib/formatters';
 import {
   BOOKING_STATUS_META,
   ORDER_STATUS_META,
@@ -147,7 +147,7 @@ function ReservationSummary({ loading, activeReservations }: { loading: boolean;
     <div>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">Demandes et rendez-vous</h3>
-        <span className="text-xs text-gray-400">{activeReservations.length} actif(s)</span>
+        <span className="text-xs text-gray-400">{plural(activeReservations.length, 'actif(s)')}</span>
       </div>
       <div className="space-y-3">
         {loading ? <p className="rounded-2xl bg-gray-50 px-4 py-4 text-sm text-gray-500">Chargement des demandes...</p> : null}

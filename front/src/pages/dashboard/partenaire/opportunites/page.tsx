@@ -39,7 +39,7 @@ export default function PartenaireOpportunitesPage() {
   useEffect(() => {
     if (opportunitiesQuery.isError) {
       console.error(opportunitiesQuery.error);
-      error('Erreur', 'Impossible de charger les opportunites.');
+      error('Erreur', 'Impossible de charger les opportunités.');
     }
   }, [error, opportunitiesQuery.error, opportunitiesQuery.isError]);
 
@@ -67,13 +67,13 @@ export default function PartenaireOpportunitesPage() {
       });
 
       success(
-        result.alreadyTracked ? 'Suivi deja actif' : 'Interet manifeste',
-        result.alreadyTracked ? 'Ce projet est deja dans vos suivis.' : 'L equipe C2P a ete notifiee et le projet a ete ajoute a vos suivis.',
+        result.alreadyTracked ? 'Suivi déjà actif' : 'Intérêt manifesté',
+        result.alreadyTracked ? 'Ce projet est déjà dans vos suivis.' : 'L’équipe C2P a été notifiée et le projet a été ajouté à vos suivis.',
       );
       await queryClient.invalidateQueries({ queryKey: queryKeys.partenaire.root(user.id) });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible d enregistrer votre interet.');
+      error('Erreur', 'Impossible d’enregistrer votre intérêt.');
     }
   };
 

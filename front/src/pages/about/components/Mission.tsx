@@ -49,7 +49,7 @@ export default function Mission() {
 
             <div className="space-y-4">
               {[
-                { icon: 'ri-check-double-line', text: "Plus de 2,500 professionnels actifs dans 45 pays" },
+                { icon: 'ri-check-double-line', text: "Plus de 2 500 professionnels actifs dans 45 pays" },
                 { icon: 'ri-check-double-line', text: "150 startups accompagnées depuis la création" },
                 { icon: 'ri-check-double-line', text: "98% de satisfaction parmi nos apprenants" },
                 { icon: 'ri-check-double-line', text: "12M FCFA de financement mobilisés pour nos projets" },

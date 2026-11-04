@@ -18,6 +18,7 @@ import {
   type FormationDetailTab,
 } from './formationDetailModel';
 
+import { plural } from '@/lib/formatters';
 export { FormationContextSidebar } from './FormationContextSidebar';
 export { CurriculumTab } from './FormationCurriculumTab';
 export { ReviewsTab } from './FormationReviewsTab';
@@ -74,7 +75,7 @@ export function FormationHero({
             <div className="mb-5 flex flex-wrap items-center gap-4 sm:mb-6 sm:gap-6">
               <HeroMetric icon="ri-group-line" label={`${course.students_count || 0} apprenants`} />
               <HeroMetric icon="ri-time-line" label={course.duration || 'N/A'} />
-              <HeroMetric icon="ri-book-line" label={`${course.modules || 0} modules`} />
+              <HeroMetric icon="ri-book-line" label={plural(course.modules || 0, 'module(s)')} />
               <HeroMetric icon="ri-play-list-line" label={`${totalLessons} leçons`} />
             </div>
 

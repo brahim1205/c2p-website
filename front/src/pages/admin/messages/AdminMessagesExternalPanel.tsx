@@ -89,7 +89,7 @@ function PublicSubmissionCard({ submission, session }: { submission: PublicConta
           {submission.status === 'new' ? (
             <button
               type="button"
-              aria-label={`Marquer comme traitee la demande de ${submission.firstName} ${submission.lastName}`}
+              aria-label={`Marquer comme traitée la demande de ${submission.firstName} ${submission.lastName}`}
               onClick={() => void session.handleMarkHandled(submission)}
               className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
             >

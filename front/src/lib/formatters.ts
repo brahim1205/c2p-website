@@ -26,3 +26,23 @@ export function formatDateTime(value: string | null | undefined, options?: Intl.
 export function formatPercent(value: number | null | undefined) {
   return `${Math.round(Number(value ?? 0))}%`;
 }
+
+/**
+ * French pluralisation for UI labels written with `(s)`, `(x)` or `(es)` markers.
+ *   plural(1, 'facture(s) liée(s)') -> '1 facture liée'
+ *   plural(3, 'facture(s) liée(s)') -> '3 factures liées'
+ *   plural(2, 'Projet(s) suivi(s)', { withCount: false }) -> 'Projets suivis'
+ * In French, 0 and 1 take the singular.
+ */
+export function plural(count: number | null | undefined, phrase: string, options: { withCount?: boolean } = {}) {
+  const value = Number.isFinite(Number(count)) ? Number(count) : 0;
+  const many = Math.abs(value) >= 2;
+  const words = phrase.replace(/\((s|x|es)\)/g, (_marker, suffix: string) => (many ? suffix : ''));
+  return options.withCount === false ? words : `${formatCount(value)} ${words}`;
+}
+
+/** Formats an integer the French way: 1 235 (no-break space), not 1,235. */
+export function formatCount(value: number) {
+  // fr-FR groups with a narrow no-break space (U+202F), nearly invisible in bold Inter: use U+00A0.
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(value).replace(/\u202f/g, '\u00a0');
+}

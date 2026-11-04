@@ -5,7 +5,7 @@ const testimonials = [
   {
     name: 'Amadou Diallo',
     role: 'Entrepreneur, Startup incubée 2023',
-    avatar: '/images/brand/image1.jpeg',
+    avatar: '/images/brand/image1.webp',
     rating: 5,
     quote: "Grâce à C2P, j'ai pu développer mes compétences et lancer mon entreprise avec un accompagnement de qualité. Le ProjectCenter a transformé mon idée en une vraie startup.",
     featured: true,
@@ -13,7 +13,7 @@ const testimonials = [
   {
     name: 'Fatou Touré',
     role: 'Formatrice certifiée',
-    avatar: '/images/brand/image2.jpeg',
+    avatar: '/images/brand/image2.webp',
     rating: 5,
     quote: "Une plateforme complète qui répond à tous mes besoins professionnels. J'enseigne ici et j'apprends aussi.",
     featured: false,
@@ -21,7 +21,7 @@ const testimonials = [
   {
     name: 'Moussa Koné',
     role: 'Client AlloPresta',
-    avatar: '/images/brand/image3.jpeg',
+    avatar: '/images/brand/image3.webp',
     rating: 5,
     quote: "J'ai trouvé des prestataires qualifiés rapidement et facilement. Le service client est impeccable.",
     featured: false,
@@ -29,7 +29,7 @@ const testimonials = [
   {
     name: 'Khadija Ba',
     role: 'Apprenante Espace Numérique',
-    avatar: '/images/brand/image5.jpeg',
+    avatar: '/images/brand/image5.webp',
     rating: 5,
     quote: "Les formations sont top ! J'ai obtenu mon premier certificat en 2 mois et j'ai décroché un emploi.",
     featured: false,

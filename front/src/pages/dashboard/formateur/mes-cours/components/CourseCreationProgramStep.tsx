@@ -10,6 +10,7 @@ import {
 import CourseCreationTableOfContents from './CourseCreationTableOfContents';
 import { getFieldClass } from './courseCreationFields';
 
+import { plural } from '@/lib/formatters';
 interface CourseCreationProgramStepProps {
   wizard: WizardDraftState;
   dragSectionId: string | null;
@@ -96,7 +97,7 @@ export default function CourseCreationProgramStep({
                       </span>
                       <div>
                         <p className="text-sm font-semibold text-slate-900">Partie {sectionIndex + 1}</p>
-                        <p className="text-xs text-slate-500">{section.lessons.length} leçon(s)</p>
+                        <p className="text-xs text-slate-500">{plural(section.lessons.length, 'leçon(s)')}</p>
                       </div>
                     </div>
                     <label className="mb-1.5 block text-xs font-medium text-slate-600">Titre de la partie</label>

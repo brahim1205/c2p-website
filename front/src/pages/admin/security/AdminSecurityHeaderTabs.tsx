@@ -6,7 +6,7 @@ interface AdminSecurityHeaderTabsProps {
 }
 
 const securityTabs: Array<[AdminSecurityTab, string]> = [
-  ['overview', 'Vue d ensemble'],
+  ['overview', 'Vue d’ensemble'],
   ['users', 'Utilisateurs'],
   ['logs', 'Journaux'],
   ['backups', 'Sauvegardes'],

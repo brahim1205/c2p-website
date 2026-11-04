@@ -58,7 +58,7 @@ export default function AdminReportsPage() {
       success(message, updated.reported);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Le signalement n a pas pu etre mis a jour.');
+      error('Erreur', 'Le signalement n’a pas pu être mis à jour.');
     }
   };
 

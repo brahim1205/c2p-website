@@ -121,11 +121,11 @@ export function getTypeIcon(type: string | null | undefined) {
 export function getCourseImage(course: Course) {
   if (course.thumbnail) return course.thumbnail;
   const catImages: Record<string, string> = {
-    informatique: '/images/brand/images11.jpeg',
+    informatique: '/images/brand/images11.webp',
     langues: '/images/brand/images12.jpeg',
-    entrepreneuriat: '/images/brand/image8.jpeg',
-    commerce: '/images/brand/image2.jpeg',
-    communication: '/images/brand/image3.jpeg',
+    entrepreneuriat: '/images/brand/image8.webp',
+    commerce: '/images/brand/image2.webp',
+    communication: '/images/brand/image3.webp',
     gestion: '/images/brand/image7.jpeg',
   };
   return catImages[(course.category || '').toLowerCase()] || catImages.informatique;

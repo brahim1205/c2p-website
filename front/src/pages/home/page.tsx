@@ -11,7 +11,7 @@ const platformCards = [
     image: '/images/home/mechanic-with-spanners-pockets-optimized.webp',
     path: '/allopresta',
     price: 'Devis',
-    rating: '4.8',
+    rating: '4,8',
     meta: 'Prix • localisation • avis',
   },
   {
@@ -21,7 +21,7 @@ const platformCards = [
     image: '/images/home/shocked-international-student-holding-pen-notebook-optimized.webp',
     path: '/espace-numerique',
     price: 'Cours',
-    rating: '4.9',
+    rating: '4,9',
     meta: 'Modules • quiz • suivi',
   },
   {
@@ -31,7 +31,7 @@ const platformCards = [
     image: '/images/home/modern-man-working-caffe-optimized.webp',
     path: '/project-center',
     price: 'Gratuit',
-    rating: '4.7',
+    rating: '4,7',
     meta: 'Incubation • financement',
   },
   {
@@ -41,7 +41,7 @@ const platformCards = [
     image: '/images/home/close-up-man-working-computer-chips-optimized.webp',
     path: '/auth/register?role=prestataire',
     price: 'Profil',
-    rating: '4.8',
+    rating: '4,8',
     meta: 'Agenda • devis • avis',
   },
   {
@@ -51,17 +51,17 @@ const platformCards = [
     image: '/images/home/photo-editor-using-editing-software-digital-workspace-home-optimized.webp',
     path: '/auth/register?role=formateur',
     price: 'Revenus',
-    rating: '4.9',
+    rating: '4,9',
     meta: 'Vidéos • classes • quiz',
   },
   {
     author: 'Partenaires',
     tag: 'Projet',
     title: 'Coacher, financer et suivre des projets',
-    image: '/images/home/venture.jpg',
+    image: '/images/home/venture.webp',
     path: '/auth/register?role=partenaire',
     price: 'Badge',
-    rating: '4.8',
+    rating: '4,8',
     meta: 'Simulation • suivi • contrat',
   },
 ];
@@ -101,7 +101,7 @@ const news = [
   {
     title: 'Comment préparer un bon profil prestataire',
     tag: 'AlloPresta',
-    image: '/images/home/precision.jpg',
+    image: '/images/home/precision.webp',
     path: '/a-propos',
   },
   {
@@ -113,7 +113,7 @@ const news = [
   {
     title: 'Financement participatif : comprendre la logique C2P',
     tag: 'ProjectCenter',
-    image: '/images/home/trust.jpg',
+    image: '/images/home/trust.webp',
     path: '/project-center',
   },
 ];
@@ -144,7 +144,7 @@ export default function HomePage() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   to="/auth/register"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#147f7b] px-6 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(20,127,123,0.22)] transition hover:bg-[#0f6b68]"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#147f7b] px-6 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(20 127,123,0.22)] transition hover:bg-[#0f6b68]"
                 >
                   Démarrer mon parcours
                 </Link>
@@ -160,14 +160,14 @@ export default function HomePage() {
             <div className="relative min-h-[270px] sm:min-h-[360px] lg:min-h-[540px]">
               <div className="absolute right-0 top-2 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
                 <div className="flex items-center gap-1 text-sm font-black text-[#147f7b]">
-                  4.8 <i className="ri-star-fill text-[#f5b642]" />
+                  4,8 <i className="ri-star-fill text-[#f5b642]" />
                 </div>
                 <p className="text-[11px] font-medium text-[#6b7a8d]">Avis utilisateurs</p>
               </div>
 
-              <div className="absolute left-2 top-16 z-10 rounded-full bg-[#147f7b] px-5 py-4 text-center text-white shadow-[0_18px_40px_rgba(20,127,123,0.28)] sm:left-8">
+              <div className="absolute left-2 top-16 z-10 rounded-full bg-[#147f7b] px-5 py-4 text-center text-white shadow-[0_18px_40px_rgba(20 127,123,0.28)] sm:left-8">
                 <i className="ri-book-open-line text-xl" />
-                <p className="mt-1 text-xl font-black leading-none">1,235</p>
+                <p className="mt-1 text-xl font-black leading-none">1 235</p>
                 <p className="text-[11px] font-semibold">opportunités</p>
               </div>
 
@@ -178,8 +178,8 @@ export default function HomePage() {
 
               <div className="absolute inset-x-6 bottom-0 h-[74%] rounded-t-full bg-[#ffd15a] sm:inset-x-16" />
               <img
-                src="/images/home/etudiante-souriante-gauche.png?v=20261005-2"
-                alt="Etudiante C2P"
+                src="/images/home/etudiante-souriante-gauche.webp" width={1200} height={800} fetchPriority="high" decoding="async"
+                alt="Étudiante C2P"
                 className="absolute bottom-0 right-0 h-[88%] w-full rounded-b-[28px] object-cover object-center sm:h-[92%] lg:w-[82%]"
               />
             </div>
@@ -275,7 +275,7 @@ export default function HomePage() {
       </section>
 
       <section className="px-5 py-0 sm:px-8 lg:px-12">
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-none bg-gradient-to-r from-[#178750] via-[#239a5f] to-[#2fad71] px-6 py-10 text-white shadow-[0_24px_70px_rgba(23,135,80,0.18)] sm:rounded-[26px] sm:px-12 lg:px-16">
+        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-none bg-gradient-to-r from-[#178750] via-[#239a5f] to-[#2fad71] px-6 py-10 text-white shadow-[0_24px_70px_rgba(23 135,80,0.18)] sm:rounded-[26px] sm:px-12 lg:px-16">
           <div className="pointer-events-none absolute inset-0 opacity-20">
             <div className="absolute left-[40%] top-[-40px] h-52 w-52 rounded-full border border-white/50" />
             <div className="absolute right-[8%] top-[-80px] h-80 w-80 rounded-full border border-white/40" />

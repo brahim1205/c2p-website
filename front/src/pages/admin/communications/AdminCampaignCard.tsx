@@ -35,7 +35,7 @@ export function AdminCampaignCard({
             </div>
             <p className="text-xs text-gray-500 mb-2">
               Canal : {channel.label} · Cible : {campaign.target} · Creee le {campaign.createdAt}
-              {campaign.scheduledDate ? ` · Planifiee le ${campaign.scheduledDate}` : ''}
+              {campaign.scheduledDate ? ` · Planifiée le ${campaign.scheduledDate}` : ''}
             </p>
             <p className="text-sm text-gray-700 line-clamp-2">{campaign.content}</p>
           </div>

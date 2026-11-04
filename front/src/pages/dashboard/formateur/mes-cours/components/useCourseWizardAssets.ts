@@ -102,7 +102,7 @@ export function useCourseWizardAssets({
       success('Bande-annonce importée', 'La vidéo de présentation a été téléversée sur le serveur.');
     } catch (reason) {
       console.error(reason);
-      error('Upload impossible', 'La bande-annonce n a pas pu être téléversée.');
+      error('Upload impossible', 'La bande-annonce n’a pas pu être téléversée.');
     } finally {
       setIsTrailerUploading(false);
       setTrailerUploadProgress(0);

@@ -127,12 +127,12 @@ export function useChatConversationSession({
       };
       await onSendMessage(conversation.id, messageText.trim(), [attachment]);
       setMessageText('');
-      success('Fichier envoye', `${attachment.name} a ete transmis.`);
+      success('Fichier envoyé', `${attachment.name} a été transmis.`);
     } catch (uploadError) {
       console.error(uploadError);
       const message = uploadError && typeof uploadError === 'object' && 'message' in uploadError
         ? String(uploadError.message)
-        : 'Impossible d envoyer le fichier.';
+        : 'Impossible d’envoyer le fichier.';
       error('Upload impossible', message);
     } finally {
       setUploadingAttachment(false);
@@ -142,7 +142,7 @@ export function useChatConversationSession({
 
   const handleDownloadAttachment = (attachment: Attachment) => {
     if (!attachment.url) {
-      error('Fichier indisponible', 'Cette piece jointe ne contient pas de lien de telechargement.');
+      error('Fichier indisponible', 'Cette piece jointe ne contient pas de lien de téléchargement.');
       return;
     }
 
@@ -153,7 +153,7 @@ export function useChatConversationSession({
     document.body.appendChild(link);
     link.click();
     link.remove();
-    success('Telechargement', `${attachment.name} a ete telecharge.`);
+    success('Telechargement', `${attachment.name} a été téléchargé.`);
   };
 
   const handleEmojiClick = useCallback((emoji: string) => {
@@ -192,7 +192,7 @@ export function useChatConversationSession({
     setShowMoreMenu(false);
     const nextConversation = conversations.find((item) => item.id !== conversation.id && !archivedConversationIds.includes(item.id));
     onArchiveConversation(conversation.id, nextConversation?.id ?? null);
-    success('Conversation archivee', `${conversation.name} a ete retiree de la liste active.`);
+    success('Conversation archivée', `${conversation.name} a été retirée de la liste active.`);
   };
 
   return {

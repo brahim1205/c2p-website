@@ -12,6 +12,7 @@ import {
   type Enrollment,
 } from './monApprentissageModel';
 
+import { plural } from '@/lib/formatters';
 export function LearningStatsCards({ stats }: { stats: {
   totalCourses: number;
   inProgress: number;
@@ -24,7 +25,7 @@ export function LearningStatsCards({ stats }: { stats: {
         { label: 'Inscriptions', value: stats.totalCourses, icon: 'ri-book-open-line', tone: 'bg-slate-100 text-slate-700' },
         { label: 'En cours', value: stats.inProgress, icon: 'ri-loader-4-line', tone: 'bg-teal-50 text-teal-700' },
         { label: 'Terminees', value: stats.completed, icon: 'ri-checkbox-circle-line', tone: 'bg-green-50 text-green-700' },
-        { label: 'Certificats emis', value: stats.certificates, icon: 'ri-award-line', tone: 'bg-amber-50 text-amber-700' },
+        { label: 'Certificats émis', value: stats.certificates, icon: 'ri-award-line', tone: 'bg-amber-50 text-amber-700' },
       ].map((stat) => (
         <div key={stat.label} className="rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center gap-3">
@@ -110,7 +111,7 @@ export function LearningCoursesPanel({ enrollments }: { enrollments: Enrollment[
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{course.title}</h3>
                     <p className="text-sm text-gray-600">
-                      {course.modules || 0} modules • {course.duration || 'Duree non renseignee'}
+                      {plural(course.modules || 0, 'module(s)')} • {course.duration || 'Durée non renseignée'}
                     </p>
                   </div>
                   <span className="text-xs text-gray-500">{formatLastAccessed(enrollment.last_active)}</span>

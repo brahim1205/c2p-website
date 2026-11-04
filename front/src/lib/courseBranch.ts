@@ -19,5 +19,5 @@ export function getCourseBranchDescription(value: unknown) {
 export function getCourseBranchBadgeClass(value: unknown) {
   return normalizeCourseBranch(value) === 'end'
     ? 'border-[#27346b]/20 bg-[#27346b]/10 text-[#27346b]'
-    : 'border-[#dbad29]/30 bg-[#dbad29]/12 text-[#8a6511]';
+    : 'border-[#dbad29]/30 bg-[#dbad29]/[0.12] text-[#8a6511]';
 }

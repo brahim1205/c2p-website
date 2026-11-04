@@ -165,7 +165,7 @@ export default function PrestataireAvisPage() {
             {filteredReviews.map((review) => (
               <div key={review.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-start gap-4">
-                  <img src={review.client_avatar || '/images/brand/image2.jpeg'} alt={review.client_name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+                  <img src={review.client_avatar || '/images/brand/image2.webp'} alt={review.client_name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <div>
@@ -185,7 +185,7 @@ export default function PrestataireAvisPage() {
                       <button
                         type="button"
                         onClick={() => handleHelpful(review.id)}
-                        aria-label={`Marquer l avis de ${review.client_name} comme utile`}
+                        aria-label={`Marquer l’avis de ${review.client_name} comme utile`}
                         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                       >
                         <i className="ri-thumb-up-line"></i>
@@ -195,7 +195,7 @@ export default function PrestataireAvisPage() {
                         <button
                           type="button"
                           onClick={() => setReplyingTo(review.id)}
-                          aria-label={`Répondre à l avis de ${review.client_name}`}
+                          aria-label={`Répondre à l’avis de ${review.client_name}`}
                           className="text-sm text-[#5fa6f3] hover:text-[#27346b] transition-colors font-medium"
                         >
                           Répondre
@@ -210,7 +210,7 @@ export default function PrestataireAvisPage() {
                           type="text"
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
-                          aria-label={`Réponse à l avis de ${review.client_name}`}
+                          aria-label={`Réponse à l’avis de ${review.client_name}`}
                           placeholder="Écrivez votre réponse..."
                           maxLength={500}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5fa6f3] text-sm"

@@ -64,7 +64,7 @@ export default function TwoFactorAuthPage() {
     setError('');
     if (resetMode) {
       if (!resetEmail) {
-        error('Session invalide', 'Veuillez recommencer la reinitialisation du mot de passe.');
+        error('Session invalide', 'Veuillez recommencer la réinitialisation du mot de passe.');
         navigate('/forgot-password', { replace: true });
         return;
       }
@@ -86,11 +86,11 @@ export default function TwoFactorAuthPage() {
             newPassword: resetForm.newPassword,
           }),
         }, { retryOnAuth: false });
-        success('Mot de passe reinitialise', result.message);
+        success('Mot de passe réinitialisé', result.message);
         setTimeout(() => navigate('/auth/login', { replace: true }), 800);
       } catch (requestError) {
         const apiError = toApiError(requestError);
-        error('Verification impossible', apiError.message);
+        error('Vérification impossible', apiError.message);
       }
       return;
     }
@@ -111,7 +111,7 @@ export default function TwoFactorAuthPage() {
     if (resendTimer > 0) return;
     if (resetMode) {
       if (!resetEmail) {
-        error('Session invalide', 'Veuillez recommencer la reinitialisation du mot de passe.');
+        error('Session invalide', 'Veuillez recommencer la réinitialisation du mot de passe.');
         navigate('/forgot-password', { replace: true });
         return;
       }
@@ -120,7 +120,7 @@ export default function TwoFactorAuthPage() {
           method: 'POST',
           body: JSON.stringify({ email: resetEmail }),
         }, { retryOnAuth: false });
-        success('Code renvoye', 'Un nouveau code a ete envoye si le compte existe.');
+        success('Code renvoyé', 'Un nouveau code a été envoyé si le compte existe.');
       } catch (requestError) {
         const apiError = toApiError(requestError);
         error('Renvoi impossible', apiError.message);
@@ -141,7 +141,7 @@ export default function TwoFactorAuthPage() {
 
     const result = await resend2FA();
     if (!result.success) {
-      error('Renvoi impossible', result.message || 'Le code n a pas pu etre renvoye.');
+      error('Renvoi impossible', result.message || 'Le code n’a pas pu être renvoyé.');
       return;
     }
     success('Code renvoyé', 'Un nouveau code a été envoyé à votre téléphone.');

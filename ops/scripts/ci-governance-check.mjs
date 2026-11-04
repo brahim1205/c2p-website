@@ -253,6 +253,7 @@ function main() {
     'npm run swagger:check',
     'npm run data:legacy-mode:test',
     'npm run state:check',
+    'npm run design:check',
     'npm run http:checks',
     'npm run bundle:budget',
     'npm run smoke:test',

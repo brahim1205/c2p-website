@@ -10,6 +10,7 @@ import {
   fetchPrestataireAvailabilityBlocks,
 } from '@/lib/prestataireDashboardApi';
 
+import { plural } from '@/lib/formatters';
 function toLocalDateTime(value: string) {
   if (!value) return '';
   const date = new Date(value);
@@ -141,7 +142,7 @@ export default function PrestataireAgendaPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-950">Créneaux bloqués</h2>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{blocks.length} créneau(x)</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{plural(blocks.length, 'créneau(x)')}</span>
             </div>
             <div className="mt-5 space-y-3">
               {blocksQuery.isLoading ? (

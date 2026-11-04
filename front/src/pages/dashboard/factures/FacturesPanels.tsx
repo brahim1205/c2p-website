@@ -13,6 +13,7 @@ import {
   type InvoiceUrlContext,
 } from './facturesModel';
 
+import { plural } from '@/lib/formatters';
 export { default as InvoiceDetailModal } from './InvoiceDetailModal';
 
 interface InvoiceContextBannerProps {
@@ -33,7 +34,7 @@ export function InvoiceContextBanner({ context, count, onClear, onOpenPayments }
             {context.financialOperationId ? <ContextChip label={`Opération ${context.financialOperationId}`} /> : null}
             {context.transactionId ? <ContextChip label={`Transaction ${context.transactionId}`} /> : null}
           </div>
-          <p className="mt-3 text-sm text-gray-600">{count} facture(s) liée(s) au contexte courant.</p>
+          <p className="mt-3 text-sm text-gray-600">{plural(count, 'facture(s) liée(s)')} au contexte courant.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={onOpenPayments} className="rounded-lg border border-teal-300 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-white">

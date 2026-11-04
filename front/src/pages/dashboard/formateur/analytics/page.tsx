@@ -22,6 +22,7 @@ import {
   YAxis,
 } from 'recharts';
 
+import { plural } from '@/lib/formatters';
 interface AnalyticsCourse {
   id: string | number;
   title: string;
@@ -258,7 +259,7 @@ export default function FormateurAnalyticsPage() {
                 ))}
                 <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
                   <div className="font-semibold">Corrections en attente</div>
-                  <div className="mt-1">{headline.recentSubmissions} soumission(s) attendent encore une action du formateur.</div>
+                  <div className="mt-1">{plural(headline.recentSubmissions, 'soumission(s)')} en attente d’une action du formateur.</div>
                 </div>
               </div>
             </div>

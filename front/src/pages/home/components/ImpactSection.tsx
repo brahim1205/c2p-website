@@ -51,7 +51,7 @@ export default function ImpactSection() {
   return (
     <section ref={sectionRef} className="py-20 lg:py-32 px-4 sm:px-6 lg:px-20 bg-gradient-to-b from-[#0f3d3e] to-[#0a2a2b] relative overflow-hidden">
       {/* Animated background orbs */}
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#5fa6f3]/8 rounded-full blur-[150px] pointer-events-none animate-pulse-glow"></div>
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#5fa6f3]/[0.08] rounded-full blur-[150px] pointer-events-none animate-pulse-glow"></div>
       <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-[#5fa6f3]/5 rounded-full blur-[120px] pointer-events-none animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
 
       <div className="max-w-7xl mx-auto relative z-10">

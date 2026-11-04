@@ -160,10 +160,10 @@ export function useAdminPaymentsPageSession() {
         ...snapshot,
         transactions: snapshot.transactions.map((item) => item.id === transaction.id ? { ...item, ...updated } : item),
       }));
-      success('Statut mis a jour', transaction.id);
+      success('Statut mis à jour', transaction.id);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Mise a jour impossible.');
+      error('Erreur', 'Mise à jour impossible.');
     }
   };
 
@@ -217,7 +217,7 @@ export function useAdminPaymentsPageSession() {
       date: transaction.date,
       reference: transaction.reference ?? '',
     })));
-    success('Rapport exporte', 'Le rapport financier a ete telecharge.');
+    success('Rapport exporté', 'Le rapport financier a été téléchargé.');
   };
 
   const getPanelClassName = (panel: string) => (

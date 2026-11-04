@@ -41,8 +41,8 @@ export function useVirtualClassReplayUpload({
       onSuccess('Replay importé', 'La vidéo est prête à être enregistrée sur la classe.');
     } catch (err) {
       console.error(err);
-      onFormMessageChange('Impossible d importer le replay.');
-      onError('Upload impossible', 'Le replay n a pas pu être envoyé.');
+      onFormMessageChange('Impossible d’importer le replay.');
+      onError('Upload impossible', 'Le replay n’a pas pu être envoyé.');
     } finally {
       resetReplayUpload();
       event.target.value = '';

@@ -20,7 +20,7 @@ export const campaignAudienceOptions: Array<{ value: CampaignAudience; label: st
   { value: 'all_apprenants', label: 'Tous les apprenants' },
   { value: 'active_clients', label: 'Clients actifs' },
   { value: 'project_holders', label: 'Porteurs de projet' },
-  { value: 'verified_providers', label: 'Prestataires verifies' },
+  { value: 'verified_providers', label: 'Prestataires vérifiés' },
 ];
 
 export function getCampaignAudienceLabel(value: CampaignAudience) {

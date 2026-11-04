@@ -72,7 +72,7 @@ export function useClientReservationsSession() {
       success('Réservation annulée', 'Votre réservation a été annulée.');
     } catch (cancelError) {
       console.error(cancelError);
-      error('Erreur', 'Impossible d annuler cette réservation.');
+      error('Erreur', 'Impossible d’annuler cette réservation.');
     }
   };
 
@@ -147,7 +147,7 @@ export function useClientReservationsSession() {
       closeProblemReport();
     } catch (reportSubmitError) {
       console.error(reportSubmitError);
-      error('Erreur', 'Impossible d envoyer le signalement.');
+      error('Erreur', 'Impossible d’envoyer le signalement.');
     }
   };
 

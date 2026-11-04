@@ -8,6 +8,8 @@ import {
   type Course,
 } from './courseManagementModel';
 
+import { plural } from '@/lib/formatters';
+import { SearchInput } from '@/components/ui';
 const STATUS_FILTERS = [
   { value: 'all', label: 'Tous' },
   { value: 'published', label: 'Publiés' },
@@ -57,18 +59,12 @@ export function CourseFilters({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <div className="w-5 h-5 flex items-center justify-center absolute left-3 top-1/2 -translate-y-1/2">
-            <i className="ri-search-line text-gray-400"></i>
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Rechercher une formation..."
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-teal-500 text-sm"
-          />
-        </div>
+        <SearchInput
+          containerClassName="flex-1"
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Rechercher une formation…"
+        />
         <div className="flex gap-2">
           {STATUS_FILTERS.map((status) => (
             <button
@@ -138,7 +134,7 @@ export function CoursesGrid({
                 </span>
                 <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md flex items-center gap-1">
                   <i className="ri-book-line"></i>
-                  {course.modules} modules
+                  {plural(course.modules, 'module(s)')}
                 </span>
                 <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md">
                   {COURSE_LEVEL_LABELS[course.level] || 'Intermédiaire'}

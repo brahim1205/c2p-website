@@ -182,7 +182,7 @@ export function useFormateurPublicProfileSession() {
       await queryClient.invalidateQueries({ queryKey: publicProfileQueryKey });
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Le profil public n a pas pu etre mis a jour.');
+      error('Erreur', err instanceof Error ? err.message : 'Le profil public n’a pas pu être mis à jour.');
     } finally {
       setSaving(false);
     }

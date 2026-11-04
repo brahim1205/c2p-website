@@ -59,7 +59,7 @@ export function getMilestoneMeta(status: string | null | undefined) {
   if (normalized === 'in_progress') {
     return { label: 'En cours', dot: 'bg-[#dbad29]', tone: 'text-[#d0b55e]' };
   }
-  return { label: 'A venir', dot: 'bg-[#27346b]', tone: 'text-[#27346b]' };
+  return { label: 'À venir', dot: 'bg-[#27346b]', tone: 'text-[#27346b]' };
 }
 
 export function getDocumentIcon(type: string | null | undefined) {

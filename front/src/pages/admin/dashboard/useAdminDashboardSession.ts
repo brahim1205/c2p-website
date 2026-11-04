@@ -227,7 +227,7 @@ export function useAdminDashboardSession() {
       modules,
       history,
     });
-    success('Export pret', 'Le snapshot de supervision a ete telecharge.');
+    success('Export prêt', 'Le snapshot de supervision a été téléchargé.');
   };
 
   return {

@@ -87,7 +87,7 @@ export default function SubscriptionPlanAdminPanel() {
       await load();
     } catch (saveError) {
       console.error(saveError);
-      error('Erreur', getErrorMessage(saveError, 'Impossible d enregistrer le tarif.'));
+      error('Erreur', getErrorMessage(saveError, 'Impossible d’enregistrer le tarif.'));
     } finally {
       setBusy(false);
     }

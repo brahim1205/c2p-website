@@ -136,7 +136,7 @@ export function useCourseCreationWizardSession({
 
     if (step === 3) {
       if (pendingUploadsCount > 0) {
-        setStepMessage('Attendez la fin des uploads avant de passer à l étape suivante.');
+        setStepMessage('Attendez la fin des uploads avant de passer à l’étape suivante.');
         return false;
       }
       if (hasUploadErrors) {
@@ -194,7 +194,7 @@ export function useCourseCreationWizardSession({
 
   const submitWizard = async () => {
     if (!userId) {
-      error('Session invalide', 'Impossible d identifier le formateur.');
+      error('Session invalide', 'Impossible d’identifier le formateur.');
       return;
     }
 

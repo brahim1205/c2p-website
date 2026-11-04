@@ -37,7 +37,7 @@ export function createDashboardHomeContent(totalUnread: number): Record<Dashboar
         { label: 'Demandes reçues', value: '15', icon: 'ri-inbox-line', color: 'bg-teal-600' },
         { label: 'Prestations en cours', value: '7', icon: 'ri-time-line', color: 'bg-teal-500' },
         { label: 'Prestations terminées', value: '42', icon: 'ri-checkbox-circle-line', color: 'bg-green-500' },
-        { label: 'Note moyenne', value: '4.8', icon: 'ri-star-line', color: 'bg-yellow-500' },
+        { label: 'Note moyenne', value: '4,8', icon: 'ri-star-line', color: 'bg-yellow-500' },
       ],
       quickActions: [
         { label: 'Mes services', icon: 'ri-briefcase-line', link: '/dashboard/prestataire/services', color: 'bg-teal-600' },
@@ -50,7 +50,7 @@ export function createDashboardHomeContent(totalUnread: number): Record<Dashboar
         { text: 'Nouvelle demande', detail: 'Jean Mbarga - Plomberie résidentielle', time: 'Il y a 15 min' },
         { text: 'Prestation terminée', detail: 'Réparation fuite - Sophie Nkomo', time: 'Il y a 3h' },
         { text: 'Avis 5 étoiles', detail: 'Fatima Diallo : Excellente prestation !', time: 'Il y a 1j' },
-        { text: 'Paiement reçu', detail: '25,000 FCFA - Jean Mbarga', time: 'Il y a 2j' },
+        { text: 'Paiement reçu', detail: '25 000 FCFA - Jean Mbarga', time: 'Il y a 2j' },
       ],
     },
     formateur: {
@@ -59,7 +59,7 @@ export function createDashboardHomeContent(totalUnread: number): Record<Dashboar
         { label: 'Formations actives', value: '8', icon: 'ri-presentation-line', color: 'bg-teal-600' },
         { label: 'Apprenants inscrits', value: '234', icon: 'ri-group-line', color: 'bg-teal-500' },
         { label: 'Taux de complétion', value: '87%', icon: 'ri-bar-chart-line', color: 'bg-green-500' },
-        { label: 'Note moyenne', value: '4.9', icon: 'ri-star-line', color: 'bg-yellow-500' },
+        { label: 'Note moyenne', value: '4,9', icon: 'ri-star-line', color: 'bg-yellow-500' },
       ],
       quickActions: [
         { label: 'Mes formations', icon: 'ri-book-open-line', link: '/dashboard/formateur/mes-cours', color: 'bg-teal-600' },
@@ -113,8 +113,8 @@ export function createDashboardHomeContent(totalUnread: number): Record<Dashboar
         { label: 'Mon profil', icon: 'ri-user-line', link: '/dashboard/profile', color: 'bg-slate-600' },
       ],
       activities: [
-        { text: 'Progression mise a jour', detail: 'Ibrahim Toure - Marketing digital avance', time: 'Il y a 2h' },
-        { text: 'Certificat emis', detail: 'React et interfaces modernes', time: 'Il y a 1j' },
+        { text: 'Progression mise à jour', detail: 'Ibrahim Toure - Marketing digital avance', time: 'Il y a 2h' },
+        { text: 'Certificat émis', detail: 'React et interfaces modernes', time: 'Il y a 1j' },
         { text: 'Message support', detail: 'C2P a confirme le rattachement parent', time: 'Il y a 2j' },
       ],
     },

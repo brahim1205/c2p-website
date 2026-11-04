@@ -7,6 +7,7 @@ import { deleteAdminContentItem, fetchAdminContentItems, updateAdminContentItem,
 import { downloadCsvFile } from '@/lib/downloads';
 import { queryKeys } from '@/lib/queryKeys';
 
+import { plural } from '@/lib/formatters';
 export default function AdminContentPage() {
   const queryClient = useQueryClient();
   const { success, error } = useToast();
@@ -57,9 +58,9 @@ export default function AdminContentPage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.admin.content() });
       const labels: Record<AdminContentItem['status'], string> = {
         draft: 'Contenu repasse en brouillon',
-        pending: 'Contenu renvoye en revision',
-        published: 'Contenu publie',
-        rejected: 'Contenu rejete',
+        pending: 'Contenu renvoyé en révision',
+        published: 'Contenu publié',
+        rejected: 'Contenu rejeté',
         archived: 'Contenu archive',
       };
       success(labels[status], updated.title);
@@ -67,7 +68,7 @@ export default function AdminContentPage() {
       console.error(err);
       const message = err && typeof err === 'object' && 'message' in err
         ? String(err.message)
-        : 'Impossible de mettre a jour le contenu.';
+        : 'Impossible de mettre à jour le contenu.';
       error('Erreur', message);
     }
   };
@@ -79,7 +80,7 @@ export default function AdminContentPage() {
       queryClient.setQueryData<AdminContentItem[]>(queryKeys.admin.content(), (current = []) => current.map((content) => byId.get(content.id) ?? content));
       await queryClient.invalidateQueries({ queryKey: queryKeys.admin.content() });
       setSelectedContent([]);
-      success('Traitement termine', `${updates.length} contenu(x) mis a jour.`);
+      success('Traitement terminé', `${plural(updates.length, 'contenu(s)')} mis à jour.`);
     } catch (err) {
       console.error(err);
       error('Erreur', 'Le traitement en masse a echoue.');
@@ -94,7 +95,7 @@ export default function AdminContentPage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.admin.content() });
       setShowDeleteModal(false);
       setSelectedItem(null);
-      success('Contenu supprime', 'Le contenu a ete retire.');
+      success('Contenu supprimé', 'Le contenu a été retiré.');
     } catch (err) {
       console.error(err);
       error('Erreur', 'Suppression impossible.');
@@ -114,7 +115,7 @@ export default function AdminContentPage() {
       table_source: content.source_table,
       id_source: content.source_id,
     })));
-    success('Export demarre', 'Les donnees de moderation ont ete telechargees.');
+    success('Export démarré', 'Les données de modération ont été téléchargées.');
   };
 
   return (
@@ -152,7 +153,7 @@ export default function AdminContentPage() {
 
           {selectedContent.length > 0 && (
             <div className="bg-[#5fa6f3]/10 border-b border-[#5fa6f3]/20 px-6 py-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-[#27346b]">{selectedContent.length} contenu(x) selectionne(s)</span>
+              <span className="text-sm font-medium text-[#27346b]">{plural(selectedContent.length, 'contenu(s) sélectionné(s)')}</span>
               <div className="flex items-center space-x-3">
                 <button onClick={() => handleBulkStatus('published')} className="px-4 py-2 bg-white text-[#5fa6f3] border border-[#5fa6f3] rounded-lg hover:bg-[#5fa6f3]/5 transition-colors text-sm font-medium whitespace-nowrap">Publier</button>
                 <button onClick={() => handleBulkStatus('rejected')} className="px-4 py-2 bg-white text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium whitespace-nowrap">Rejeter</button>

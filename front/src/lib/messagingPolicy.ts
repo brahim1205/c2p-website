@@ -32,8 +32,8 @@ export function getMessagingAudienceHint(role: UserRole) {
   switch (role) {
     case 'admin':
     case 'superadmin':
-      return 'Vous pouvez echanger avec tous les comptes de la plateforme.';
+      return 'Vous pouvez échanger avec tous les comptes de la plateforme.';
     default:
-      return 'Vous pouvez echanger avec les contacts autorises par C2P selon le contexte support, formation ou projet.';
+      return 'Vous pouvez échanger avec les contacts autorises par C2P selon le contexte support, formation ou projet.';
   }
 }

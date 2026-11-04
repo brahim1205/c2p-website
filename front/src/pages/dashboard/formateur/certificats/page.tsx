@@ -80,7 +80,7 @@ export default function FormateurCertificatsPage() {
     }
 
     downloadSimplePdf(`${cert.certificate_id ?? `certificat-${cert.id}`}.pdf`, {
-      title: 'CERTIFICAT DE REUSSITE',
+      title: 'CERTIFICAT DE RÉUSSITE',
       lines: [
         'Centre C2P',
         '',

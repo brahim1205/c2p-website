@@ -72,7 +72,7 @@ export function EditServiceForm({
           onEditServiceChange((prev) => ({ ...prev, image: url }))
         }
         folder="c2p/services"
-        helper="Mettez a jour le visuel affiche dans votre catalogue."
+        helper="Mettez à jour le visuel affiché dans votre catalogue."
       />
 
       <div className="grid grid-cols-2 gap-4">

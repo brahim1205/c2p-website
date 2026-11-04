@@ -183,7 +183,7 @@ export function useVirtualClassesPageSession() {
       return false;
     }
     if (!user?.id) {
-      error('Session invalide', 'Impossible d identifier le formateur.');
+      error('Session invalide', 'Impossible d’identifier le formateur.');
       return false;
     }
     const nextErrors = validateVirtualClassForm(newClass, availableCourseIds);
@@ -196,7 +196,7 @@ export function useVirtualClassesPageSession() {
     if (!selectedCourse) {
       setCreateErrors((current) => ({ ...current, course_id: 'Sélectionnez une formation valide.' }));
       setCreateFormMessage('Corrigez les champs signalés avant de programmer la classe.');
-      error('Formation invalide', 'Veuillez selectionner une formation valide.');
+      error('Formation invalide', 'Veuillez sélectionner une formation valide.');
       return false;
     }
     setIsCreating(true);
@@ -248,7 +248,7 @@ export function useVirtualClassesPageSession() {
     if (!selectedCourse) {
       setEditErrors((current) => ({ ...current, course_id: 'Sélectionnez une formation valide.' }));
       setEditFormMessage('Corrigez les champs signalés avant d’enregistrer.');
-      error('Formation invalide', 'Veuillez selectionner une formation valide.');
+      error('Formation invalide', 'Veuillez sélectionner une formation valide.');
       return;
     }
     setIsUpdating(true);

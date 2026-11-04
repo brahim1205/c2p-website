@@ -199,7 +199,7 @@ export default function OnboardingProfilePage() {
       success('Profil complété', 'Votre espace est prêt.');
       navigate(getAfterProfilePath(user.role, next), { replace: true });
     } catch {
-      error('Enregistrement impossible', 'Votre profil n a pas pu être enregistré. Réessayez.');
+      error('Enregistrement impossible', 'Votre profil n’a pas pu être enregistré. Réessayez.');
     } finally {
       setSubmitting(false);
     }
@@ -211,25 +211,25 @@ export default function OnboardingProfilePage() {
       <div className="mx-auto flex h-[calc(100dvh-1.5rem)] max-w-[1080px] items-center justify-center">
         <div className="grid h-full w-full overflow-hidden rounded-[10px] bg-white shadow-[0_24px_70px_rgba(15,28,53,0.10)] lg:grid-cols-2">
           <section className="onboarding-scrollbar h-full min-w-0 overflow-y-scroll overscroll-contain px-6 py-5 sm:px-10 sm:py-6 lg:px-12">
-            <img src="/images/brand/c2p-admin-logo.png" alt="C2P" className="h-9 w-auto" />
+            <img src="/images/brand/c2p-admin-logo.webp" alt="C2P" className="h-9 w-auto" />
 
             <div className="mt-8">
               <div className="flex max-w-[270px] gap-1.5" aria-hidden="true">
                 {Array.from({ length: stepMeta.total }, (_, item) => (
-                  <span key={item} className={`h-1.5 flex-1 rounded-full ${item < stepMeta.current ? 'bg-[#4d7f16]' : 'bg-[#e2e8f0]'}`} />
+                  <span key={item} className={`h-1.5 flex-1 rounded-full ${item < stepMeta.current ? 'bg-c2p-primary' : 'bg-[#e2e8f0]'}`} />
                 ))}
               </div>
               <div className="mt-3 flex items-center gap-2 text-xs font-bold text-[#64748b]">
-                <span className="rounded-full bg-[#e8f5d8] px-2.5 py-1 text-[#4d7f16]">Étape {stepMeta.current}/{stepMeta.total}</span>
+                <span className="rounded-full bg-c2p-success-soft px-2.5 py-1 text-c2p-primary-hover">Étape {stepMeta.current}/{stepMeta.total}</span>
                 <span>Profil {selectedUserTypeTitle?.toLowerCase()}</span>
               </div>
             </div>
 
             <div className="mt-7">
-              <p className="text-sm font-medium text-[#64748b]">Tell us</p>
+              <p className="text-sm font-medium text-[#64748b]">Faisons connaissance</p>
               <h1 className="mt-4 max-w-md text-3xl font-black leading-tight text-[#172033] sm:text-[34px]">
                 {isClientOnboarding
-                  ? 'What is your preferred location?'
+                  ? 'Où souhaitez-vous être accompagné ?'
                   : isProviderDetailsStep
                     ? 'Complétez votre profil prestataire'
                   : isPartnerDetailsStep
@@ -311,15 +311,15 @@ export default function OnboardingProfilePage() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <OnboardingInput
                       id="onboarding-provider-title"
-                      label="Metier principal *"
+                      label="Métier principal *"
                       value={roleProfile.publicTitle}
-                      placeholder="Ex: Electricien batiment"
+                      placeholder="Ex: Électricien bâtiment"
                       disabled={submitting}
                       onChange={(value) => setRoleProfile((current) => ({ ...current, publicTitle: value }))}
                     />
                     <OnboardingInput
                       id="onboarding-provider-location"
-                      label="Zone d intervention *"
+                      label="Zone d’intervention *"
                       value={roleProfile.location}
                       placeholder="Ex: Dakar, Thies, Rufisque"
                       disabled={submitting}
@@ -330,7 +330,7 @@ export default function OnboardingProfilePage() {
                     id="onboarding-provider-services"
                     label="Services proposes *"
                     value={roleProfile.skills}
-                    placeholder="Installation electrique, depannage, maintenance"
+                    placeholder="Installation électrique, dépannage, maintenance"
                     disabled={submitting}
                     onChange={(value) => setRoleProfile((current) => ({ ...current, skills: value }))}
                   />
@@ -419,7 +419,7 @@ export default function OnboardingProfilePage() {
                 <button
                   type="submit"
                   disabled={submitting || Boolean(missingRequiredField)}
-                  className="inline-flex rounded-lg bg-[#62c800] px-8 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(98,200,0,0.28)] hover:bg-[#51a900] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex rounded-lg bg-c2p-primary px-8 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(26,154,150,0.24)] hover:bg-c2p-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? 'Enregistrement...' : isDetailsStep && isMonetizedRole(user.role) ? 'Continuer vers les clauses' : isDetailsStep ? 'Terminer mon profil' : 'Continuer'}
                 </button>
@@ -468,7 +468,7 @@ function OnboardingSelect({
         required={required}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="block w-full rounded-md border border-[#d9dee8] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#62c800] focus:ring-4 focus:ring-[#62c800]/10 disabled:cursor-not-allowed disabled:bg-slate-100"
+        className="block w-full rounded-md border border-[#d9dee8] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-c2p-primary focus:ring-4 focus:ring-[#1a9a96]/10 disabled:cursor-not-allowed disabled:bg-slate-100"
         disabled={disabled}
       >
         <option value="">{placeholder}</option>
@@ -502,7 +502,7 @@ function OnboardingTextarea({
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="block min-h-[92px] w-full resize-none rounded-md border border-[#d9dee8] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#62c800] focus:ring-4 focus:ring-[#62c800]/10 disabled:cursor-not-allowed disabled:bg-slate-100"
+        className="block min-h-[92px] w-full resize-none rounded-md border border-[#d9dee8] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-c2p-primary focus:ring-4 focus:ring-[#1a9a96]/10 disabled:cursor-not-allowed disabled:bg-slate-100"
         placeholder={placeholder}
         disabled={disabled}
       />
@@ -533,7 +533,7 @@ function OnboardingInput({
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="block w-full rounded-md border border-[#d9dee8] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-[#62c800] focus:ring-4 focus:ring-[#62c800]/10 disabled:cursor-not-allowed disabled:bg-slate-100"
+        className="block w-full rounded-md border border-[#d9dee8] bg-white px-4 py-3 text-sm text-[#172033] outline-none transition focus:border-c2p-primary focus:ring-4 focus:ring-[#1a9a96]/10 disabled:cursor-not-allowed disabled:bg-slate-100"
         placeholder={placeholder}
         disabled={disabled}
       />
@@ -544,19 +544,19 @@ function OnboardingInput({
 const onboardingScrollbarStyles = `
   .onboarding-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #4d7f16 #edf4e4;
+    scrollbar-color: #1a9a96 #e6f4f3;
     scrollbar-gutter: stable;
   }
   .onboarding-scrollbar::-webkit-scrollbar {
     width: 10px;
   }
   .onboarding-scrollbar::-webkit-scrollbar-track {
-    background: #edf4e4;
+    background: #e6f4f3;
     border-radius: 999px;
   }
   .onboarding-scrollbar::-webkit-scrollbar-thumb {
-    background: #4d7f16;
-    border: 2px solid #edf4e4;
+    background: #1a9a96;
+    border: 2px solid #e6f4f3;
     border-radius: 999px;
   }
   .onboarding-scrollbar::-webkit-scrollbar-thumb:hover {

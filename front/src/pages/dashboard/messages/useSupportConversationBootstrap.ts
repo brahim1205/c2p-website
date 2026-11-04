@@ -42,7 +42,7 @@ export function useSupportConversationBootstrap({
         messaging.setActiveConversationId(supportConversation.id);
       }
       if (shouldNotify) {
-        success('Support ouvert', 'La conversation avec l equipe C2P est prete.');
+        success('Support ouvert', 'La conversation avec l’équipe C2P est prête.');
       }
       return;
     }
@@ -64,10 +64,10 @@ export function useSupportConversationBootstrap({
 
       if (created) {
         messaging.setActiveConversationId(created.id);
-        success('Support ouvert', 'La conversation avec l equipe C2P a ete creee.');
+        success('Support ouvert', 'La conversation avec l’équipe C2P a été créée.');
       } else {
         supportBootstrapDoneRef.current = false;
-        error('Support indisponible', 'Impossible d ouvrir la conversation support.');
+        error('Support indisponible', 'Impossible d’ouvrir la conversation support.');
       }
     })();
   }, [error, messaging, searchParams, success, user]);
