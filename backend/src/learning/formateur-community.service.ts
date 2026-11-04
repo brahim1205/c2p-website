@@ -9,6 +9,7 @@ import {
   store,
   syncAppStoreFromDatabase,
   withId,
+  withoutClientId,
 } from '../data/data-app-store.js';
 import { filterRowsForActor } from '../data/data-actor-scope.js';
 import {
@@ -115,7 +116,7 @@ export class FormateurCommunityService {
     const actor = this.requireFormateurActor(user);
     const input = this.requireObject(payload, 'FAQ invalide.');
     await syncAppStoreFromDatabase(this.prisma);
-    const sanitized = sanitizeCourseFaqRecord(input, actor);
+    const sanitized = sanitizeCourseFaqRecord(withoutClientId(input), actor);
     ensureConstraints('course_faq_items', [sanitized]);
     const faq = withId(prepareInsert('course_faq_items', sanitized));
     const created = appendAppRows('course_faq_items', [faq]);

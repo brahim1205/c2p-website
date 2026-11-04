@@ -11,6 +11,7 @@ import {
   store,
   syncAppStoreFromDatabase,
   withId,
+  withoutClientId,
 } from '../data/data-app-store.js';
 import { filterRowsForActor } from '../data/data-actor-scope.js';
 import {
@@ -153,7 +154,7 @@ export class LearningService {
     }
     const raw = payload as Row;
     const sanitized = sanitizeSubmissionRecord({
-      ...raw,
+      ...withoutClientId(raw),
       exam_id: exam.id,
       student_id: actor.id,
       student_name: `${actor.firstName} ${actor.lastName}`.trim() || actor.id,

@@ -53,6 +53,17 @@ export function matches(row: Row, query: Record<string, string | string[] | unde
   });
 }
 
+/**
+ * Drops a client-supplied `id` from a create payload. Create endpoints must never let the
+ * client choose the id: reusing an existing id overwrites (and may later cascade-delete)
+ * someone else's row, because persistence upserts by `table::id`.
+ * Server-side flows that rely on deterministic ids (payments idempotency) do not use this.
+ */
+export function withoutClientId<T extends Row>(row: T): Omit<T, 'id'> {
+  const { id: _clientId, ...rest } = row;
+  return rest;
+}
+
 export function withId(row: Row): Row {
   return {
     ...row,
@@ -104,6 +115,18 @@ export function appendAppRows(table: string, rows: Row[]) {
   store[table] = [...(store[table] ?? []), ...rows];
   recomputeAppStoreDerivedData();
   return rows.map((row) => hydrateAppStoreRow(table, findRow(table, row.id) ?? row));
+}
+
+/**
+ * Removes rows previously added with `appendAppRows` from the in-memory store, e.g. when a
+ * multi-row command fails half-way, so that no phantom row stays visible until the next sync.
+ */
+export function discardAppRows(rowsByTable: Record<string, Row[]>) {
+  for (const [table, rows] of Object.entries(rowsByTable)) {
+    const ids = new Set(rows.map((row) => String(row.id)));
+    store[table] = (store[table] ?? []).filter((row) => !ids.has(String(row.id)));
+  }
+  recomputeAppStoreDerivedData();
 }
 
 export function patchAppRows(

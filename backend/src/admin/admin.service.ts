@@ -11,6 +11,7 @@ import {
   store,
   syncAppStoreFromDatabase,
   withId,
+  withoutClientId,
 } from '../data/data-app-store.js';
 import { applyDataDeleteCascade } from '../data/data-delete-cascade.js';
 import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/data-runtime.js';
@@ -56,7 +57,7 @@ export class AdminService {
     const config = this.getResourceConfig(resource);
     const input = this.requireObject(payload);
     await syncAppStoreFromDatabase(this.prisma);
-    const row = withId(prepareInsert(config.table, input));
+    const row = withId(prepareInsert(config.table, withoutClientId(input)));
     ensureConstraints(config.table, [row]);
     const created = appendAppRows(config.table, [row]);
     await this.platformPersistenceService.persistRows({ [config.table]: [row] }, {
