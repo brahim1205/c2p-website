@@ -18,16 +18,24 @@ import {
   sanitizeSubmissionRecord,
   sanitizeSubmissionUpdateRecord,
 } from '../data/data-learning-sanitizers.js';
-import { toNumber } from '../data/data-normalizers.js';
+import { examPassGrade } from '../data/data-certification.js';
+import { toNumber, trimText } from '../data/data-normalizers.js';
 import { ensureConstraints, prepareInsert } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import { LearningAssessmentsCommandService } from './learning-assessments-command.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
+import { LearningCertificationService } from './learning-certification.service.js';
 type ProgressPayload = { progress?: unknown; completedLessons?: unknown; completedLessonIds?: unknown };
 @Injectable()
 export class LearningService {
-  constructor(private readonly prisma: PrismaService, private readonly platformPersistenceService: PlatformPersistenceService, private readonly learningAssessmentsReadService: LearningAssessmentsReadService, private readonly learningAssessmentsCommandService: LearningAssessmentsCommandService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly learningAssessmentsReadService: LearningAssessmentsReadService,
+    private readonly learningAssessmentsCommandService: LearningAssessmentsCommandService,
+    private readonly learningCertificationService: LearningCertificationService,
+  ) {}
 
   async getApprenantExamsSnapshot(user: AuthUser | null) {
     const actor = this.requireLearningActor(user);
@@ -35,8 +43,8 @@ export class LearningService {
       throw new ForbiddenException('Seul un apprenant peut consulter ses examens.');
     }
     const prismaSnapshot = await this.learningAssessmentsReadService.getApprenantExamsSnapshot(actor);
-    if (prismaSnapshot) return prismaSnapshot;
     await syncAppStoreFromDatabase(this.prisma);
+    if (prismaSnapshot) return this.withAttemptRules(prismaSnapshot);
     const enrollments = this.accessibleRows('course_enrollments', actor);
     const courseIds = new Set(enrollments.map((enrollment) => String(enrollment.course_id)));
     const exams = this.accessibleRows('exams', actor)
@@ -44,9 +52,29 @@ export class LearningService {
       .sort((left, right) => this.compareDatesDesc(left.exam_date ?? left.created_at, right.exam_date ?? right.created_at));
     const submissions = this.accessibleRows('submissions', actor)
       .sort((left, right) => this.compareDatesDesc(left.submitted_at ?? left.created_at, right.submitted_at ?? right.created_at));
-    return {
+    return this.withAttemptRules({
       exams: exams.map((exam) => this.toApprenantExam(exam)),
       submissions,
+    });
+  }
+  /** Adds each exam's pass mark and whether the learner may submit again (new version / quiz retry). */
+  private withAttemptRules(snapshot: { exams: Row[]; submissions: Row[] }) {
+    const examById = new Map((store.exams ?? []).map((exam) => [String(exam.id), exam]));
+    const passGrade = (exam: Row) => examPassGrade(exam, findRow('courses', exam.course_id));
+    return {
+      exams: snapshot.exams.map((exam) => {
+        const source = examById.get(String(exam.id)) ?? exam;
+        return { ...exam, pass_grade: passGrade(source), max_attempts: toNumber(source.max_attempts) ?? 3 };
+      }),
+      submissions: snapshot.submissions.map((submission) => {
+        const exam = examById.get(String(submission.exam_id));
+        return {
+          ...submission,
+          attempt: toNumber(submission.attempt) ?? 1,
+          pass_grade: exam ? passGrade(exam) : null,
+          can_retry: exam ? this.canRetry(submission, exam) : false,
+        };
+      }),
     };
   }
   async getApprenantEnrollments(user: AuthUser | null, options: { limit?: unknown } = {}) {
@@ -64,6 +92,13 @@ export class LearningService {
   async getApprenantCertificates(user: AuthUser | null, options: { limit?: unknown; status?: unknown } = {}) {
     const actor = this.requireApprenantReadActor(user);
     await syncAppStoreFromDatabase(this.prisma);
+    // Learners enrolled before certification existed get their "in progress" certificate here.
+    if (actor.role === 'apprenant') {
+      const pairs = (store.course_enrollments ?? [])
+        .filter((row) => String(row.student_id) === String(actor.id))
+        .map((row) => ({ courseId: row.course_id, studentId: actor.id }));
+      await this.learningCertificationService.syncAndPersist(pairs, actor.id, 'learning:apprenant:certificates:sync');
+    }
     const limit = this.parseOptionalLimit(options.limit);
     const status = this.text(options.status);
     const prismaRows = await this.learningAssessmentsReadService.getApprenantCertificates(actor, { limit, status });
@@ -144,10 +179,13 @@ export class LearningService {
     if (String(exam.status ?? 'ongoing') !== 'ongoing') {
       throw new BadRequestException('Cette evaluation n est pas ouverte.');
     }
-    if ((store.submissions ?? []).some((submission) =>
+    const existing = (store.submissions ?? []).find((submission) =>
       String(submission.exam_id) === String(exam.id) && String(submission.student_id) === String(actor.id),
-    )) {
-      throw new ConflictException('Cette evaluation a deja ete soumise.');
+    );
+    if (existing && !this.canRetry(existing, exam)) {
+      throw new ConflictException(String(exam.type) === 'quiz' && String(existing.status) === 'graded'
+        ? 'Vous avez utilise toutes vos tentatives pour ce quiz.'
+        : 'Cette evaluation a deja ete soumise.');
     }
     if (!payload || typeof payload !== 'object') {
       throw new BadRequestException('Soumission invalide.');
@@ -159,9 +197,24 @@ export class LearningService {
       student_id: actor.id,
       student_name: `${actor.firstName} ${actor.lastName}`.trim() || actor.id,
     }, actor);
-    ensureConstraints('submissions', [sanitized]);
-    const submission = withId(prepareInsert('submissions', sanitized));
-    const createdSubmissions = appendAppRows('submissions', [submission]);
+    let submission: Row;
+    let createdSubmissions: Row[];
+    const beforeRowsByTable: Record<string, Row[]> = {};
+    if (existing) {
+      // New attempt (failed quiz, or new version requested by the instructor): same record, attempt + 1.
+      beforeRowsByTable.submissions = [clone(existing)];
+      createdSubmissions = patchAppRows('submissions', (row) => String(row.id) === String(existing.id), {
+        ...sanitized,
+        attempt: (toNumber(existing.attempt) ?? 1) + 1,
+        previous_grade: existing.grade ?? null,
+        resubmit_requested_at: null,
+      });
+      submission = createdSubmissions[0] ?? existing;
+    } else {
+      ensureConstraints('submissions', [sanitized]);
+      submission = withId(prepareInsert('submissions', { ...sanitized, attempt: 1 }));
+      createdSubmissions = appendAppRows('submissions', [submission]);
+    }
     const rowsToPersist: Record<string, Row[]> = {
       submissions: [submission],
     };
@@ -181,9 +234,12 @@ export class LearningService {
       })));
       rowsToPersist.notifications = appendAppRows('notifications', [notification]);
     }
+    const certification = this.learningCertificationService.collect([{ courseId: exam.course_id, studentId: actor.id }]);
+    Object.assign(rowsToPersist, this.mergeRows(rowsToPersist, certification.rowsByTable));
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
-      reason: 'learning:apprenant:exam:submit',
+      reason: existing ? 'learning:apprenant:exam:resubmit' : 'learning:apprenant:exam:submit',
+      beforeRowsByTable: { ...beforeRowsByTable, ...certification.beforeRowsByTable },
       afterRowsByTable: rowsToPersist,
     });
     return await this.learningAssessmentsReadService.getSubmissionById(String(submission.id), actor) ?? createdSubmissions[0] ?? submission;
@@ -191,8 +247,8 @@ export class LearningService {
   async getFormateurEvaluationsSnapshot(user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
     const prismaSnapshot = await this.learningAssessmentsReadService.getFormateurEvaluationsSnapshot(actor);
-    if (prismaSnapshot) return prismaSnapshot;
     await syncAppStoreFromDatabase(this.prisma);
+    if (prismaSnapshot) return this.withPassGrades(prismaSnapshot);
     const courses = this.getInstructorCourses(actor)
       .sort((left, right) => this.compareDatesDesc(left.updated_at ?? left.created_at, right.updated_at ?? right.created_at));
     const courseIds = new Set(courses.map((course) => String(course.id)));
@@ -203,7 +259,7 @@ export class LearningService {
     const submissions = hydrateRows('submissions', this.accessibleRows('submissions', actor))
       .filter((submission) => examIds.has(String(submission.exam_id)))
       .sort((left, right) => this.compareDatesDesc(left.submitted_at ?? left.created_at, right.submitted_at ?? right.created_at));
-    return {
+    return this.withPassGrades({
       exams,
       submissions,
       courses: courses.map((course) => ({
@@ -211,6 +267,17 @@ export class LearningService {
         title: course.title,
         delivery_mode: course.delivery_mode,
       })),
+    });
+  }
+  /** Effective pass mark of each exam (its own, or the course certificate percentage). */
+  private withPassGrades<T extends { exams: Row[] }>(snapshot: T): T {
+    const examById = new Map((store.exams ?? []).map((exam) => [String(exam.id), exam]));
+    return {
+      ...snapshot,
+      exams: snapshot.exams.map((exam) => {
+        const source = examById.get(String(exam.id)) ?? exam;
+        return { ...exam, pass_grade: examPassGrade(source, findRow('courses', source.course_id)), passing_grade: source.passing_grade ?? null, max_attempts: toNumber(source.max_attempts) ?? 3 };
+      }),
     };
   }
   async createFormateurExam(payload: unknown, user: AuthUser | null) {
@@ -272,6 +339,8 @@ export class LearningService {
     const updated = patchAppRows('submissions', (row) => String(row.id) === String(submission.id), sanitized);
     const rowsToPersist: Record<string, Row[]> = { submissions: updated };
     this.includeDerivedExam(rowsToPersist, submission.exam_id);
+    const gradedExam = this.getInstructorExam(String(submission.exam_id), actor);
+    const certification = this.learningCertificationService.collect([{ courseId: gradedExam.course_id, studentId: submission.student_id }]);
     if (submission.student_id) {
       const notification = withId(prepareInsert('notifications', createAppNotificationRow({
         userId: String(submission.student_id),
@@ -288,13 +357,79 @@ export class LearningService {
       })));
       rowsToPersist.notifications = appendAppRows('notifications', [notification]);
     }
+    Object.assign(rowsToPersist, this.mergeRows(rowsToPersist, certification.rowsByTable));
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
       reason: 'learning:formateur:submission:grade',
-      beforeRowsByTable: { submissions: [previous] },
+      beforeRowsByTable: { submissions: [previous], ...certification.beforeRowsByTable },
       afterRowsByTable: rowsToPersist,
     });
     return await this.learningAssessmentsReadService.getSubmissionById(String(submission.id), actor) ?? updated[0] ?? sanitized;
+  }
+  /** Udemy-style "ask for a new version": the learner can submit this exam again. */
+  async requestFormateurResubmission(submissionId: string, payload: unknown, user: AuthUser | null) {
+    const actor = this.requireFormateurActor(user);
+    const input = this.requireObject(payload, 'Demande invalide.');
+    const feedback = trimText(input.feedback);
+    if (!feedback) {
+      throw new BadRequestException('Expliquez a l apprenant ce qu il doit ameliorer.');
+    }
+    if (feedback.length > 500) {
+      throw new BadRequestException('Le commentaire ne peut pas depasser 500 caracteres.');
+    }
+    await syncAppStoreFromDatabase(this.prisma);
+    const submission = this.accessibleRows('submissions', actor).find((row) => String(row.id) === String(submissionId));
+    if (!submission) {
+      throw new NotFoundException('Soumission introuvable.');
+    }
+    const exam = this.getInstructorExam(String(submission.exam_id), actor);
+    const previous = clone(submission);
+    const now = new Date().toISOString();
+    const updated = patchAppRows('submissions', (row) => String(row.id) === String(submission.id), {
+      status: 'resubmit',
+      feedback,
+      resubmit_requested_at: now,
+      graded_at: null,
+    });
+    const rowsToPersist: Record<string, Row[]> = { submissions: updated };
+    this.includeDerivedExam(rowsToPersist, submission.exam_id);
+    const certification = this.learningCertificationService.collect([{ courseId: exam.course_id, studentId: submission.student_id }]);
+    Object.assign(rowsToPersist, this.mergeRows(rowsToPersist, certification.rowsByTable));
+    if (submission.student_id) {
+      const notification = withId(prepareInsert('notifications', createAppNotificationRow({
+        userId: String(submission.student_id),
+        title: 'Nouvelle version demandee',
+        message: `Votre formateur vous demande de reprendre "${this.text(exam.title, 'Evaluation')}" : ${feedback}`,
+        type: 'evaluation',
+        link: '/dashboard/apprenant/examens',
+        metadata: { exam_id: exam.id, submission_id: submission.id },
+      })));
+      rowsToPersist.notifications = [...(rowsToPersist.notifications ?? []), ...appendAppRows('notifications', [notification])];
+    }
+    await this.platformPersistenceService.persistRows(rowsToPersist, {
+      actorId: actor.id,
+      reason: 'learning:formateur:submission:resubmit',
+      beforeRowsByTable: { submissions: [previous], ...certification.beforeRowsByTable },
+      afterRowsByTable: rowsToPersist,
+    });
+    return await this.learningAssessmentsReadService.getSubmissionById(String(submission.id), actor) ?? updated[0];
+  }
+  /** A new attempt is allowed after a "new version" request, or for a failed quiz with attempts left. */
+  private canRetry(submission: Row, exam: Row) {
+    if (String(submission.status) === 'resubmit') return true;
+    if (String(exam.type) !== 'quiz' || String(submission.status) !== 'graded') return false;
+    const course = findRow('courses', exam.course_id);
+    const passed = (toNumber(submission.grade) ?? 0) >= examPassGrade(exam, course);
+    const attempts = toNumber(submission.attempt) ?? 1;
+    return !passed && attempts < (toNumber(exam.max_attempts) ?? 3);
+  }
+  /** Concatenates rows per table (e.g. notifications produced by two different steps). */
+  private mergeRows(target: Record<string, Row[]>, extra: Record<string, Row[]>) {
+    const merged: Record<string, Row[]> = {};
+    for (const [table, rows] of Object.entries(extra)) {
+      merged[table] = [...(target[table] ?? []), ...rows];
+    }
+    return merged;
   }
   private requireLearningActor(user: AuthUser | null) {
     if (!user) {

@@ -113,6 +113,11 @@ export function ExamensListPanel({
                   )}
                 </div>
 
+                {exam.myStatus === 'resubmit' && exam.myFeedback ? (
+                  <p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm leading-6 text-blue-900">
+                    <strong>Votre formateur :</strong> {exam.myFeedback}
+                  </p>
+                ) : null}
                 {exam.instructions ? (
                   <p className="mb-4 line-clamp-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 text-gray-700">
                     {exam.instructions}
@@ -126,11 +131,34 @@ export function ExamensListPanel({
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
                   <div className="text-sm text-gray-500">
                     {exam.myStatus === 'pending' && 'Votre réponse attend une correction.'}
-                    {exam.myStatus === 'graded' && 'Le résultat est disponible.'}
+                    {exam.myStatus === 'graded' && exam.myGrade !== null && exam.pass_grade != null
+                      ? (exam.myGrade >= exam.pass_grade
+                        ? <span className="font-semibold text-green-700">Épreuve validée</span>
+                        : <span className="font-semibold text-red-700">Non validée (minimum {exam.pass_grade}/{exam.max_grade})</span>)
+                      : exam.myStatus === 'graded' && 'Le résultat est disponible.'}
+                    {exam.myStatus === 'resubmit' && 'Votre formateur vous demande une nouvelle version.'}
                     {!exam.submitted && quizReady && 'Prêt à être traité.'}
                     {!quizReady && 'Quiz en cours de configuration.'}
                   </div>
-                  {!exam.submitted ? (
+                  {exam.canRetry ? (
+                    <div className="flex flex-wrap gap-2">
+                      {submission?.status === 'graded' ? (
+                        <button type="button" onClick={() => onSelectResult(submission)}
+                          className="rounded-lg bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100">
+                          Voir résultat
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => onOpenSubmit(exam)}
+                        className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700"
+                      >
+                        {exam.type === 'quiz'
+                          ? `Repasser le quiz (${exam.attempt + 1}/${exam.max_attempts ?? 3})`
+                          : 'Renvoyer une nouvelle version'}
+                      </button>
+                    </div>
+                  ) : !exam.submitted ? (
                     <button
                       type="button"
                       onClick={() => onOpenSubmit(exam)}

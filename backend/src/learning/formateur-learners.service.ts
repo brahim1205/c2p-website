@@ -14,6 +14,8 @@ import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
+import { enrollmentPairsForCourses } from '../data/data-certification.js';
+import { LearningCertificationService } from './learning-certification.service.js';
 
 @Injectable()
 export class FormateurLearnersService {
@@ -22,11 +24,18 @@ export class FormateurLearnersService {
     private readonly platformPersistenceService: PlatformPersistenceService,
     private readonly learningAssessmentsReadService: LearningAssessmentsReadService,
     private readonly notificationsService: NotificationsService,
+    private readonly learningCertificationService: LearningCertificationService,
   ) {}
 
   async getCertificates(user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
     await syncAppStoreFromDatabase(this.prisma);
+    // Creates missing "in progress" certificates and delivers the ones whose requirements are met.
+    await this.learningCertificationService.syncAndPersist(
+      enrollmentPairsForCourses(this.instructorCourseIds(actor)),
+      actor.id,
+      'learning:formateur:certificates:sync',
+    );
     const prismaRows = await this.learningAssessmentsReadService.getFormateurCertificates(actor);
     if (prismaRows) return prismaRows;
     const courseIds = this.instructorCourseIds(actor);

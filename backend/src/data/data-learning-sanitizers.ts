@@ -381,6 +381,12 @@ export function sanitizeExamRecord(row: Row, user: AuthUser) {
   normalized.participants = participants;
   normalized.submitted = submitted;
   normalized.max_grade = requireNumberInRange(normalized.max_grade ?? 20, 1, 100, 'La note maximale doit etre comprise entre 1 et 100.');
+  // Pass mark (out of max_grade) used by the certificate; empty = the course percentage.
+  normalized.passing_grade = normalized.passing_grade === undefined || normalized.passing_grade === null || normalized.passing_grade === ''
+    ? null
+    : requireNumberInRange(normalized.passing_grade, 0, Number(normalized.max_grade), 'La note de passage doit etre comprise entre 0 et la note maximale.');
+  // Attempts allowed for an automatically graded quiz (a failed attempt can be retried).
+  normalized.max_attempts = requireNumberInRange(normalized.max_attempts ?? 3, 1, 10, 'Le nombre de tentatives doit etre compris entre 1 et 10.');
   normalized.instructions = trimText(normalized.instructions);
   if (normalized.instructions && String(normalized.instructions).length > 1500) {
     throw new BadRequestException('La consigne ne peut pas depasser 1500 caracteres.');
@@ -533,14 +539,18 @@ export function sanitizeSubmissionRecord(row: Row, user: AuthUser) {
   normalized.student_id = user.id;
   normalized.student_name = trimText(normalized.student_name) ?? normalized.student_name ?? user.id;
   normalized.student_avatar = trimText(normalized.student_avatar);
-  normalized.feedback = trimText(normalized.feedback);
-  normalized.submitted_at = normalized.submitted_at ?? new Date().toISOString();
+  // Grade, feedback and the "graded" status never come from the learner: only the instructor
+  // (or the automatic quiz correction below) sets them.
+  normalized.feedback = null;
+  normalized.grade = null;
+  normalized.graded_at = null;
+  normalized.submitted_at = new Date().toISOString();
 
   const status = trimText(normalized.status) ?? 'pending';
-  if (!new Set(['pending', 'graded', 'late']).has(status)) {
+  if (!new Set(['pending', 'graded', 'late', 'resubmit']).has(status)) {
     throw new BadRequestException('Le statut de la soumission est invalide.');
   }
-  normalized.status = status;
+  normalized.status = status === 'late' ? 'late' : 'pending';
 
   if (String(exam.type) === 'quiz') {
     const questions = (store.quiz_questions ?? [])

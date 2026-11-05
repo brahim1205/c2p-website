@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
+import { isAdminRole, listUsers, type AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
 import {
@@ -16,6 +16,7 @@ import { prepareInsert } from '../data/data-runtime.js';
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import { createAppNotificationRow } from '../notifications/notification-payloads.js';
+import { LearningCertificationService } from './learning-certification.service.js';
 import {
   accessibleRows,
   assertCanAccessLessonThread,
@@ -61,6 +62,7 @@ export class LearningAccessService {
     private readonly learningProgressReadService: LearningProgressReadService,
     private readonly learningPublicFallbackService: LearningPublicFallbackService,
     private readonly paymentCommandsService: PaymentCommandsService,
+    private readonly learningCertificationService: LearningCertificationService,
   ) {}
 
   async getPublicCourses() {
@@ -296,16 +298,17 @@ export class LearningAccessService {
     }));
     const persisted = appendAppRows('course_quiz_attempts', [created])[0] ?? created;
 
-    const certificate = this.ensureCompletionCertificate(course, actor);
+    const certification = this.certificationFor(course.id, actor);
     await this.platformPersistenceService.persistRows({
       course_quiz_attempts: [persisted],
-      ...(certificate ? { certificates: [certificate] } : {}),
+      ...certification.rowsByTable,
     }, {
       actorId: actor.id,
       reason: 'learning:apprenant:course-quiz-attempt:create',
+      beforeRowsByTable: certification.beforeRowsByTable,
       afterRowsByTable: {
         course_quiz_attempts: [persisted],
-        ...(certificate ? { certificates: [certificate] } : {}),
+        ...certification.rowsByTable,
       },
     });
 
@@ -470,10 +473,45 @@ export class LearningAccessService {
     return Math.max(0, Number(course.current_price ?? course.price ?? 0));
   }
 
+  /**
+   * Instructor adds an existing learner account to one of their published courses (cohort /
+   * class enrolment, no payment). The certificate record is created like for a purchase.
+   */
+  async enrollLearnerAsInstructor(courseId: string, payload: unknown, user: AuthUser | null) {
+    if (!user || (user.role !== 'formateur' && !isAdminRole(user))) {
+      throw new ForbiddenException('Seul un formateur peut inscrire un apprenant.');
+    }
+    const email = String((payload as Row | null)?.email ?? '').trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      throw new BadRequestException('Adresse email de l apprenant invalide.');
+    }
+    await syncAppStoreFromDatabase(this.prisma);
+    const course = (store.courses ?? []).find((row) => String(row.id) === String(courseId));
+    if (!course || (!isAdminRole(user) && String(course.instructor_id) !== String(user.id))) {
+      throw new NotFoundException('Formation introuvable.');
+    }
+    if (String(course.status) !== 'published') {
+      throw new BadRequestException('La formation doit etre publiee avant d y inscrire des apprenants.');
+    }
+    const student = listUsers().find((account) => String(account.email ?? '').toLowerCase() === email);
+    if (!student) {
+      throw new NotFoundException('Aucun compte C2P avec cette adresse email. L apprenant doit d abord creer son compte.');
+    }
+    if (student.role !== 'apprenant') {
+      throw new BadRequestException('Ce compte n est pas un compte apprenant.');
+    }
+    if ((store.course_enrollments ?? []).some((row) => String(row.course_id) === String(course.id) && String(row.student_id) === String(student.id))) {
+      throw new HttpException('Cet apprenant est deja inscrit a cette formation.', HttpStatus.CONFLICT);
+    }
+    const enrollment = await this.createEnrollment(course, student, undefined, { enrolledBy: user });
+    return enrollment;
+  }
+
   private async createEnrollment(
     course: Row,
     actor: AuthUser,
     payment?: { transactionId: string; financialOperationId: string; amount: number; method?: string },
+    options: { enrolledBy?: AuthUser } = {},
   ) {
     const existing = getAccessibleEnrollment(String(course.id), actor);
     if (existing) return existing;
@@ -498,9 +536,13 @@ export class LearningAccessService {
       enrolled_at: now,
       last_active: now,
       created_at: now,
+      enrollment_source: options.enrolledBy ? 'instructor' : (payment ? 'purchase' : 'self'),
+      enrolled_by: options.enrolledBy?.id ?? null,
     }));
     const createdRows = appendAppRows('course_enrollments', [enrollment]);
     const rowsToPersist: Record<string, Row[]> = { course_enrollments: [enrollment] };
+    // Certifying course: the learner's certificate exists from day one ("en cours").
+    Object.assign(rowsToPersist, this.learningCertificationService.collect([{ courseId: course.id, studentId: actor.id }]).rowsByTable);
     if (course.instructor_id) {
       const notification = withId(prepareInsert('notifications', createAppNotificationRow({
         userId: String(course.instructor_id),
@@ -512,9 +554,20 @@ export class LearningAccessService {
       })));
       rowsToPersist.notifications = appendAppRows('notifications', [notification]);
     }
+    if (options.enrolledBy) {
+      const welcome = withId(prepareInsert('notifications', createAppNotificationRow({
+        userId: String(actor.id),
+        title: 'Vous avez ete inscrit a une formation',
+        message: `${`${options.enrolledBy.firstName} ${options.enrolledBy.lastName}`.trim()} vous a inscrit a "${text(course.title, 'Formation')}".`,
+        type: 'formation',
+        link: `/dashboard/apprenant/cours/${encodeURIComponent(String(course.id))}`,
+        metadata: { course_id: course.id },
+      })));
+      rowsToPersist.notifications = [...(rowsToPersist.notifications ?? []), ...appendAppRows('notifications', [welcome])];
+    }
     await this.platformPersistenceService.persistRows(rowsToPersist, {
-      actorId: actor.id,
-      reason: 'learning:apprenant:course:enroll',
+      actorId: options.enrolledBy?.id ?? actor.id,
+      reason: options.enrolledBy ? 'learning:formateur:learner:enroll' : 'learning:apprenant:course:enroll',
       afterRowsByTable: rowsToPersist,
     });
     return createdRows[0] ?? enrollment;
@@ -609,14 +662,13 @@ export class LearningAccessService {
     if (lessonProgressMutation.afterRows.length > 0) {
       rowsToPersist.lesson_progress = lessonProgressMutation.afterRows;
     }
-    const certificate = this.ensureCompletionCertificate(getAccessibleCourse(courseId, actor), actor);
-    if (certificate) {
-      rowsToPersist.certificates = [certificate];
-    }
+    const certification = this.certificationFor(courseId, actor);
+    Object.assign(rowsToPersist, certification.rowsByTable);
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
       reason: 'learning:apprenant:progress:update',
       beforeRowsByTable: {
+        ...certification.beforeRowsByTable,
         course_enrollments: [previous],
         ...(lessonProgressMutation.beforeRows.length > 0 ? { lesson_progress: lessonProgressMutation.beforeRows } : {}),
       },
@@ -730,22 +782,23 @@ export class LearningAccessService {
       status: enrollmentProgress >= 100 ? 'completed' : 'active',
       last_active: now,
     });
-    const certificate = this.ensureCompletionCertificate(getAccessibleCourse(courseId, actor), actor);
+    const certification = this.certificationFor(courseId, actor);
     await this.platformPersistenceService.persistRows({
       lesson_progress: [persistedProgress],
       course_enrollments: updatedEnrollments,
-      ...(certificate ? { certificates: [certificate] } : {}),
+      ...certification.rowsByTable,
     }, {
       actorId: actor.id,
       reason: 'learning:apprenant:lesson-progress:update',
       beforeRowsByTable: {
+        ...certification.beforeRowsByTable,
         ...(beforeRows.length > 0 ? { lesson_progress: beforeRows } : {}),
         course_enrollments: [previousEnrollment],
       },
       afterRowsByTable: {
         lesson_progress: [persistedProgress],
         course_enrollments: updatedEnrollments,
-        ...(certificate ? { certificates: [certificate] } : {}),
+        ...certification.rowsByTable,
       },
     });
     return persistedProgress;
@@ -788,73 +841,12 @@ export class LearningAccessService {
     return created[0] ?? comment;
   }
 
-  private ensureCompletionCertificate(course: Row, actor: AuthUser) {
-    if (actor.role !== 'apprenant' && !isAdminRole(actor)) return null;
-    const courseId = String(course.id);
-    const enrollment = getAccessibleEnrollment(courseId, actor);
-    if (!enrollment) return null;
-    if (String(enrollment.status) !== 'completed' && clampProgress(enrollment.progress) < 100) return null;
-
-    const quiz = buildCourseQuiz(courseId, actor);
-    if (quiz.length > 0 && !this.hasPassingQuizAttempt(courseId, actor, quiz.length)) return null;
-
-    const existing = (store.certificates ?? []).find((row) =>
-      String(row.course_id) === courseId && String(row.student_id) === String(actor.id)
-    );
-    if (existing) return null;
-
-    const now = new Date().toISOString();
-    const certificateNumber = this.buildAutoCertificateNumber(course, actor, now);
-    const finalGrade = this.getBestQuizGrade(courseId, actor, quiz.length);
-    const certificate = withId(prepareInsert('certificates', {
-      student_id: actor.id,
-      student_name: `${actor.firstName} ${actor.lastName}`.trim() || actor.email || actor.id,
-      student_avatar: actor.avatar ?? null,
-      course_id: course.id,
-      course_name: text(course.title, 'Formation C2P'),
-      title: text(course.title, 'Formation C2P'),
-      completion_date: now,
-      final_grade: finalGrade,
-      grade: finalGrade,
-      status: 'issued',
-      certificate_id: certificateNumber,
-      certificate_number: certificateNumber,
-      issued_at: now,
-      created_at: now,
-      updated_at: now,
-    }));
-    return appendAppRows('certificates', [certificate])[0] ?? certificate;
+  /** Certificate rows to write with the current change (created at enrolment, delivered when every requirement is met). */
+  private certificationFor(courseId: unknown, actor: AuthUser) {
+    if (actor.role !== 'apprenant') return { rowsByTable: {}, beforeRowsByTable: {} } as const;
+    return this.learningCertificationService.collect([{ courseId, studentId: actor.id }]);
   }
 
-  private hasPassingQuizAttempt(courseId: string, actor: AuthUser, totalQuestions: number) {
-    const bestScore = this.getBestQuizScorePercent(courseId, actor, totalQuestions);
-    return bestScore >= 70;
-  }
 
-  private getBestQuizGrade(courseId: string, actor: AuthUser, totalQuestions: number) {
-    if (totalQuestions <= 0) return null;
-    const bestScore = this.getBestQuizScorePercent(courseId, actor, totalQuestions);
-    if (bestScore < 0) return null;
-    return Math.round((bestScore / 100) * 20);
-  }
-
-  private getBestQuizScorePercent(courseId: string, actor: AuthUser, totalQuestions: number) {
-    const attempts = hydrateRows('course_quiz_attempts', store.course_quiz_attempts ?? []).filter((row) =>
-      String(row.course_id) === String(courseId) && String(row.student_id) === String(actor.id)
-    );
-    return attempts.reduce((best, attempt) => {
-      const score = toNumber(attempt.score) ?? 0;
-      const total = toNumber(attempt.total) ?? totalQuestions;
-      if (total <= 0) return best;
-      return Math.max(best, (score / total) * 100);
-    }, -1);
-  }
-
-  private buildAutoCertificateNumber(course: Row, actor: AuthUser, issuedAt: string) {
-    const year = new Date(issuedAt).getUTCFullYear();
-    const coursePart = String(course.id).replace(/[^a-zA-Z0-9]/g, '').slice(-8).toUpperCase() || 'COURSE';
-    const studentPart = String(actor.id).replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase() || 'USER';
-    return `C2P-${year}-${coursePart}-${studentPart}`;
-  }
 
 }

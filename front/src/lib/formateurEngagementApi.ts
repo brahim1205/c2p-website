@@ -50,3 +50,11 @@ export async function createFormateurAnnouncement(courseId: string | number, inp
     body: JSON.stringify(input),
   });
 }
+
+/** Instructor enrols an existing learner account (by email) in one of their published courses. */
+export async function enrollFormateurLearner(courseId: string | number, email: string) {
+  return apiRequest<{ id: string | number; course_id: string | number; student_id: string }>(
+    `/learning/formateur/courses/${encodeURIComponent(String(courseId))}/learners`,
+    { method: 'POST', body: JSON.stringify({ email: email.trim() }) },
+  );
+}

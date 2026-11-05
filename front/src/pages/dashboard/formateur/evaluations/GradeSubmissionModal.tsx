@@ -28,6 +28,7 @@ export interface GradeSubmissionModalProps {
   isGrading: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  onRequestResubmission: () => void;
   onUseSuggestedGrade: () => void;
   onGradeValueChange: (value: string) => void;
   onFeedbackValueChange: (value: string) => void;
@@ -48,11 +49,15 @@ export default function GradeSubmissionModal({
   isGrading,
   onClose,
   onConfirm,
+  onRequestResubmission,
   onUseSuggestedGrade,
   onGradeValueChange,
   onFeedbackValueChange,
 }: GradeSubmissionModalProps) {
   const textSubmission = getTextSubmissionContent(submission);
+  const passGrade = exam?.pass_grade ?? exam?.passing_grade ?? examMaxGrade / 2;
+  const typedGrade = gradeValue.trim() === '' ? null : Number(gradeValue.replace(',', '.'));
+  const verdict = typedGrade === null || Number.isNaN(typedGrade) ? null : typedGrade >= passGrade;
   const documentSubmissionUrl = getDocumentSubmissionUrl(submission);
 
   return (
@@ -224,6 +229,17 @@ export default function GradeSubmissionModal({
                     className={getFieldClass(Boolean(errors.gradeValue))}
                   />
                   {errors.gradeValue ? <p className="mt-1 text-xs text-red-600">{errors.gradeValue}</p> : null}
+                  <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                    Note de passage : <strong>{passGrade}/{examMaxGrade}</strong>
+                    {verdict === null ? null : (
+                      <span className={`rounded-full px-2 py-0.5 font-semibold ${verdict ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                        {verdict ? 'Réussi' : 'Insuffisant'}
+                      </span>
+                    )}
+                  </p>
+                  {verdict === false ? (
+                    <p className="mt-1 text-xs text-gray-500">Le certificat attendra que l’apprenant réussisse : demandez-lui une nouvelle version.</p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Commentaire pour l’apprenant</label>
@@ -248,6 +264,14 @@ export default function GradeSubmissionModal({
                   className="w-full rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isGrading ? 'Enregistrement...' : 'Publier la correction'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onRequestResubmission}
+                  disabled={isGrading}
+                  className="w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-50"
+                >
+                  Demander une nouvelle version
                 </button>
                 <button
                   type="button"

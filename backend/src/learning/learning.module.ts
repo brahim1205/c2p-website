@@ -12,6 +12,7 @@ import { FormateurVirtualClassesService } from './formateur-virtual-classes.serv
 import { LearningAccessService } from './learning-access.service.js';
 import { LearningAssessmentsCommandService } from './learning-assessments-command.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
+import { LearningCertificationService } from './learning-certification.service.js';
 import { LearningController } from './learning.controller.js';
 import { LearningParentController } from './learning-parent.controller.js';
 import { LearningProgressReadService } from './learning-progress-read.service.js';
@@ -32,6 +33,7 @@ import { LearningService } from './learning.service.js';
     LearningAccessService,
     LearningAssessmentsCommandService,
     LearningAssessmentsReadService,
+    LearningCertificationService,
     LearningProgressReadService,
     LearningPublicFallbackService,
     LearningPublicReadService,

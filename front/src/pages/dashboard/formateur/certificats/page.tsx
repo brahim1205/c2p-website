@@ -4,7 +4,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
-import { downloadSimplePdf } from '@/lib/downloads';
+import { downloadCertificatePdf } from '@/lib/downloads';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   deleteFormateurCertificate,
@@ -19,7 +19,7 @@ import {
 } from './CertificatePanels';
 import {
   filterCertificates,
-  formatCertificateGrade,
+  toCertificateData,
   type Certificate,
   type CertificateFilter,
 } from './certificatesModel';
@@ -58,6 +58,7 @@ export default function FormateurCertificatsPage() {
   const filteredCerts = filterCertificates(certs, filter);
 
   const handleIssue = async (cert: Certificate) => {
+    if (!window.confirm(`Délivrer le certificat de ${cert.student_name} sans attendre la validation de toutes les étapes ? Il sera immédiatement vérifiable.`)) return;
     try {
       await issueFormateurCertificate(cert);
       success('Certificat délivré', `Le certificat pour ${cert.student_name} a été généré avec succès.`);
@@ -79,26 +80,14 @@ export default function FormateurCertificatsPage() {
       return;
     }
 
-    downloadSimplePdf(`${cert.certificate_id ?? `certificat-${cert.id}`}.pdf`, {
-      title: 'CERTIFICAT DE RÉUSSITE',
-      lines: [
-        'Centre C2P',
-        '',
-        'Ce certificat est decerne a',
-        cert.student_name,
-        '',
-        `Formation: ${cert.course_name ?? 'Formation C2P'}`,
-        `Identifiant: ${cert.certificate_id ?? cert.id}`,
-        `Note finale: ${formatCertificateGrade(cert.final_grade)}`,
-        `Date: ${cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}`,
-      ],
-    });
-
+    const data = toCertificateData(cert);
+    downloadCertificatePdf(`certificat-${data.certificateId}.pdf`, data);
     success('Téléchargement', `Le certificat ${cert.certificate_id ?? cert.id} a été généré.`);
   };
 
   const handleDelete = async (cert: Certificate) => {
-    if (!window.confirm(`Voulez-vous vraiment supprimer le certificat de ${cert.student_name} ?`)) return;
+    const action = cert.status === 'issued' ? 'révoquer' : 'supprimer';
+    if (!window.confirm(`Voulez-vous vraiment ${action} le certificat de ${cert.student_name} ?${cert.status === 'issued' ? ' Sa vérification publique ne fonctionnera plus.' : ''}`)) return;
     try {
       await deleteFormateurCertificate(cert.id);
       success('Supprimé', `Le certificat de ${cert.student_name} a été supprimé.`);
@@ -136,7 +125,6 @@ export default function FormateurCertificatsPage() {
           loading={loading}
           onDelete={handleDelete}
           onDownload={handleDownload}
-          onIssue={handleIssue}
           onPreview={handlePreview}
         />
 

@@ -44,6 +44,26 @@ export interface ApprenantCertificate {
   certificate_number: string | null;
   issued_at: string | null;
   completion_date?: string | null;
+  course_id?: number | string;
+  instructor_name?: string | null;
+  course_duration?: string | null;
+  progress_percent?: number;
+  /** Server-computed progress towards the certificate (status `in_progress`). */
+  requirements?: CertificateRequirements | null;
+}
+
+export interface CertificateRequirements {
+  lessons: { completed: boolean; progress: number };
+  exams: Array<{
+    exam_id: string;
+    title: string;
+    status: 'passed' | 'failed' | 'pending_review' | 'resubmit' | 'not_submitted';
+    grade: number | null;
+    max_grade: number;
+    pass_grade: number;
+  }>;
+  pass_percentage: number;
+  ready: boolean;
 }
 
 export interface ApprenantSubmission {
@@ -56,6 +76,12 @@ export interface ApprenantSubmission {
   file_name?: string | null;
   file_url?: string | null;
   answers?: ApprenantSubmittedAnswer[] | null;
+  /** Attempt number (1 = first submission). */
+  attempt?: number;
+  /** Pass mark of the exam this submission belongs to. */
+  pass_grade?: number | null;
+  /** True after a "new version" request, or for a failed quiz with attempts left. */
+  can_retry?: boolean;
 }
 
 export type ApprenantExamType = 'quiz' | 'assignment' | 'project';
@@ -80,6 +106,8 @@ export interface ApprenantExam {
   max_grade: number;
   status: string;
   questions_count?: number;
+  pass_grade?: number;
+  max_attempts?: number;
   created_at: string;
 }
 

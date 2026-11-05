@@ -3,337 +3,157 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
+import CertificateRequirements from '@/components/feature/CertificateRequirements';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { formatDate, formatDateTime } from '@/lib/formatters';
+import { formatDate } from '@/lib/formatters';
 import { downloadCertificatePdf } from '@/lib/downloads';
+import { buildCertificateVerificationUrl } from '@/lib/certificateVerification';
 import CertificateViewer, { type CertificateData } from '../../profile/components/CertificateViewer';
-import {
-  fetchApprenantEnrollments,
-  fetchApprenantCertificates,
-  type ApprenantCertificate as Certificate,
-  type ApprenantEnrollment as Enrollment,
-} from '@/lib/apprenantDashboardApi';
+import { fetchApprenantCertificates, type ApprenantCertificate as Certificate } from '@/lib/apprenantDashboardApi';
 import { queryKeys } from '@/lib/queryKeys';
 
-function formatCertificateGrade(value: number | null) {
-  return value != null ? `${value}/20` : '-';
-}
-
-type CertificateStatus = 'issued' | 'ready' | 'pending';
-
-type CertificateView = {
-  id: string;
-  studentName: string;
-  courseName: string;
-  instructor: string;
-  grade: number | null;
-  status: CertificateStatus;
-  certificateNumber: string | null;
-  issuedAt: string | null;
-  completionDate: string | null;
-};
-
-function normalizeStatus(status: string | undefined): CertificateStatus {
-  if (status === 'issued' || status === 'active') return 'issued';
-  if (status === 'ready') return 'ready';
-  return 'pending';
-}
-
-function fromDatabaseCertificate(certificate: Certificate): CertificateView {
+function toCertificateData(certificate: Certificate): CertificateData {
   return {
-    id: `db-${certificate.id}`,
     studentName: certificate.student_name?.trim() || 'Apprenant C2P',
-    courseName: certificate.course_name || certificate.title || 'Formation C2P',
-    instructor: 'C2P Academy',
-    grade: certificate.final_grade ?? certificate.grade ?? null,
-    status: normalizeStatus(certificate.status),
-    certificateNumber: certificate.certificate_number || certificate.certificate_id || null,
-    issuedAt: certificate.issued_at,
-    completionDate: certificate.completion_date || null,
+    courseTitle: certificate.course_name || certificate.title || 'Formation C2P',
+    instructor: certificate.instructor_name || 'Formateur C2P',
+    date: formatDate(certificate.issued_at || certificate.completion_date || new Date().toISOString()),
+    certificateId: String(certificate.certificate_number || certificate.certificate_id),
+    duration: certificate.course_duration ?? null,
+    finalGrade: certificate.final_grade ?? certificate.grade ?? null,
   };
-}
-
-function buildPreviewCertificate(enrollment: Enrollment, user: { firstName?: string; lastName?: string } | null | undefined): CertificateView {
-  const completionDate = enrollment.last_active || enrollment.enrolled_at || new Date().toISOString();
-  const studentName =
-    enrollment.student_name?.trim()
-    || `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
-    || 'Apprenant C2P';
-  const courseName = enrollment.courses?.title || enrollment.course_name || 'Formation C2P';
-  const generatedId = `PREVIEW-${String(enrollment.course_id)}-${studentName.replace(/\s+/g, '-').toUpperCase()}`;
-
-  return {
-    id: `preview-${enrollment.id}`,
-    studentName,
-    courseName,
-    instructor: 'C2P Academy',
-    grade: enrollment.grade ?? null,
-    status: 'ready',
-    certificateNumber: generatedId,
-    issuedAt: null,
-    completionDate,
-  };
-}
-
-function getCertificateDate(certificate: CertificateView) {
-  return certificate.issuedAt || certificate.completionDate || '';
-}
-
-function getCertificateCompletionDate(certificate: CertificateView) {
-  return certificate.completionDate || certificate.issuedAt || '';
 }
 
 export default function ApprenantCertificatsPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [statusFilter, setStatusFilter] = useState<'all' | CertificateStatus>('all');
   const [viewerData, setViewerData] = useState<CertificateData | null>(null);
-  const [showViewer, setShowViewer] = useState(false);
 
-  const {
-    data: databaseCertificates = [],
-    isError,
-    isLoading: loading,
-  } = useQuery<Certificate[]>({
+  const { data: certificates = [], isError, isLoading } = useQuery<Certificate[]>({
     queryKey: queryKeys.apprenant.certificates(user?.id),
     queryFn: () => fetchApprenantCertificates(user?.id ?? ''),
     enabled: Boolean(user?.id),
   });
-  const { data: enrollments = [] } = useQuery<Enrollment[]>({
-    queryKey: queryKeys.apprenant.enrollments(user?.id),
-    queryFn: () => fetchApprenantEnrollments(user?.id ?? ''),
-    enabled: Boolean(user?.id),
-  });
 
   useEffect(() => {
-    if (isError) {
-      error('Erreur', 'Impossible de charger vos certificats.');
-    }
+    if (isError) error('Erreur', 'Impossible de charger vos certificats.');
   }, [error, isError]);
 
-  const certificates = useMemo(() => {
-    const normalized = databaseCertificates.map(fromDatabaseCertificate);
-    const hasCertificateForCourse = new Set(
-      databaseCertificates.map((certificate) => String(certificate.course_name || certificate.title || '').toLowerCase().trim()),
-    );
-    const previewCertificates = enrollments
-      .filter((enrollment) => Number(enrollment.progress || 0) >= 100 || String(enrollment.status || '').toLowerCase() === 'completed')
-      .filter((enrollment) => {
-        const key = String(enrollment.courses?.title || enrollment.course_name || '').toLowerCase().trim();
-        return key && !hasCertificateForCourse.has(key);
-      })
-      .map((enrollment) => buildPreviewCertificate(enrollment, user));
-    const seen = new Set<string>();
-    return [...normalized, ...previewCertificates]
-      .filter((certificate) => {
-        const key = certificate.certificateNumber || certificate.courseName.toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .sort((a, b) => new Date(getCertificateDate(b) || 0).getTime() - new Date(getCertificateDate(a) || 0).getTime());
-  }, [databaseCertificates, enrollments, user]);
+  // Only certificates delivered by C2P (status "issued") are documents; the others show progress.
+  const issued = useMemo(() => certificates.filter((certificate) => certificate.status === 'issued'), [certificates]);
+  const inProgress = useMemo(() => certificates.filter((certificate) => certificate.status !== 'issued'), [certificates]);
 
-  const filteredCertificates = useMemo(() => {
-    if (statusFilter === 'all') return certificates;
-    return certificates.filter((certificate) => certificate.status === statusFilter);
-  }, [certificates, statusFilter]);
-
-  const stats = useMemo(() => {
-    const issuedWithGrades = certificates.filter((certificate) => certificate.status === 'issued' && certificate.grade != null);
-
-    return {
-      issued: certificates.filter((certificate) => certificate.status === 'issued').length,
-      ready: certificates.filter((certificate) => certificate.status === 'ready').length,
-      pending: certificates.filter((certificate) => certificate.status === 'pending').length,
-      avgGrade: issuedWithGrades.length
-        ? (issuedWithGrades.reduce((sum, certificate) => sum + Number(certificate.grade), 0) / issuedWithGrades.length).toFixed(1)
-        : '0.0',
-    };
-  }, [certificates]);
-
-  const latestIssuedCertificate = useMemo(
-    () => certificates.find((certificate) => certificate.status === 'issued' || certificate.status === 'ready'),
-    [certificates],
-  );
-
-  const openViewer = (certificate: CertificateView) => {
-    if (certificate.status === 'pending') {
-      error('Certificat indisponible', 'Ce certificat n’est pas encore emissible.');
-      return;
-    }
-
-    setViewerData({
-      studentName: certificate.studentName,
-      courseTitle: certificate.courseName,
-      instructor: certificate.instructor,
-      date: getCertificateCompletionDate(certificate) ? formatDate(getCertificateCompletionDate(certificate)) : '',
-      certificateId: certificate.certificateNumber || certificate.id,
-    });
-    setShowViewer(true);
+  const download = (certificate: Certificate) => {
+    const data = toCertificateData(certificate);
+    downloadCertificatePdf(`certificat-${data.certificateId}.pdf`, data);
+    success('Certificat prêt', 'La version imprimable s’ouvre : choisissez « Enregistrer en PDF ».');
   };
 
-  const handleDownload = (certificate: CertificateView) => {
-    if (certificate.status === 'pending') {
-      error('Indisponible', 'Le téléchargement sera disponible après emission.');
-      return;
+  const copyLink = async (certificate: Certificate) => {
+    const url = buildCertificateVerificationUrl(String(certificate.certificate_number || certificate.certificate_id));
+    try {
+      await navigator.clipboard.writeText(url);
+      success('Lien copié', 'Partagez-le (LinkedIn, CV…) : il permet de vérifier votre certificat.');
+    } catch {
+      error('Copie impossible', url);
     }
-    downloadCertificatePdf(`${certificate.certificateNumber || `certificat-${certificate.id}`}.pdf`, {
-      studentName: certificate.studentName,
-      courseTitle: certificate.courseName,
-      instructor: certificate.instructor,
-      date: getCertificateCompletionDate(certificate) ? formatDate(getCertificateCompletionDate(certificate)) : '-',
-      certificateId: certificate.certificateNumber || certificate.id,
-    });
-    success('Certificat prêt', 'La version imprimable s’ouvre pour enregistrement en PDF.');
   };
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
-        <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Apprenant', path: '/dashboard/apprenant' }, { label: 'Certificats' }]} />
-
+      <div className="mx-auto max-w-6xl">
+        <Breadcrumb items={[{ label: 'Apprenant', path: '/dashboard/apprenant' }, { label: 'Certificats' }]} />
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes certificats</h1>
-          <p className="text-gray-600">Retrouvez vos certificats emis par C2P et ceux generes apres une formation terminee.</p>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900">Mes certificats</h1>
+          <p className="text-gray-600">
+            Chaque formation certifiante vous ouvre un certificat dès l’inscription. Il vous est délivré automatiquement quand vous avez suivi toutes les leçons et réussi toutes les évaluations.
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: 'Emis', value: stats.issued, icon: 'ri-award-line', color: 'bg-green-500' },
-            { label: 'Prets', value: stats.ready, icon: 'ri-time-line', color: 'bg-amber-500' },
-            { label: 'En attente', value: stats.pending, icon: 'ri-loader-4-line', color: 'bg-blue-500' },
-            { label: 'Note moyenne', value: stats.avgGrade, icon: 'ri-bar-chart-line', color: 'bg-[#5fa6f3]' },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-lg ${stat.color} text-white flex items-center justify-center`}>
-                  <i className={`${stat.icon} text-base`}></i>
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-xs text-gray-600">{stat.label}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {isLoading ? <div className="h-40 animate-pulse rounded-2xl bg-gray-100" /> : null}
 
-        <div className="flex flex-wrap gap-2 mb-6">
-          {(['all', 'issued', 'ready', 'pending'] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === status ? 'bg-[#5fa6f3] text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {status === 'all' ? 'Tous' : status === 'issued' ? 'Emis' : status === 'ready' ? 'Prets' : 'En attente'}
-            </button>
-          ))}
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-5">
-          {loading && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {[0, 1, 2, 3].map((item) => (
-                <div key={item} className="h-40 animate-pulse rounded-2xl bg-gray-100" />
-              ))}
-            </div>
-          )}
-
-          {!loading && filteredCertificates.length > 0 && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {filteredCertificates.map((certificate) => (
-                <article key={certificate.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-start gap-4">
+        {!isLoading ? (
+          <section className="mb-10">
+            <h2 className="mb-4 text-lg font-bold text-gray-900">Certificats obtenus <span className="text-gray-400">({issued.length})</span></h2>
+            {issued.length ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {issued.map((certificate) => (
+                  <article key={String(certificate.id)} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-start gap-4">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
-                        <i className="ri-award-line text-xl" />
+                        <i className="ri-award-fill text-2xl" aria-hidden="true" />
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-gray-900">{certificate.courseName}</p>
-                        <p className="mt-1 text-sm text-gray-500">{certificate.certificateNumber || 'Numero non genere'}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900">{certificate.course_name || certificate.title}</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          N° {certificate.certificate_number} · délivré le {certificate.issued_at ? formatDate(certificate.issued_at) : '–'}
+                        </p>
+                        {certificate.final_grade != null ? (
+                          <p className="mt-1 text-sm text-gray-700">Note finale : <strong>{String(certificate.final_grade).replace('.', ',')}/20</strong></p>
+                        ) : null}
                       </div>
                     </div>
-                    <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-                      certificate.status === 'issued'
-                        ? 'bg-green-100 text-green-700'
-                        : certificate.status === 'ready'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {certificate.status === 'issued' ? 'Emis' : certificate.status === 'ready' ? 'Pret' : 'En attente'}
-                    </span>
-                  </div>
-
-                  <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-xl bg-gray-50 px-3 py-3">
-                      <p className="text-xs text-gray-500">Note finale</p>
-                      <p className="mt-1 font-semibold text-gray-900">{formatCertificateGrade(certificate.grade)}</p>
+                    <div className="mt-5 flex flex-wrap justify-end gap-2">
+                      <button type="button" onClick={() => void copyLink(certificate)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i className="ri-link mr-1" aria-hidden="true" />Lien de vérification
+                      </button>
+                      <button type="button" onClick={() => setViewerData(toCertificateData(certificate))} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Voir
+                      </button>
+                      <button type="button" onClick={() => download(certificate)} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                        <i className="ri-download-2-line mr-1" aria-hidden="true" />Télécharger (PDF)
+                      </button>
                     </div>
-                    <div className="rounded-xl bg-gray-50 px-3 py-3">
-                      <p className="text-xs text-gray-500">Emission</p>
-                      <p className="mt-1 font-semibold text-gray-900">
-                        {certificate.issuedAt ? formatDate(certificate.issuedAt) : certificate.completionDate ? formatDate(certificate.completionDate) : '-'}
-                      </p>
-                    </div>
-                  </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center text-sm text-gray-500">
+                Pas encore de certificat obtenu. Terminez les étapes ci-dessous pour décrocher le premier.
+              </p>
+            )}
+          </section>
+        ) : null}
 
-                  <div className="mt-5 flex flex-wrap justify-end gap-2">
-                    <button
-                      onClick={() => openViewer(certificate)}
-                      disabled={certificate.status === 'pending'}
-                      className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Voir
-                    </button>
-                    <button
-                      onClick={() => handleDownload(certificate)}
-                      disabled={certificate.status === 'pending'}
-                      className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Telecharger
-                    </button>
+        {!isLoading && inProgress.length ? (
+          <section>
+            <h2 className="mb-4 text-lg font-bold text-gray-900">En cours <span className="text-gray-400">({inProgress.length})</span></h2>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {inProgress.map((certificate) => (
+                <article key={String(certificate.id)} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <p className="font-semibold text-gray-900">{certificate.course_name || certificate.title}</p>
+                    <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">En cours</span>
+                  </div>
+                  <CertificateRequirements requirements={certificate.requirements} />
+                  <div className="mt-4 flex flex-wrap justify-end gap-2">
+                    <Link to="/dashboard/apprenant/examens" className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Mes évaluations</Link>
+                    {certificate.course_id ? (
+                      <Link to={`/dashboard/apprenant/cours/${encodeURIComponent(String(certificate.course_id))}`} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                        Continuer la formation
+                      </Link>
+                    ) : null}
                   </div>
                 </article>
               ))}
             </div>
-          )}
+          </section>
+        ) : null}
 
-          {!loading && filteredCertificates.length === 0 && (
-            <div className="py-14 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
-                <i className="ri-award-line text-2xl" />
-              </div>
-              <h2 className="mt-4 text-lg font-semibold text-gray-900">Aucun certificat</h2>
-              <p className="mt-1 text-sm text-gray-500">Terminez une formation eligible pour voir votre certificat ici.</p>
-              <Link to="/dashboard/apprenant/mes-cours" className="mt-4 inline-flex rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                Voir mes formations
-              </Link>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
-          <h2 className="text-lg font-semibold text-gray-900">Derniere emission</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {latestIssuedCertificate?.issuedAt
-              ? `Dernier certificat émis le ${formatDateTime(latestIssuedCertificate.issuedAt)}.`
-              : latestIssuedCertificate?.completionDate
-                ? `Un certificat prêt est disponible depuis le ${formatDateTime(latestIssuedCertificate.completionDate)}.`
-                : 'Aucun certificat émis pour le moment.'}
-          </p>
-        </div>
+        {!isLoading && !certificates.length ? (
+          <div className="rounded-2xl border border-gray-200 bg-white py-14 text-center">
+            <i className="ri-award-line text-4xl text-gray-400" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-gray-900">Aucun certificat pour l’instant</h2>
+            <p className="mt-1 text-sm text-gray-500">Inscrivez-vous à une formation certifiante : votre certificat apparaîtra ici.</p>
+            <Link to="/espace-numerique" className="mt-4 inline-flex rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+              Découvrir les formations
+            </Link>
+          </div>
+        ) : null}
       </div>
 
-      {showViewer && viewerData && (
-        <CertificateViewer
-          data={viewerData}
-          onClose={() => setShowViewer(false)}
-        />
-      )}
+      {viewerData ? <CertificateViewer data={viewerData} onClose={() => setViewerData(null)} /> : null}
     </DashboardLayout>
   );
 }

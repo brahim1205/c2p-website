@@ -31,6 +31,10 @@ export interface Exam {
   questions_count?: number;
   open_questions_count?: number;
   auto_gradable?: boolean;
+  /** Effective pass mark (exam's own, or the course certificate percentage). */
+  pass_grade?: number;
+  passing_grade?: number | null;
+  max_attempts?: number;
   created_at: string;
 }
 

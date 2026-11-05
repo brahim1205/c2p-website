@@ -40,7 +40,7 @@ export default function PricingPanel({ studio, course }: { studio: CourseStudio;
 
   return (
     <div className="space-y-8">
-      <PanelHeader title="Tarification" description="Choisissez si votre cours est gratuit ou payant. Vous pourrez modifier le prix plus tard." />
+      <PanelHeader title="Tarification et certificat" description="Choisissez si votre cours est gratuit ou payant, et s’il délivre un certificat. Vous pourrez modifier ces réglages plus tard." />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <ChoiceCard selected={course.is_free} icon="ri-gift-line" title="Gratuit"
@@ -69,6 +69,26 @@ export default function PricingPanel({ studio, course }: { studio: CourseStudio;
           </p>
         </div>
       ) : null}
+
+      <section className="space-y-4 rounded-2xl border border-c2p-border bg-c2p-surface p-5">
+        <label className="flex items-start gap-3">
+          <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--c2p-primary)]" checked={course.certificate_enabled !== false}
+            onChange={(event) => void studio.patchCourse({ certificate_enabled: event.target.checked })} />
+          <span>
+            <span className="block text-base font-bold text-c2p-text">Formation certifiante</span>
+            <span className="block text-sm text-c2p-muted">
+              Chaque inscrit (achat ou inscription par vous) reçoit un certificat « en cours ». Il est délivré automatiquement, à son nom, quand il a suivi toutes les leçons et réussi toutes les évaluations — avec votre nom comme responsable pédagogique et le cachet C2P.
+            </span>
+          </span>
+        </label>
+        {course.certificate_enabled !== false ? (
+          <div className="max-w-xs">
+            <NumberField label="Seuil de réussite des évaluations" suffix="%" value={course.certificate_pass_percentage ?? 50} min={1} max={100}
+              hint="Note minimale à chaque évaluation (sauf si l’évaluation fixe sa propre note de passage)."
+              onSave={(value) => studio.patchCourse({ certificate_pass_percentage: value })} />
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

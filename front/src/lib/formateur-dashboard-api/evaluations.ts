@@ -38,6 +38,14 @@ export async function gradeFormateurSubmission(userId: string, input: {
   );
 }
 
+/** Udemy-style "ask for a new version": the learner may submit again; feedback is required. */
+export async function requestFormateurResubmission(submissionId: string | number, feedback: string) {
+  return apiRequest<FormateurEvaluationSubmission>(
+    `/learning/formateur/submissions/${encodeURIComponent(String(submissionId))}/resubmit`,
+    { method: 'PATCH', body: JSON.stringify({ feedback }) },
+  );
+}
+
 export async function createFormateurExam(userId: string, payload: {
   course_id: string | number;
   title: string;
@@ -56,6 +64,8 @@ export async function createFormateurExam(userId: string, payload: {
   submitted: number;
   status: string;
   max_grade: number;
+  passing_grade?: number | null;
+  max_attempts?: number;
 }) {
   void userId;
   return apiRequest<FormateurExam>('/learning/formateur/exams', {

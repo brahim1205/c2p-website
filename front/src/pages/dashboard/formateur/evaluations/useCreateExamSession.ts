@@ -129,6 +129,8 @@ export function useCreateExamSession({
         submitted: newExam.submitted || 0,
         status: newExam.status || 'ongoing',
         max_grade: newExam.max_grade || 20,
+        passing_grade: newExam.passing_grade ?? null,
+        max_attempts: newExam.max_attempts ?? 3,
       });
       if (!isMountedRef.current) return;
 

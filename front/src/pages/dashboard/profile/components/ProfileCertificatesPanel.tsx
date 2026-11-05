@@ -4,6 +4,8 @@ export interface ProfileCertificateEntry {
   instructor: string;
   issueDate: string | null;
   certificateId: string;
+  duration?: string | null;
+  finalGrade?: number | null;
 }
 
 interface Props {

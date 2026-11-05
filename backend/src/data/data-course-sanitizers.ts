@@ -140,6 +140,15 @@ export function sanitizeCourseRecord(row: Row, user: AuthUser) {
   for (const field of COURSE_LIST_FIELDS) {
     normalized[field] = sanitizeTextList(normalized[field], field);
   }
+  // Certification (Udemy-like): on by default; delivered when every lesson is done and every
+  // exam is passed with at least this percentage.
+  normalized.certificate_enabled = parseBoolean(normalized.certificate_enabled, true);
+  normalized.certificate_pass_percentage = requireNumberInRange(
+    normalized.certificate_pass_percentage ?? 50,
+    1,
+    100,
+    'Le seuil de reussite du certificat doit etre compris entre 1 et 100 %.',
+  );
   normalized.modules = requireInteger(normalized.modules, 1, 200, 'Le nombre de modules doit etre compris entre 1 et 200.');
   normalized.level = normalizeCourseLevel(normalized.level);
   if (!normalized.level) {

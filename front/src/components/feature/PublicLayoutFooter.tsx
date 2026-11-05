@@ -165,8 +165,8 @@ export default function PublicLayoutFooter({ onInternalLinkClick }: PublicLayout
       <div className="border-t border-[#d6dbe1]">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row sm:px-6 lg:px-8">
           <div className="text-sm text-[#1a9a96]">© 2026 Groupe C2P Consulting L&amp;M. Tous droits reserves.</div>
-          <a href="https://porfolio-theta-orcin.vercel.app/" target="_blank" rel="noreferrer" aria-label="Voir le portfolio de Kodify" className="text-[11px] text-[#64748b] transition-colors hover:text-[#0f1c35]">
-            Développé par Kodify
+          <a href="https://techdeeg.com/" target="_blank" rel="noreferrer" aria-label="Voir le site de techdeeg" className="text-[11px] text-[#64748b] transition-colors hover:text-[#0f1c35]">
+            Développé par techdeeg
           </a>
           <div className="flex gap-6">
             <Link to="/cgu" onClick={onInternalLinkClick('/cgu')} className="text-sm text-[#1a9a96] transition-colors hover:text-[#0f1c35]">CGU</Link>

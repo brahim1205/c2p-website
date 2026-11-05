@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchFormateurQuizStructure,
   gradeFormateurSubmission,
+  requestFormateurResubmission,
 } from '@/lib/formateurDashboardApi';
 import { queryKeys } from '@/lib/queryKeys';
 import {
@@ -195,6 +196,29 @@ export function useGradeSubmissionSession({
     }
   };
 
+  const requestResubmission = async () => {
+    if (!selectedSubmission) return;
+    if (!feedbackValue.trim()) {
+      setGradeErrors({ feedbackValue: 'Expliquez à l’apprenant ce qu’il doit améliorer.' });
+      setGradeFormMessage('Un commentaire est nécessaire pour demander une nouvelle version.');
+      return;
+    }
+    setIsGrading(true);
+    try {
+      await requestFormateurResubmission(selectedSubmission.id, feedbackValue.trim());
+      if (!isMountedRef.current) return;
+      success('Nouvelle version demandée', `${selectedSubmission.student_name} est notifié et peut renvoyer son travail.`);
+      closeGradeModal();
+      await refreshEvaluations();
+    } catch (err: unknown) {
+      if (!isMountedRef.current) return;
+      setGradeFormMessage('Impossible de demander une nouvelle version.');
+      console.error(err);
+    } finally {
+      if (isMountedRef.current) setIsGrading(false);
+    }
+  };
+
   const gradeSubmissionModalProps: GradeSubmissionModalProps | null = showGradeModal && selectedSubmission
     ? {
       submission: selectedSubmission,
@@ -212,6 +236,9 @@ export function useGradeSubmissionSession({
       onClose: closeGradeModal,
       onConfirm: () => {
         void confirmGrade();
+      },
+      onRequestResubmission: () => {
+        void requestResubmission();
       },
       onUseSuggestedGrade: useSuggestedGrade,
       onGradeValueChange: updateGradeValue,

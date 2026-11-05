@@ -12,6 +12,10 @@ export interface ExamWithStatus extends Exam {
   submitted: boolean;
   myGrade: number | null;
   myStatus: string | null;
+  /** A new attempt is allowed (new version requested, or failed quiz with attempts left). */
+  canRetry: boolean;
+  attempt: number;
+  myFeedback: string | null;
 }
 
 export interface QuizAnswerDraft {
@@ -39,6 +43,7 @@ export function getUploadResourceType(file: File): UploadResourceType {
 
 export function getStatusLabel(status: string | null) {
   if (status === 'graded') return 'Corrigé';
+  if (status === 'resubmit') return 'Nouvelle version demandée';
   if (status === 'pending') return 'À corriger';
   if (status === 'late') return 'En retard';
   return 'À faire';
@@ -46,6 +51,7 @@ export function getStatusLabel(status: string | null) {
 
 export function getStatusClass(status: string | null) {
   if (status === 'graded') return 'bg-green-100 text-green-700';
+  if (status === 'resubmit') return 'bg-blue-100 text-blue-700';
   if (status === 'pending') return 'bg-amber-100 text-amber-700';
   if (status === 'late') return 'bg-red-100 text-red-700';
   return 'bg-blue-100 text-blue-700';

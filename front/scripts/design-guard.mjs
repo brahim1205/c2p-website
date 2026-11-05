@@ -9,7 +9,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const frontRoot = resolve(new URL('..', import.meta.url).pathname);
-const HEX_BASELINE = 1399;
+const HEX_BASELINE = 1385;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 // Kept on purpose: possibly referenced by production content, see docs before removing.
 const IMAGE_ALLOWLIST = new Set(['public/images/home/acceuil.png']);

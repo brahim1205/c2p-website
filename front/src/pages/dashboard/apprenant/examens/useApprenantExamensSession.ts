@@ -86,6 +86,9 @@ export function useApprenantExamensSession() {
         submitted: !!mySubmission,
         myGrade: mySubmission?.grade ?? null,
         myStatus: mySubmission?.status ?? null,
+        canRetry: Boolean(mySubmission?.can_retry),
+        attempt: mySubmission?.attempt ?? (mySubmission ? 1 : 0),
+        myFeedback: mySubmission?.feedback ?? null,
       };
     });
   }, [examensSnapshot?.exams, submissions]);
@@ -132,14 +135,14 @@ export function useApprenantExamensSession() {
   };
 
   const examStats = useMemo(() => {
-    const todo = exams.filter((exam) => !exam.submitted).length;
+    const todo = exams.filter((exam) => !exam.submitted || exam.canRetry).length;
     const pending = submissions.filter((submission) => submission.status === 'pending').length;
     const graded = submissions.filter((submission) => submission.status === 'graded').length;
     return { total: exams.length, todo, pending, graded };
   }, [exams, submissions]);
 
   const filteredExams = useMemo(() => {
-    if (filter === 'todo') return exams.filter((exam) => !exam.submitted);
+    if (filter === 'todo') return exams.filter((exam) => !exam.submitted || exam.canRetry);
     if (filter === 'pending') return exams.filter((exam) => exam.myStatus === 'pending');
     if (filter === 'graded') return exams.filter((exam) => exam.myStatus === 'graded');
     return exams;

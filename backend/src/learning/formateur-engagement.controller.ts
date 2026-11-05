@@ -4,11 +4,39 @@ import { PermissionGuard } from '../auth/permission.guard.js';
 import { RequirePermission } from '../auth/require-permission.decorator.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { FormateurEngagementService } from './formateur-engagement.service.js';
+import { LearningAccessService } from './learning-access.service.js';
+import { LearningService } from './learning.service.js';
 
 @ApiTags('learning')
 @Controller('learning')
 export class FormateurEngagementController {
-  constructor(private readonly formateurEngagementService: FormateurEngagementService) {}
+  constructor(
+    private readonly formateurEngagementService: FormateurEngagementService,
+    private readonly learningService: LearningService,
+    private readonly learningAccessService: LearningAccessService,
+  ) {}
+
+  @Patch('formateur/submissions/:submissionId/resubmit')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.learning.write')
+  requestFormateurResubmission(
+    @Req() request: AuthenticatedRequest,
+    @Param('submissionId') submissionId: string,
+    @Body() payload: unknown,
+  ) {
+    return this.learningService.requestFormateurResubmission(submissionId, payload, request.auth?.user ?? null);
+  }
+
+  @Post('formateur/courses/:courseId/learners')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.learning.write')
+  enrollFormateurLearner(
+    @Req() request: AuthenticatedRequest,
+    @Param('courseId') courseId: string,
+    @Body() payload: unknown,
+  ) {
+    return this.learningAccessService.enrollLearnerAsInstructor(courseId, payload, request.auth?.user ?? null);
+  }
 
   @Get('formateur/reviews')
   @UseGuards(PermissionGuard)

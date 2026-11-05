@@ -1,6 +1,10 @@
 import { SkeletonList } from '@/components/base/Skeleton';
+import CertificateRequirements from '@/components/feature/CertificateRequirements';
+import CertificateSurface from '@/pages/dashboard/profile/components/CertificateSurface';
 import {
   certificateFilters,
+  certificateProgressLabel,
+  toCertificateData,
   formatCertificateGrade,
   getCertificateFilterLabel,
   getCertificateStats,
@@ -52,14 +56,12 @@ export function CertificatesTable({
   loading,
   onDelete,
   onDownload,
-  onIssue,
   onPreview,
 }: {
   certs: Certificate[];
   loading: boolean;
   onDelete: (cert: Certificate) => void;
   onDownload: (cert: Certificate) => void;
-  onIssue: (cert: Certificate) => void;
   onPreview: (cert: Certificate) => void;
 }) {
   return (
@@ -86,7 +88,6 @@ export function CertificatesTable({
                     cert={cert}
                     onDelete={onDelete}
                     onDownload={onDownload}
-                    onIssue={onIssue}
                     onPreview={onPreview}
                   />
                 ))}
@@ -120,57 +121,41 @@ export function CertificatePreviewModal({
   onDownload: (cert: Certificate) => void;
   onIssue: (cert: Certificate) => void;
 }) {
+  const issued = cert.status === 'issued';
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-white p-8 shadow-xl">
-        <div className="rounded-lg border-4 border-teal-100 bg-[#f5faf9] p-8">
-          <div className="text-center">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-teal-600">
-              <i className="ri-award-line text-4xl text-white"></i>
-            </div>
-            <h2 className="mb-1 text-2xl font-bold text-teal-900">CERTIFICAT DE RÉUSSITE</h2>
-            <p className="mb-6 text-sm text-teal-600">C2P - Compétences et Création de Projet</p>
-
-            <p className="mb-4 text-gray-700">Ce certificat est décerné à</p>
-            <h3 className="mb-2 text-3xl font-bold text-gray-900">{cert.student_name}</h3>
-            <p className="mb-6 text-gray-600">pour avoir complété avec succès la formation</p>
-            <h4 className="mb-4 text-xl font-semibold text-teal-700">{cert.course_name || '-'}</h4>
-
-            <div className="mb-6 flex items-center justify-center gap-8">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{formatCertificateGrade(cert.final_grade)}</p>
-                <p className="text-xs text-gray-500">Note finale</p>
-              </div>
-              <div className="h-10 w-px bg-gray-300"></div>
-              <div className="text-center">
-                <p className="text-lg font-bold text-gray-900">
-                  {cert.completion_date ? new Date(cert.completion_date).toLocaleDateString('fr-FR') : '-'}
-                </p>
-                <p className="text-xs text-gray-500">Date d'obtention</p>
-              </div>
-            </div>
-
-            {cert.certificate_id ? <p className="font-mono text-xs text-gray-400">N° {cert.certificate_id}</p> : null}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label={`Certificat de ${cert.student_name}`}>
+      <div className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">{cert.student_name}</h2>
+            <p className="text-sm text-gray-500">{cert.course_name || '-'}</p>
           </div>
+          <button onClick={onClose} aria-label="Fermer" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100">
+            <i className="ri-close-line text-gray-500"></i>
+          </button>
         </div>
-        <div className="mt-6 flex justify-end gap-3">
+        {issued ? (
+          <CertificateSurface data={toCertificateData(cert)} />
+        ) : (
+          <div className="rounded-xl border border-gray-200 p-5">
+            <p className="mb-3 text-sm font-semibold text-gray-900">Le certificat sera délivré automatiquement quand toutes les étapes seront validées :</p>
+            <CertificateRequirements requirements={cert.requirements} />
+          </div>
+        )}
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100">
             Fermer
           </button>
-          {cert.status === 'issued' ? (
-            <button
-              onClick={() => onDownload(cert)}
-              className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
-            >
+          {issued ? (
+            <button onClick={() => onDownload(cert)} className="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700">
               <i className="ri-download-line"></i>
               Télécharger PDF
             </button>
-          ) : null}
-          {cert.status === 'ready' ? (
-            <button onClick={() => onIssue(cert)} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700">
-              Délivrer le certificat
+          ) : (
+            <button onClick={() => onIssue(cert)} className="rounded-lg border border-teal-200 px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50">
+              Délivrer manuellement
             </button>
-          ) : null}
+          )}
         </div>
       </div>
     </div>
@@ -181,13 +166,11 @@ function CertificateRow({
   cert,
   onDelete,
   onDownload,
-  onIssue,
   onPreview,
 }: {
   cert: Certificate;
   onDelete: (cert: Certificate) => void;
   onDownload: (cert: Certificate) => void;
-  onIssue: (cert: Certificate) => void;
   onPreview: (cert: Certificate) => void;
 }) {
   const statusMeta = getCertificateStatusMeta(cert.status);
@@ -206,28 +189,26 @@ function CertificateRow({
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-gray-700">{cert.course_name || '-'}</td>
-      <td className="px-4 py-3 text-sm text-gray-600">{cert.completion_date ? new Date(cert.completion_date).toLocaleDateString('fr-FR') : '-'}</td>
+      <td className="px-4 py-3 text-sm text-gray-600">{cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('fr-FR') : '-'}</td>
       <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCertificateGrade(cert.final_grade)}</td>
-      <td className="px-4 py-3 font-mono text-sm text-gray-600">{cert.certificate_id || '-'}</td>
+      <td className="px-4 py-3 font-mono text-sm text-gray-600">{cert.certificate_number || cert.certificate_id || '-'}</td>
       <td className="px-4 py-3">
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusMeta.style}`}>{statusMeta.label}</span>
+        {cert.status !== 'issued' && certificateProgressLabel(cert) ? (
+          <span className="mt-1 block text-xs text-gray-500">{certificateProgressLabel(cert)}</span>
+        ) : null}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-2">
           <button onClick={() => onPreview(cert)} className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-gray-100" title="Aperçu">
             <i className="ri-eye-line text-sm text-gray-600"></i>
           </button>
-          {cert.status === 'ready' ? (
-            <button onClick={() => onIssue(cert)} className="whitespace-nowrap rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-teal-700">
-              Délivrer
-            </button>
-          ) : null}
           {cert.status === 'issued' ? (
             <button onClick={() => onDownload(cert)} className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-teal-50" title="Télécharger">
               <i className="ri-download-line text-sm text-teal-600"></i>
             </button>
           ) : null}
-          <button onClick={() => onDelete(cert)} className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-red-50">
+          <button onClick={() => onDelete(cert)} title={cert.status === 'issued' ? 'Révoquer le certificat' : 'Supprimer'} aria-label={cert.status === 'issued' ? 'Révoquer le certificat' : 'Supprimer'} className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-red-50">
             <i className="ri-delete-bin-line text-sm text-red-500"></i>
           </button>
         </div>

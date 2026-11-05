@@ -242,7 +242,7 @@ async function testFormateurCourseCreation(page) {
   // Landing page and pricing.
   await page.getByRole('link', { name: /Page d'accueil du cours/ }).first().click();
   await blurField(page.getByLabel(/^Sous-titre du cours$/), 'Sous-titre QA');
-  await page.getByRole('link', { name: /Tarification/ }).first().click();
+  await page.getByRole('link', { name: /Tarifs et certificat/ }).first().click();
   await page.getByRole('button', { name: /^Gratuit/ }).click();
   program = await pollUntil(readProgram, (snapshot) => snapshot?.course?.subtitle === 'Sous-titre QA' && snapshot?.course?.is_free === true);
   if (program?.course?.subtitle !== 'Sous-titre QA') record('subtitle-saved', `subtitle = ${program?.course?.subtitle}`);

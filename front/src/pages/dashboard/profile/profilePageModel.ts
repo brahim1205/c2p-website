@@ -18,12 +18,15 @@ export function getProfileUserInitials(user: AuthUser | null | undefined) {
 }
 
 export function mapProfileCertificates(certificates: ApprenantCertificate[]): ProfileCertificateEntry[] {
-  return certificates.map((entry) => ({
+  // Only certificates actually delivered by C2P are documents (in-progress ones have no number).
+  return certificates.filter((entry) => entry.status === 'issued' && (entry.certificate_number || entry.certificate_id)).map((entry) => ({
     courseId: entry.id,
     title: entry.course_name || entry.title || 'Formation',
-    instructor: 'C2P Academy',
+    instructor: entry.instructor_name || 'Formateur C2P',
     issueDate: entry.issued_at || entry.completion_date || null,
-    certificateId: entry.certificate_id || entry.certificate_number || `C2P-CERT-${entry.id}`,
+    certificateId: String(entry.certificate_number || entry.certificate_id),
+    duration: entry.course_duration ?? null,
+    finalGrade: entry.final_grade ?? entry.grade ?? null,
   }));
 }
 
@@ -40,5 +43,7 @@ export function buildProfileCertificateData(
       ? new Date(entry.issueDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
       : new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
     certificateId: entry.certificateId,
+    duration: entry.duration ?? null,
+    finalGrade: entry.finalGrade ?? null,
   };
 }

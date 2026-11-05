@@ -22,6 +22,8 @@ export interface StudioCourse {
   is_free: boolean;
   price: number | null;
   promotion_percentage: number;
+  certificate_enabled?: boolean;
+  certificate_pass_percentage?: number;
   objectives?: string[];
   prerequisites?: string[];
   target_audience?: string[];
@@ -83,7 +85,7 @@ export const STUDIO_PANELS: Array<{ id: StudioPanel; group: string; label: strin
   { id: 'programme', group: 'Créer votre contenu', label: 'Programme', icon: 'ri-list-check-3' },
   { id: 'seances', group: 'Créer votre contenu', label: 'Séances en direct', icon: 'ri-live-line' },
   { id: 'accueil', group: 'Publier votre cours', label: "Page d'accueil du cours", icon: 'ri-layout-top-line' },
-  { id: 'tarifs', group: 'Publier votre cours', label: 'Tarification', icon: 'ri-price-tag-3-line' },
+  { id: 'tarifs', group: 'Publier votre cours', label: 'Tarifs et certificat', icon: 'ri-price-tag-3-line' },
 ];
 
 export function isStudioPanel(value: string | undefined): value is StudioPanel {
