@@ -16,6 +16,8 @@ import { hydrateRows } from '../data/data-row-hydration.js';
 import { prepareInsert } from '../data/data-runtime.js';
 import type { Row } from '../data/mock-store.js';
 import { createAppNotificationRow } from '../notifications/notification-payloads.js';
+import type { ProjectCenterTables } from '../data/data-derived-data.js';
+import { ProjectCenterPrismaReadService } from './project-center-prisma-read.service.js';
 import {
   parseOwnerFundingRoundCreatePayload,
   parseOwnerProjectUpdatePayload,
@@ -31,14 +33,9 @@ import {
   applyProjectFilters,
   applyProjectSorting,
   buildPartnerNeeds,
-  buildOwnerProjectDetail,
-  buildProjectDetailForAuthenticatedProject,
   buildProjectDocuments,
-  getOpenProjectsForPartners,
   getOwnerProjects,
-  getPartnerCollaborations,
   getPartnerTrackedProjects,
-  getRowsForProjectIds,
   mapFundingType,
   normalizeCategory,
   parseTeamSize,
@@ -68,17 +65,82 @@ function isPublicProjectNoise(row: Row) {
   );
 }
 
+type ProjectChildTable =
+  | 'project_milestones'
+  | 'project_documents'
+  | 'project_history'
+  | 'project_partnerships'
+  | 'project_funding_rounds';
+
+function rowsForProjectIn(tables: ProjectCenterTables, table: ProjectChildTable, projectId: string) {
+  return tables[table].filter((row) => String(row.project_id) === String(projectId));
+}
+
+function rowsForProjectsIn(tables: ProjectCenterTables, table: ProjectChildTable, projectIds: Set<string>) {
+  return tables[table].filter((row) => projectIds.has(String(row.project_id)));
+}
+
+function ownerProjectsIn(tables: ProjectCenterTables, ownerId: string) {
+  return tables.projects
+    .filter((project) => String(project.owner_id) === String(ownerId))
+    .sort((left, right) => compareValues(right.created_at, left.created_at));
+}
+
+function requireOwnedProjectIn(tables: ProjectCenterTables, ownerId: string, projectId: string) {
+  const project = ownerProjectsIn(tables, ownerId).find((row) => String(row.id) === String(projectId)) ?? null;
+  if (!project) {
+    throw new BadRequestException('PROJECT_NOT_FOUND');
+  }
+  return project;
+}
+
+function partnerTrackingIn(tables: ProjectCenterTables, partnerId: string) {
+  return hydrateRows('project_tracking', tables.project_tracking.filter((row) => String(row.partner_id) === String(partnerId)))
+    .sort((left, right) => compareValues(right.last_update, left.last_update));
+}
+
+function partnerCollaborationsIn(tables: ProjectCenterTables, partnerId: string) {
+  return hydrateRows('project_collaborations', tables.project_collaborations.filter((row) => String(row.partner_id) === String(partnerId)))
+    .sort((left, right) => compareValues(right.start_date, left.start_date));
+}
+
+function openProjectsIn(tables: ProjectCenterTables) {
+  return publicRows('projects', tables.projects)
+    .filter((project) => String(project.status ?? '').toLowerCase() !== 'termine')
+    .sort((left, right) => compareValues(right.created_at, left.created_at));
+}
+
 @Injectable()
 export class ProjectCenterService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly prismaReadService: ProjectCenterPrismaReadService,
   ) {}
+
+  /**
+   * Project Center tables for one request: Prisma projection first, AppRow store as fallback
+   * while the migration is in progress. Callers must have run `syncAppStoreFromDatabase` before.
+   */
+  private async tables(): Promise<ProjectCenterTables> {
+    return (await this.prismaReadService.loadTables()) ?? {
+      projects: clone(store.projects ?? []),
+      project_milestones: clone(store.project_milestones ?? []),
+      project_documents: clone(store.project_documents ?? []),
+      project_history: clone(store.project_history ?? []),
+      project_funding_rounds: clone(store.project_funding_rounds ?? []),
+      funding_investors: clone(store.funding_investors ?? []),
+      project_partnerships: clone(store.project_partnerships ?? []),
+      project_tracking: clone(store.project_tracking ?? []),
+      project_collaborations: clone(store.project_collaborations ?? []),
+    };
+  }
 
   async listPublicProjects(query: PublicProjectQuery = {}) {
     await syncAppStoreFromDatabase(this.prisma);
+    const t = await this.tables();
 
-    let rows = publicRows('projects', clone(store.projects ?? [])).filter((row) => !isPublicProjectNoise(row));
+    let rows = publicRows('projects', t.projects).filter((row) => !isPublicProjectNoise(row));
     rows = applyProjectFilters(rows, query);
     rows = applyProjectSorting(rows, query.sort);
     return rows.slice(0, resolvePublicProjectsLimit(query.limit));
@@ -86,8 +148,9 @@ export class ProjectCenterService {
 
   async getPublicProjectDetail(projectId: string) {
     await syncAppStoreFromDatabase(this.prisma);
+    const t = await this.tables();
 
-    const projects = publicRows('projects', clone(store.projects ?? [])).filter((row) => !isPublicProjectNoise(row));
+    const projects = publicRows('projects', t.projects).filter((row) => !isPublicProjectNoise(row));
     const project = projects.find((row) => String(row.id) === String(projectId)) ?? null;
     if (!project) {
       return {
@@ -102,20 +165,17 @@ export class ProjectCenterService {
       };
     }
 
-    const milestones = publicRows('project_milestones', rowsForProject('project_milestones', projectId))
+    const milestones = publicRows('project_milestones', rowsForProjectIn(t, 'project_milestones', projectId))
       .sort((left, right) => compareValues(left.due_date, right.due_date));
-    const documents = publicRows('project_documents', rowsForProject('project_documents', projectId));
-    const history = publicRows('project_history', rowsForProject('project_history', projectId))
+    const documents = publicRows('project_documents', rowsForProjectIn(t, 'project_documents', projectId));
+    const history = publicRows('project_history', rowsForProjectIn(t, 'project_history', projectId))
       .sort((left, right) => compareValues(right.date, left.date));
-    const partnerships = publicRows('project_partnerships', rowsForProject('project_partnerships', projectId))
+    const partnerships = publicRows('project_partnerships', rowsForProjectIn(t, 'project_partnerships', projectId))
       .sort((left, right) => compareValues(left.id, right.id));
-    const rounds = publicRows('project_funding_rounds', rowsForProject('project_funding_rounds', projectId))
+    const rounds = publicRows('project_funding_rounds', rowsForProjectIn(t, 'project_funding_rounds', projectId))
       .sort((left, right) => compareValues(right.deadline, left.deadline));
     const roundIds = new Set(rounds.map((round) => String(round.id)));
-    const investors = publicRows(
-      'funding_investors',
-      clone(store.funding_investors ?? []).filter((row) => roundIds.has(String(row.funding_round_id))),
-    );
+    const investors = publicRows('funding_investors', t.funding_investors.filter((row) => roundIds.has(String(row.funding_round_id))));
     const relatedProjects = projects
       .filter((row) => String(row.id) !== String(projectId) && String(row.category ?? '') === String(project.category ?? ''))
       .sort((left, right) => compareValues(right.created_at, left.created_at))
@@ -136,19 +196,21 @@ export class ProjectCenterService {
   async listOwnerProjects(user: AuthUser | null) {
     const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    return getOwnerProjects(owner.id);
+    const t = await this.tables();
+    return ownerProjectsIn(t, owner.id);
   }
 
   async getOwnerSnapshot(user: AuthUser | null) {
     const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const projects = getOwnerProjects(owner.id);
+    const t = await this.tables();
+    const projects = ownerProjectsIn(t, owner.id);
     const projectIds = new Set(projects.map((project) => String(project.id)));
     return {
       projects,
-      partnerships: getRowsForProjectIds('project_partnerships', projectIds)
+      partnerships: rowsForProjectsIn(t, 'project_partnerships', projectIds)
         .sort((left, right) => compareValues(left.id, right.id)),
-      rounds: getRowsForProjectIds('project_funding_rounds', projectIds)
+      rounds: rowsForProjectsIn(t, 'project_funding_rounds', projectIds)
         .sort((left, right) => compareValues(right.deadline, left.deadline)),
     };
   }
@@ -156,8 +218,16 @@ export class ProjectCenterService {
   async getOwnerProjectDetail(projectId: string, user: AuthUser | null) {
     const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const project = requireOwnerProject(owner.id, projectId);
-    return buildOwnerProjectDetail(project);
+    const t = await this.tables();
+    const project = requireOwnedProjectIn(t, owner.id, projectId);
+    return {
+      project,
+      milestones: rowsForProjectIn(t, 'project_milestones', String(project.id)).sort((left, right) => compareValues(left.due_date, right.due_date)),
+      documents: rowsForProjectIn(t, 'project_documents', String(project.id)).sort((left, right) => compareValues(right.date, left.date)),
+      history: rowsForProjectIn(t, 'project_history', String(project.id)).sort((left, right) => compareValues(right.date, left.date)),
+      partnerships: rowsForProjectIn(t, 'project_partnerships', String(project.id)).sort((left, right) => compareValues(left.id, right.id)),
+      rounds: rowsForProjectIn(t, 'project_funding_rounds', String(project.id)).sort((left, right) => compareValues(right.deadline, left.deadline)),
+    };
   }
 
   async updateOwnerProject(projectId: string, payload: unknown, user: AuthUser | null) {
@@ -199,25 +269,27 @@ export class ProjectCenterService {
   async listOwnerFundingRounds(user: AuthUser | null) {
     const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const projectIds = new Set(getOwnerProjects(owner.id).map((project) => String(project.id)));
-    return getRowsForProjectIds('project_funding_rounds', projectIds)
+    const t = await this.tables();
+    const projectIds = new Set(ownerProjectsIn(t, owner.id).map((project) => String(project.id)));
+    return rowsForProjectsIn(t, 'project_funding_rounds', projectIds)
       .sort((left, right) => compareValues(right.deadline, left.deadline));
   }
 
   async getOwnerFundingRoundDetail(roundId: string, user: AuthUser | null) {
     const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const round = (store.project_funding_rounds ?? []).find((row) => String(row.id) === String(roundId)) ?? null;
+    const t = await this.tables();
+    const round = t.project_funding_rounds.find((row) => String(row.id) === String(roundId)) ?? null;
     if (!round) {
       throw new BadRequestException('FUNDING_ROUND_NOT_FOUND');
     }
-    requireOwnerProject(owner.id, String(round.project_id));
-    const investors = clone(store.funding_investors ?? [])
+    requireOwnedProjectIn(t, owner.id, String(round.project_id));
+    const investors = t.funding_investors
       .filter((row) => String(row.funding_round_id) === String(round.id))
       .sort((left, right) => compareValues(right.date, left.date));
-    const documents = rowsForProject('project_documents', String(round.project_id))
+    const documents = rowsForProjectIn(t, 'project_documents', String(round.project_id))
       .sort((left, right) => compareValues(right.date, left.date));
-    const history = rowsForProject('project_history', String(round.project_id))
+    const history = rowsForProjectIn(t, 'project_history', String(round.project_id))
       .sort((left, right) => compareValues(right.date, left.date));
     return { round, investors, documents, history };
   }
@@ -254,24 +326,27 @@ export class ProjectCenterService {
   async listOwnerPartnerships(user: AuthUser | null) {
     const owner = requireProjectOwnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const projectIds = new Set(getOwnerProjects(owner.id).map((project) => String(project.id)));
-    return getRowsForProjectIds('project_partnerships', projectIds)
+    const t = await this.tables();
+    const projectIds = new Set(ownerProjectsIn(t, owner.id).map((project) => String(project.id)));
+    return rowsForProjectsIn(t, 'project_partnerships', projectIds)
       .sort((left, right) => compareValues(left.id, right.id));
   }
 
   async listPartnerTrackedProjects(user: AuthUser | null) {
     const partner = requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    return getPartnerTrackedProjects(partner.id);
+    const t = await this.tables();
+    return partnerTrackingIn(t, partner.id);
   }
 
   async getAdminDashboardSummary(user: AuthUser | null) {
     requireProjectAdminUser(user);
     await syncAppStoreFromDatabase(this.prisma);
+    const t = await this.tables();
     return {
-      projects: hydrateRows('projects', clone(store.projects ?? []))
+      projects: hydrateRows('projects', t.projects)
         .sort((left, right) => compareValues(right.created_at, left.created_at)),
-      history: hydrateRows('project_history', clone(store.project_history ?? []))
+      history: hydrateRows('project_history', t.project_history)
         .sort((left, right) => compareValues(right.date, left.date))
         .slice(0, 6),
     };
@@ -280,12 +355,14 @@ export class ProjectCenterService {
   async getPartnerSnapshot(user: AuthUser | null) {
     const partner = requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const trackedProjects = getPartnerTrackedProjects(partner.id);
+    const t = await this.tables();
+    const trackedProjects = partnerTrackingIn(t, partner.id);
     const trackedProjectIds = new Set(trackedProjects.map((tracked) => String(tracked.project_id)));
+    const openProjects = openProjectsIn(t);
     return {
       trackedProjects,
-      collaborations: getPartnerCollaborations(partner.id),
-      openProjects: getOpenProjectsForPartners()
+      collaborations: partnerCollaborationsIn(t, partner.id),
+      openProjects: openProjects
         .filter((project) => !trackedProjectIds.has(String(project.id))),
     };
   }
@@ -293,21 +370,35 @@ export class ProjectCenterService {
   async getPartnerTrackedProjectDetail(projectId: string, user: AuthUser | null) {
     const partner = requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    const tracked = getPartnerTrackedProjects(partner.id)
+    const t = await this.tables();
+    const tracked = partnerTrackingIn(t, partner.id)
       .find((row) => String(row.project_id) === String(projectId)) ?? null;
     if (!tracked) {
       throw new BadRequestException('TRACKED_PROJECT_NOT_FOUND');
     }
+    const project = hydrateRows('projects', t.projects.filter((row) => String(row.id) === String(projectId)))[0] ?? null;
+    if (!project) {
+      throw new BadRequestException('PROJECT_NOT_FOUND');
+    }
+    const childRows = (table: ProjectChildTable) => hydrateRows(table, rowsForProjectIn(t, table, projectId));
     return {
       tracked,
-      detail: buildProjectDetailForAuthenticatedProject(projectId),
+      detail: {
+        project,
+        milestones: childRows('project_milestones').sort((left, right) => compareValues(left.due_date, right.due_date)),
+        documents: childRows('project_documents').sort((left, right) => compareValues(right.date, left.date)),
+        history: childRows('project_history').sort((left, right) => compareValues(right.date, left.date)),
+        partnerships: childRows('project_partnerships').sort((left, right) => compareValues(left.id, right.id)),
+        rounds: childRows('project_funding_rounds').sort((left, right) => compareValues(right.deadline, left.deadline)),
+      },
     };
   }
 
   async listPartnerCollaborations(user: AuthUser | null) {
     const partner = requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    return getPartnerCollaborations(partner.id);
+    const t = await this.tables();
+    return partnerCollaborationsIn(t, partner.id);
   }
 
   async updatePartnerCollaboration(collaborationId: string, payload: unknown, user: AuthUser | null) {
@@ -430,7 +521,8 @@ export class ProjectCenterService {
   async listPartnerOpenProjects(user: AuthUser | null) {
     requireProjectPartnerUser(user);
     await syncAppStoreFromDatabase(this.prisma);
-    return getOpenProjectsForPartners();
+    const t = await this.tables();
+    return openProjectsIn(t);
   }
 
   async expressPartnerInterest(payload: unknown, user: AuthUser | null) {

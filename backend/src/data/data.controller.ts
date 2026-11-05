@@ -30,6 +30,7 @@ import {
   store,
   syncAppStoreFromDatabase,
   withId,
+  withoutClientId,
 } from './data-app-store.js';
 import {
   APPEND_ONLY_TABLES,
@@ -136,7 +137,7 @@ export class DataController {
     const normalizedRows = user ? rawRows.map((row) => sanitizeCreatePayload(table, clone(row), user)) : rawRows;
     ensureConstraints(table, normalizedRows);
 
-    const rows = normalizedRows.map((row) => withId(prepareInsert(table, row)));
+    const rows = normalizedRows.map((row) => withId(prepareInsert(table, withoutClientId(row))));
     const response = appendAppRows(table, rows);
     const rowsToPersist: Record<string, Row[]> = {
       [table]: rows,

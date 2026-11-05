@@ -8,7 +8,9 @@ import {
   patchAppRows,
   store,
   syncAppStoreFromDatabase,
+  discardAppRows,
   withId,
+  withoutClientId,
 } from '../data/data-app-store.js';
 import { filterRowsForActor } from '../data/data-actor-scope.js';
 import {
@@ -121,97 +123,105 @@ export class FormateurCourseProgramService {
 
     await syncAppStoreFromDatabase(this.prisma);
     const now = new Date().toISOString();
-    const course = this.createCourseRow({
-      ...courseInput,
-      instructor_id: actor.id,
-      status: 'draft',
-      modules: sectionsInput.length || courseInput.modules || 1,
-      created_at: now,
-      updated_at: now,
-    }, actor);
-
-    const rowsByTable: Record<string, Row[]> = { courses: [course] };
-    const sectionIdMap = new Map<string, string | number>();
-    const lessonIdMap = new Map<string, string | number>();
-    const lessonSectionMap = new Map<string, string>();
-
-    for (const sectionInput of sectionsInput) {
-      const section = this.createSectionRow({ ...sectionInput, course_id: course.id }, actor);
-      rowsByTable.course_sections = [...(rowsByTable.course_sections ?? []), section];
-      sectionIdMap.set(String(sectionInput.id ?? section.id), this.requireCreatedId(section.id));
-
-      const lessonsInput = Array.isArray(sectionInput.lessons) ? sectionInput.lessons as Row[] : [];
-      for (const lessonInput of lessonsInput) {
-        const lesson = this.createLessonRow({
-          ...lessonInput,
-          course_id: course.id,
-          section_id: section.id,
-        }, actor);
-        rowsByTable.course_lessons = [...(rowsByTable.course_lessons ?? []), lesson];
-        lessonIdMap.set(String(lessonInput.id ?? lesson.id), this.requireCreatedId(lesson.id));
-        lessonSectionMap.set(String(lessonInput.id ?? lesson.id), String(sectionInput.id ?? section.id));
-      }
-    }
-
-    for (const assetInput of assetsInput.filter((entry) => String(entry.url ?? '').trim())) {
-      const draftLessonId = String(assetInput.lessonId ?? assetInput.lesson_id ?? '');
-      const lessonId = lessonIdMap.get(draftLessonId);
-      const draftSectionId = lessonSectionMap.get(draftLessonId);
-      const sectionId = draftSectionId ? sectionIdMap.get(draftSectionId) : null;
-      if (!lessonId || !sectionId) continue;
-
-      const asset = this.createAssetRow({
-        ...assetInput,
-        lesson_id: lessonId,
-        section_id: sectionId,
-        course_id: course.id,
-        title: assetInput.title || assetInput.lessonTitle,
-        status: assetInput.status ?? (String(assetInput.asset_type) === 'video' ? 'processing' : 'ready'),
-      }, actor);
-      rowsByTable.lesson_assets = [...(rowsByTable.lesson_assets ?? []), asset];
-    }
-
-    for (const examInput of examsInput) {
-      const exam = this.createExamRow({
-        ...examInput,
+    // Every row below is appended to the in-memory store as soon as it is validated; if a later
+    // row (or the persistence) fails, discard them all so no phantom course stays visible.
+    const rowsByTable: Record<string, Row[]> = {};
+    let course: Row;
+    try {
+      course = this.createCourseRow({
+        ...courseInput,
         instructor_id: actor.id,
-        course_id: course.id,
-        status: examInput.status ?? 'upcoming',
-        submitted: 0,
-        avg_grade: null,
+        status: 'draft',
+        modules: sectionsInput.length || courseInput.modules || 1,
+        created_at: now,
+        updated_at: now,
       }, actor);
-      rowsByTable.exams = [...(rowsByTable.exams ?? []), exam];
+      rowsByTable.courses = [course];
+      const sectionIdMap = new Map<string, string | number>();
+      const lessonIdMap = new Map<string, string | number>();
+      const lessonSectionMap = new Map<string, string>();
 
-      if (String(exam.type) !== 'quiz') continue;
-      const questionsInput = Array.isArray(examInput.questions) ? examInput.questions as Row[] : [];
-      for (let questionIndex = 0; questionIndex < questionsInput.length; questionIndex += 1) {
-        const questionInput = questionsInput[questionIndex];
-        const question = this.createQuestionRow({
-          ...questionInput,
-          exam_id: exam.id,
-          position: questionInput.position ?? questionIndex + 1,
-        }, actor);
-        rowsByTable.quiz_questions = [...(rowsByTable.quiz_questions ?? []), question];
+      for (const sectionInput of sectionsInput) {
+        const section = this.createSectionRow({ ...sectionInput, course_id: course.id }, actor);
+        rowsByTable.course_sections = [...(rowsByTable.course_sections ?? []), section];
+        sectionIdMap.set(String(sectionInput.id ?? section.id), this.requireCreatedId(section.id));
 
-        const choicesInput = Array.isArray(questionInput.choices) ? questionInput.choices as Row[] : [];
-        for (let choiceIndex = 0; choiceIndex < choicesInput.length; choiceIndex += 1) {
-          const choiceInput = choicesInput[choiceIndex];
-          if (!String(choiceInput.label ?? '').trim()) continue;
-          const choice = this.createChoiceRow({
-            ...choiceInput,
-            question_id: question.id,
-            position: choiceInput.position ?? choiceIndex + 1,
+        const lessonsInput = Array.isArray(sectionInput.lessons) ? sectionInput.lessons as Row[] : [];
+        for (const lessonInput of lessonsInput) {
+          const lesson = this.createLessonRow({
+            ...lessonInput,
+            course_id: course.id,
+            section_id: section.id,
           }, actor);
-          rowsByTable.quiz_choices = [...(rowsByTable.quiz_choices ?? []), choice];
+          rowsByTable.course_lessons = [...(rowsByTable.course_lessons ?? []), lesson];
+          lessonIdMap.set(String(lessonInput.id ?? lesson.id), this.requireCreatedId(lesson.id));
+          lessonSectionMap.set(String(lessonInput.id ?? lesson.id), String(sectionInput.id ?? section.id));
         }
       }
-    }
 
-    await this.platformPersistenceService.persistRows(rowsByTable, {
-      actorId: actor.id,
-      reason: 'learning:formateur:course-bundle:create',
-      afterRowsByTable: rowsByTable,
-    });
+      for (const assetInput of assetsInput.filter((entry) => String(entry.url ?? '').trim())) {
+        const draftLessonId = String(assetInput.lessonId ?? assetInput.lesson_id ?? '');
+        const lessonId = lessonIdMap.get(draftLessonId);
+        const draftSectionId = lessonSectionMap.get(draftLessonId);
+        const sectionId = draftSectionId ? sectionIdMap.get(draftSectionId) : null;
+        if (!lessonId || !sectionId) continue;
+
+        const asset = this.createAssetRow({
+          ...assetInput,
+          lesson_id: lessonId,
+          section_id: sectionId,
+          course_id: course.id,
+          title: assetInput.title || assetInput.lessonTitle,
+          status: assetInput.status ?? (String(assetInput.asset_type) === 'video' ? 'processing' : 'ready'),
+        }, actor);
+        rowsByTable.lesson_assets = [...(rowsByTable.lesson_assets ?? []), asset];
+      }
+
+      for (const examInput of examsInput) {
+        const exam = this.createExamRow({
+          ...examInput,
+          instructor_id: actor.id,
+          course_id: course.id,
+          status: examInput.status ?? 'upcoming',
+          submitted: 0,
+          avg_grade: null,
+        }, actor);
+        rowsByTable.exams = [...(rowsByTable.exams ?? []), exam];
+
+        if (String(exam.type) !== 'quiz') continue;
+        const questionsInput = Array.isArray(examInput.questions) ? examInput.questions as Row[] : [];
+        for (let questionIndex = 0; questionIndex < questionsInput.length; questionIndex += 1) {
+          const questionInput = questionsInput[questionIndex];
+          const question = this.createQuestionRow({
+            ...questionInput,
+            exam_id: exam.id,
+            position: questionInput.position ?? questionIndex + 1,
+          }, actor);
+          rowsByTable.quiz_questions = [...(rowsByTable.quiz_questions ?? []), question];
+
+          const choicesInput = Array.isArray(questionInput.choices) ? questionInput.choices as Row[] : [];
+          for (let choiceIndex = 0; choiceIndex < choicesInput.length; choiceIndex += 1) {
+            const choiceInput = choicesInput[choiceIndex];
+            if (!String(choiceInput.label ?? '').trim()) continue;
+            const choice = this.createChoiceRow({
+              ...choiceInput,
+              question_id: question.id,
+              position: choiceInput.position ?? choiceIndex + 1,
+            }, actor);
+            rowsByTable.quiz_choices = [...(rowsByTable.quiz_choices ?? []), choice];
+          }
+        }
+      }
+
+      await this.platformPersistenceService.persistRows(rowsByTable, {
+        actorId: actor.id,
+        reason: 'learning:formateur:course-bundle:create',
+        afterRowsByTable: rowsByTable,
+      });
+    } catch (error) {
+      discardAppRows(rowsByTable);
+      throw error;
+    }
     const admins = listUsers().filter((candidate) =>
       (candidate.role === 'admin' || candidate.role === 'superadmin') && candidate.status === 'active',
     );
@@ -455,7 +465,7 @@ export class FormateurCourseProgramService {
   }
 
   private createCourseRow(input: Row, actor: AuthUser) {
-    const sanitized = sanitizeCourseRecord(input, actor);
+    const sanitized = sanitizeCourseRecord(withoutClientId(input), actor);
     ensureConstraints('courses', [sanitized]);
     const row = withId(prepareInsert('courses', sanitized));
     appendAppRows('courses', [row]);
@@ -463,7 +473,7 @@ export class FormateurCourseProgramService {
   }
 
   private createSectionRow(input: Row, actor: AuthUser) {
-    const sanitized = sanitizeCourseSectionRecord(input, actor);
+    const sanitized = sanitizeCourseSectionRecord(withoutClientId(input), actor);
     ensureConstraints('course_sections', [sanitized]);
     const row = withId(prepareInsert('course_sections', sanitized));
     appendAppRows('course_sections', [row]);
@@ -471,7 +481,7 @@ export class FormateurCourseProgramService {
   }
 
   private createLessonRow(input: Row, actor: AuthUser) {
-    const sanitized = sanitizeCourseLessonRecord(input, actor);
+    const sanitized = sanitizeCourseLessonRecord(withoutClientId(input), actor);
     ensureConstraints('course_lessons', [sanitized]);
     const row = withId(prepareInsert('course_lessons', sanitized));
     appendAppRows('course_lessons', [row]);
@@ -479,7 +489,7 @@ export class FormateurCourseProgramService {
   }
 
   private createAssetRow(input: Row, actor: AuthUser) {
-    const sanitized = sanitizeLessonAssetRecord(input, actor);
+    const sanitized = sanitizeLessonAssetRecord(withoutClientId(input), actor);
     ensureConstraints('lesson_assets', [sanitized]);
     const row = withId(prepareInsert('lesson_assets', sanitized));
     appendAppRows('lesson_assets', [row]);
@@ -487,7 +497,7 @@ export class FormateurCourseProgramService {
   }
 
   private createExamRow(input: Row, actor: AuthUser) {
-    const sanitized = sanitizeExamRecord(input, actor);
+    const sanitized = sanitizeExamRecord(withoutClientId(input), actor);
     ensureConstraints('exams', [sanitized]);
     const row = withId(prepareInsert('exams', sanitized));
     appendAppRows('exams', [row]);
@@ -495,7 +505,7 @@ export class FormateurCourseProgramService {
   }
 
   private createQuestionRow(input: Row, actor: AuthUser) {
-    const sanitized = sanitizeQuizQuestionRecord(input, actor);
+    const sanitized = sanitizeQuizQuestionRecord(withoutClientId(input), actor);
     ensureConstraints('quiz_questions', [sanitized]);
     const row = withId(prepareInsert('quiz_questions', sanitized));
     appendAppRows('quiz_questions', [row]);
@@ -503,7 +513,7 @@ export class FormateurCourseProgramService {
   }
 
   private createChoiceRow(input: Row, actor: AuthUser) {
-    const sanitized = sanitizeQuizChoiceRecord(input, actor);
+    const sanitized = sanitizeQuizChoiceRecord(withoutClientId(input), actor);
     ensureConstraints('quiz_choices', [sanitized]);
     const row = withId(prepareInsert('quiz_choices', sanitized));
     appendAppRows('quiz_choices', [row]);

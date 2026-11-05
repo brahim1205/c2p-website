@@ -25,6 +25,76 @@ export type ProjectCenterRowsByTableRemovals = {
   project_collaborations: string[];
 };
 
+type ProjectionReader = Pick<
+  Prisma.TransactionClient,
+  | 'projectCenterProject'
+  | 'projectCenterMilestone'
+  | 'projectCenterDocument'
+  | 'projectCenterHistoryEntry'
+  | 'projectCenterFundingRound'
+  | 'projectCenterFundingInvestor'
+  | 'projectCenterPartnership'
+  | 'projectCenterTracking'
+  | 'projectCenterCollaboration'
+>;
+
+// No explicit orderBy on purpose: AppRow is read the same way (`appRow.findMany()`), and the
+// projection rows are inserted in the same order (boot snapshot sync + double-run upserts).
+// Several endpoints keep the store order for ties (e.g. partner opportunities sorted by score),
+// so this keeps the exact same visible ordering during the migration.
+const PROJECTION_READ = {
+  select: { id: true, metadata: true },
+};
+
+function projectionRecordToRow(record: { id: string; metadata: Prisma.JsonValue | null }): Row {
+  const metadata = record.metadata;
+  const row = metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? { ...(metadata as Row) } : {};
+  return { ...row, id: row.id ?? record.id };
+}
+
+/**
+ * Rebuilds the original Project Center rows (as stored in AppRow) from the Prisma projection,
+ * which keeps the full source row in `metadata`. Derived fields are NOT computed here.
+ */
+export async function readProjectCenterProjection(client: ProjectionReader): Promise<ProjectCenterRowsByTable> {
+  const [
+    projects,
+    milestones,
+    documents,
+    history,
+    rounds,
+    investors,
+    partnerships,
+    tracking,
+    collaborations,
+  ] = await Promise.all([
+    client.projectCenterProject.findMany(PROJECTION_READ),
+    client.projectCenterMilestone.findMany(PROJECTION_READ),
+    client.projectCenterDocument.findMany(PROJECTION_READ),
+    client.projectCenterHistoryEntry.findMany(PROJECTION_READ),
+    client.projectCenterFundingRound.findMany(PROJECTION_READ),
+    client.projectCenterFundingInvestor.findMany(PROJECTION_READ),
+    client.projectCenterPartnership.findMany(PROJECTION_READ),
+    client.projectCenterTracking.findMany(PROJECTION_READ),
+    client.projectCenterCollaboration.findMany(PROJECTION_READ),
+  ]);
+  return {
+    projects: projects.map(projectionRecordToRow),
+    project_milestones: milestones.map(projectionRecordToRow),
+    project_documents: documents.map(projectionRecordToRow),
+    project_history: history.map(projectionRecordToRow),
+    project_funding_rounds: rounds.map(projectionRecordToRow),
+    funding_investors: investors.map(projectionRecordToRow),
+    project_partnerships: partnerships.map(projectionRecordToRow),
+    project_tracking: tracking.map(projectionRecordToRow),
+    project_collaborations: collaborations.map(projectionRecordToRow),
+  };
+}
+
+export function isMissingProjectionError(error: unknown) {
+  return Boolean(error && typeof error === 'object' && (error as { code?: unknown }).code === 'P2021');
+}
+
 export async function persistProjectCenterProjection(
   tx: Prisma.TransactionClient,
   rowsByTable: ProjectCenterRowsByTable,

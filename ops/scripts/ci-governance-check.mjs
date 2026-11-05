@@ -252,6 +252,7 @@ function main() {
     'npm run email:provider:check',
     'npm run swagger:check',
     'npm run data:legacy-mode:test',
+    'npm test',
     'npm run state:check',
     'npm run http:checks',
     'npm run bundle:budget',

@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service.js';
+import { isMissingProjectionError, readProjectCenterProjection } from '../database/platform-project-center-projection.js';
 import { createInitialStore, type Row, type Store } from './mock-store.js';
 import { toNumber } from './data-normalizers.js';
 
@@ -50,6 +51,17 @@ export function matches(row: Row, query: Record<string, string | string[] | unde
 
     return true;
   });
+}
+
+/**
+ * Drops a client-supplied `id` from a create payload. Create endpoints must never let the
+ * client choose the id: reusing an existing id overwrites (and may later cascade-delete)
+ * someone else's row, because persistence upserts by `table::id`.
+ * Server-side flows that rely on deterministic ids (payments idempotency) do not use this.
+ */
+export function withoutClientId<T extends Row>(row: T): Omit<T, 'id'> {
+  const { id: _clientId, ...rest } = row;
+  return rest;
 }
 
 export function withId(row: Row): Row {
@@ -103,6 +115,18 @@ export function appendAppRows(table: string, rows: Row[]) {
   store[table] = [...(store[table] ?? []), ...rows];
   recomputeAppStoreDerivedData();
   return rows.map((row) => hydrateAppStoreRow(table, findRow(table, row.id) ?? row));
+}
+
+/**
+ * Removes rows previously added with `appendAppRows` from the in-memory store, e.g. when a
+ * multi-row command fails half-way, so that no phantom row stays visible until the next sync.
+ */
+export function discardAppRows(rowsByTable: Record<string, Row[]>) {
+  for (const [table, rows] of Object.entries(rowsByTable)) {
+    const ids = new Set(rows.map((row) => String(row.id)));
+    store[table] = (store[table] ?? []).filter((row) => !ids.has(String(row.id)));
+  }
+  recomputeAppStoreDerivedData();
 }
 
 export function patchAppRows(
@@ -163,6 +187,29 @@ function buildAppRows() {
   );
 }
 
+/**
+ * AppRow -> Prisma migration, Project Center lot: the Prisma projection is the read source for
+ * the 9 Project Center tables. Writes still go to AppRow + Prisma (double-run), so both hold the
+ * same rows (`npm run project-center:prisma-consistency:check`).
+ * Rollback lever without redeploy: PROJECT_CENTER_READ_SOURCE=app_row.
+ */
+export function projectCenterReadsFromPrisma() {
+  return (process.env.PROJECT_CENTER_READ_SOURCE ?? 'prisma') !== 'app_row';
+}
+
+async function overlayProjectCenterFromPrisma(prisma: PrismaService, nextStore: Store) {
+  if (!projectCenterReadsFromPrisma()) return;
+  try {
+    const projected = await readProjectCenterProjection(prisma);
+    for (const [table, rows] of Object.entries(projected)) {
+      nextStore[table] = rows;
+    }
+  } catch (error) {
+    if (isMissingProjectionError(error)) return;
+    throw error;
+  }
+}
+
 export async function syncAppStoreFromDatabase(prisma: PrismaService, options: { force?: boolean } = {}) {
   if (!prisma.isConnected) {
     resetStore(Object.fromEntries(Object.keys(initialStore).map((table) => [table, []])));
@@ -194,6 +241,8 @@ export async function syncAppStoreFromDatabase(prisma: PrismaService, options: {
         nextStore[table] = [];
       }
     }
+
+    await overlayProjectCenterFromPrisma(prisma, nextStore);
 
     resetStore(nextStore);
     recomputeAppStoreDerivedData();

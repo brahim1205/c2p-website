@@ -10,6 +10,7 @@ import {
   store,
   syncAppStoreFromDatabase,
   withId,
+  withoutClientId,
 } from '../data/data-app-store.js';
 import { filterRowsForActor } from '../data/data-actor-scope.js';
 import { sanitizeVirtualClassRecord } from '../data/data-learning-sanitizers.js';
@@ -65,7 +66,7 @@ export class FormateurVirtualClassesService {
     const actor = this.requireFormateurActor(user);
     const input = this.requireObject(payload, 'Classe virtuelle invalide.');
     await syncAppStoreFromDatabase(this.prisma);
-    const sanitized = sanitizeVirtualClassRecord({ ...input, status: input.status ?? 'scheduled' }, actor);
+    const sanitized = sanitizeVirtualClassRecord({ ...withoutClientId(input), status: input.status ?? 'scheduled' }, actor);
     ensureConstraints('virtual_classes', [sanitized]);
     const virtualClass = withId(prepareInsert('virtual_classes', sanitized));
     const created = appendAppRows('virtual_classes', [virtualClass]);

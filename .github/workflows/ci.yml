@@ -181,6 +181,10 @@ jobs:
         working-directory: backend
         run: npm run build
 
+      - name: Backend unit tests
+        working-directory: backend
+        run: npm test
+
       - name: Backend legacy data mode checks
         working-directory: backend
         run: npm run data:legacy-mode:test

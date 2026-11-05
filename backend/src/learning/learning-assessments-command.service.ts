@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
-import { appendAppRows, clone, patchAppRows, store, syncAppStoreFromDatabase, withId } from '../data/data-app-store.js';
+import { appendAppRows, clone, patchAppRows, store, syncAppStoreFromDatabase, withId, withoutClientId } from '../data/data-app-store.js';
 import { filterRowsForActor } from '../data/data-actor-scope.js';
 import { applyDataDeleteCascade } from '../data/data-delete-cascade.js';
 import { sanitizeExamRecord, sanitizeQuizChoiceRecord, sanitizeQuizQuestionRecord } from '../data/data-learning-sanitizers.js';
@@ -22,7 +22,7 @@ export class LearningAssessmentsCommandService {
     const actor = this.requireFormateurActor(user);
     const input = this.requireObject(payload, 'Evaluation invalide.');
     await syncAppStoreFromDatabase(this.prisma);
-    const sanitized = sanitizeExamRecord(input, actor);
+    const sanitized = sanitizeExamRecord(withoutClientId(input), actor);
     ensureConstraints('exams', [sanitized]);
     const exam = withId(prepareInsert('exams', sanitized));
     const created = appendAppRows('exams', [exam]);
@@ -55,7 +55,7 @@ export class LearningAssessmentsCommandService {
     const input = this.requireObject(payload, 'Question invalide.');
     await syncAppStoreFromDatabase(this.prisma);
     this.getInstructorExam(examId, actor);
-    const sanitized = sanitizeQuizQuestionRecord({ ...input, exam_id: examId }, actor);
+    const sanitized = sanitizeQuizQuestionRecord({ ...withoutClientId(input), exam_id: examId }, actor);
     ensureConstraints('quiz_questions', [sanitized]);
     const question = withId(prepareInsert('quiz_questions', sanitized));
     const createdQuestions = appendAppRows('quiz_questions', [question]);
@@ -178,7 +178,7 @@ export class LearningAssessmentsCommandService {
     this.getInstructorExam(examId, actor);
     const rowsToPersist = this.resetCorrectChoices(input, actor);
     const questionId = input.question_id ?? input.questionId;
-    const sanitized = sanitizeQuizChoiceRecord({ ...input, question_id: questionId, exam_id: examId }, actor);
+    const sanitized = sanitizeQuizChoiceRecord({ ...withoutClientId(input), question_id: questionId, exam_id: examId }, actor);
     const choice = withId(prepareInsert('quiz_choices', sanitized));
     appendAppRows('quiz_choices', [choice]);
     rowsToPersist.quiz_choices = [...(rowsToPersist.quiz_choices ?? []), choice];

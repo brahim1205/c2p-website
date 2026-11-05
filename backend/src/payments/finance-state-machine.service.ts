@@ -63,7 +63,7 @@ export interface FinanceStateMachineSnapshot {
   metadata: Record<string, unknown>;
 }
 
-const ADMIN_ROLES = new Set(['admin', 'finance_admin', 'operator']);
+const ADMIN_ROLES = new Set(['superadmin', 'admin', 'finance_admin', 'operator']);
 
 @Injectable()
 export class FinanceStateMachineService {

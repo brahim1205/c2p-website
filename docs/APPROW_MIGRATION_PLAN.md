@@ -6,7 +6,7 @@ Etat mesure:
 
 - tables connues: 60;
 - tables avec projection normalisee ou auth normalisee: 35;
-- tables suivies comme dette `AppRow`: 44;
+- tables suivies comme dette `AppRow`: 36;
 - surface de mutation generique restante via `/data`: 0.
 
 ## Regles de migration
@@ -134,6 +134,28 @@ Etat 2026-05-29:
 - projection double-run ajoutee pour `projects`, `project_milestones`, `project_documents`, `project_history`, `project_funding_rounds`, `funding_investors`, `project_partnerships`, `project_tracking` et `project_collaborations`;
 - backfill Project Center branche sur `PlatformSnapshotSyncService` et controle par `npm run project-center:prisma-consistency:check`;
 - le lot Project Center restant concerne surtout la bascule runtime des lectures/ecritures depuis les projections Prisma et les E2E porteur/partenaire/admin.
+
+Etat 2026-11-04:
+
+- lectures runtime Project Center basculees vers `ProjectCenterPrismaReadService` avec fallback AppRow : catalogue et detail publics, espace porteur (projets, snapshot, detail, levees, partenariats), espace partenaire (suivis, snapshot, collaborations, projets ouverts) et tableau de bord admin;
+- les champs non stockes (`documents_count`, `partnerships_count`, `progress_percent`, `investors`, titres recopies...) sont calcules par `deriveProjectCenterRows`, partage entre le store AppRow et le reader Prisma;
+- `project-center:prisma-consistency:check` compare desormais le contenu ligne a ligne (et plus seulement les volumes);
+- reponses HTTP des 17 endpoints de lecture verifiees identiques avant/apres bascule sur la base seed CI;
+- les 9 tables Project Center sont retirees du registre de dette `AppRow` active par `npm run app-row:governance:check`;
+- toutes les lectures du module Project Center passent par le reader Prisma (24 reponses HTTP verifiees identiques a HEAD, cas d'erreur inclus); seules les commandes lisent encore AppRow pour rester coherentes avec leurs ecritures;
+- ecritures encore maintenues sur AppRow avec double-run Prisma.
+
+Bloquant avant la bascule des ecritures:
+
+- `PRISMA_PLATFORM_SYNC_ON_BOOT=true` (production et staging) execute `syncProjectCenterSnapshot` a chaque demarrage : les tables Prisma Project Center (`source = 'app_row'`) sont **supprimees puis reconstruites depuis AppRow**. Une ecriture faite uniquement dans Prisma serait donc perdue au redemarrage suivant.
+- AppRow reste lu hors du module par `data-actor-scope.ts`, `data-row-access.ts`, `data-write-policy.ts`, `data-project-hydration.ts`, `data-delete-cascade.ts`, `data-derived-data.ts`, l'API legacy `/data` et `project-funding.service.ts`.
+
+Ordre de bascule sur:
+
+1. ~~basculer les lectures restantes hors module vers Prisma~~ — fait le 2026-11-04 : `syncAppStoreFromDatabase` charge les 9 tables Project Center depuis la projection Prisma (`readProjectCenterProjection`), donc `project-funding.service.ts`, actor scope, row access, hydration, write policy, delete cascade et l'API legacy `/data` lisent Prisma. Retour arriere sans redeploiement : `PROJECT_CENTER_READ_SOURCE=app_row`. Verifie : 75 reponses HTTP identiques a HEAD (avant et apres les flux d'ecriture), `http:checks`, `smoke:test`, `smoke:test:forms`;
+2. exclure Project Center du sync de boot (ou le rendre Prisma -> AppRow) et le valider en staging;
+3. inverser les ecritures : Prisma en premier, AppRow en copie derivee dans la meme transaction;
+4. apres une periode d'observation sans divergence (`project-center:prisma-consistency:check`), arreter la copie AppRow et purger ses lignes.
 
 ### Lot 4 - Messaging et notifications
 
