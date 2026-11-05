@@ -7,7 +7,7 @@
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:dev:loader": "NODE_OPTIONS='--experimental-specifier-resolution=node' node --loader ts-node/esm src/main.ts",
-    "test": "NODE_OPTIONS='--experimental-specifier-resolution=node --no-warnings' node --loader ts-node/esm --test 'src/**/*.spec.ts'",
+    "test": "NODE_OPTIONS='--experimental-specifier-resolution=node --no-warnings' node --loader ts-node/esm --test $(find src -name '*.spec.ts' | sort)",
     "build": "tsc -p tsconfig.build.json",
     "architecture:check": "node ../ops/scripts/architecture-check.mjs",
     "large-file:ratchet": "node ../ops/scripts/large-file-ratchet-check.mjs",
