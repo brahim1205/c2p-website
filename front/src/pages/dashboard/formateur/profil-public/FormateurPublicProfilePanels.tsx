@@ -15,7 +15,7 @@ export function FormateurPublicProfileHeader({ session }: { session: FormateurPu
   return (
     <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profil public formateur</h1>
+        <h2 className="text-2xl font-bold text-gray-900">Profil public formateur</h2>
         <p className="mt-2 text-gray-600">Ce profil alimente votre page publique, vos preuves d’expertise et vos données de paiement.</p>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -43,7 +43,7 @@ export function FormateurPublicProfileEditor({ session }: { session: FormateurPu
   const { form } = session;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(340px,0.7fr)]">
+    <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.3fr)_minmax(340px,0.7fr)]">
       <div className="space-y-6">
         <IdentitySection session={session} />
         <SkillsLanguagesSection session={session} />

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,7 +27,10 @@ import {
   SettingsHeader,
   SettingsSidebar,
 } from './ParametresPanels';
-import type { AccountSettingsForm, PasswordSettingsForm, SettingsTab } from './parametresModel';
+import { SETTINGS_TAB_PARAM, settingsTabsFor, type AccountSettingsForm, type PasswordSettingsForm, type SettingsTab } from './parametresModel';
+
+// Instructor-only tab: loaded on demand so other roles do not download the profile editor.
+const FormateurPublicProfileSection = lazy(() => import('../formateur/profil-public/FormateurPublicProfileSection'));
 
 const defaultPreferences: Required<UserPreferences> = {
   language: 'fr',
@@ -45,7 +48,19 @@ export default function ParametresPage() {
   const navigate = useNavigate();
   const { user, updateUser, logout } = useAuth();
   const { success, info, error } = useToast();
-  const [activeTab, setActiveTab] = useState<SettingsTab>('account');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabs = useMemo(() => settingsTabsFor(user?.role), [user?.role]);
+  const requestedTab = SETTINGS_TAB_PARAM[searchParams.get('onglet') ?? ''];
+  const [selectedTab, setSelectedTab] = useState<SettingsTab>(requestedTab ?? 'account');
+  useEffect(() => {
+    if (requestedTab) setSelectedTab(requestedTab);
+  }, [requestedTab]);
+  const activeTab: SettingsTab = tabs.some((tab) => tab.id === selectedTab) ? selectedTab : 'account';
+  const setActiveTab = (tab: SettingsTab) => {
+    setSelectedTab(tab);
+    const param = Object.entries(SETTINGS_TAB_PARAM).find(([, value]) => value === tab)?.[0];
+    setSearchParams(param ? { onglet: param } : {}, { replace: true });
+  };
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -240,7 +255,7 @@ export default function ParametresPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <SettingsSidebar activeTab={activeTab} onChangeTab={setActiveTab} />
+        <SettingsSidebar activeTab={activeTab} onChangeTab={setActiveTab} tabs={tabs} />
 
         <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
           {activeTab === 'account' && (
@@ -251,6 +266,11 @@ export default function ParametresPage() {
               onChange={setAccountForm}
               onSave={handleSaveAccount}
             />
+          )}
+          {activeTab === 'public-profile' && (
+            <Suspense fallback={<p className="p-6 text-sm text-gray-500">Chargement du profil public…</p>}>
+              <FormateurPublicProfileSection />
+            </Suspense>
           )}
           {activeTab === 'activities' && user && (
             <ActivitiesPanel user={user} switching={switchingActivity} onSwitch={handleSwitchActivity} />

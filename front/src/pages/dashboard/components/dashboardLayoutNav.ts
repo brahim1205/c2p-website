@@ -46,9 +46,8 @@ export const roleNavOverrides: Record<string, DashboardNavItem[]> = {
     { group: 'Performances', label: 'Apprenants', icon: 'ri-group-line', path: '/dashboard/formateur/apprenants' },
     { group: 'Performances', label: 'Avis', icon: 'ri-star-line', path: '/dashboard/formateur/avis' },
     { group: 'Performances', label: 'Revenus', icon: 'ri-money-dollar-circle-line', path: '/dashboard/formateur/revenus' },
-    { group: 'Compte', label: 'Profil public', icon: 'ri-user-star-line', path: '/dashboard/formateur/profil-public' },
     { group: 'Compte', label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
-    { group: 'Compte', label: 'Paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
+    { group: 'Compte', label: 'Profil et paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
   ],
   apprenant: [
     { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/apprenant' },

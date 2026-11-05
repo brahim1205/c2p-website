@@ -56,7 +56,7 @@ export function QuickLinksPanel({ quickLinks }: { quickLinks: DashboardQuickLink
     <section className="mb-6 rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-900">Accès rapide</h2>
-        <Link to="/dashboard/formateur/profil-public" className="text-sm font-medium text-teal-600 hover:text-teal-700">
+        <Link to="/dashboard/parametres?onglet=profil-public" className="text-sm font-medium text-teal-600 hover:text-teal-700">
           Voir le profil public
         </Link>
       </div>

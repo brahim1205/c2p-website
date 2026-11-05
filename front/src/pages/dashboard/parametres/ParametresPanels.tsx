@@ -58,13 +58,15 @@ export function AccountSummary({
 export function SettingsSidebar({
   activeTab,
   onChangeTab,
+  tabs = settingsTabs,
 }: {
   activeTab: SettingsTab;
   onChangeTab: (tab: SettingsTab) => void;
+  tabs?: typeof settingsTabs;
 }) {
   return (
     <aside className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-      {settingsTabs.map((tab) => (
+      {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"
@@ -97,7 +99,7 @@ export function PrivacyPanel({ role, onNavigate }: { role?: AuthUser['role']; on
           </p>
           <button
             type="button"
-            onClick={() => onNavigate(role === 'formateur' ? '/dashboard/formateur/profil-public' : '/dashboard/profile')}
+            onClick={() => onNavigate(role === 'formateur' ? '/dashboard/parametres?onglet=profil-public' : '/dashboard/profile')}
             className="mt-4 rounded-lg border border-teal-200 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
           >
             Ouvrir le profil
