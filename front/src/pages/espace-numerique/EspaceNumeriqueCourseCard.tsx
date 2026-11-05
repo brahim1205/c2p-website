@@ -48,11 +48,15 @@ export default function EspaceNumeriqueCourseCard({
           {formation.instructor_name || 'Formateur C2P'}
         </p>
         <div className="mt-4 flex items-center justify-between">
-          <span className="flex items-center gap-1 text-xs font-bold text-[#f5a623]">
-            <i className="ri-star-fill"></i>
-            {Number(formation.rating || 4.8).toFixed(1)}
-            <span className="text-[#9aa2b8]">({formation.students_count || 0})</span>
-          </span>
+          {Number(formation.rating) > 0 ? (
+            <span className="flex items-center gap-1 text-xs font-bold text-[#f5a623]">
+              <i className="ri-star-fill"></i>
+              {Number(formation.rating).toFixed(1).replace('.', ',')}
+              <span className="text-[#9aa2b8]">({formation.students_count || 0})</span>
+            </span>
+          ) : (
+            <span className="rounded-full bg-[#eef6ff] px-2 py-0.5 text-[11px] font-bold text-[#2f6fb5]">Nouveau</span>
+          )}
           <span className="text-sm font-black text-[#10183f]">{price}</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">

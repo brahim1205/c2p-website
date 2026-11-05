@@ -11,7 +11,6 @@ const platformCards = [
     image: '/images/home/mechanic-with-spanners-pockets-optimized.webp',
     path: '/allopresta',
     price: 'Devis',
-    rating: '4,8',
     meta: 'Prix • localisation • avis',
   },
   {
@@ -21,7 +20,6 @@ const platformCards = [
     image: '/images/home/shocked-international-student-holding-pen-notebook-optimized.webp',
     path: '/espace-numerique',
     price: 'Cours',
-    rating: '4,9',
     meta: 'Modules • quiz • suivi',
   },
   {
@@ -31,7 +29,6 @@ const platformCards = [
     image: '/images/home/modern-man-working-caffe-optimized.webp',
     path: '/project-center',
     price: 'Gratuit',
-    rating: '4,7',
     meta: 'Incubation • financement',
   },
   {
@@ -41,7 +38,6 @@ const platformCards = [
     image: '/images/home/close-up-man-working-computer-chips-optimized.webp',
     path: '/auth/register?role=prestataire',
     price: 'Profil',
-    rating: '4,8',
     meta: 'Agenda • devis • avis',
   },
   {
@@ -51,7 +47,6 @@ const platformCards = [
     image: '/images/home/photo-editor-using-editing-software-digital-workspace-home-optimized.webp',
     path: '/auth/register?role=formateur',
     price: 'Revenus',
-    rating: '4,9',
     meta: 'Vidéos • classes • quiz',
   },
   {
@@ -61,7 +56,6 @@ const platformCards = [
     image: '/images/home/venture.webp',
     path: '/auth/register?role=partenaire',
     price: 'Badge',
-    rating: '4,8',
     meta: 'Simulation • suivi • contrat',
   },
 ];
@@ -144,7 +138,7 @@ export default function HomePage() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   to="/auth/register"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#147f7b] px-6 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(20 127,123,0.22)] transition hover:bg-[#0f6b68]"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#147f7b] px-6 py-3 text-sm font-bold text-white shadow-[0_18px_34px_rgba(20,127,123,0.22)] transition hover:bg-[#0f6b68]"
                 >
                   Démarrer mon parcours
                 </Link>
@@ -160,15 +154,15 @@ export default function HomePage() {
             <div className="relative min-h-[270px] sm:min-h-[360px] lg:min-h-[540px]">
               <div className="absolute right-0 top-2 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
                 <div className="flex items-center gap-1 text-sm font-black text-[#147f7b]">
-                  4,8 <i className="ri-star-fill text-[#f5b642]" />
+                  <i className="ri-shield-check-line" /> Badge vérifié
                 </div>
-                <p className="text-[11px] font-medium text-[#6b7a8d]">Avis utilisateurs</p>
+                <p className="text-[11px] font-medium text-[#6b7a8d]">Sur les profils contrôlés par C2P</p>
               </div>
 
-              <div className="absolute left-2 top-16 z-10 rounded-full bg-[#147f7b] px-5 py-4 text-center text-white shadow-[0_18px_40px_rgba(20 127,123,0.28)] sm:left-8">
+              <div className="absolute left-2 top-16 z-10 rounded-full bg-[#147f7b] px-5 py-4 text-center text-white shadow-[0_18px_40px_rgba(20,127,123,0.28)] sm:left-8">
                 <i className="ri-book-open-line text-xl" />
-                <p className="mt-1 text-xl font-black leading-none">1 235</p>
-                <p className="text-[11px] font-semibold">opportunités</p>
+                <p className="mt-1 text-xl font-black leading-none">3</p>
+                <p className="text-[11px] font-semibold">espaces réunis</p>
               </div>
 
               <div className="absolute bottom-2 left-2 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)] sm:left-10">
@@ -225,8 +219,8 @@ export default function HomePage() {
                   <p className="mt-3 text-sm text-[#6a7b8c]">{card.meta}</p>
                   <div className="mt-4 flex items-center justify-between border-t border-[#edf1ef] pt-4">
                     <span className="text-sm font-black text-[#15945f]">{card.price}</span>
-                    <span className="flex items-center gap-1 text-sm font-black text-[#112238]">
-                      {card.rating} <i className="ri-star-fill text-[#f5b642]" />
+                    <span className="flex items-center gap-1 text-sm font-black text-[#112238] transition group-hover:text-[#15945f]">
+                      Découvrir <i className="ri-arrow-right-line" />
                     </span>
                   </div>
                 </div>
@@ -275,7 +269,7 @@ export default function HomePage() {
       </section>
 
       <section className="px-5 py-0 sm:px-8 lg:px-12">
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-none bg-gradient-to-r from-[#178750] via-[#239a5f] to-[#2fad71] px-6 py-10 text-white shadow-[0_24px_70px_rgba(23 135,80,0.18)] sm:rounded-[26px] sm:px-12 lg:px-16">
+        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-none bg-gradient-to-r from-[#178750] via-[#239a5f] to-[#2fad71] px-6 py-10 text-white shadow-[0_24px_70px_rgba(23,135,80,0.18)] sm:rounded-[26px] sm:px-12 lg:px-16">
           <div className="pointer-events-none absolute inset-0 opacity-20">
             <div className="absolute left-[40%] top-[-40px] h-52 w-52 rounded-full border border-white/50" />
             <div className="absolute right-[8%] top-[-80px] h-80 w-80 rounded-full border border-white/40" />
