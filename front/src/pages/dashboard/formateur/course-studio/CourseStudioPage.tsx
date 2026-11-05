@@ -7,6 +7,7 @@ import { useCourseStudio } from './useCourseStudio';
 import CurriculumPanel from './panels/CurriculumPanel';
 import IntendedLearnersPanel from './panels/IntendedLearnersPanel';
 import LandingPagePanel from './panels/LandingPagePanel';
+import LiveSessionsPanel from './panels/LiveSessionsPanel';
 import PricingPanel from './panels/PricingPanel';
 
 function StudioState({ icon, title, children }: { icon: string; title: string; children?: ReactNode }) {
@@ -82,6 +83,7 @@ export default function CourseStudioPage() {
           ) : null}
           {panel === 'objectifs' ? <IntendedLearnersPanel studio={studio} course={course} /> : null}
           {panel === 'programme' ? <CurriculumPanel studio={studio} program={studio.program} /> : null}
+          {panel === 'seances' ? <LiveSessionsPanel course={course} sessions={studio.liveSessions} loading={studio.liveLoading} /> : null}
           {panel === 'accueil' ? <LandingPagePanel studio={studio} course={course} /> : null}
           {panel === 'tarifs' ? <PricingPanel studio={studio} course={course} /> : null}
         </main>

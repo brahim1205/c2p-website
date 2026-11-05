@@ -9,6 +9,7 @@ import {
   deleteFormateurCourseSection,
   deleteFormateurLessonAsset,
   fetchFormateurCourseProgram,
+  fetchFormateurVirtualClasses,
   saveFormateurCourseLesson,
   saveFormateurCourseSection,
   saveFormateurLessonAsset,
@@ -71,6 +72,15 @@ export function useCourseStudio(courseId: string | undefined) {
     enabled: Boolean(courseId && userId),
   });
   const program = programQuery.data ?? null;
+  const liveQuery = useQuery({
+    queryKey: queryKeys.formateur.virtualClasses(userId),
+    queryFn: () => fetchFormateurVirtualClasses(userId),
+    enabled: Boolean(userId),
+  });
+  const liveSessions = useMemo(
+    () => (liveQuery.data?.classes ?? []).filter((session) => String(session.course_id) === String(courseId)),
+    [courseId, liveQuery.data?.classes],
+  );
 
   const setProgram = useCallback(
     (updater: (current: StudioProgram) => StudioProgram) =>
@@ -246,7 +256,8 @@ export function useCourseStudio(courseId: string | undefined) {
     return updated;
   };
 
-  const checklist = useMemo(() => (program ? buildSubmissionChecklist(program) : []), [program]);
+  const plannedLive = liveSessions.filter((session) => session.status !== 'cancelled').length;
+  const checklist = useMemo(() => (program ? buildSubmissionChecklist(program, plannedLive) : []), [plannedLive, program]);
 
   return {
     addLesson,
@@ -258,6 +269,8 @@ export function useCourseStudio(courseId: string | undefined) {
     changeStatus,
     checklist,
     computedDuration,
+    liveLoading: liveQuery.isLoading,
+    liveSessions,
     patchCourse,
     program,
     programQuery,

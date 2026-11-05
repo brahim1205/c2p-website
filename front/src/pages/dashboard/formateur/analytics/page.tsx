@@ -12,8 +12,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
-  LineChart,
+  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -217,14 +216,16 @@ export default function FormateurAnalyticsPage() {
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={coursePerformance}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="conversion" stroke="#5fa6f3" strokeWidth={3} />
-                  <Line type="monotone" dataKey="completion" stroke="#6366F1" strokeWidth={3} />
-                </LineChart>
+                {/* Courses are separate categories: grouped bars, not a line joining unrelated courses. */}
+                <BarChart data={coursePerformance} layout="vertical" barGap={2} margin={{ left: 8, right: 16 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" unit="%" domain={[0, 100]} />
+                  <YAxis type="category" dataKey="name" width={130} interval={0} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(value: number) => `${value} %`} />
+                  <Legend />
+                  <Bar dataKey="conversion" name="Conversion" fill="#5fa6f3" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="completion" name="Complétion" fill="#6366F1" radius={[0, 6, 6, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </section>

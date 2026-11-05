@@ -118,6 +118,8 @@ const formateurRoutes: RouteObject[] = [
   dashboardRoute('/dashboard/formateur/revenus', Pages.FormateurRevenuePage, ['formateur']),
   dashboardRoute('/dashboard/formateur/analytics', Pages.FormateurAnalyticsPage, ['formateur']),
   dashboardRoute('/dashboard/formateur/communaute', Pages.FormateurCommunityPage, ['formateur']),
+  dashboardRoute('/dashboard/formateur/avis', Pages.FormateurReviewsPage, ['formateur']),
+  dashboardRoute('/dashboard/formateur/annonces', Pages.FormateurAnnouncementsPage, ['formateur']),
 ];
 
 const roleSpecificRoutes: RouteObject[] = [

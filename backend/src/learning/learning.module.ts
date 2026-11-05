@@ -5,6 +5,8 @@ import { NotificationsModule } from '../notifications/notifications.module.js';
 import { PaymentsModule } from '../payments/payments.module.js';
 import { FormateurCourseProgramService } from './formateur-course-program.service.js';
 import { FormateurCommunityService } from './formateur-community.service.js';
+import { FormateurEngagementController } from './formateur-engagement.controller.js';
+import { FormateurEngagementService } from './formateur-engagement.service.js';
 import { FormateurLearnersService } from './formateur-learners.service.js';
 import { FormateurVirtualClassesService } from './formateur-virtual-classes.service.js';
 import { LearningAccessService } from './learning-access.service.js';
@@ -20,9 +22,10 @@ import { LearningService } from './learning.service.js';
 
 @Module({
   imports: [AuthModule, DatabaseModule, NotificationsModule, PaymentsModule],
-  controllers: [LearningController, LearningParentController, LearningPublicController],
+  controllers: [FormateurEngagementController, LearningController, LearningParentController, LearningPublicController],
   providers: [
     FormateurCommunityService,
+    FormateurEngagementService,
     FormateurCourseProgramService,
     FormateurLearnersService,
     FormateurVirtualClassesService,

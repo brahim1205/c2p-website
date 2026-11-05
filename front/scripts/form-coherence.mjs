@@ -260,6 +260,16 @@ async function testFormateurCourseCreation(page) {
   if (remaining !== 0) record('created-course-cleaned', `course still visible ${remaining} time(s)`);
 }
 
+// Udemy-style communication / performance pages: they load and the grouped menu points to them.
+async function testFormateurCommunicationPages(page) {
+  await page.goto(`${FRONT_URL}/dashboard/formateur/avis`, { waitUntil: 'domcontentloaded' });
+  await expectVisible(page.getByRole('heading', { name: /^Avis des apprenants$/ }), 'formateur-reviews-page');
+  const navLink = page.locator('aside a[href="/dashboard/formateur/annonces"]').first();
+  await expectVisible(navLink, 'formateur-nav-announcements');
+  await navLink.click();
+  await expectVisible(page.getByRole('heading', { name: /^Nouvelle annonce$/ }), 'formateur-announcements-page');
+}
+
 async function main() {
   assertMutationSafety();
 
@@ -286,6 +296,7 @@ async function main() {
     attachWatchers(formateurPage);
     await login(formateurPage, FORMATEUR_EMAIL);
     await testFormateurCourseCreation(formateurPage);
+    await testFormateurCommunicationPages(formateurPage);
     await formateurPage.close();
   } catch (error) {
     record('fatal', error);

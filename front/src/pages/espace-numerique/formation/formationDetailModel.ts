@@ -65,6 +65,8 @@ export interface CourseReview {
   comment: string;
   status: string;
   created_at: string;
+  instructor_response?: string | null;
+  instructor_response_by?: string | null;
 }
 
 export interface LessonProgressRecord {

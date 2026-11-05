@@ -54,6 +54,7 @@ export const COMMAND_ONLY_WRITE_TABLES = new Set([
   'certificates',
   'client_favorites',
   'client_orders',
+  'course_announcements',
   'course_enrollments',
   'course_faq_items',
   'course_lessons',
@@ -166,6 +167,7 @@ const LEARNING_TABLES = new Set([
   'certificates',
   'lesson_comments',
   'course_faq_items',
+  'course_announcements',
 ]);
 
 const MESSAGING_TABLES = new Set([

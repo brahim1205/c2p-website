@@ -36,6 +36,8 @@ const searchIndex: Record<string, SearchItem[]> = {
   ],
   formateur: [
     { id: 'cours', label: 'Mes formations', category: 'Page', path: '/dashboard/formateur/mes-cours', icon: 'ri-book-open-line' },
+    { id: 'avis', label: 'Avis des apprenants', category: 'Page', path: '/dashboard/formateur/avis', icon: 'ri-star-line' },
+    { id: 'annonces', label: 'Annonces', category: 'Page', path: '/dashboard/formateur/annonces', icon: 'ri-megaphone-line' },
     { id: 'classe', label: 'Classes virtuelles', category: 'Page', path: '/dashboard/formateur/classes-virtuelles', icon: 'ri-video-line' },
     { id: 'appren', label: 'Mes apprenants', category: 'Page', path: '/dashboard/formateur/apprenants', icon: 'ri-group-line' },
     { id: 'eval', label: 'Évaluations', category: 'Page', path: '/dashboard/formateur/evaluations', icon: 'ri-file-list-3-line' },

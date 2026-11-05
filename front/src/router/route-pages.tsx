@@ -68,6 +68,8 @@ export const FormateurCoursPage = lazy(() => import('../pages/dashboard/formateu
 export const FormateurCourseProgramPage = lazy(() => import('../pages/dashboard/formateur/course-studio/LegacyProgramRedirect'));
 export const FormateurCourseQuickStartPage = lazy(() => import('../pages/dashboard/formateur/course-studio/QuickStartPage'));
 export const FormateurCourseStudioPage = lazy(() => import('../pages/dashboard/formateur/course-studio/CourseStudioPage'));
+export const FormateurReviewsPage = lazy(() => import('../pages/dashboard/formateur/avis/page'));
+export const FormateurAnnouncementsPage = lazy(() => import('../pages/dashboard/formateur/annonces/page'));
 export const FormateurClassesPage = lazy(() => import('../pages/dashboard/formateur/classes-virtuelles/page'));
 export const FormateurCreateVirtualClassPage = lazy(() => import('../pages/dashboard/formateur/classes-virtuelles/nouvelle/page'));
 export const FormateurApprenantsPage = lazy(() => import('../pages/dashboard/formateur/apprenants/page'));

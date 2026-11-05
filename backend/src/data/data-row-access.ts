@@ -134,6 +134,7 @@ export function filterRowsForActor(
       }
       return rows.filter((row) => String(row.status ?? 'published') === 'published');
     case 'course_faq_items':
+    case 'course_announcements':
       if (user.role === 'formateur') {
         return rows.filter((row) => courseIds.includes(String(row.course_id)));
       }

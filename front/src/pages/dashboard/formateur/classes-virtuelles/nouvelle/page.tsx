@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
@@ -8,10 +9,22 @@ import { useVirtualClassesPageSession } from '../useVirtualClassesPageSession';
 export default function FormateurCreateVirtualClassPage() {
   const navigate = useNavigate();
   const session = useVirtualClassesPageSession();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('retour');
+  // Opened from the course studio ("Séances en direct"): preselect that course once loaded.
+  const preselectedCourse = searchParams.get('course');
+  const preselected = useRef(false);
+  const { instructorCourses, selectCreateCourse } = session;
+  useEffect(() => {
+    if (preselected.current || !preselectedCourse) return;
+    if (!instructorCourses.some((course) => String(course.id) === preselectedCourse)) return;
+    preselected.current = true;
+    selectCreateCourse(preselectedCourse);
+  }, [instructorCourses, preselectedCourse, selectCreateCourse]);
 
   const submit = async () => {
     const created = await session.handleCreateClass();
-    if (created) navigate('/dashboard/formateur/classes-virtuelles');
+    if (created) navigate(returnTo?.startsWith('/dashboard/formateur/') ? returnTo : '/dashboard/formateur/classes-virtuelles');
   };
 
   return (

@@ -134,6 +134,12 @@ function ReviewCard({ review, isCurrentUser }: { review: CourseReview; isCurrent
         <span className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString('fr-FR')}</span>
       </div>
       <p className="mt-3 text-sm leading-7 text-gray-700">{review.comment}</p>
+      {review.instructor_response ? (
+        <div className="mt-3 rounded-xl border-l-4 border-teal-500 bg-teal-50/60 px-4 py-3">
+          <p className="text-xs font-bold text-teal-700">Réponse du formateur{review.instructor_response_by ? ` · ${review.instructor_response_by}` : ''}</p>
+          <p className="mt-1 whitespace-pre-line text-sm leading-6 text-gray-700">{review.instructor_response}</p>
+        </div>
+      ) : null}
     </div>
   );
 }

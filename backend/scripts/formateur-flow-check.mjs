@@ -126,6 +126,35 @@ async function main() {
     expectOk(await call(formateur, 'DELETE', `/learning/formateur/courses/${enc(quick.id)}`), 'DELETE quick draft');
   });
 
+  await step('avis: liste et reponse publique du formateur', async () => {
+    const snapshot = expectOk(await call(formateur, 'GET', '/learning/formateur/reviews'), 'GET reviews');
+    expect(Array.isArray(snapshot.reviews), 'reviews absent');
+    const review = snapshot.reviews[0];
+    if (!review) return;
+    const previous = review.instructor_response ?? '';
+    const answered = expectOk(await call(formateur, 'PATCH', `/learning/formateur/reviews/${enc(review.id)}/response`, { response: `Merci ${RUN_ID}` }), 'PATCH response');
+    expect(answered.instructor_response === `Merci ${RUN_ID}` && answered.instructor_response_at, `reponse = ${JSON.stringify(answered)}`);
+    const tooLong = await call(formateur, 'PATCH', `/learning/formateur/reviews/${enc(review.id)}/response`, { response: 'x'.repeat(1001) });
+    expect(tooLong.status === 400, `reponse trop longue -> ${tooLong.status}`);
+    expectOk(await call(formateur, 'PATCH', `/learning/formateur/reviews/${enc(review.id)}/response`, { response: previous }), 'restore response');
+  });
+
+  await step('annonces: envoi aux inscrits d une formation', async () => {
+    const snapshot = expectOk(await call(formateur, 'GET', '/learning/formateur/announcements'), 'GET announcements');
+    const target = (snapshot.courses ?? []).find((course) => course.learners > 0);
+    expect(target, 'aucune formation avec des inscrits dans le seed');
+    const empty = await call(formateur, 'POST', `/learning/formateur/courses/${enc(target.id)}/announcements`, { title: 'Vide', message: ' ' });
+    expect(empty.status === 400, `annonce vide -> ${empty.status}`);
+    const foreign = await call(formateur, 'POST', '/learning/formateur/courses/course-inexistant/announcements', { title: 'T', message: 'M' });
+    expect(foreign.status === 404, `formation d un autre -> ${foreign.status}`);
+    const created = expectOk(await call(formateur, 'POST', `/learning/formateur/courses/${enc(target.id)}/announcements`, {
+      title: `Annonce QA ${RUN_ID}`, message: 'Nouvelle lecon disponible.',
+    }), 'POST announcement');
+    expect(created.recipients_count === target.learners && created.delivered_count === created.recipients_count, `annonce = ${JSON.stringify(created)}`);
+    const after = expectOk(await call(formateur, 'GET', '/learning/formateur/announcements'), 'GET announcements after');
+    expect(after.announcements.some((entry) => entry.title === `Annonce QA ${RUN_ID}`), 'annonce absente de l historique');
+  });
+
   // 3. Throw-away course.
   const courseTitle = `QA formateur ${RUN_ID}`;
   await step('creer une formation (bundle)', async () => {

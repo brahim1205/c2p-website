@@ -76,11 +76,12 @@ export interface StudioProgram {
   assets: StudioAsset[];
 }
 
-export type StudioPanel = 'objectifs' | 'programme' | 'accueil' | 'tarifs';
+export type StudioPanel = 'objectifs' | 'programme' | 'seances' | 'accueil' | 'tarifs';
 
 export const STUDIO_PANELS: Array<{ id: StudioPanel; group: string; label: string; icon: string }> = [
   { id: 'objectifs', group: 'Planifier votre cours', label: 'Apprenants cibles', icon: 'ri-focus-3-line' },
   { id: 'programme', group: 'Créer votre contenu', label: 'Programme', icon: 'ri-list-check-3' },
+  { id: 'seances', group: 'Créer votre contenu', label: 'Séances en direct', icon: 'ri-live-line' },
   { id: 'accueil', group: 'Publier votre cours', label: "Page d'accueil du cours", icon: 'ri-layout-top-line' },
   { id: 'tarifs', group: 'Publier votre cours', label: 'Tarification', icon: 'ri-price-tag-3-line' },
 ];
@@ -183,8 +184,9 @@ export interface ChecklistItem {
   panel: StudioPanel;
 }
 
-export function buildSubmissionChecklist(program: StudioProgram): ChecklistItem[] {
+export function buildSubmissionChecklist(program: StudioProgram, plannedLiveSessions = 0): ChecklistItem[] {
   const { course, sections, lessons, assets } = program;
+  const needsLive = course.delivery_mode !== 'online';
   const objectives = (course.objectives ?? []).filter((item) => item.trim());
   const videoLessonIds = new Set(assets.filter((asset) => asset.asset_type === 'video').map((asset) => String(asset.lesson_id)));
   return [
@@ -194,6 +196,7 @@ export function buildSubmissionChecklist(program: StudioProgram): ChecklistItem[
     { id: 'lessons', label: 'Au moins une leçon', done: lessons.length > 0, required: true, panel: 'programme' },
     { id: 'videos', label: 'Au moins une vidéo', done: videoLessonIds.size > 0, required: false, panel: 'programme' },
     { id: 'preview', label: 'Une leçon en aperçu gratuit', done: lessons.some((lesson) => lesson.is_preview), required: false, panel: 'programme' },
+    ...(needsLive ? [{ id: 'live', label: 'Au moins une séance en direct planifiée', done: plannedLiveSessions > 0, required: false, panel: 'seances' as const }] : []),
     { id: 'duration', label: 'La durée du cours est renseignée', done: Boolean(course.duration?.trim()), required: true, panel: 'accueil' },
     { id: 'subtitle', label: 'Un sous-titre accrocheur', done: Boolean(course.subtitle?.trim()), required: false, panel: 'accueil' },
     { id: 'description', label: 'Une description du cours', done: Boolean(course.description?.trim()), required: true, panel: 'accueil' },

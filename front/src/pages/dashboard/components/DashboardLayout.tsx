@@ -126,12 +126,18 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         >
           <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <p className="px-3 pb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Navigation</p>
+            {navItems.some((item) => item.group) ? null : (
+              <p className="px-3 pb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Navigation</p>
+            )}
             <ul className={`flex min-h-[calc(100%-1.75rem)] flex-col ${navGapClass}`}>
-              {navItems.map((item) => {
+              {navItems.map((item, index) => {
                 const isActive = activeNavPath === item.path;
+                const startsGroup = Boolean(item.group) && item.group !== navItems[index - 1]?.group;
                 return (
                   <li key={item.path}>
+                    {startsGroup ? (
+                      <p className="px-3 pb-1.5 pt-4 text-xs font-semibold uppercase tracking-wider text-gray-400">{item.group}</p>
+                    ) : null}
                     <Link
                       to={item.path}
                       onClick={() => setSidebarOpen(false)}
