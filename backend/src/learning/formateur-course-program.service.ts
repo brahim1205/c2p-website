@@ -464,6 +464,72 @@ export class FormateurCourseProgramService {
     return this.swapPositions('course_lessons', current, target, actor, 'learning:formateur:course-lesson:reorder');
   }
 
+  /**
+   * Applies the full curriculum order in one write (drag & drop in the course studio):
+   * `{ sections: [{ id, lesson_ids: [...] }, ...] }`. Every section and lesson of the course
+   * must appear exactly once, so a stale client can never silently drop or duplicate items.
+   * Lessons may change section; their assets follow them.
+   */
+  async applyCurriculumOrder(courseId: string, payload: unknown, user: AuthUser | null) {
+    const actor = this.requireFormateurActor(user);
+    const input = this.requireObject(payload, 'Ordre du programme invalide.');
+    if (!Array.isArray(input.sections)) {
+      throw new BadRequestException('La liste ordonnee des sections est obligatoire.');
+    }
+    await syncAppStoreFromDatabase(this.prisma);
+    const course = this.getInstructorCourse(courseId, actor);
+    const courseSections = this.accessibleRows('course_sections', actor).filter((row) => String(row.course_id) === String(course.id));
+    const courseLessons = this.accessibleRows('course_lessons', actor).filter((row) => String(row.course_id) === String(course.id));
+
+    const orderedSections = (input.sections as unknown[]).map((entry) => this.requireObject(entry, 'Section invalide dans l ordre du programme.'));
+    const sectionIds = orderedSections.map((entry) => String(entry.id ?? ''));
+    const lessonPlacements = orderedSections.flatMap((entry, sectionIndex) => {
+      const lessonIds = Array.isArray(entry.lesson_ids) ? entry.lesson_ids.map(String) : [];
+      return lessonIds.map((lessonId, lessonIndex) => ({ lessonId, sectionId: sectionIds[sectionIndex], position: lessonIndex + 1 }));
+    });
+    this.assertSameIds(sectionIds, courseSections, 'sections');
+    this.assertSameIds(lessonPlacements.map((entry) => entry.lessonId), courseLessons, 'lecons');
+
+    const beforeSections = courseSections.map((row) => clone(row));
+    const beforeLessons = courseLessons.map((row) => clone(row));
+    const movedLessonSection = new Map<string, string>();
+    const sectionRows = sectionIds.flatMap((sectionId, index) =>
+      patchAppRows('course_sections', (row) => String(row.id) === sectionId, { position: index + 1 }));
+    const lessonRows = lessonPlacements.flatMap(({ lessonId, sectionId, position }) => {
+      const lesson = courseLessons.find((row) => String(row.id) === lessonId);
+      if (lesson && String(lesson.section_id) !== sectionId) movedLessonSection.set(lessonId, sectionId);
+      return patchAppRows('course_lessons', (row) => String(row.id) === lessonId, { position, section_id: sectionId });
+    });
+    const movedAssets = this.accessibleRows('lesson_assets', actor)
+      .filter((row) => String(row.course_id) === String(course.id) && movedLessonSection.has(String(row.lesson_id)));
+    const beforeAssets = movedAssets.map((row) => clone(row));
+    const assetRows = movedAssets.flatMap((asset) =>
+      patchAppRows('lesson_assets', (row) => String(row.id) === String(asset.id), { section_id: movedLessonSection.get(String(asset.lesson_id)) }));
+    recomputeDerivedData();
+
+    const afterRowsByTable: Record<string, Row[]> = { course_sections: sectionRows, course_lessons: lessonRows };
+    const beforeRowsByTable: Record<string, Row[]> = { course_sections: beforeSections, course_lessons: beforeLessons };
+    if (assetRows.length) {
+      afterRowsByTable.lesson_assets = assetRows;
+      beforeRowsByTable.lesson_assets = beforeAssets;
+    }
+    await this.platformPersistenceService.persistRows(afterRowsByTable, {
+      actorId: actor.id,
+      reason: 'learning:formateur:curriculum:order',
+      beforeRowsByTable,
+      afterRowsByTable,
+    });
+    return this.getProgram(courseId, user);
+  }
+
+  private assertSameIds(orderedIds: string[], rows: Row[], label: string) {
+    const expected = new Set(rows.map((row) => String(row.id)));
+    const received = new Set(orderedIds);
+    if (received.size !== orderedIds.length || received.size !== expected.size || orderedIds.some((id) => !expected.has(id))) {
+      throw new BadRequestException(`L ordre envoye ne correspond pas aux ${label} actuelles du programme. Rechargez la page.`);
+    }
+  }
+
   private createCourseRow(input: Row, actor: AuthUser) {
     const sanitized = sanitizeCourseRecord(withoutClientId(input), actor);
     ensureConstraints('courses', [sanitized]);

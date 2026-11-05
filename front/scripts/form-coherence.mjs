@@ -172,74 +172,86 @@ async function fetchFormateurCourseProgram(page, courseId) {
   }, { apiUrl: API_URL, id: courseId });
 }
 
+async function blurField(locator, value) {
+  await locator.fill(value);
+  await locator.blur();
+}
+
+// Udemy-style flow: 3-step quick start, then the course studio (autosave everywhere).
 async function testFormateurCourseCreation(page) {
   const title = `QA formation ${Date.now()}`;
-  const updatedSectionTitle = `Partie QA modifiee ${Date.now()}`;
-  const updatedLessonTitle = `Lecon QA modifiee ${Date.now()}`;
   await page.goto(`${FRONT_URL}/dashboard/formateur/mes-cours`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => null);
 
   await expectVisible(page.getByRole('heading', { name: /Mes formations/i }), 'formateur-courses-loaded');
   await page.getByRole('button', { name: /Nouvelle formation/i }).click();
-  await expectVisible(page.getByRole('heading', { name: /Nouvelle formation en 5/i }), 'course-wizard-open');
-  await page.waitForTimeout(1200);
+  await expectVisible(page.getByRole('heading', { name: /Quel type de cours/i }), 'quick-start-open');
+  await page.getByRole('button', { name: /Cours en ligne/i }).click();
+  await page.getByRole('button', { name: /^Continuer$/ }).click();
+  await page.getByLabel(/Titre provisoire du cours/i).fill(title);
+  await page.getByRole('button', { name: /^Continuer$/ }).click();
+  await page.getByRole('button', { name: /^Informatique$/ }).click();
+  await page.getByRole('button', { name: /^Créer le cours$/ }).click();
+  await page.waitForURL(/\/gerer\/objectifs$/, { timeout: 15000 }).catch((error) => record('studio-opened', error));
 
-  await page.getByPlaceholder(/Marketing digital/i).fill(title);
-  await page.getByPlaceholder(/Marketing, Produit/i).fill('QA SaaS');
-  await page.getByPlaceholder(/promesse de la formation/i).fill('Formation creee par le smoke test formulaire.');
-  await page.locator('input[type="number"]').nth(1).fill('1000');
-
-  await page.getByRole('button', { name: /^Suivant$/ }).click();
-  await expectVisible(page.getByRole('heading', { name: /Structure du programme/i }), 'course-program-step-visible');
-  await page.locator('input[placeholder="Titre de la partie"]').first().fill('Partie QA');
-  await page.locator('input[placeholder="Titre de la leçon"]').first().fill('Lecon QA');
-  await page.getByRole('button', { name: /^Suivant$/ }).click();
-  await page.getByRole('button', { name: /^Suivant$/ }).click();
-  await page.getByRole('button', { name: /^Suivant$/ }).click();
-  await page.getByRole('button', { name: /^Créer la formation$/ }).click();
-
-  await expectVisible(page.getByText(title, { exact: true }), 'created-course-visible');
   const createdCourse = await pollUntil(() => fetchFormateurCourseByTitle(page, title), (course) => Boolean(course?.id));
   if (!createdCourse?.id) {
     record('created-course-api-visible', 'created course was not returned by formateur courses API');
     await cleanupFormateurCourse(page, title);
     return;
   }
+  const readProgram = () => fetchFormateurCourseProgram(page, createdCourse.id);
 
-  await page.goto(`${FRONT_URL}/dashboard/formateur/mes-cours/${encodeURIComponent(String(createdCourse.id))}/programme`, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => null);
-  await expectVisible(page.getByRole('heading', { name: /Programme de la formation/i }), 'course-program-page-loaded');
-  await expectVisible(page.getByText('Partie QA', { exact: true }), 'course-program-section-visible');
-  await expectVisible(page.getByText('Lecon QA', { exact: true }), 'course-program-lesson-visible');
+  // Intended learners.
+  await expectVisible(page.getByRole('heading', { name: /^Apprenants cibles$/ }), 'studio-learners-panel');
+  await blurField(page.getByLabel(/Que vont apprendre les apprenants dans votre cours \? 1/), 'Objectif QA');
+  let program = await pollUntil(readProgram, (snapshot) => snapshot?.course?.objectives?.includes('Objectif QA'));
+  if (!program?.course?.objectives?.includes('Objectif QA')) record('objectives-saved', 'objective not persisted');
 
-  await page.getByRole('button', { name: /^Modifier la section Partie QA$/ }).click();
-  await expectVisible(page.getByRole('heading', { name: /^Modifier la section$/ }), 'course-section-edit-modal-visible');
-  await page.getByPlaceholder(/Fondamentaux/i).fill(updatedSectionTitle);
-  await page.getByPlaceholder(/Objectif pédagogique/i).fill('Section modifiee par le smoke test formulaire.');
-  await page.getByRole('button', { name: /^Enregistrer$/ }).click();
-  await expectVisible(page.getByText(updatedSectionTitle, { exact: true }), 'updated-section-visible');
+  // Curriculum: section, lesson, content, then move it into a second section with the arrows.
+  await page.getByRole('link', { name: /Programme/ }).first().click();
+  await page.getByRole('button', { name: /^Ajouter une section$/ }).click();
+  await page.locator('#studio-new-section').fill('Partie QA');
+  await page.getByRole('button', { name: /^Ajouter la section$/ }).click();
+  await expectVisible(page.getByRole('heading', { name: /Section 1 : Partie QA/ }), 'section-visible');
+  await page.getByRole('button', { name: /Élément du programme/ }).click();
+  await page.getByRole('button', { name: /^Article/ }).click();
+  await page.getByPlaceholder(/Titre de la leçon/).fill('Lecon QA');
+  await page.getByRole('button', { name: /^Ajouter la leçon$/ }).click();
+  await expectVisible(page.getByRole('button', { name: /Leçon 1 : Lecon QA/ }), 'lesson-visible');
+  await page.getByRole('button', { name: /^Modifier le contenu$/ }).click();
+  await blurField(page.getByLabel(/^Durée estimée$/), '15 min');
+  await blurField(page.getByLabel(/^Contenu de l'article$/), 'Contenu QA');
+  await page.getByRole('button', { name: /^Section$/ }).click();
+  await page.locator('#studio-new-section').fill('Partie QA 2');
+  await page.getByRole('button', { name: /^Ajouter la section$/ }).click();
+  await expectVisible(page.getByRole('heading', { name: /Section 2 : Partie QA 2/ }), 'second-section-visible');
+  await page.getByRole('button', { name: /^Descendre$/ }).first().click();
+  program = await pollUntil(readProgram, (snapshot) => {
+    const second = snapshot?.sections?.find((section) => section.title === 'Partie QA 2');
+    const lesson = snapshot?.lessons?.find((entry) => entry.title === 'Lecon QA');
+    return Boolean(second && lesson && String(lesson.section_id) === String(second.id) && lesson.content === 'Contenu QA');
+  });
+  const movedLesson = program?.lessons?.find((entry) => entry.title === 'Lecon QA');
+  const secondSection = program?.sections?.find((section) => section.title === 'Partie QA 2');
+  if (!movedLesson || String(movedLesson.section_id) !== String(secondSection?.id)) record('lesson-moved', `lesson = ${JSON.stringify(movedLesson)}`);
+  if (movedLesson?.duration !== '15 min' || movedLesson?.content !== 'Contenu QA') record('lesson-content-saved', `lesson = ${JSON.stringify(movedLesson)}`);
+  program = await pollUntil(readProgram, (snapshot) => snapshot?.course?.duration === '15 min');
+  if (program?.course?.duration !== '15 min') record('course-duration-auto', `duration = ${program?.course?.duration}`);
 
-  await page.getByRole('button', { name: /^Modifier la leçon Lecon QA$/ }).click();
-  await expectVisible(page.getByRole('heading', { name: /^Modifier la leçon$/ }), 'course-lesson-edit-modal-visible');
-  await page.getByPlaceholder(/Introduction vidéo/i).fill(updatedLessonTitle);
-  await page.getByPlaceholder(/12 min/i).fill('15 min');
-  await page.getByPlaceholder(/Résumé de la leçon/i).fill('Lecon modifiee par le smoke test formulaire.');
-  await page.getByRole('button', { name: /^Enregistrer$/ }).click();
-  await expectVisible(page.getByText(updatedLessonTitle, { exact: true }), 'updated-lesson-visible');
+  // Landing page and pricing.
+  await page.getByRole('link', { name: /Page d'accueil du cours/ }).first().click();
+  await blurField(page.getByLabel(/^Sous-titre du cours$/), 'Sous-titre QA');
+  await page.getByRole('link', { name: /Tarification/ }).first().click();
+  await page.getByRole('button', { name: /^Gratuit/ }).click();
+  program = await pollUntil(readProgram, (snapshot) => snapshot?.course?.subtitle === 'Sous-titre QA' && snapshot?.course?.is_free === true);
+  if (program?.course?.subtitle !== 'Sous-titre QA') record('subtitle-saved', `subtitle = ${program?.course?.subtitle}`);
+  if (program?.course?.is_free !== true) record('pricing-saved', `is_free = ${program?.course?.is_free}`);
 
-  const program = await pollUntil(
-    () => fetchFormateurCourseProgram(page, createdCourse.id),
-    (snapshot) => Boolean(
-      snapshot?.sections?.some((section) => String(section.title) === updatedSectionTitle)
-      && snapshot?.lessons?.some((lesson) => String(lesson.title) === updatedLessonTitle && String(lesson.duration) === '15 min'),
-    ),
-  );
-  if (!program?.sections?.some((section) => String(section.title) === updatedSectionTitle)) {
-    record('updated-section-api-visible', 'updated section was not returned by formateur program API');
-  }
-  if (!program?.lessons?.some((lesson) => String(lesson.title) === updatedLessonTitle && String(lesson.duration) === '15 min')) {
-    record('updated-lesson-api-visible', 'updated lesson was not returned by formateur program API');
-  }
+  // Submission checklist: the cover image is still missing, so the dialog must block.
+  await page.getByRole('button', { name: /^Soumettre/ }).click();
+  await expectVisible(page.getByRole('heading', { name: /Encore quelques étapes/ }), 'submit-checklist-blocks');
+  await expectVisible(page.getByRole('dialog').getByText('Une image de cours'), 'submit-checklist-lists-missing-image');
 
   await cleanupFormateurCourse(page, title);
   await page.goto(`${FRONT_URL}/dashboard/formateur/mes-cours`, { waitUntil: 'domcontentloaded' });

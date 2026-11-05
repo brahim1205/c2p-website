@@ -119,7 +119,7 @@ function EnrollmentCard({ enrollment, onClose }: { enrollment: Enrollment; onClo
           <p className="text-sm text-gray-600">{enrollment.course_category || enrollment.courses?.category || 'Formation'}</p>
         </div>
 
-        <Link to={`/dashboard/formateur/mes-cours/${enrollment.course_id}/programme`} onClick={onClose} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+        <Link to={`/dashboard/formateur/mes-cours/${enrollment.course_id}/gerer/programme`} onClick={onClose} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
           Voir le programme
         </Link>
       </div>

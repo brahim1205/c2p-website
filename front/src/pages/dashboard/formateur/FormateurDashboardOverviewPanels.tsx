@@ -84,7 +84,7 @@ export function ComplementLinksPanel({ latestUpdatedCourse }: { latestUpdatedCou
     {
       label: 'Programme',
       icon: 'ri-node-tree',
-      path: latestUpdatedCourse ? `/dashboard/formateur/mes-cours/${latestUpdatedCourse.id}/programme` : '/dashboard/formateur/mes-cours',
+      path: latestUpdatedCourse ? `/dashboard/formateur/mes-cours/${latestUpdatedCourse.id}/gerer/programme` : '/dashboard/formateur/mes-cours',
     },
     { label: 'Classes virtuelles', icon: 'ri-video-line', path: '/dashboard/formateur/classes-virtuelles' },
     { label: 'Mes apprenants', icon: 'ri-group-line', path: '/dashboard/formateur/apprenants' },

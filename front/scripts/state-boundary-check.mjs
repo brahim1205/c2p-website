@@ -9,18 +9,10 @@ const srcRoot = path.join(frontRoot, 'src');
 
 const allowedBrowserStorageFiles = new Map([
   ['src/hooks/useAuth.tsx', 'auth-session-ephemeral'],
-  [
-    'src/pages/dashboard/formateur/mes-cours/components/wizardStorage.ts',
-    'trainer-draft-storage-adapter',
-  ],
   ['src/lib/paymentCheckoutStorage.ts', 'checkout-session-handoff'],
 ]);
 
 const migrationBacklog = [
-  {
-    file: 'src/pages/dashboard/formateur/mes-cours/components/wizardStorage.ts',
-    target: 'Keep local autosave as draft-only state; published course data must remain backend-owned.',
-  },
   {
     file: 'src/lib/paymentCheckoutStorage.ts',
     target: 'Keep as short-lived sessionStorage handoff for prestation checkout; confirmed payment state must remain backend-owned.',

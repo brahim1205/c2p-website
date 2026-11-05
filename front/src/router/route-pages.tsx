@@ -65,7 +65,9 @@ export const SuperAdminOperationsPage = lazy(() => import('../pages/superadmin/o
 export const SuperAdminFinancePage = lazy(() => import('../pages/superadmin/finance/page'));
 export const NotFoundPage = lazy(() => import('../pages/NotFound'));
 export const FormateurCoursPage = lazy(() => import('../pages/dashboard/formateur/mes-cours/page'));
-export const FormateurCourseProgramPage = lazy(() => import('../pages/dashboard/formateur/mes-cours/[id]/programme/page'));
+export const FormateurCourseProgramPage = lazy(() => import('../pages/dashboard/formateur/course-studio/LegacyProgramRedirect'));
+export const FormateurCourseQuickStartPage = lazy(() => import('../pages/dashboard/formateur/course-studio/QuickStartPage'));
+export const FormateurCourseStudioPage = lazy(() => import('../pages/dashboard/formateur/course-studio/CourseStudioPage'));
 export const FormateurClassesPage = lazy(() => import('../pages/dashboard/formateur/classes-virtuelles/page'));
 export const FormateurCreateVirtualClassPage = lazy(() => import('../pages/dashboard/formateur/classes-virtuelles/nouvelle/page'));
 export const FormateurApprenantsPage = lazy(() => import('../pages/dashboard/formateur/apprenants/page'));

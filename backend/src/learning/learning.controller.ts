@@ -351,6 +351,17 @@ export class LearningController {
     return this.formateurCourseProgramService.reorderSections(courseId, payload, request.auth?.user ?? null);
   }
 
+  @Put('formateur/courses/:courseId/curriculum/order')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.learning.write')
+  applyFormateurCurriculumOrder(
+    @Req() request: AuthenticatedRequest,
+    @Param('courseId') courseId: string,
+    @Body() payload: unknown,
+  ) {
+    return this.formateurCourseProgramService.applyCurriculumOrder(courseId, payload, request.auth?.user ?? null);
+  }
+
   @Post('formateur/courses/:courseId/lessons')
   @UseGuards(PermissionGuard)
   @RequirePermission('data.learning.write')

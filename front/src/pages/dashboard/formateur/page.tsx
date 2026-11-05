@@ -192,7 +192,7 @@ export default function FormateurDashboardPage() {
 
   const quickLinks = [
     { label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/formateur/mes-cours', tone: 'bg-teal-50 text-teal-700' },
-    { label: 'Programme', icon: 'ri-node-tree', path: latestUpdatedCourse ? `/dashboard/formateur/mes-cours/${latestUpdatedCourse.id}/programme` : '/dashboard/formateur/mes-cours', tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Programme', icon: 'ri-node-tree', path: latestUpdatedCourse ? `/dashboard/formateur/mes-cours/${latestUpdatedCourse.id}/gerer/programme` : '/dashboard/formateur/mes-cours', tone: 'bg-emerald-50 text-emerald-700' },
     { label: 'Apprenants', icon: 'ri-group-line', path: '/dashboard/formateur/apprenants', tone: 'bg-sky-50 text-sky-700' },
     { label: 'Évaluations', icon: 'ri-file-list-3-line', path: '/dashboard/formateur/evaluations', tone: 'bg-amber-50 text-amber-700' },
     { label: 'Revenus', icon: 'ri-wallet-3-line', path: '/dashboard/formateur/revenus', tone: 'bg-violet-50 text-violet-700' },

@@ -128,23 +128,12 @@ export function useFormationDetailPageSession() {
         ? 'Suivez au moins une leçon avant de publier un avis.'
         : null));
 
-  const objectives = useMemo(() => {
-    const metadataObjectives = readMetadataList(course?.objectives ?? course?.metadata?.learning_objectives);
-    if (metadataObjectives.length > 0) return metadataObjectives;
-    const items = [
-      'Comprendre les fondamentaux utiles au terrain.',
-      'Appliquer le contenu sur des cas concrets.',
-      'Structurer une progression mesurable module par module.',
-      'Finaliser un parcours exploitable dans un contexte professionnel.',
-    ];
-    if (course?.delivery_mode === 'hybrid') {
-      items[1] = 'Alterner sessions en ligne et séquences en présentiel sur des cas concrets.';
-    }
-    if (course?.delivery_mode === 'onsite') {
-      items[1] = 'Travailler en présentiel avec démonstrations et ateliers appliqués.';
-    }
-    return items;
-  }, [course?.delivery_mode, course?.metadata?.learning_objectives, course?.objectives]);
+  // Only what the trainer wrote: no generic objectives invented for courses that have none.
+  const objectives = useMemo(
+    () => readMetadataList(course?.objectives ?? course?.metadata?.learning_objectives),
+    [course?.metadata?.learning_objectives, course?.objectives],
+  );
+  const audience = useMemo(() => readMetadataList(course?.target_audience), [course?.target_audience]);
 
   const requirements = useMemo(() => {
     const metadataPrerequisites = readMetadataList(course?.prerequisites ?? course?.metadata?.prerequisites);
@@ -243,6 +232,7 @@ export function useFormationDetailPageSession() {
     setActiveTab,
     setReviewDraft,
     tools,
+    audience,
     totalLessons,
     user,
   };

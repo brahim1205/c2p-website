@@ -8,8 +8,10 @@ import {
   type Course,
 } from './courseManagementModel';
 
-import { plural } from '@/lib/formatters';
+import { formatCount, plural } from '@/lib/formatters';
 import { SearchInput } from '@/components/ui';
+import { studioPath } from '../course-studio/studioModel';
+import { getCategoryLabel } from '@/pages/espace-numerique/espaceNumeriquePageModel';
 const STATUS_FILTERS = [
   { value: 'all', label: 'Tous' },
   { value: 'published', label: 'Publiés' },
@@ -31,7 +33,6 @@ interface CoursesGridProps {
   loading: boolean;
   subscriptionAllowed: boolean;
   onWorkflowAction: (course: Course) => void;
-  onEdit: (course: Course) => void;
   onDelete: (course: Course) => void;
 }
 
@@ -90,7 +91,6 @@ export function CoursesGrid({
   loading,
   subscriptionAllowed,
   onWorkflowAction,
-  onEdit,
   onDelete,
 }: CoursesGridProps) {
   if (loading) {
@@ -110,7 +110,7 @@ export function CoursesGrid({
             key={`${String(course.id)}-${index}`}
             className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
           >
-            <div className="relative h-40 overflow-hidden">
+            <Link to={studioPath(course.id)} className="relative block h-40 overflow-hidden" aria-label={`Gérer « ${course.title} »`}>
               {course.thumbnail ? (
                 <img
                   src={course.thumbnail}
@@ -130,7 +130,7 @@ export function CoursesGrid({
               <div className="absolute bottom-3 left-3 flex gap-2">
                 <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md flex items-center gap-1">
                   <i className="ri-time-line"></i>
-                  {course.duration || 'N/A'}
+                  {course.duration || 'Durée à définir'}
                 </span>
                 <span className="px-2 py-1 bg-black/60 text-white text-xs rounded-md flex items-center gap-1">
                   <i className="ri-book-line"></i>
@@ -143,11 +143,11 @@ export function CoursesGrid({
                   {getDeliveryLabel(course.delivery_mode)}
                 </span>
               </div>
-            </div>
+            </Link>
             <div className="p-5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-1 rounded-md">
-                  {course.category}
+                  {getCategoryLabel(course.category || 'Sans catégorie')}
                 </span>
                 <span className="text-xs text-gray-500">
                   {new Date(course.updated_at).toLocaleDateString('fr-FR')}
@@ -172,14 +172,14 @@ export function CoursesGrid({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-900">
-                  {course.is_free ? 'Gratuit' : `${(course.current_price ?? course.price).toLocaleString('fr-FR')} FCFA`}
+                  {course.is_free ? 'Gratuit' : Number(course.current_price ?? course.price ?? 0) > 0 ? `${formatCount(Number(course.current_price ?? course.price))} FCFA` : 'Tarif à définir'}
                 </span>
                 <div className="flex flex-wrap gap-2 justify-end">
                   <Link
-                    to={`/dashboard/formateur/mes-cours/${course.id}/programme`}
-                    className="px-3 py-1.5 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                    to={studioPath(course.id)}
+                    className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors"
                   >
-                    Programme
+                    Gérer le cours
                   </Link>
                   {workflowAction && (
                     <button
@@ -192,21 +192,15 @@ export function CoursesGrid({
                             ? 'border border-amber-200 text-amber-700 hover:bg-amber-50'
                             : course.status === 'review'
                               ? 'border border-gray-200 text-gray-700 hover:bg-gray-50'
-                              : 'bg-teal-600 text-white hover:bg-teal-700'
+                              : 'border border-teal-200 text-teal-700 hover:bg-teal-50'
                       }`}
                     >
                       {workflowAction.description}
                     </button>
                   )}
                   <button
-                    onClick={() => onEdit(course)}
-                    disabled={!subscriptionAllowed}
-                    className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <i className="ri-edit-line text-gray-600"></i>
-                  </button>
-                  <button
                     onClick={() => onDelete(course)}
+                    aria-label={`Supprimer « ${course.title} »`}
                     className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <i className="ri-delete-bin-line text-red-500"></i>
@@ -221,14 +215,30 @@ export function CoursesGrid({
   );
 }
 
-export function EmptyCoursesState() {
-  return (
-    <div className="text-center py-16">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <i className="ri-search-line text-2xl text-gray-400"></i>
+export function EmptyCoursesState({ hasCourses, onCreate }: { hasCourses: boolean; onCreate: () => void }) {
+  if (hasCourses) {
+    return (
+      <div className="text-center py-16">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i className="ri-search-line text-2xl text-gray-400"></i>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune formation trouvée</h3>
+        <p className="text-gray-600">Ajustez votre recherche ou le filtre de statut.</p>
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune formation trouvée</h3>
-      <p className="text-gray-600">Ajustez vos filtres ou créez une nouvelle formation</p>
+    );
+  }
+  return (
+    <div className="mx-auto max-w-xl rounded-3xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center">
+      <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i className="ri-video-add-line text-3xl text-teal-600"></i>
+      </div>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">Créez votre première formation</h3>
+      <p className="text-gray-600 mb-6">
+        Trois questions pour démarrer, puis construisez votre programme à votre rythme : tout est enregistré automatiquement.
+      </p>
+      <button onClick={onCreate} className="px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-semibold hover:bg-teal-700 transition-colors">
+        Créer une formation
+      </button>
     </div>
   );
 }

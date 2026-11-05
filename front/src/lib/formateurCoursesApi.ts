@@ -1,7 +1,6 @@
 import { apiRequest } from '@/lib/api';
 import type {
   FormateurCourse,
-  FormateurCourseBundleInput,
   FormateurCourseDeliveryMode,
   FormateurCourseLesson,
   FormateurCourseLevel,
@@ -57,34 +56,6 @@ export async function fetchFormateurCourses(userId: string) {
   void userId;
   const courses = await apiRequest<FormateurCourse[]>('/learning/formateur/courses');
   return courses.map(normalizeFormateurCourse);
-}
-
-export async function createFormateurCourseBundle(userId: string, payload: FormateurCourseBundleInput) {
-  void userId;
-  return apiRequest<FormateurCourse>('/learning/formateur/courses/bundle', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function fetchFormateurCourseWizardDraft(userId: string) {
-  void userId;
-  return apiRequest<{ draft: unknown | null; savedAt: string | null }>('/learning/formateur/course-wizard-draft');
-}
-
-export async function saveFormateurCourseWizardDraft(userId: string, draft: unknown) {
-  void userId;
-  return apiRequest<{ draft: unknown; savedAt: string }>('/learning/formateur/course-wizard-draft', {
-    method: 'PUT',
-    body: JSON.stringify({ draft }),
-  });
-}
-
-export async function deleteFormateurCourseWizardDraft(userId: string) {
-  void userId;
-  return apiRequest<{ cleared: boolean }>('/learning/formateur/course-wizard-draft', {
-    method: 'DELETE',
-  });
 }
 
 export async function updateFormateurCourse(userId: string, courseId: string | number, payload: Record<string, unknown>) {
@@ -234,6 +205,32 @@ export async function deleteFormateurLessonAsset(userId: string, courseId: strin
   void userId;
   return apiRequest<FormateurLessonAsset>(`/learning/formateur/courses/${encodeURIComponent(String(courseId))}/assets/${encodeURIComponent(String(assetId))}`, {
     method: 'DELETE',
+  });
+}
+
+/** Quick start: creates an empty draft (no programme yet) that the course studio then completes. */
+export async function createFormateurCourseDraft(input: {
+  title: string;
+  category: string;
+  delivery_mode: FormateurCourseDeliveryMode;
+}) {
+  return apiRequest<FormateurCourse>('/learning/formateur/courses/bundle', {
+    method: 'POST',
+    body: JSON.stringify({
+      course: { ...input, title: input.title.trim(), level: 'all_levels', is_free: false, price: 0 },
+      sections: [],
+    }),
+  });
+}
+
+/** Applies the full curriculum order (sections and their lessons) in one call; returns the programme. */
+export async function applyFormateurCurriculumOrder(
+  courseId: string | number,
+  sections: Array<{ id: string; lesson_ids: string[] }>,
+) {
+  return apiRequest<FormateurCourseProgramSnapshot>(`/learning/formateur/courses/${encodeURIComponent(String(courseId))}/curriculum/order`, {
+    method: 'PUT',
+    body: JSON.stringify({ sections }),
   });
 }
 

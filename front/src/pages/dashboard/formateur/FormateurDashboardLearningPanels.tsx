@@ -67,7 +67,7 @@ function CoursePipelineCard({ course }: { course: CourseInsight }) {
 
         <div className="flex flex-wrap gap-2">
           <Link
-            to={`/dashboard/formateur/mes-cours/${course.id}/programme`}
+            to={`/dashboard/formateur/mes-cours/${course.id}/gerer/programme`}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Voir programme
@@ -266,7 +266,7 @@ function LatestCourseCard({ course }: { course: CourseInsight }) {
 
       <div className="flex flex-wrap gap-2">
         <Link
-          to={`/dashboard/formateur/mes-cours/${course.id}/programme`}
+          to={`/dashboard/formateur/mes-cours/${course.id}/gerer/programme`}
           className="px-3 py-2 border border-teal-200 rounded-lg text-sm font-medium text-teal-700 hover:bg-teal-50 transition-colors"
         >
           Continuer le programme

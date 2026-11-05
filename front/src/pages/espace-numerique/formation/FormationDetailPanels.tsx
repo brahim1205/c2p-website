@@ -68,8 +68,8 @@ export function FormationHero({
             </div>
 
             <h1 className="mb-4 text-3xl font-black leading-tight text-[#0f1c35] sm:text-4xl md:text-5xl">{course.title}</h1>
-            <p className="mb-5 max-w-3xl text-base font-medium leading-8 text-[#475569] sm:mb-6 sm:text-lg">
-              {course.description || 'Formation professionnelle de qualité pour développer vos compétences.'}
+            <p className="mb-5 line-clamp-3 max-w-3xl text-base font-medium leading-8 text-[#475569] sm:mb-6 sm:text-lg">
+              {course.subtitle || course.description || 'Formation professionnelle de qualité pour développer vos compétences.'}
             </p>
 
             <div className="mb-5 flex flex-wrap items-center gap-4 sm:mb-6 sm:gap-6">
@@ -190,11 +190,13 @@ export function OverviewTab({
   objectives,
   requirements,
   tools,
+  audience,
 }: {
   course: Course;
   objectives: string[];
   requirements: string[];
   tools: string[];
+  audience: string[];
 }) {
   return (
     <div className="space-y-8" role="tabpanel" id="course-panel-overview" aria-labelledby="course-tab-overview">
@@ -214,8 +216,9 @@ export function OverviewTab({
         </p>
       </div>
 
-      <ChecklistBlock title="Ce que vous allez apprendre" items={objectives} icon="ri-check-line text-teal-600" grid />
+      {objectives.length > 0 ? <ChecklistBlock title="Ce que vous allez apprendre" items={objectives} icon="ri-check-line text-teal-600" grid /> : null}
       <ChecklistBlock title="Prérequis" items={requirements} icon="ri-checkbox-circle-line text-gray-400" />
+      {audience.length > 0 ? <ChecklistBlock title="À qui s'adresse ce cours ?" items={audience} icon="ri-user-heart-line text-teal-600" /> : null}
 
       {tools.length > 0 && (
         <div>

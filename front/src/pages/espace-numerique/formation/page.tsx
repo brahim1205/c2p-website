@@ -57,6 +57,7 @@ export default function FormationDetailPage() {
                 objectives={session.objectives}
                 requirements={session.requirements}
                 tools={session.tools}
+                audience={session.audience}
               />
             )}
 

@@ -111,6 +111,21 @@ async function main() {
     expect(!courses.some((course) => course.title === ghostTitle), 'formation fantome visible apres un echec');
   });
 
+  await step('demarrage rapide: brouillon sans duree ni programme', async () => {
+    const quick = expectOk(await call(formateur, 'POST', '/learning/formateur/courses/bundle', {
+      course: { title: `Rapide ${RUN_ID}`, category: 'informatique', delivery_mode: 'online', level: 'all_levels' },
+      sections: [],
+    }), 'quick-start bundle');
+    expect(quick.status === 'draft' && quick.duration === '', `brouillon rapide = ${JSON.stringify(quick)}`);
+    const landing = expectOk(await call(formateur, 'PATCH', `/learning/formateur/courses/${enc(quick.id)}`, {
+      subtitle: 'Sous-titre', objectives: ['Objectif 1', ' '], target_audience: ['Debutants'],
+    }), 'PATCH landing fields');
+    expect(landing.subtitle === 'Sous-titre' && landing.objectives.length === 1, `champs page d accueil = ${JSON.stringify(landing)}`);
+    const early = await call(formateur, 'PATCH', `/learning/formateur/courses/${enc(quick.id)}/workflow`, { status: 'review' });
+    expect(early.status === 400, `soumission d un brouillon vide -> ${early.status}`);
+    expectOk(await call(formateur, 'DELETE', `/learning/formateur/courses/${enc(quick.id)}`), 'DELETE quick draft');
+  });
+
   // 3. Throw-away course.
   const courseTitle = `QA formateur ${RUN_ID}`;
   await step('creer une formation (bundle)', async () => {
@@ -184,6 +199,22 @@ async function main() {
         thumbnail_url: null, mime_type: 'application/pdf', size_bytes: 1024, status: 'ready',
       }), 'POST asset');
       expectOk(await call(formateur, 'PATCH', `${base}/assets/${enc(asset.id)}`, { lesson_id: String(lesson.id), title: 'Support PDF v2', asset_type: 'pdf', url: 'https://example.com/support-v2.pdf', status: 'ready' }), 'PATCH asset');
+
+      // Course studio drag & drop: move lesson A (and its asset) into the first section, sections swapped.
+      const firstLessons = (program.lessons ?? []).filter((entry) => String(entry.section_id) === String(sections[0].id)).map((entry) => String(entry.id));
+      const order = { sections: [
+        { id: String(second.id), lesson_ids: [String(lessonB.id)] },
+        { id: String(sections[0].id), lesson_ids: [String(lesson.id), ...firstLessons] },
+      ] };
+      const stale = await call(formateur, 'PUT', `${base}/curriculum/order`, { sections: order.sections.slice(0, 1) });
+      expect(stale.status === 400, `ordre incomplet accepte (${stale.status})`);
+      const ordered = expectOk(await call(formateur, 'PUT', `${base}/curriculum/order`, order), 'PUT curriculum order');
+      const orderedSections = [...ordered.sections].sort((a, b) => a.position - b.position).map((entry) => String(entry.id));
+      expect(orderedSections[0] === String(second.id), `ordre des sections = ${orderedSections}`);
+      const movedLesson = ordered.lessons.find((entry) => String(entry.id) === String(lesson.id));
+      expect(String(movedLesson?.section_id) === String(sections[0].id) && movedLesson?.position === 1, `lecon deplacee = ${JSON.stringify(movedLesson)}`);
+      const movedAsset = ordered.assets.find((entry) => String(entry.id) === String(asset.id));
+      expect(String(movedAsset?.section_id) === String(sections[0].id), 'la ressource n a pas suivi sa lecon');
 
       const after = expectOk(await call(formateur, 'GET', `${base}/program`), 'program after edits');
       const titles = JSON.stringify(after);

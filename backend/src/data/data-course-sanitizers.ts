@@ -94,6 +94,37 @@ export function sanitizeAdminContentItemRecord(row: Row, user: AuthUser) {
   return normalized;
 }
 
+const COURSE_SUBTITLE_MAX = 120;
+const COURSE_LIST_ITEM_MAX = 200;
+const COURSE_LIST_MAX_ITEMS = 20;
+const COURSE_LIST_FIELDS = ['objectives', 'prerequisites', 'target_audience', 'tools'] as const;
+
+function limitText(value: unknown, maxLength: number, label: string) {
+  const text = trimText(value);
+  if (text && text.length > maxLength) {
+    throw new BadRequestException(`${label} ne doit pas depasser ${maxLength} caracteres.`);
+  }
+  return text;
+}
+
+/** Instructor-entered bullet lists (objectives, prerequisites...): trimmed, blanks dropped, bounded. */
+function sanitizeTextList(value: unknown, field: string) {
+  if (value === undefined || value === null) return [];
+  // Legacy rows may hold a newline-separated string: accept it rather than block unrelated edits.
+  const entries = typeof value === 'string' ? value.split('\n') : value;
+  if (!Array.isArray(entries)) {
+    throw new BadRequestException(`Le champ ${field} doit etre une liste.`);
+  }
+  const items = entries.map((entry) => trimText(entry)).filter((entry): entry is string => Boolean(entry));
+  if (items.length > COURSE_LIST_MAX_ITEMS) {
+    throw new BadRequestException(`Le champ ${field} accepte au plus ${COURSE_LIST_MAX_ITEMS} elements.`);
+  }
+  if (items.some((entry) => entry.length > COURSE_LIST_ITEM_MAX)) {
+    throw new BadRequestException(`Chaque element de ${field} doit faire au plus ${COURSE_LIST_ITEM_MAX} caracteres.`);
+  }
+  return items;
+}
+
 export function sanitizeCourseRecord(row: Row, user: AuthUser) {
   const normalized = clone(row);
   const existingCourse = normalized.id !== undefined && normalized.id !== null ? findRow('courses', normalized.id) : undefined;
@@ -101,7 +132,14 @@ export function sanitizeCourseRecord(row: Row, user: AuthUser) {
   normalized.title = requireText(normalized.title, 'Le titre de la formation est obligatoire.');
   normalized.category = requireText(normalized.category, 'La categorie de la formation est obligatoire.');
   normalized.description = trimText(normalized.description) ?? '';
-  normalized.duration = requireText(normalized.duration, 'La duree de la formation est obligatoire.');
+  // A draft can exist before its programme (and so its duration) is known; the readiness
+  // check below still requires a duration before review or publication.
+  normalized.duration = trimText(normalized.duration) ?? '';
+  normalized.subtitle = limitText(normalized.subtitle, COURSE_SUBTITLE_MAX, 'Le sous-titre');
+  normalized.language = limitText(normalized.language, 40, 'La langue') ?? 'Français';
+  for (const field of COURSE_LIST_FIELDS) {
+    normalized[field] = sanitizeTextList(normalized[field], field);
+  }
   normalized.modules = requireInteger(normalized.modules, 1, 200, 'Le nombre de modules doit etre compris entre 1 et 200.');
   normalized.level = normalizeCourseLevel(normalized.level);
   if (!normalized.level) {

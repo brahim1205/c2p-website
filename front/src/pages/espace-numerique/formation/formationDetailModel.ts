@@ -1,6 +1,9 @@
 export interface Course {
   id: string | number;
   title: string;
+  subtitle?: string | null;
+  language?: string | null;
+  target_audience?: unknown;
   category: string;
   description: string | null;
   instructor_id: string | null;
