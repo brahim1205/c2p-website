@@ -156,6 +156,16 @@ compose ps
 log "Attente santé backend"
 wait_service_healthy backend "$BACKEND_HEALTH_TIMEOUT_SECONDS"
 
+# Nginx resolves the `upstream { server backend:3000; }` hostnames only when it starts.
+# Recreated backend/frontend containers can get a new IP: without a reload the reverse
+# proxy keeps the old one and the public API answers 502 / times out while the backend
+# itself is healthy.
+if is_service_running reverse-proxy; then
+  log "Rechargement du reverse proxy (résolution des nouveaux conteneurs)"
+  compose exec -T reverse-proxy nginx -t
+  compose exec -T reverse-proxy nginx -s reload
+fi
+
 log "Postdeploy"
 postdeploy_args=(
   --compose-file "$COMPOSE_FILE"
