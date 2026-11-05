@@ -1,4 +1,7 @@
 version: 2
+# One grouped PR per directory and week for minor/patch updates, so CI and the production
+# deploy run once instead of once per package. Major versions still arrive one PR each (they
+# need a dedicated migration), except NestJS whose packages must move together.
 updates:
   - package-ecosystem: "npm"
     directory: "/backend"
@@ -6,10 +9,22 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "04:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "backend"
+    groups:
+      nestjs:
+        patterns:
+          - "@nestjs/*"
+      backend-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # @types/node follows the Node runtime used by CI and the Docker images (Node 20).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/front"
@@ -17,18 +32,30 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "04:15"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "frontend"
+    groups:
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "vitest"
+      frontend-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:30"
-    open-pull-requests-limit: 10
+      interval: "monthly"
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
       - "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
