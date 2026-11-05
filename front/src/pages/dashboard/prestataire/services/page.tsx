@@ -61,7 +61,7 @@ export default function PrestataireServicesPage() {
 
   useEffect(() => {
     if (servicesQuery.data && !servicesQuery.data.providerId) {
-      error('Prestataire introuvable', 'Votre compte prestataire n est pas encore relie a une fiche service.');
+      error('Prestataire introuvable', 'Votre compte prestataire n’est pas encore relie à une fiche service.');
     }
   }, [error, servicesQuery.data]);
 
@@ -125,7 +125,7 @@ export default function PrestataireServicesPage() {
       return;
     }
     if (!providerId) {
-      error('Prestataire introuvable', 'Aucune fiche prestataire associee a ce compte.');
+      error('Prestataire introuvable', 'Aucune fiche prestataire associée à ce compte.');
       return;
     }
 

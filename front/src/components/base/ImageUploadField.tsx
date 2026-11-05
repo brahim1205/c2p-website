@@ -34,12 +34,12 @@ export default function ImageUploadField({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      error('Format invalide', 'Selectionnez une image JPG, PNG, WEBP ou GIF.');
+      error('Format invalide', 'Sélectionnez une image JPG, PNG, WEBP ou GIF.');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      error('Fichier trop lourd', 'L image doit faire moins de 5 Mo.');
+      error('Fichier trop lourd', 'L’image doit faire moins de 5 Mo.');
       return;
     }
 
@@ -49,10 +49,10 @@ export default function ImageUploadField({
       const filename = createClientRandomId('image');
       const uploaded = await uploadImageToServer(file, { folder, filename, onProgress: setUploadProgress });
       onChange(uploaded.url);
-      success('Image importee', 'L image a ete televersee avec succes.');
+      success('Image importée', 'L’image a été téléversée avec succès.');
     } catch (err) {
       console.error(err);
-      error('Erreur d upload', 'Impossible d envoyer l image.');
+      error('Erreur d’upload', 'Impossible d’envoyer l’image.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

@@ -12,6 +12,7 @@ import {
 } from '@/lib/apprenantDashboardApi';
 import { queryKeys } from '@/lib/queryKeys';
 
+import { SearchInput } from '@/components/ui';
 export default function ApprenantCoursPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -142,18 +143,12 @@ export default function ApprenantCoursPage() {
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <div className="pointer-events-none absolute left-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center">
-                <i className="ri-search-line text-gray-400"></i>
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher une formation..."
-                className="w-full rounded-lg border border-gray-300 py-2.5 pl-12 pr-4 text-sm focus:border-teal-500 focus:outline-none"
-              />
-            </div>
+            <SearchInput
+              containerClassName="flex-1"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher une formation…"
+            />
             <div className="flex gap-2">
               {(['all', 'active', 'completed'] as const).map((status) => (
                 <button

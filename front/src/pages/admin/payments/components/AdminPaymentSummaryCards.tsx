@@ -1,4 +1,5 @@
-interface AdminPaymentSummaryCardsProps {
+
+import { plural } from '@/lib/formatters';interface AdminPaymentSummaryCardsProps {
   commissionTotal: number;
   subscriptionMrr: number;
   activeSubscriptionsCount: number;
@@ -29,7 +30,7 @@ export default function AdminPaymentSummaryCards({
       <div id="panel-provider" className={`rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm ${getPanelClassName('provider')}`}>
         <p className="text-sm text-gray-500">MRR abonnements</p>
         <p className="mt-2 text-2xl font-bold text-gray-900">{subscriptionMrr.toLocaleString('fr-FR')} FCFA</p>
-        <p className="mt-2 text-sm text-gray-500">{activeSubscriptionsCount} abonnement(s) actif(s)</p>
+        <p className="mt-2 text-sm text-gray-500">{plural(activeSubscriptionsCount, 'abonnement(s) actif(s)')}</p>
       </div>
       <div className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
         <p className="text-sm text-gray-500">Séquestres à superviser</p>

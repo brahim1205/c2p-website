@@ -87,27 +87,27 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      error('Mots de passe differents', 'Les mots de passe ne correspondent pas.');
+      error('Mots de passe différents', 'Les mots de passe ne correspondent pas.');
       return;
     }
 
     if (formData.password.length < 10) {
-      error('Mot de passe trop court', 'Le mot de passe doit contenir au moins 10 caracteres.');
+      error('Mot de passe trop court', 'Le mot de passe doit contenir au moins 10 caractères.');
       return;
     }
 
     if (!/[a-z]/.test(formData.password) || !/[A-Z]/.test(formData.password) || !/\d/.test(formData.password) || !/[^A-Za-z0-9]/.test(formData.password)) {
-      error('Mot de passe insuffisant', 'Ajoutez au moins une minuscule, une majuscule, un chiffre et un caractere special.');
+      error('Mot de passe insuffisant', 'Ajoutez au moins une minuscule, une majuscule, un chiffre et un caractère special.');
       return;
     }
 
     if (!formData.acceptTerms) {
-      error('Conditions requises', 'Veuillez accepter les conditions d utilisation.');
+      error('Conditions requises', 'Veuillez accepter les conditions d’utilisation.');
       return;
     }
 
     if (!userType) {
-      error('Type requis', 'Veuillez selectionner un type de compte.');
+      error('Type requis', 'Veuillez sélectionner un type de compte.');
       return;
     }
 
@@ -118,11 +118,11 @@ export default function RegisterPage() {
     });
 
     if (!result.success) {
-      error('Erreur d inscription', result.message || 'Une erreur est survenue.');
+      error('Erreur d’inscription', result.message || 'Une erreur est survenue.');
       return;
     }
 
-    success('Compte cree', 'Votre compte a ete cree avec succes. Redirection...');
+    success('Compte créé', 'Votre compte a été créé avec succès. Redirection...');
 
     const target = requiresProfileOnboarding(userType) ? getProfileOnboardingPath(postProfileTarget) : postProfileTarget;
     setTimeout(() => navigate(target), 1200);

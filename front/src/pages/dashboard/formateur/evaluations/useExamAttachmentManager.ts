@@ -83,7 +83,7 @@ export function useExamAttachmentManager({
       );
     } catch (err: unknown) {
       console.error(err);
-      onUploadError('Erreur d upload', err instanceof Error ? err.message : 'Impossible d importer le fichier.');
+      onUploadError('Erreur d’upload', err instanceof Error ? err.message : 'Impossible d’importer le fichier.');
     } finally {
       setIsUploadingExamAttachment(false);
       setExamAttachmentUploadProgress(0);

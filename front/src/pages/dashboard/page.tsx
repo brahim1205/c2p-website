@@ -7,7 +7,6 @@ import { useBackendMessaging } from '@/hooks/useBackendMessaging';
 import { SkeletonCard, SkeletonList } from '@/components/base/Skeleton';
 import StatCard from '@/components/base/StatCard';
 import { ROLE_DASHBOARD_PATHS } from '@/lib/roles';
-import { ClientBaseDashboard } from './ClientBaseDashboard';
 import {
   createDashboardHomeContent,
   type DashboardHomeRole,
@@ -30,14 +29,6 @@ export default function DashboardPage() {
 
   if (redirectPath && location.pathname !== redirectPath) {
     return <Navigate to={redirectPath} replace />;
-  }
-
-  if (userType === 'client') {
-    return (
-      <DashboardLayout>
-        <ClientBaseDashboard firstName={user?.firstName || 'Awa'} />
-      </DashboardLayout>
-    );
   }
 
   return (

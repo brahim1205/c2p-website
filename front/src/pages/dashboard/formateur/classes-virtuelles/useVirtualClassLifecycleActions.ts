@@ -39,7 +39,7 @@ export function useVirtualClassLifecycleActions({
 
   const handleCopyRoomLink = async (cls: VirtualClass) => {
     if (!cls.room_link) {
-      error('Lien indisponible', 'Aucune salle n est encore associée à cette session.');
+      error('Lien indisponible', 'Aucune salle n’est encore associée à cette session.');
       return;
     }
     try {

@@ -60,7 +60,7 @@ export default function CourseCreationWizardFrame({
             type="button"
             onClick={onClose}
             className="rounded-full border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-            aria-label="Fermer l assistant"
+            aria-label="Fermer l’assistant"
           >
             <i className="ri-close-line text-lg"></i>
           </button>

@@ -421,9 +421,9 @@
     background-color: #f8fafc !important;
   }
 
-  .dashboard-layout input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
-  .dashboard-layout select,
-  .dashboard-layout textarea {
+  .dashboard-layout :where(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])),
+  .dashboard-layout :where(select),
+  .dashboard-layout :where(textarea) {
     width: 100%;
     border-radius: 0.75rem;
     border: 1px solid #d1d5db;
@@ -434,26 +434,26 @@
     transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
   }
 
-  .dashboard-layout input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
-  .dashboard-layout select {
+  .dashboard-layout :where(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])),
+  .dashboard-layout :where(select) {
     min-height: 2.75rem;
     padding: 0.625rem 0.875rem;
   }
 
-  .dashboard-layout textarea {
+  .dashboard-layout :where(textarea) {
     padding: 0.75rem 0.875rem;
   }
 
-  .dashboard-layout input:disabled,
-  .dashboard-layout select:disabled,
-  .dashboard-layout textarea:disabled {
+  .dashboard-layout :where(input:disabled),
+  .dashboard-layout :where(select:disabled),
+  .dashboard-layout :where(textarea:disabled) {
     background-color: #f9fafb;
     color: #6b7280;
   }
 
-  .dashboard-layout input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
-  .dashboard-layout select:focus,
-  .dashboard-layout textarea:focus {
+  .dashboard-layout :where(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus),
+  .dashboard-layout :where(select:focus),
+  .dashboard-layout :where(textarea:focus) {
     border-color: transparent;
     box-shadow: 0 0 0 2px #1a9a96;
     outline: none;

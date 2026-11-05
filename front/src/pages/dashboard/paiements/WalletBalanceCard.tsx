@@ -36,7 +36,7 @@ export default function WalletBalanceCard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="mb-2 text-sm text-white/72">Solde du portefeuille C2P</p>
+          <p className="mb-2 text-sm text-white/[0.72]">Solde du portefeuille C2P</p>
           <div className="flex items-center gap-2">
             <p className={`${compactOnMobile ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-4xl'} font-bold tracking-tight`}>
               {amountLabel}
@@ -44,7 +44,7 @@ export default function WalletBalanceCard({
             <button
               type="button"
               onClick={() => setMasked((current) => !current)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/18 bg-white/10 text-white transition-colors hover:bg-white/16"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.18] bg-white/10 text-white transition-colors hover:bg-white/[0.16]"
               aria-label={masked ? 'Afficher le solde' : 'Masquer le solde'}
               title={masked ? 'Afficher le solde' : 'Masquer le solde'}
             >
@@ -73,7 +73,7 @@ export default function WalletBalanceCard({
               <button
                 onClick={onWithdraw}
                 disabled={loading || !hasWallet || !onWithdraw}
-                className="whitespace-nowrap rounded-xl border border-white/18 bg-white/10 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/16 disabled:cursor-not-allowed disabled:opacity-60"
+                className="whitespace-nowrap rounded-xl border border-white/[0.18] bg-white/10 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <div className="mr-2 inline-flex h-4 w-4 items-center justify-center"><i className="ri-arrow-up-line text-base"></i></div>
                 Retirer

@@ -13,7 +13,7 @@ export function formatRelativeDate(value: string) {
   const now = new Date();
   const diffMinutes = Math.floor((now.getTime() - date.getTime()) / 60000);
 
-  if (diffMinutes < 1) return 'A l instant';
+  if (diffMinutes < 1) return 'À l’instant';
   if (diffMinutes < 60) return `Il y a ${diffMinutes} min`;
   if (diffMinutes < 1440) return `Il y a ${Math.floor(diffMinutes / 60)} h`;
   return date.toLocaleDateString('fr-FR', {

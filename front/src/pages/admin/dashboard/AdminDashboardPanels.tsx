@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { formatShortCurrency } from '@/lib/formatters';
+import { formatShortCurrency, plural } from '@/lib/formatters';
+import { AdminKpiHighlight } from './AdminKpiHighlight';
 import type {
   BreakdownItem,
   HistoryItem,
@@ -146,9 +147,7 @@ export function KpiGrid({ kpis }: { kpis: KpiCard[] }) {
               <i className={`${item.icon} text-xl`} />
             </div>
           </div>
-          <div className="mt-3 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-            <i className="ri-arrow-up-line mr-1" />{item.trend}
-          </div>
+          <AdminKpiHighlight highlight={item.highlight} />
         </div>
       ))}
     </section>
@@ -250,7 +249,7 @@ export function PendingActionsPanel({ pendingActions }: { pendingActions: Pendin
         </span>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2">
         {sortedActions.map((action) => (
           <Link
             key={action.label}
@@ -264,7 +263,7 @@ export function PendingActionsPanel({ pendingActions }: { pendingActions: Pendin
                 <i className={`${action.icon} text-base`} />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-gray-900">{action.label}</p>
+                <p className="line-clamp-2 text-sm font-medium leading-snug text-gray-900" title={action.label}>{action.label}</p>
               </div>
             </div>
             <span className="text-lg font-bold text-gray-900">{action.count}</span>
@@ -324,7 +323,7 @@ export function BreakdownPanel({ breakdown }: { breakdown: BreakdownItem[] }) {
             <div className="h-3 overflow-hidden rounded-full bg-gray-100">
               <div className="h-full rounded-full bg-teal-500" style={{ width: `${item.ratio}%` }} />
             </div>
-            <div className="mt-1 text-xs text-gray-500">{item.value} élément(s)</div>
+            <div className="mt-1 text-xs text-gray-500">{plural(item.value, 'élément(s)')}</div>
           </div>
         ))}
       </div>

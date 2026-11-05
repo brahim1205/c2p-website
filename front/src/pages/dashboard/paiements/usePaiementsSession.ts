@@ -4,11 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { downloadCsvFile, downloadHtmlFile } from '@/lib/downloads';
-import {
-  fetchDexPayBanks,
-  fetchDexPayStatus,
-  type DexPayBank,
-} from '@/lib/paymentsApi';
+import { fetchDexPayBanks, fetchDexPayStatus, type DexPayBank } from '@/lib/paymentsApi';
 import {
   fetchFinanceSnapshot,
   fetchFinanceTransactions,
@@ -45,6 +41,7 @@ import {
 import { usePaymentActions } from './usePaymentActions';
 import { useTransactionCapabilities } from './useTransactionCapabilities';
 
+import { plural } from '@/lib/formatters';
 export function usePaiementsSession() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -247,12 +244,12 @@ export function usePaiementsSession() {
       date: transaction.date,
       reference: transaction.reference,
     })));
-    success('Export termine', `${filteredTransactions.length} transaction(s) exportee(s).`);
+    success('Export terminé', `${plural(filteredTransactions.length, 'transaction(s) exportée(s)')}.`);
   };
 
   const handleDownloadReceipt = (transaction: Transaction) => {
     downloadHtmlFile(`${transaction.id}-recu.html`, buildReceiptHtml(transaction));
-    success('Recu genere', `Le recu de la transaction ${transaction.id} a ete telecharge.`);
+    success('Reçu généré', `Le reçu de la transaction ${transaction.id} a été téléchargé.`);
   };
 
   const clearFinanceContext = () => {

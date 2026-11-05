@@ -96,7 +96,7 @@ export default function RegisterDetailsStep({
             value={formData.password}
             visible={showPassword}
             disabled={isLoading}
-            hint="Minimum 10 caracteres avec majuscule, minuscule, chiffre et caractere special."
+            hint="Minimum 10 caractères avec majuscule, minuscule, chiffre et caractère special."
             onChange={(value) => onFormDataChange({ ...formData, password: value })}
             onToggle={onTogglePassword}
           />
@@ -125,7 +125,7 @@ export default function RegisterDetailsStep({
               Creation du compte...
             </span>
           ) : (
-            'Creer mon compte'
+            'Créer mon compte'
           )}
         </button>
       </form>

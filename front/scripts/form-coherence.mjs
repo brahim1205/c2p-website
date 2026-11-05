@@ -92,7 +92,7 @@ async function testAdminCampaign(page) {
   await page.getByRole('button', { name: /^Planifier$/i }).click();
 
   await expectVisible(page.getByText(title, { exact: true }), 'scheduled-campaign-visible');
-  await expectVisible(page.getByText(/Planifiee le 2026-12-31T09:30/i), 'scheduled-date-visible');
+  await expectVisible(page.getByText(/Planifi[ée]e le 2026-12-31T09:30/i), 'scheduled-date-visible');
 
   const card = page.getByRole('heading', { name: title, exact: true }).locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]');
   await card.getByRole('button', { name: /^Apercu$/i }).click();
@@ -133,6 +133,18 @@ async function cleanupFormateurCourse(page, title) {
       headers,
     })));
   }, { apiUrl: API_URL, courseTitle: title });
+}
+
+// The UI updates optimistically: poll the API for a few seconds instead of reading it once,
+// otherwise the check races the write that the UI has just triggered.
+async function pollUntil(read, accept, { timeoutMs = 8000, intervalMs = 400 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  let value = await read();
+  while (!accept(value) && Date.now() < deadline) {
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, intervalMs));
+    value = await read();
+  }
+  return value;
 }
 
 async function fetchFormateurCourseByTitle(page, title) {
@@ -187,7 +199,7 @@ async function testFormateurCourseCreation(page) {
   await page.getByRole('button', { name: /^Créer la formation$/ }).click();
 
   await expectVisible(page.getByText(title, { exact: true }), 'created-course-visible');
-  const createdCourse = await fetchFormateurCourseByTitle(page, title);
+  const createdCourse = await pollUntil(() => fetchFormateurCourseByTitle(page, title), (course) => Boolean(course?.id));
   if (!createdCourse?.id) {
     record('created-course-api-visible', 'created course was not returned by formateur courses API');
     await cleanupFormateurCourse(page, title);
@@ -215,7 +227,13 @@ async function testFormateurCourseCreation(page) {
   await page.getByRole('button', { name: /^Enregistrer$/ }).click();
   await expectVisible(page.getByText(updatedLessonTitle, { exact: true }), 'updated-lesson-visible');
 
-  const program = await fetchFormateurCourseProgram(page, createdCourse.id);
+  const program = await pollUntil(
+    () => fetchFormateurCourseProgram(page, createdCourse.id),
+    (snapshot) => Boolean(
+      snapshot?.sections?.some((section) => String(section.title) === updatedSectionTitle)
+      && snapshot?.lessons?.some((lesson) => String(lesson.title) === updatedLessonTitle && String(lesson.duration) === '15 min'),
+    ),
+  );
   if (!program?.sections?.some((section) => String(section.title) === updatedSectionTitle)) {
     record('updated-section-api-visible', 'updated section was not returned by formateur program API');
   }

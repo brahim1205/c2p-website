@@ -37,7 +37,7 @@ export function downloadJsonFile(filename: string, value: unknown) {
 
 export function downloadCsvFile(filename: string, rows: CsvRow[]) {
   if (!rows.length) {
-    downloadTextFile(filename, 'Aucune donnee\n', 'text/csv;charset=utf-8');
+    downloadTextFile(filename, 'Aucune donnée\n', 'text/csv;charset=utf-8');
     return;
   }
 

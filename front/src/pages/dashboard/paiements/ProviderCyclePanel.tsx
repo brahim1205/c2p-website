@@ -8,6 +8,7 @@ import {
   type Transaction,
 } from './paymentPageModel';
 
+import { plural } from '@/lib/formatters';
 interface ProviderCyclePanelProps {
   providerBackedTransactions: Transaction[];
   activeProviderTransactions: Transaction[];
@@ -43,7 +44,7 @@ export default function ProviderCyclePanel({
           <p className="text-sm text-gray-600">Suivi unifié des opérations externalisées avant confirmation et réconciliation C2P.</p>
         </div>
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-          {providerBackedTransactions.length} opération(s)
+          {plural(providerBackedTransactions.length, 'opération(s)')}
         </span>
       </div>
 

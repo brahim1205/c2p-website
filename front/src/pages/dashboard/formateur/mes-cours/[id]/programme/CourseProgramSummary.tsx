@@ -55,7 +55,7 @@ export default function CourseProgramSummary({
                 : course.status === 'rejected'
                   ? 'Cette formation a été rejetée. Reprenez-la en brouillon pour la corriger.'
                   : course.status === 'archived'
-                    ? 'Cette formation est archivée et n apparaît plus dans le catalogue.'
+                    ? 'Cette formation est archivée et n’apparaît plus dans le catalogue.'
                     : 'Le programme est prêt pour une soumission en révision.'}
         </div>
       </div>

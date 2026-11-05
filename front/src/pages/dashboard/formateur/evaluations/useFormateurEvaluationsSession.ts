@@ -180,7 +180,7 @@ export function useFormateurEvaluationsSession() {
       await refreshEvaluations();
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      error('Erreur', 'Impossible de supprimer l examen.');
+      error('Erreur', 'Impossible de supprimer l’examen.');
       console.error(err);
     }
   };

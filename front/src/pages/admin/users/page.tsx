@@ -18,6 +18,7 @@ import {
   type ManagedUser,
 } from './adminUsersModel';
 
+import { plural } from '@/lib/formatters';
 export default function AdminUsersPage() {
   const { success, error } = useToast();
   const { user: currentUser } = useAuth();
@@ -65,10 +66,10 @@ export default function AdminUsersPage() {
     try {
       const updated = await updateManagedUser(id, { status });
       updateUsersCache((prev) => prev.map((user) => (user.id === id ? ({ ...user, ...(updated as ManagedUser) }) : user)));
-      success('Utilisateur mis a jour', `Le compte a ete passe au statut "${statusLabels[status]}".`);
+      success('Utilisateur mis à jour', `Le compte a été passe au statut "${statusLabels[status]}".`);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La mise a jour du compte a echoue.');
+      error('Erreur', 'La mise à jour du compte a echoue.');
     }
   };
 
@@ -87,7 +88,7 @@ export default function AdminUsersPage() {
     try {
       await Promise.all(selectedUsers.map((id) => updateManagedUser(id, { status })));
       updateUsersCache((prev) => prev.map((user) => (selectedUsers.includes(user.id) ? { ...user, status } : user)));
-      success('Traitement termine', `${selectedUsers.length} compte(s) mis a jour.`);
+      success('Traitement terminé', `${plural(selectedUsers.length, 'compte(s)')} mis à jour.`);
       setSelectedUsers([]);
     } catch (err) {
       console.error(err);
@@ -109,7 +110,7 @@ export default function AdminUsersPage() {
 
   const handleExport = () => {
     downloadCsvFile('admin-utilisateurs.csv', buildUsersExportRows(filteredUsers));
-    success('Export pret', 'La liste des utilisateurs a ete telechargee.');
+    success('Export prêt', 'La liste des utilisateurs a été téléchargée.');
   };
 
   return (

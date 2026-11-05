@@ -9,7 +9,7 @@ export default function ProjectCenterFundingModel() {
               <h2 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">
                 Vers la propriété définitive et l’autonomisation.
               </h2>
-              <p className="mt-5 text-sm leading-7 text-white/82">
+              <p className="mt-5 text-sm leading-7 text-white/[0.82]">
                 Les partenaires peuvent simuler leur contribution, suivre l’amortissement et accompagner le porteur jusqu’au remboursement progressif.
               </p>
               <p className="mt-6 inline-flex rounded-full bg-white px-4 py-2 text-sm font-black text-[#147f7b]">

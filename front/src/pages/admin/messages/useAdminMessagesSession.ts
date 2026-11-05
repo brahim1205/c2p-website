@@ -137,7 +137,7 @@ export function useAdminMessagesSession() {
     if (!currentConversation || !replyText.trim()) return;
     await sendMessage(currentConversation.id, replyText.trim());
     setReplyText('');
-    success('Reponse envoyee', 'Le message a ete transmis.');
+    success('Réponse envoyée', 'Le message a été transmis.');
   };
 
   const handleMarkHandled = async (submission: PublicContactSubmission) => {
@@ -148,10 +148,10 @@ export function useAdminMessagesSession() {
       ).map((item) => (item.id === updated.id ? updated : item)));
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.messages() });
       window.dispatchEvent(new CustomEvent('c2p:admin-support-updated'));
-      success('Demande traitee', `${submission.firstName} ${submission.lastName}`);
+      success('Demande traitée', `${submission.firstName} ${submission.lastName}`);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de mettre la demande a jour.');
+      error('Erreur', 'Impossible de mettre la demande à jour.');
     }
   };
 

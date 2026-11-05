@@ -2,6 +2,7 @@ import type { AdminAccreditation } from '@/lib/adminApi';
 import { AdminAccreditationCard } from './AdminAccreditationCard';
 import { statusLabels, type AccreditationStatus } from './adminAccreditationUi';
 
+import { plural } from '@/lib/formatters';
 type AccreditationCounts = Record<AccreditationStatus, number>;
 
 interface AdminAccreditationsHeroProps {
@@ -97,7 +98,7 @@ export function AdminAccreditationsSearch({
           />
         </div>
         <p className="text-sm text-gray-500">
-          {resultCount} dossier(s) dans "{statusLabels[activeTab].toLowerCase()}"
+          {plural(resultCount, 'dossier(s)')} dans "{statusLabels[activeTab].toLowerCase()}"
         </p>
       </div>
     </section>

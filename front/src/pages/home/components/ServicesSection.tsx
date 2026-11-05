@@ -105,7 +105,7 @@ export default function ServicesSection() {
           >
             <div className="relative overflow-hidden min-h-[440px] lg:min-h-[480px]">
               <img
-                src="/images/brand/image3.jpeg"
+                src="/images/brand/image3.webp"
                 alt="Formation professionnelle"
                 className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700"
               />
@@ -141,7 +141,7 @@ export default function ServicesSection() {
           >
             <div className="relative overflow-hidden min-h-[440px] lg:min-h-[480px]">
               <img
-                src="/images/brand/image8.jpeg"
+                src="/images/brand/image8.webp"
                 alt="Incubation de projets"
                 className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700"
               />
@@ -172,7 +172,7 @@ export default function ServicesSection() {
 
         {/* Bottom stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <AnimatedStat value="1,200+" label="Professionnels qualifiés" icon="ri-group-line" delay={0} />
+          <AnimatedStat value="1 200+" label="Professionnels qualifiés" icon="ri-group-line" delay={0} />
           <AnimatedStat value="50+" label="Formations disponibles" icon="ri-graduation-cap-line" delay={100} />
           <AnimatedStat value="150+" label="Projets incubés" icon="ri-rocket-line" delay={200} />
           <AnimatedStat value="95%" label="Taux de satisfaction" icon="ri-star-line" delay={300} />

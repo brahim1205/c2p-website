@@ -25,7 +25,7 @@ export default function PorteurFinancementDetailPage() {
   useEffect(() => {
     if (roundQuery.isError) {
       console.error(roundQuery.error);
-      error('Erreur', 'Impossible de charger cette levee de fonds.');
+      error('Erreur', 'Impossible de charger cette levée de fonds.');
     }
   }, [error, roundQuery.error, roundQuery.isError]);
 
@@ -62,7 +62,7 @@ export default function PorteurFinancementDetailPage() {
   </main>
 </body>
 </html>`);
-    success('Document pret', `Le document "${document.name}" a ete ouvert.`);
+    success('Document prêt', `Le document "${document.name}" a été ouvert.`);
   };
 
   if (!loading && !round) {
@@ -128,7 +128,7 @@ export default function PorteurFinancementDetailPage() {
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               <div className="flex flex-wrap gap-2 border-b border-gray-200 px-6 py-4">
                 {[
-                  ['overview', 'Vue generale'],
+                  ['overview', 'Vue générale'],
                   ['investors', 'Investisseurs'],
                   ['documents', 'Documents'],
                   ['history', 'Historique'],

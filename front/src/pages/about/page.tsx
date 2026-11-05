@@ -127,7 +127,7 @@ export default function AboutPage() {
                 ['Des parcours réels', 'services, cours, projets et partenariats'],
                 ['Une logique progressive', 'de découverte vers l’autonomie'],
               ].map(([title, label]) => (
-                <div key={title} className="rounded-3xl border border-white/70 bg-white/82 p-5 text-center shadow-sm backdrop-blur">
+                <div key={title} className="rounded-3xl border border-white/70 bg-white/[0.82] p-5 text-center shadow-sm backdrop-blur">
                   <div className="text-lg font-black text-[#147f7b]">{title}</div>
                   <div className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-[#64748b]">{label}</div>
                 </div>
@@ -137,11 +137,11 @@ export default function AboutPage() {
 
           <div className="relative">
             <img
-              src="/images/home/apropos.png"
-              alt="C2P ecosysteme professionnel"
+              src="/images/home/apropos.webp"
+              alt="C2P écosystème professionnel"
               className="h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
             />
-            <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/92 p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
+            <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/[0.92] p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
               <p className="text-sm font-black text-[#0f1c35]">AlloPresta • Espace Numérique • ProjectCenter</p>
               <p className="mt-1 text-xs leading-5 text-[#64748b]">Un seul compte pour évoluer selon votre parcours.</p>
             </div>
@@ -178,8 +178,8 @@ export default function AboutPage() {
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="relative overflow-hidden rounded-[30px] border border-[#d6dbe1]">
             <img src="/images/brand/image7.jpeg" alt="Mission C2P" className="h-[520px] w-full object-cover object-center" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0f1c35]/42 to-transparent"></div>
-            <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-[#d6dbe1] bg-white/86 p-5 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0f1c35]/[0.42] to-transparent"></div>
+            <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-[#d6dbe1] bg-white/[0.86] p-5 backdrop-blur-sm">
               <div className="text-3xl font-semibold text-[#0f1c35]">98%</div>
               <p className="mt-1 text-sm leading-6 text-[#64748b]">des apprenants recommandent l’accompagnement C2P.</p>
             </div>

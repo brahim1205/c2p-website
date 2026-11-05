@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-c2p-bg px-4 py-24 text-c2p-text sm:px-6 lg:px-8">
       <div className="absolute inset-0">
-        <img src="/images/brand/image44" alt="" className="h-full w-full object-cover object-center opacity-14" />
+        <img src="/images/brand/image44" alt="" className="h-full w-full object-cover object-center opacity-[0.14]" />
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,241,232,0.97)_0%,rgba(246,241,232,0.88)_48%,rgba(246,241,232,0.76)_100%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(213,180,111,0.18),transparent_28%),radial-gradient(circle_at_82%_58%,rgba(255,255,255,0.32),transparent_28%)]"></div>
@@ -23,7 +23,7 @@ export default function NotFound() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#7c8698]">Page introuvable</p>
             <div className="h-px w-16 bg-[#d5b46f]"></div>
           </div>
-          <h1 className="mt-7 text-[8rem] font-black leading-none text-[#d5b46f]/18 sm:text-[12rem] lg:text-[16rem]">
+          <h1 className="mt-7 text-[8rem] font-black leading-none text-[#d5b46f]/[0.18] sm:text-[12rem] lg:text-[16rem]">
             404
           </h1>
 

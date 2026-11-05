@@ -52,15 +52,15 @@ export default function PorteurPartenariatsPage() {
         message,
       });
       if (!result.delivered) {
-        error('Indisponible', 'La demande n a pas pu etre transmise a C2P.');
+        error('Indisponible', 'La demande n’a pas pu être transmise à C2P.');
         return;
       }
-      success('Message envoye', 'Votre demande a ete transmise a l equipe C2P.');
+      success('Message envoyé', 'Votre demande a été transmise à l’équipe C2P.');
       setMessage('');
       setShowContactModal(false);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Le message n a pas pu etre envoye.');
+      error('Erreur', 'Le message n’a pas pu être envoyé.');
     }
   };
 
@@ -107,7 +107,7 @@ export default function PorteurPartenariatsPage() {
               key={partner.id}
               role="group"
               tabIndex={0}
-              aria-label={`Apercu du partenaire ${partner.name}`}
+              aria-label={`Aperçu du partenaire ${partner.name}`}
               onClick={() => setPreviewPartner(partner)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -262,7 +262,7 @@ export default function PorteurPartenariatsPage() {
               rows={5}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Precisez votre besoin ou la prochaine etape souhaitée..."
+              placeholder="Précisez votre besoin ou la prochaine étape souhaitée..."
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
             />
             <div className="mt-5 flex justify-end gap-3">

@@ -146,7 +146,7 @@ export default function ClientCommandesPage() {
       setReportForm(emptyReportForm);
     } catch (reportSubmitError) {
       console.error(reportSubmitError);
-      error('Erreur', 'Impossible d envoyer le signalement.');
+      error('Erreur', 'Impossible d’envoyer le signalement.');
     }
   };
 

@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
 import { fetchOwnerDashboardSnapshot } from '@/lib/projectApi';
-import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
+import { formatCurrency, formatShortCurrency, plural } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
 import { fetchFinanceSnapshot } from '@/lib/saasApi';
 
@@ -33,7 +33,7 @@ export default function PorteurDashboardPage() {
   useEffect(() => {
     if (dashboardQuery.isError) {
       console.error(dashboardQuery.error);
-      error('Erreur', 'Impossible de charger les donnees porteur.');
+      error('Erreur', 'Impossible de charger les données porteur.');
     }
   }, [dashboardQuery.error, dashboardQuery.isError, error]);
 
@@ -57,7 +57,7 @@ export default function PorteurDashboardPage() {
       {
         label: 'Mentors assignés',
         value: String(partnerships.filter((partner) => partner.type === 'mentor').length),
-        detail: `${partnerships.length} relation(s) actives`,
+        detail: `${plural(partnerships.length, 'relation(s) active(s)')}`,
         icon: 'ri-user-star-line',
         surface: 'bg-violet-50 text-violet-700',
       },
@@ -71,7 +71,7 @@ export default function PorteurDashboardPage() {
       {
         label: 'Levées en cours',
         value: String(rounds.filter((round) => round.status !== 'termine').length),
-        detail: `${rounds.length} cycle(s) au total`,
+        detail: `${plural(rounds.length, 'cycle(s)')} au total`,
         icon: 'ri-line-chart-line',
         surface: 'bg-amber-50 text-amber-700',
       },
@@ -224,7 +224,7 @@ export default function PorteurDashboardPage() {
             <section className="rounded-3xl border border-gray-200 bg-white px-5 py-5 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-gray-900">Mentors et partenaires</h2>
-                <span className="text-sm text-gray-500">{partnerships.length} relation(s)</span>
+                <span className="text-sm text-gray-500">{plural(partnerships.length, 'relation(s)')}</span>
               </div>
 
               <div className="space-y-4">

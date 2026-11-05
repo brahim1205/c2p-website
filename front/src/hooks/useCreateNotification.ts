@@ -109,7 +109,7 @@ export async function notifyAdminClientReport(adminMessage: string, avatar?: str
 export async function notifyClientReportReceipt(userId: string, userMessage: string, userLink?: string) {
   await createNotification(
     userId,
-    'Signalement enregistre',
+    'Signalement enregistré',
     userMessage,
     'system',
     userLink,
@@ -136,8 +136,8 @@ export async function notifyProviderReviewPublished(
 export async function notifyClientReviewReply(clientUserId: string, service: string) {
   await createNotification(
     clientUserId,
-    'Reponse a votre avis',
-    `Le prestataire a repondu a votre avis sur "${service}".`,
+    'Réponse à votre avis',
+    `Le prestataire a répondu à votre avis sur "${service}".`,
     'review',
     '/dashboard/client/prestataires',
   );
@@ -152,7 +152,7 @@ export async function notifyApprenantGradePublished(
   await createNotification(
     studentUserId,
     'Nouvelle note disponible',
-    `Votre soumission "${examTitle}" a ete notee ${grade}/${maxGrade}.`,
+    `Votre soumission "${examTitle}" a été notée ${grade}/${maxGrade}.`,
     'evaluation',
     '/dashboard/apprenant/examens',
   );
@@ -161,8 +161,8 @@ export async function notifyApprenantGradePublished(
 export async function notifyFormateurNewSubmission(instructorUserId: string, examTitle: string) {
   await createNotification(
     instructorUserId,
-    'Nouvelle soumission a corriger',
-    `Un apprenant a soumis sa reponse pour "${examTitle}"`,
+    'Nouvelle soumission à corriger',
+    `Un apprenant a soumis sa réponse pour "${examTitle}"`,
     'evaluation',
     '/dashboard/formateur/evaluations',
   );
@@ -171,7 +171,7 @@ export async function notifyFormateurNewSubmission(instructorUserId: string, exa
 export async function notifyAdminOwnerPartnershipRequest(message: string) {
   await createNotification(
     'usr-admin',
-    'Demande porteur a traiter',
+    'Demande porteur à traiter',
     message,
     'message',
     '/admin/messages',
@@ -181,7 +181,7 @@ export async function notifyAdminOwnerPartnershipRequest(message: string) {
 export async function notifyAdminPartnerInterest(message: string, avatar?: string) {
   await createNotification(
     'usr-admin',
-    'Interet partenaire a cadrer',
+    'Intérêt partenaire à cadrer',
     message,
     'collaboration',
     '/admin/messages',
@@ -209,8 +209,8 @@ export async function notifyProviderMissionAssignedByC2P(
 ) {
   await createNotification(
     providerUserId,
-    'Nouvelle mission attribuee par C2P',
-    `Une mission "${service || 'Mission'}" vous a ete confiee par C2P.`,
+    'Nouvelle mission attribuée par C2P',
+    `Une mission "${service || 'Mission'}" vous a été confiée par C2P.`,
     'prestation',
     '/dashboard/prestataire/demandes',
   );
@@ -238,8 +238,8 @@ export async function notifyClientManagedBookingReceipt(
 ) {
   await createNotification(
     userId,
-    'Demande recue par C2P',
-    `Votre besoin pour "${providerName || 'ce prestataire'}" a bien ete transmis a l'equipe C2P.`,
+    'Demande reçue par C2P',
+    `Votre besoin pour "${providerName || 'ce prestataire'}" a bien été transmis à l'équipe C2P.`,
     'booking',
     '/dashboard/client/reservations',
     avatar,

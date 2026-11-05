@@ -6,7 +6,7 @@ import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequire
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, plural } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   fetchPrestataireDashboardSnapshot,
@@ -79,7 +79,7 @@ export default function PrestataireDashboardPage() {
       {
         label: 'Prestations en cours',
         value: String(inProgress),
-        detail: `${Math.max(0, requests.length - inProgress)} clôturée(s)`,
+        detail: `${plural(Math.max(0, requests.length - inProgress), 'clôturée(s)')}`,
         icon: 'ri-time-line',
         surface: 'bg-sky-50 text-sky-700',
       },
@@ -119,10 +119,10 @@ export default function PrestataireDashboardPage() {
     try {
       await updatePrestataireBookingStatus(booking, status);
       await queryClient.invalidateQueries({ queryKey: queryKeys.prestataire.root(user?.id) });
-      success('Statut mis a jour', 'Le client a ete notifie du changement.');
+      success('Statut mis à jour', 'Le client a été notifié du changement.');
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La demande n a pas pu etre mise a jour.');
+      error('Erreur', 'La demande n’a pas pu être mise à jour.');
     }
   };
 

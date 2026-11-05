@@ -7,7 +7,7 @@ import type {
   ClientDashboardUser,
 } from './types';
 
-const providerFallbackImage = '/images/brand/image1.jpeg';
+const providerFallbackImage = '/images/brand/image1.webp';
 
 export async function publishClientProviderDirectReview(params: {
   providerId: string | number;

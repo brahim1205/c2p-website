@@ -7,6 +7,7 @@ import {
   type CommunityTab,
 } from './communityModel';
 
+import { plural } from '@/lib/formatters';
 export function CommunityToolbar({
   activeTab,
   courseFilter,
@@ -215,7 +216,7 @@ function CommentCard({
         </div>
       </div>
       <p className="text-gray-700">{comment.content}</p>
-      <div className="mt-3 text-xs text-gray-500">{comment.likes} mention(s) utile(s)</div>
+      <div className="mt-3 text-xs text-gray-500">{plural(comment.likes, 'mention(s) utile(s)')}</div>
 
       {replies.length > 0 ? (
         <div className="mt-4 space-y-3 border-l-2 border-gray-100 pl-4">

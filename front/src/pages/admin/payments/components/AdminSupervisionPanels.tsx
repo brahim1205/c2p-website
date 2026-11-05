@@ -2,6 +2,7 @@ import AdminProviderPaymentSignalsPanel from './AdminProviderPaymentSignalsPanel
 import AdminSupervisionRuntimePanels from './AdminSupervisionRuntimePanels';
 import type { AdminSupervisionPanelsProps, ProviderTransactionSignalRow } from './adminSupervisionModel';
 
+import { plural } from '@/lib/formatters';
 export default function AdminSupervisionPanels<TProviderTransaction extends ProviderTransactionSignalRow>({
   outboxMetrics,
   deadLetterRows,
@@ -115,7 +116,7 @@ export default function AdminSupervisionPanels<TProviderTransaction extends Prov
                   {renderProviderStatusBadge(job.status)}
                 </div>
                 <p className="mt-2 text-sm text-gray-600">
-                  {job.summary?.scanned ? `${String(job.summary.scanned)} analysé(s)` : 'Aucun résumé'}{job.summary?.updated ? ` · ${String(job.summary.updated)} mis à jour` : ''}
+                  {job.summary?.scanned ? `${plural(Number(job.summary.scanned), 'élément(s) analysé(s)')}` : 'Aucun résumé'}{job.summary?.updated ? ` · ${String(job.summary.updated)} mis à jour` : ''}
                 </p>
                 {job.error ? <p className="mt-1 text-xs text-red-600">{job.error}</p> : null}
               </div>

@@ -82,7 +82,7 @@ export default function SubmitProjectPage() {
       navigate(submittingUser.role === 'porteur' ? '/dashboard/porteur/mes-projets' : '/project-center');
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Le projet n a pas pu etre soumis.');
+      error('Erreur', err instanceof Error ? err.message : 'Le projet n’a pas pu être soumis.');
     } finally {
       setIsSubmitting(false);
     }

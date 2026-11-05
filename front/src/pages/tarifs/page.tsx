@@ -80,15 +80,15 @@ export default function PricingPage() {
 
           <div className="relative">
             <img
-              src="/images/home/elegant-man-reviewing-checklist-removebg-preview.png"
+              src="/images/home/elegant-man-reviewing-checklist.webp"
               alt="Plans d'abonnement C2P"
               className="h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
             />
-            <div className="absolute right-4 top-4 rounded-3xl bg-white/92 px-5 py-4 shadow-[0_18px_45px_rgba(15,28,53,0.12)]">
+            <div className="absolute right-4 top-4 rounded-3xl bg-white/[0.92] px-5 py-4 shadow-[0_18px_45px_rgba(15,28,53,0.12)]">
               <p className="text-2xl font-black text-[#147f7b]">Promo</p>
               <p className="text-xs font-semibold text-[#64748b]">tarifs évolutifs</p>
             </div>
-            <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/92 p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
+            <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/[0.92] p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
               <p className="text-sm font-black text-[#0f1c35]">Compte gratuit</p>
               <ul className="mt-5 space-y-3 text-sm leading-7 text-[#64748b]">
                 <li className="flex gap-3"><i className="ri-check-line text-[#1a9a96]"></i><span>Créer un compte et accéder à votre espace.</span></li>

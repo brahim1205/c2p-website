@@ -80,7 +80,7 @@ export default function AdminDashboardContent({
       <CommandCenterPanel
         loading={loading}
         pendingActions={pendingActions}
-        pendingRequestCount={pendingActions.find((item) => item.label === 'Demandes a assigner')?.count ?? 0}
+        pendingRequestCount={pendingActions.find((item) => item.label === 'Demandes à assigner')?.count ?? 0}
       />
 
       <div className="grid gap-4">

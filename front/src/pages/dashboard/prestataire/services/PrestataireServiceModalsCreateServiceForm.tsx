@@ -104,7 +104,7 @@ export function CreateServiceForm({
               type="text"
               value={newService.price || ''}
               onChange={(event) => onNewServiceChange((prev) => ({ ...prev, price: event.target.value }))}
-              placeholder="Ex: 25,000 FCFA"
+              placeholder="Ex: 25 000 FCFA"
               className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-[#5fa6f3] focus:outline-none"
             />
           </div>

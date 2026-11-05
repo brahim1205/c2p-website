@@ -86,7 +86,7 @@ export default function AdminProfilePage() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.account.profile(user.id) });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La photo de profil administrateur n a pas pu etre enregistree.');
+      error('Erreur', 'La photo de profil administrateur n’a pas pu être enregistrée.');
     }
   };
 
@@ -99,10 +99,10 @@ export default function AdminProfilePage() {
       updateUser(updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.account.profile(user.id) });
       setIsEditing(false);
-      success('Profil mis a jour', 'Les informations administrateur ont ete enregistrees.');
+      success('Profil mis à jour', 'Les informations administrateur ont été enregistrées.');
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Le profil n a pas pu etre mis a jour.');
+      error('Erreur', 'Le profil n’a pas pu être mis à jour.');
     }
   };
 
@@ -120,11 +120,11 @@ export default function AdminProfilePage() {
     try {
       await changeAccountPassword(user.id, passwordForm.currentPassword, passwordForm.newPassword);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      success('Mot de passe mis a jour', 'Le mot de passe administrateur a ete change.');
+      success('Mot de passe mis à jour', 'Le mot de passe administrateur a été change.');
       void profileQuery.refetch();
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n a pas pu etre modifie.');
+      error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n’a pas pu être modifié.');
     }
   };
 

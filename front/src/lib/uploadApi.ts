@@ -65,7 +65,7 @@ export async function fetchUploadStrategy() {
   });
 
   if (!response.ok) {
-    throw new Error('Impossible de charger la strategie d upload.');
+    throw new Error('Impossible de charger la stratégie d’upload.');
   }
 
   return response.json() as Promise<UploadStrategyPayload>;

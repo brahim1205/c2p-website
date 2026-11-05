@@ -27,9 +27,9 @@ type RoleProfileField = {
 export const userTypes = [
   { id: 'client', title: 'Client', description: 'Rechercher des prestations, publier un besoin et suivre vos demandes', icon: 'ri-user-line' },
   { id: 'prestataire', title: 'Prestataire', description: 'Proposer vos services professionnels', icon: 'ri-briefcase-line' },
-  { id: 'formateur', title: 'Formateur', description: 'Creer et dispenser des formations', icon: 'ri-presentation-line' },
-  { id: 'apprenant', title: 'Apprenant', description: 'Suivre des formations et developper vos competences', icon: 'ri-graduation-cap-line' },
-  { id: 'porteur', title: 'Porteur de projet', description: 'Soumettre et developper votre projet', icon: 'ri-lightbulb-line' },
+  { id: 'formateur', title: 'Formateur', description: 'Créer et dispenser des formations', icon: 'ri-presentation-line' },
+  { id: 'apprenant', title: 'Apprenant', description: 'Suivre des formations et développer vos compétences', icon: 'ri-graduation-cap-line' },
+  { id: 'porteur', title: 'Porteur de projet', description: 'Soumettre et développer votre projet', icon: 'ri-lightbulb-line' },
   { id: 'partenaire', title: 'Partenaire', description: 'Intervenir comme partenaire financier ou technique', icon: 'ri-hand-heart-line' },
 ];
 
@@ -41,53 +41,53 @@ export const roleProfileFields: Record<string, { title: string; description: str
   },
   prestataire: {
     title: 'Profil professionnel',
-    description: 'Ces informations preparent votre profil public et vos futures demandes d accreditation.',
+    description: 'Ces informations préparent votre profil public et vos futures demandes d’accreditation.',
     fields: [
-      { key: 'publicTitle', label: 'Metier principal', placeholder: 'Ex: Electricien batiment', required: true },
-      { key: 'location', label: 'Zone d intervention', placeholder: 'Ex: Dakar, Thies, Rufisque', required: true },
+      { key: 'publicTitle', label: 'Métier principal', placeholder: 'Ex: Électricien bâtiment', required: true },
+      { key: 'location', label: 'Zone d’intervention', placeholder: 'Ex: Dakar, Thies, Rufisque', required: true },
       {
         key: 'skills',
         label: 'Services proposes',
-        placeholder: 'Installation electrique, depannage, maintenance',
+        placeholder: 'Installation électrique, dépannage, maintenance',
         required: true,
-        hint: 'Separez les services par des virgules.',
+        hint: 'Séparez les services par des virgules.',
       },
-      { key: 'bio', label: 'Experience', placeholder: 'Resumez votre experience, vos certifications ou votre specialite.', type: 'textarea' },
+      { key: 'bio', label: 'Experience', placeholder: 'Résumez votre expérience, vos certifications ou votre spécialité.', type: 'textarea' },
     ],
   },
   formateur: {
     title: 'Profil formateur',
-    description: 'Ces informations servent a presenter votre expertise dans l espace numerique.',
+    description: 'Ces informations servent à presenter votre expertise dans l’espace numérique.',
     fields: [
       { key: 'publicTitle', label: 'Titre professionnel', placeholder: 'Ex: Formatrice marketing digital', required: true },
-      { key: 'skills', label: 'Domaines enseignes', placeholder: 'Marketing digital, React, gestion de projet', required: true, hint: 'Separez les domaines par des virgules.' },
-      { key: 'preferredLanguage', label: 'Langue principale', placeholder: 'Ex: Francais, Wolof, Anglais' },
-      { key: 'bio', label: 'Presentation', placeholder: 'Presentez votre approche pedagogique et votre experience.', type: 'textarea' },
+      { key: 'skills', label: 'Domaines enseignes', placeholder: 'Marketing digital, React, gestion de projet', required: true, hint: 'Séparez les domaines par des virgules.' },
+      { key: 'preferredLanguage', label: 'Langue principale', placeholder: 'Ex: Français, Wolof, Anglais' },
+      { key: 'bio', label: 'Presentation', placeholder: 'Présentez votre approche pédagogique et votre expérience.', type: 'textarea' },
     ],
   },
   apprenant: {
-    title: 'Objectif d apprentissage',
+    title: 'Objectif d’apprentissage',
     description: 'On adapte votre espace aux formations que vous voulez suivre.',
     fields: [
       { key: 'publicTitle', label: 'Objectif principal', placeholder: 'Ex: Trouver un emploi, lancer une activité, renforcer mes compétences', required: true },
-      { key: 'skills', label: 'Domaines qui vous intéressent', placeholder: 'Développement web, bureautique, marketing digital', required: true, hint: 'Separez les domaines par des virgules.' },
+      { key: 'skills', label: 'Domaines qui vous intéressent', placeholder: 'Développement web, bureautique, marketing digital', required: true, hint: 'Séparez les domaines par des virgules.' },
       { key: 'preferredLanguage', label: 'Langue préférée', placeholder: 'Ex: Français, Wolof, Anglais' },
       { key: 'bio', label: 'Disponibilité et niveau actuel', placeholder: 'Expliquez votre niveau, votre disponibilité et ce que vous voulez atteindre.', type: 'textarea' },
     ],
   },
   porteur: {
-    title: 'Projet a accompagner',
+    title: 'Projet à accompagner',
     description: 'Ces informations aident C2P a comprendre rapidement votre projet.',
     fields: [
       { key: 'publicTitle', label: 'Nom ou résumé du projet', placeholder: 'Ex: Plateforme de livraison locale', required: true },
       { key: 'location', label: 'Localisation du projet', placeholder: 'Ex: Dakar, Thiès, Sénégal', required: true },
-      { key: 'skills', label: 'Secteur / besoins', placeholder: 'Agriculture, numérique, financement, mentorat', required: true, hint: 'Separez les éléments par des virgules.' },
+      { key: 'skills', label: 'Secteur / besoins', placeholder: 'Agriculture, numérique, financement, mentorat', required: true, hint: 'Séparez les éléments par des virgules.' },
       { key: 'bio', label: 'Description du projet', placeholder: 'Décrivez le problème, la solution, le stade actuel et le besoin d’accompagnement.', type: 'textarea', required: true },
     ],
   },
   partenaire: {
     title: 'Profil partenaire',
-    description: 'On identifie votre type d accompagnement pour les porteurs de projet.',
+    description: 'On identifie votre type d’accompagnement pour les porteurs de projet.',
     fields: [
       {
         key: 'partnerType',
@@ -115,9 +115,9 @@ export const roleProfileFields: Record<string, { title: string; description: str
         hint: 'Contribution non remboursable servant de caution solidaire et au fonctionnement du centre.',
       },
       { key: 'publicTitle', label: 'Organisation ou fonction', placeholder: 'Ex: Mentor produit, partenaire financier', required: true },
-      { key: 'skills', label: 'Expertises', placeholder: 'Financement, mentorat, technique, distribution', required: true, hint: 'Separez les expertises par des virgules.' },
+      { key: 'skills', label: 'Expertises', placeholder: 'Financement, mentorat, technique, distribution', required: true, hint: 'Séparez les expertises par des virgules.' },
       { key: 'website', label: 'Site ou page publique', placeholder: 'https://...', type: 'url' },
-      { key: 'bio', label: 'Type d accompagnement', placeholder: 'Expliquez comment vous pouvez accompagner les projets.', type: 'textarea' },
+      { key: 'bio', label: 'Type d’accompagnement', placeholder: 'Expliquez comment vous pouvez accompagner les projets.', type: 'textarea' },
     ],
   },
 };

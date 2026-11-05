@@ -67,7 +67,7 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
             ))}
           </div>
 
-          <div className="mt-7 max-w-2xl rounded-[24px] border border-white/80 bg-white/86 p-3 shadow-[0_20px_55px_rgba(15,28,53,0.08)] backdrop-blur">
+          <div className="mt-7 max-w-2xl rounded-[24px] border border-white/80 bg-white/[0.86] p-3 shadow-[0_20px_55px_rgba(15,28,53,0.08)] backdrop-blur">
             <div className="flex min-h-14 items-center gap-3 rounded-2xl bg-white px-4 py-3">
               <i className="ri-search-line text-xl text-[#64748b]" />
               <input
@@ -89,11 +89,11 @@ export function ProjectCenterHero({ searchQuery, onSearchChange }: ProjectCenter
             alt="ProjectCenter"
             className="relative h-[320px] w-full rounded-[32px] object-cover object-center shadow-[0_28px_80px_rgba(15,28,53,0.16)] sm:h-[430px] lg:h-[520px]"
           />
-          <div className="absolute right-4 top-4 rounded-3xl bg-white/92 px-5 py-4 shadow-[0_18px_45px_rgba(15,28,53,0.12)]">
+          <div className="absolute right-4 top-4 rounded-3xl bg-white/[0.92] px-5 py-4 shadow-[0_18px_45px_rgba(15,28,53,0.12)]">
             <p className="text-2xl font-black text-[#147f7b]">100%</p>
             <p className="text-xs font-semibold text-[#64748b]">soumission gratuite</p>
           </div>
-          <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/92 p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
+          <div className="absolute bottom-5 left-5 right-5 rounded-3xl bg-white/[0.92] p-5 shadow-[0_18px_45px_rgba(15,28,53,0.12)] backdrop-blur">
             <p className="text-sm font-black text-[#0f1c35]">Projets • mentors • financement</p>
             <p className="mt-1 text-xs leading-5 text-[#64748b]">Un espace pour construire, évaluer et accompagner les projets.</p>
           </div>

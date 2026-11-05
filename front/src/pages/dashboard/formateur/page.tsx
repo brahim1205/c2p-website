@@ -32,6 +32,7 @@ import {
   type Submission,
 } from './formateurDashboardModel';
 
+import { plural } from '@/lib/formatters';
 export default function FormateurDashboardPage() {
   const { user } = useAuth();
   const { error } = useToast();
@@ -162,14 +163,14 @@ export default function FormateurDashboardPage() {
     {
       label: 'Cours publiés',
       value: String(publishedCount),
-      detail: `${readyDraftCount} brouillon(s) prêts`,
+      detail: `${plural(readyDraftCount, 'brouillon(s) prêt(s)')}`,
       icon: 'ri-presentation-line',
       surface: 'bg-emerald-50 text-emerald-700',
     },
     {
       label: 'En révision',
       value: String(reviewCount),
-      detail: `${courseInsights.filter((course) => course.status === 'draft').length} brouillon(s) actifs`,
+      detail: `${plural(courseInsights.filter((course) => course.status === 'draft').length, 'brouillon(s) actif(s)')}`,
       icon: 'ri-shield-check-line',
       surface: 'bg-sky-50 text-sky-700',
     },

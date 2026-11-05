@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { plural } from '@/lib/formatters';
 interface ProviderPaymentCapabilitySummary {
   summary: string;
   actions: {
@@ -55,7 +56,7 @@ export default function AdminProviderPaymentSignalsPanel<TProviderTransaction ex
             <h2 className="text-lg font-bold text-gray-900">Provider transactions</h2>
             <p className="text-sm text-gray-500">Vue DexPay normalisée côté plateforme.</p>
           </div>
-          <span className="text-sm text-gray-500">{providerTransactions.length} élément(s)</span>
+          <span className="text-sm text-gray-500">{plural(providerTransactions.length, 'élément(s)')}</span>
         </div>
         <div className="space-y-3">
           {providerTransactions.slice(0, 6).map((item) => {
@@ -99,7 +100,7 @@ export default function AdminProviderPaymentSignalsPanel<TProviderTransaction ex
             <h2 className="text-lg font-bold text-gray-900">Payment intents</h2>
             <p className="text-sm text-gray-500">Intentions de paiement internes avant confirmation provider.</p>
           </div>
-          <span className="text-sm text-gray-500">{paymentIntents.length} élément(s)</span>
+          <span className="text-sm text-gray-500">{plural(paymentIntents.length, 'élément(s)')}</span>
         </div>
         <div className="space-y-3">
           {paymentIntents.slice(0, 6).map((item) => (

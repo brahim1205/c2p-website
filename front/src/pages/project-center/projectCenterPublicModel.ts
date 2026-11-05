@@ -59,11 +59,11 @@ export function getProjectImage(project: PublicProject) {
   if (project.image) return project.image;
 
   const categoryImages: Record<string, string> = {
-    tech: '/images/brand/images11.jpeg',
-    agriculture: '/images/brand/image8.jpeg',
-    education: '/images/brand/image3.jpeg',
-    sante: '/images/brand/images10.jpeg',
-    commerce: '/images/brand/image2.jpeg',
+    tech: '/images/brand/images11.webp',
+    agriculture: '/images/brand/image8.webp',
+    education: '/images/brand/image3.webp',
+    sante: '/images/brand/images10.webp',
+    commerce: '/images/brand/image2.webp',
     environnement: '/images/brand/images12.jpeg',
   };
 

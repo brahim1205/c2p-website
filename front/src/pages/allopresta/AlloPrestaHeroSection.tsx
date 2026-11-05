@@ -31,7 +31,7 @@ export function AlloPrestaHero({
               Décrivez votre besoin, comparez les prestataires, puis demandez un devis directement depuis la carte du service.
             </p>
 
-            <div className="mt-8 max-w-xl rounded-2xl border border-white/80 bg-white p-2 shadow-[0_20px_55px_rgba(255,180,31,0.15)]">
+            <div className="mt-8 max-w-xl rounded-2xl border border-white/80 bg-white p-2 shadow-[0_20px_55px_rgba(255 180,31,0.15)]">
               <div className="flex min-h-12 items-center gap-3 rounded-xl bg-[#fffaf2] px-4">
                 <i className="ri-search-line text-lg text-[#ff9f0a]" />
                 <input
@@ -73,11 +73,11 @@ export function AlloPrestaHero({
 
           <div className="relative min-h-[280px] sm:min-h-[370px] lg:min-h-[520px]">
             <div className="absolute right-3 top-5 z-10 rounded-2xl bg-white px-4 py-3 shadow-[0_18px_44px_rgba(15,28,53,0.12)]">
-              <p className="text-sm font-black text-[#08084f]">4.8 <i className="ri-star-fill text-[#ffb41f]" /></p>
+              <p className="text-sm font-black text-[#08084f]">4,8 <i className="ri-star-fill text-[#ffb41f]" /></p>
               <p className="text-[11px] font-medium text-[#6b7280]">avis clients</p>
             </div>
 
-            <div className="absolute left-4 top-20 z-10 rounded-2xl bg-[#ffb41f] px-5 py-4 text-center text-[#08084f] shadow-[0_18px_40px_rgba(255,180,31,0.30)] sm:left-10">
+            <div className="absolute left-4 top-20 z-10 rounded-2xl bg-[#ffb41f] px-5 py-4 text-center text-[#08084f] shadow-[0_18px_40px_rgba(255 180,31,0.30)] sm:left-10">
               <i className="ri-service-line text-xl" />
               <p className="mt-1 text-2xl font-black leading-none">{providersCount || 19}+</p>
               <p className="text-[11px] font-black">services visibles</p>
@@ -90,7 +90,7 @@ export function AlloPrestaHero({
 
             <div className="absolute inset-x-8 bottom-2 h-[72%] rounded-t-full bg-[#ffcf63]" />
             <img
-              src="/images/home/presta.png"
+              src="/images/home/presta.webp"
               alt="Services professionnels AlloPresta"
               className="absolute bottom-6 right-0 h-[80%] w-full rounded-[28px] object-contain object-center drop-shadow-[0_24px_45px_rgba(15,28,53,0.14)] lg:bottom-10 lg:w-[86%]"
             />

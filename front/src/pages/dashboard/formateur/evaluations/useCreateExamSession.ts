@@ -88,11 +88,11 @@ export function useCreateExamSession({
       return;
     }
     if (!userId) {
-      error('Session invalide', 'Impossible d identifier le formateur.');
+      error('Session invalide', 'Impossible d’identifier le formateur.');
       return;
     }
     if (isUploadingExamAttachment) {
-      setCreateExamMessage('Attendez la fin de l import des fichiers avant de créer l’évaluation.');
+      setCreateExamMessage('Attendez la fin de l’import des fichiers avant de créer l’évaluation.');
       return;
     }
     const nextErrors = validateExamForm(newExam, availableCourseIds);
@@ -106,7 +106,7 @@ export function useCreateExamSession({
     if (!selectedCourse) {
       setCreateExamErrors((current) => ({ ...current, course_id: 'Sélectionnez une formation valide.' }));
       setCreateExamMessage('Corrigez les champs signalés avant de créer l’examen.');
-      error('Formation invalide', 'Veuillez selectionner une formation valide.');
+      error('Formation invalide', 'Veuillez sélectionner une formation valide.');
       return;
     }
     if (!isExamTypeAllowedForDelivery((newExam.type || 'quiz') as ExamType, selectedCourse.delivery_mode)) {
@@ -145,8 +145,8 @@ export function useCreateExamSession({
       await refreshEvaluations();
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      setCreateExamMessage('Impossible de créer l examen.');
-      error('Erreur', 'Impossible de créer l examen.');
+      setCreateExamMessage('Impossible de créer l’examen.');
+      error('Erreur', 'Impossible de créer l’examen.');
       console.error(err);
     } finally {
       if (isMountedRef.current) {

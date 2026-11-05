@@ -37,7 +37,7 @@ export default function PrestataireDemandesPage() {
 
   useEffect(() => {
     if (bookingsQuery.data && !bookingsQuery.data.providerId) {
-      error('Prestataire introuvable', 'Votre compte prestataire n est pas encore relie a une fiche de service.');
+      error('Prestataire introuvable', 'Votre compte prestataire n’est pas encore relie à une fiche de service.');
     }
   }, [bookingsQuery.data, error]);
 

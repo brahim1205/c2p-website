@@ -70,13 +70,13 @@ export default function PorteurMesProjetsPage() {
     if (!selectedProject || !user?.id) return;
     try {
       await updateOwnerProject(user.id, selectedProject.id, editForm);
-      success('Projet mis a jour', 'Les modifications ont ete enregistrees.');
+      success('Projet mis à jour', 'Les modifications ont été enregistrées.');
       setShowEditModal(false);
       setSelectedProject(null);
       await queryClient.invalidateQueries({ queryKey: queryKeys.porteur.root(user.id) });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Le projet n a pas pu etre mis a jour.');
+      error('Erreur', 'Le projet n’a pas pu être mis à jour.');
     }
   };
 
@@ -258,7 +258,7 @@ export default function PorteurMesProjetsPage() {
                     <option value="pre-incubation">Pre-incubation</option>
                     <option value="incubation">Incubation</option>
                     <option value="acceleration">Acceleration</option>
-                    <option value="termine">Termine</option>
+                    <option value="termine">Terminé</option>
                   </select>
                 </div>
               </div>

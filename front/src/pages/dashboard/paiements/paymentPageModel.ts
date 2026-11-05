@@ -128,7 +128,7 @@ export const buildReceiptHtml = (transaction: Transaction) => `<!DOCTYPE html>
       <div class="card"><strong>Montant</strong><br />${formatAmount(transaction.amount, transaction.currency)}</div>
       <div class="card"><strong>Statut</strong><br />${getStatusLabel(transaction.status)}</div>
       <div class="card"><strong>Type</strong><br />${getTypeLabel(transaction.type)}</div>
-      <div class="card"><strong>Methode</strong><br />${getMethodName(transaction.method)}</div>
+      <div class="card"><strong>Méthode</strong><br />${getMethodName(transaction.method)}</div>
       <div class="card"><strong>Date</strong><br />${formatDate(transaction.date)}</div>
       <div class="card"><strong>Description</strong><br />${transaction.description}</div>
     </div>

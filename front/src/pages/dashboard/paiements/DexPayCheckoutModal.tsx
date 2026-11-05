@@ -103,7 +103,7 @@ export default function DexPayCheckoutModal({
                   onChange={(event) => onFormChange({ bankCode: event.target.value })}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
                 >
-                  <option value="">Selectionner une banque</option>
+                  <option value="">Sélectionner une banque</option>
                   {banks.map((bank) => (
                     <option key={bank.code} value={bank.code}>
                       {bank.name} {bank.currency ? `(${bank.currency})` : ''}
@@ -137,7 +137,7 @@ export default function DexPayCheckoutModal({
             Annuler
           </button>
           <button onClick={onSubmit} disabled={submitting} className="flex-1 whitespace-nowrap rounded-lg bg-[#0f766e] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0d665f] disabled:opacity-60">
-            {submitting ? 'Traitement...' : 'Creer l operation'}
+            {submitting ? 'Traitement...' : 'Créer l’opération'}
           </button>
         </div>
       </div>

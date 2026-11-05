@@ -48,11 +48,11 @@ export default function PartenaireCollaborationsPage() {
     if (!user?.id) return;
     try {
       await updatePartnerCollaboration(user.id, collaboration.id, patch);
-      success('Collaboration mise a jour', 'La collaboration a ete actualisee.');
+      success('Collaboration mise à jour', 'La collaboration a été actualisée.');
       await queryClient.invalidateQueries({ queryKey: queryKeys.partenaire.root(user.id) });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La collaboration n a pas pu etre modifiee.');
+      error('Erreur', 'La collaboration n’a pas pu être modifiée.');
     }
   };
 

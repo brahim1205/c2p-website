@@ -42,7 +42,7 @@ export default function CreateFundingRoundModal({
           <div>
             <label htmlFor="porteur-round-project" className="block text-sm font-medium text-gray-700 mb-1">Projet</label>
             <select id="porteur-round-project" value={newRound.projectId} onChange={(e) => setNewRound((prev) => ({ ...prev, projectId: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20">
-              <option value="">Selectionnez un projet</option>
+              <option value="">Sélectionnez un projet</option>
               {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
             </select>
           </div>
@@ -50,7 +50,7 @@ export default function CreateFundingRoundModal({
             <div>
               <label htmlFor="porteur-round-type" className="block text-sm font-medium text-gray-700 mb-1">Type</label>
               <select id="porteur-round-type" value={newRound.type} onChange={(e) => setNewRound((prev) => ({ ...prev, type: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20">
-                <option value="amorcage">Amorcage</option>
+                <option value="amorcage">Amorçage</option>
                 <option value="subvention">Subvention</option>
                 <option value="concours">Concours</option>
                 <option value="serie_a">Serie A</option>

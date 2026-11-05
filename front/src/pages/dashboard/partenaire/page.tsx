@@ -11,7 +11,7 @@ import {
   type PartnerType,
   type ProjectRecord,
 } from '@/lib/projectApi';
-import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
+import { formatCurrency, formatShortCurrency, plural } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
 import { fetchFinanceSnapshot } from '@/lib/saasApi';
 
@@ -55,21 +55,21 @@ export default function PartenaireDashboardPage() {
       {
         label: 'Projets suivis',
         value: String(trackedProjects.length),
-        detail: `${active} actif(s)`,
+        detail: `${plural(active, 'actif(s)')}`,
         icon: 'ri-eye-line',
         surface: 'bg-teal-50 text-teal-700',
       },
       {
         label: 'Montant engagé',
         value: formatShortCurrency(invested),
-        detail: `${trackedProjects.length} dossier(s) suivis`,
+        detail: `${plural(trackedProjects.length, 'dossier(s) suivi(s)')}`,
         icon: 'ri-money-dollar-circle-line',
         surface: 'bg-emerald-50 text-emerald-700',
       },
       {
         label: 'Collaborations actives',
         value: String(collaborations.filter((collaboration) => collaboration.status === 'actif').length),
-        detail: `${collaborations.length} relation(s) ouvertes`,
+        detail: `${plural(collaborations.length, 'relation(s) ouverte(s)')}`,
         icon: 'ri-team-line',
         surface: 'bg-sky-50 text-sky-700',
       },
@@ -104,15 +104,15 @@ export default function PartenaireDashboardPage() {
       });
 
       success(
-        result.alreadyTracked ? 'Suivi deja actif' : 'Interet enregistre',
+        result.alreadyTracked ? 'Suivi déjà actif' : 'Intérêt enregistré',
         result.alreadyTracked
-          ? 'Ce projet fait deja partie de vos suivis ou de vos collaborations.'
-          : 'L equipe C2P a ete notifiee et le projet a ete ajoute a vos suivis.',
+          ? 'Ce projet fait déjà partie de vos suivis ou de vos collaborations.'
+          : 'L’équipe C2P a été notifiée et le projet a été ajouté à vos suivis.',
       );
       await queryClient.invalidateQueries({ queryKey: queryKeys.partenaire.root(user.id) });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de manifester votre interet.');
+      error('Erreur', 'Impossible de manifester votre intérêt.');
     }
   };
 

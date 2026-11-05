@@ -3,6 +3,7 @@ import type { DexPayWebhookReceipt, OutboxDeadLetterEvent, OutboxMetrics } from 
 import type { DexPayStatus } from '@/lib/paymentsApi';
 import type { ProviderHealth, RuntimeBadge } from './adminSupervisionModel';
 
+import { plural } from '@/lib/formatters';
 interface AdminSupervisionRuntimePanelsProps {
   deadLetterRows: OutboxDeadLetterEvent[];
   dexPayStatus: DexPayStatus | null;
@@ -97,7 +98,7 @@ function OutboxRuntimePanel({
       <div className="mt-5 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">Dead-letter récents</h3>
-          <span className="text-xs text-gray-500">{deadLetterRows.length} événement(s)</span>
+          <span className="text-xs text-gray-500">{plural(deadLetterRows.length, 'événement(s)')}</span>
         </div>
         {deadLetterRows.slice(0, 4).map((event) => (
           <div key={event.id} className="rounded-2xl border border-gray-200 p-4">
@@ -181,7 +182,7 @@ function ProviderRuntimePanel({
       <div className="mt-5 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">Receipts webhook récents</h3>
-          <span className="text-xs text-gray-500">{providerWebhookReceipts.length} reçu(s)</span>
+          <span className="text-xs text-gray-500">{plural(providerWebhookReceipts.length, 'reçu(s)')}</span>
         </div>
         {providerWebhookReceipts.slice(0, 4).map((receipt) => (
           <div key={receipt.id} className="rounded-2xl border border-gray-200 p-4">

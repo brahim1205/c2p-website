@@ -60,11 +60,11 @@ export function getCategoryLabel(category: string) {
 export function getCourseImage(course: Course) {
   if (course.thumbnail) return course.thumbnail;
   const categoryImages: Record<string, string> = {
-    informatique: '/images/brand/image3.jpeg',
+    informatique: '/images/brand/image3.webp',
     langues: '/images/brand/images12.jpeg',
-    entrepreneuriat: '/images/brand/image8.jpeg',
-    commerce: '/images/brand/image2.jpeg',
-    communication: '/images/brand/images11.jpeg',
+    entrepreneuriat: '/images/brand/image8.webp',
+    commerce: '/images/brand/image2.webp',
+    communication: '/images/brand/images11.webp',
     gestion: '/images/brand/image7.jpeg',
   };
   return categoryImages[(course.category || '').toLowerCase()] || categoryImages.informatique;

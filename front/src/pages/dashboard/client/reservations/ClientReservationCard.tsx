@@ -49,7 +49,7 @@ export function ReservationCard({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 items-start gap-4">
           <img
-            src={getBookingProviderImage(booking, providers) || '/images/brand/image1.jpeg'}
+            src={getBookingProviderImage(booking, providers) || '/images/brand/image1.webp'}
             alt={getBookingProviderLabel(booking, providers)}
             className="h-14 w-14 flex-shrink-0 rounded-full object-cover"
           />

@@ -4,6 +4,7 @@ import type { AuthUser } from '@/lib/roles';
 import type { ProjectPartnership, ProjectRecord } from '@/lib/projectApi';
 import type { ProfileFormData } from './profileTypes';
 
+import { plural } from '@/lib/formatters';
 interface PorteurPublicProfileViewProps {
   user: AuthUser | null;
   userInitials: string;
@@ -70,7 +71,7 @@ export default function PorteurPublicProfileView({
                 <p className="mt-2 text-gray-600">{formData.profession || 'Porteur de projet'}</p>
                 <p className="mt-1 text-sm text-gray-500">{formData.location || 'Localisation non renseignee'}</p>
                 <p className="mt-4 max-w-3xl text-gray-700">
-                  {formData.bio || 'Ajoutez une presentation courte pour expliquer votre parcours, votre vision et la valeur de vos projets.'}
+                  {formData.bio || 'Ajoutez une présentation courte pour expliquer votre parcours, votre vision et la valeur de vos projets.'}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {(porteurSectors.length ? porteurSectors : formData.skills).map((item) => (
@@ -92,8 +93,8 @@ export default function PorteurPublicProfileView({
         </section>
 
         <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard value={porteurProjects.length} label="Projet(s) portes" />
-          <MetricCard value={porteurPartnerships.length} label="Partenaire(s) rattaches" tone="teal" />
+          <MetricCard value={porteurProjects.length} label={plural(porteurProjects.length, 'Projet(s) porté(s)', { withCount: false })} />
+          <MetricCard value={porteurPartnerships.length} label={plural(porteurPartnerships.length, 'Partenaire(s) rattaché(s)', { withCount: false })} tone="teal" />
           <MetricCard value={`${totalRaised.toLocaleString('fr-FR')} FCFA`} label="Financement leve" tone="green" />
           <MetricCard value={`${totalFundingTarget.toLocaleString('fr-FR')} FCFA`} label="Objectif suivi" tone="blue" />
         </div>

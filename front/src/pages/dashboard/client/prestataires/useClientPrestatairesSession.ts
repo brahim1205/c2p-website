@@ -106,7 +106,7 @@ export function useClientPrestatairesSession() {
   const handleSubmitRequest = async () => {
     if (!selectedPrestataire || !user) return;
     if (!requestForm.service || !requestForm.date || !requestForm.address.trim() || !requestForm.description.trim()) {
-      error('Informations manquantes', 'Renseignez le service, la date, l adresse et le besoin.');
+      error('Informations manquantes', 'Renseignez le service, la date, l’adresse et le besoin.');
       return;
     }
 
@@ -134,7 +134,7 @@ export function useClientPrestatairesSession() {
       navigate(`/paiement?type=prestation&returnTo=${encodeURIComponent('/dashboard/client/reservations')}`);
     } catch (submitError) {
       console.error(submitError);
-      error('Erreur', 'Impossible d enregistrer cette demande.');
+      error('Erreur', 'Impossible d’enregistrer cette demande.');
     }
   };
 

@@ -13,6 +13,7 @@ import {
   type StudentDetailStats,
 } from './apprenantsModel';
 
+import { plural } from '@/lib/formatters';
 interface LearnerDetailModalProps {
   detailLoading: boolean;
   detailStats: StudentDetailStats;
@@ -132,7 +133,7 @@ function EnrollmentCard({ enrollment, onClose }: { enrollment: Enrollment; onClo
 
       <div className="flex flex-wrap gap-4 text-xs text-gray-500">
         <span>{enrollment.completed_sections_estimate || 0}/{enrollment.course_sections_count || 0} sections</span>
-        <span>{enrollment.pending_grading_count || 0} correction(s) en attente</span>
+        <span>{plural(enrollment.pending_grading_count || 0, 'correction(s)')} en attente</span>
         <span>Note moyenne: {enrollment.avg_submission_grade !== null && enrollment.avg_submission_grade !== undefined ? `${enrollment.avg_submission_grade}` : 'N/A'}</span>
         <span>Dernier accès: {formatDate(enrollment.last_active)}</span>
         {enrollment.certificate_number && <span>Certificat: {enrollment.certificate_number}</span>}

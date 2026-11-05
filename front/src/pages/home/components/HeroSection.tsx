@@ -12,7 +12,7 @@ const slides = [
     tagline: 'Formations de qualité, résultats concrets'
   },
   {
-    image: '/images/brand/image8.jpeg',
+    image: '/images/brand/image8.webp',
     tagline: "De l'idée à l'entreprise"
   }
 ];

@@ -93,7 +93,7 @@ async function refreshSession() {
 }
 
 async function parseApiError(response: Response): Promise<ApiError> {
-  let message = response.status >= 500 ? 'Une erreur est survenue. Veuillez reessayer plus tard.' : 'Requete invalide.';
+  let message = response.status >= 500 ? 'Une erreur est survenue. Veuillez réessayer plus tard.' : 'Requête invalide.';
   let code: string | undefined;
 
   try {
@@ -182,7 +182,7 @@ export async function apiRequest<T>(
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw {
-          message: 'La requete a expire. Veuillez reessayer.',
+          message: 'La requête a expire. Veuillez réessayer.',
           status: 408,
           code: 'REQUEST_TIMEOUT',
           requestId: lastRequestId,
@@ -190,7 +190,7 @@ export async function apiRequest<T>(
       }
       if (error instanceof TypeError) {
         throw {
-          message: 'Erreur reseau.',
+          message: 'Erreur réseau.',
           code: 'NETWORK_ERROR',
           requestId: lastRequestId,
         } satisfies ApiError;
@@ -226,7 +226,7 @@ export function toApiError(error: unknown): ApiError {
     return error as ApiError;
   }
   return {
-    message: 'Erreur reseau.',
+    message: 'Erreur réseau.',
     requestId: lastRequestId,
   };
 }

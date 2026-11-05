@@ -160,7 +160,7 @@ export default function ApprenantCertificatsPage() {
 
   const openViewer = (certificate: CertificateView) => {
     if (certificate.status === 'pending') {
-      error('Certificat indisponible', 'Ce certificat n est pas encore emissible.');
+      error('Certificat indisponible', 'Ce certificat n’est pas encore emissible.');
       return;
     }
 
@@ -176,7 +176,7 @@ export default function ApprenantCertificatsPage() {
 
   const handleDownload = (certificate: CertificateView) => {
     if (certificate.status === 'pending') {
-      error('Indisponible', 'Le telechargement sera disponible apres emission.');
+      error('Indisponible', 'Le téléchargement sera disponible après emission.');
       return;
     }
     downloadCertificatePdf(`${certificate.certificateNumber || `certificat-${certificate.id}`}.pdf`, {
@@ -186,7 +186,7 @@ export default function ApprenantCertificatsPage() {
       date: getCertificateCompletionDate(certificate) ? formatDate(getCertificateCompletionDate(certificate)) : '-',
       certificateId: certificate.certificateNumber || certificate.id,
     });
-    success('Certificat prêt', 'La version imprimable s ouvre pour enregistrement en PDF.');
+    success('Certificat prêt', 'La version imprimable s’ouvre pour enregistrement en PDF.');
   };
 
   return (
@@ -320,10 +320,10 @@ export default function ApprenantCertificatsPage() {
           <h2 className="text-lg font-semibold text-gray-900">Derniere emission</h2>
           <p className="text-sm text-gray-600 mt-1">
             {latestIssuedCertificate?.issuedAt
-              ? `Dernier certificat emis le ${formatDateTime(latestIssuedCertificate.issuedAt)}.`
+              ? `Dernier certificat émis le ${formatDateTime(latestIssuedCertificate.issuedAt)}.`
               : latestIssuedCertificate?.completionDate
-                ? `Un certificat pret est disponible depuis le ${formatDateTime(latestIssuedCertificate.completionDate)}.`
-                : 'Aucun certificat emis pour le moment.'}
+                ? `Un certificat prêt est disponible depuis le ${formatDateTime(latestIssuedCertificate.completionDate)}.`
+                : 'Aucun certificat émis pour le moment.'}
           </p>
         </div>
       </div>

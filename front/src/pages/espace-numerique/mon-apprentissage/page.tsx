@@ -42,7 +42,7 @@ export default function MonApprentissagePage() {
       setCertificates((certificateRows as Certificate[]) || []);
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de charger votre espace d apprentissage.');
+      error('Erreur', 'Impossible de charger votre espace d’apprentissage.');
       setEnrollments([]);
       setCertificates([]);
     } finally {

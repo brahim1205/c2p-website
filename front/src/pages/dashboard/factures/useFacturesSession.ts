@@ -22,6 +22,7 @@ import {
   type InvoiceUrlContext,
 } from './facturesModel';
 
+import { plural } from '@/lib/formatters';
 export function useFacturesSession() {
   const { user } = useAuth();
   const { success } = useToast();
@@ -119,17 +120,17 @@ export function useFacturesSession() {
 
   const downloadInvoice = useCallback((invoice: Invoice) => {
     downloadHtmlFile(`${invoice.number}.html`, buildInvoiceHtml(invoice));
-    success('Telechargement', `La facture ${invoice.number} a ete telechargee.`);
+    success('Telechargement', `La facture ${invoice.number} a été téléchargée.`);
   }, [success]);
 
   const printInvoice = useCallback((invoice: Invoice) => {
     printHtmlDocument(invoice.number, buildInvoiceHtml(invoice));
-    success('Impression', `La facture ${invoice.number} a ete ouverte pour impression.`);
+    success('Impression', `La facture ${invoice.number} a été ouverte pour impression.`);
   }, [success]);
 
   const exportAll = useCallback(() => {
     downloadCsvFile('factures.csv', buildInvoiceCsvRows(filteredInvoices));
-    success('Export', `${filteredInvoices.length} facture(s) exportee(s) au format CSV.`);
+    success('Export', `${plural(filteredInvoices.length, 'facture(s) exportée(s)')} au format CSV.`);
   }, [filteredInvoices, success]);
 
   const openFinanceContext = useCallback((invoice: Invoice) => {

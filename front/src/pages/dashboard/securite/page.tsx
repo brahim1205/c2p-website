@@ -12,7 +12,7 @@ import {
   type AuditLogEntry,
   type SecuritySession,
 } from '@/lib/accountApi';
-import { formatDateTime } from '@/lib/formatters';
+import { formatDateTime, plural } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
 
 export default function SecurityPage() {
@@ -70,7 +70,7 @@ export default function SecurityPage() {
       await queryClient.invalidateQueries({ queryKey: securityQueryKey });
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n a pas pu etre modifie.');
+      error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n’a pas pu être modifié.');
     }
   };
 
@@ -78,11 +78,11 @@ export default function SecurityPage() {
     if (!user?.id) return;
     try {
       await revokeAccountSession(user.id, sessionId);
-      success('Session revoquee', 'La session a ete deconnectee.');
+      success('Session révoquée', 'La session a été déconnectée.');
       await queryClient.invalidateQueries({ queryKey: securityQueryKey });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de revoquer la session.');
+      error('Erreur', 'Impossible de révoquer la session.');
     }
   };
 
@@ -90,11 +90,11 @@ export default function SecurityPage() {
     if (!user?.id) return;
     try {
       const payload = await revokeOtherAccountSessions(user.id);
-      success('Sessions nettoyees', `${payload.removed} session(s) secondaire(s) ont ete revoquee(s).`);
+      success('Sessions nettoyées', `${plural(payload.removed, 'session(s) secondaire(s) révoquée(s)')}.`);
       await queryClient.invalidateQueries({ queryKey: securityQueryKey });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de revoquer les autres sessions.');
+      error('Erreur', 'Impossible de révoquer les autres sessions.');
     }
   };
 

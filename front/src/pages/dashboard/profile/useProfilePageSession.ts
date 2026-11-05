@@ -155,11 +155,11 @@ export function useProfilePageSession() {
       updateUser(updated);
       queryClient.setQueryData(profileQueryKey, updated);
       await queryClient.invalidateQueries({ queryKey: profileQueryKey });
-      success('Profil mis a jour', 'Vos informations ont ete enregistrees avec succes.');
+      success('Profil mis à jour', 'Vos informations ont été enregistrées avec succès.');
       setIsEditing(false);
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Le profil n a pas pu etre mis a jour.');
+      error('Erreur', err instanceof Error ? err.message : 'Le profil n’a pas pu être mis à jour.');
     }
   };
 
@@ -171,7 +171,7 @@ export function useProfilePageSession() {
       return;
     }
     if (passwordData.newPassword.length < 10) {
-      info('Mot de passe trop court', 'Le nouveau mot de passe doit contenir au moins 10 caracteres.');
+      info('Mot de passe trop court', 'Le nouveau mot de passe doit contenir au moins 10 caractères.');
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -181,12 +181,12 @@ export function useProfilePageSession() {
 
     try {
       await changeAccountPassword(user.id, passwordData.currentPassword, passwordData.newPassword);
-      success('Mot de passe mis a jour', 'Votre mot de passe a ete change avec succes.');
+      success('Mot de passe mis à jour', 'Votre mot de passe a été change avec succès.');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       await profileQuery.refetch();
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n a pas pu etre modifie.');
+      error('Erreur', err instanceof Error ? err.message : 'Le mot de passe n’a pas pu être modifié.');
     }
   };
 
@@ -201,7 +201,7 @@ export function useProfilePageSession() {
       await queryClient.invalidateQueries({ queryKey: profileQueryKey });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'La photo de profil n a pas pu etre enregistree.');
+      error('Erreur', 'La photo de profil n’a pas pu être enregistrée.');
     }
   };
 
@@ -217,7 +217,7 @@ export function useProfilePageSession() {
       navigate('/', { replace: true });
     } catch (err) {
       console.error(err);
-      error('Erreur', err instanceof Error ? err.message : 'Le compte n a pas pu etre supprime.');
+      error('Erreur', err instanceof Error ? err.message : 'Le compte n’a pas pu être supprimé.');
     } finally {
       setIsDeletingAccount(false);
     }

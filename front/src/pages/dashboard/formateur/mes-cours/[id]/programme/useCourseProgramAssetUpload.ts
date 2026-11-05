@@ -68,8 +68,8 @@ export function useCourseProgramAssetUpload({
       onUploadSuccess('Fichier importé', 'Le contenu a été téléversé et rattaché au formulaire.');
     } catch (err: unknown) {
       console.error(err);
-      setAssetFormMessage('Impossible d envoyer le fichier.');
-      onUploadError('Erreur d upload', 'Impossible d envoyer le fichier.');
+      setAssetFormMessage('Impossible d’envoyer le fichier.');
+      onUploadError('Erreur d’upload', 'Impossible d’envoyer le fichier.');
     } finally {
       setIsAssetUploading(false);
       setAssetUploadProgress(0);

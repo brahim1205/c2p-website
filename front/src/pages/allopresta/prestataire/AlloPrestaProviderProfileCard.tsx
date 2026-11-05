@@ -26,7 +26,7 @@ export default function AlloPrestaProviderProfileCard({
       <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:gap-6">
         <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl sm:h-32 sm:w-32">
           <img
-            src={prestataire.image || '/images/brand/image1.jpeg'}
+            src={prestataire.image || '/images/brand/image1.webp'}
             alt={displayName}
             className="w-full h-full object-cover object-center"
           />

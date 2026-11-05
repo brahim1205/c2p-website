@@ -101,7 +101,7 @@ export function RulesPanel({
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-lg font-bold text-gray-900">Simulation de commission</h2>
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <CommissionMetric label="Montant transaction" value="25,000 FCFA" />
+          <CommissionMetric label="Montant transaction" value="25 000 FCFA" />
           <CommissionMetric label={`Commission C2P (${commissionRate}%)`} value={`${Math.round(25000 * (commissionRate / 100)).toLocaleString('fr-FR')} FCFA`} />
           <CommissionMetric featured label="Net prestataire" value={`${Math.round(25000 * (1 - commissionRate / 100)).toLocaleString('fr-FR')} FCFA`} />
         </div>
@@ -189,7 +189,7 @@ export function AddCategoryModal({
             <label htmlFor="admin-category-type" className="mb-1 block text-sm font-medium text-gray-700">Type de categorie</label>
             <select id="admin-category-type" value={category.type} onChange={(event) => onCategoryChange({ ...category, type: event.target.value as AdminCategory['type'] })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
               <option value="service">Service (AlloPresta)</option>
-              <option value="formation">Formation (Espace Numerique)</option>
+              <option value="formation">Formation (Espace Numérique)</option>
               <option value="projet">Projet (ProjectCenter)</option>
             </select>
           </div>

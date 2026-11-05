@@ -4,6 +4,7 @@ import type { AuthUser } from '@/lib/roles';
 import type { Collaboration, TrackedProject } from '@/lib/projectApi';
 import type { ProfileFormData } from './profileTypes';
 
+import { plural } from '@/lib/formatters';
 interface PartenairePublicProfileViewProps {
   user: AuthUser | null;
   userInitials: string;
@@ -79,7 +80,7 @@ export default function PartenairePublicProfileView({
                 </p>
                 <p className="mt-1 text-sm text-gray-500">{formData.location || 'Localisation non renseignee'}</p>
                 <p className="mt-4 max-w-3xl text-gray-700">
-                  {formData.bio || 'Ajoutez une presentation courte pour expliquer votre expertise, votre these d accompagnement et le type de projets que vous pouvez soutenir.'}
+                  {formData.bio || 'Ajoutez une présentation courte pour expliquer votre expertise, votre these d’accompagnement et le type de projets que vous pouvez soutenir.'}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {(partnerExpertise.length ? partnerExpertise : formData.skills).map((item) => (
@@ -101,10 +102,10 @@ export default function PartenairePublicProfileView({
         </section>
 
         <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard value={partnerTrackedProjects.length} label="Projet(s) suivis" />
-          <MetricCard value={activePartnerCollaborations.length} label="Collaboration(s) actives" tone="teal" />
+          <MetricCard value={partnerTrackedProjects.length} label={plural(partnerTrackedProjects.length, 'Projet(s) suivi(s)', { withCount: false })} />
+          <MetricCard value={activePartnerCollaborations.length} label={plural(activePartnerCollaborations.length, 'Collaboration(s) active(s)', { withCount: false })} tone="teal" />
           <MetricCard value={`${totalPartnerInvestment.toLocaleString('fr-FR')} FCFA`} label="Engagement suivi" tone="green" />
-          <MetricCard value={partnerTypes.length || 1} label="Role(s) partenaire" tone="blue" />
+          <MetricCard value={partnerTypes.length || 1} label={plural(partnerTypes.length || 1, 'Rôle(s) partenaire', { withCount: false })} tone="blue" />
         </div>
 
         {isEditing && (

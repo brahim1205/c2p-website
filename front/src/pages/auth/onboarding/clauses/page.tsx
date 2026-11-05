@@ -17,11 +17,11 @@ export default function OnboardingClausesPage() {
   const next = searchParams.get('next') || (role ? `/dashboard/${role}` : '/dashboard');
 
   const clauses = useMemo(() => [
-    'Vos donnees de compte, de profil public, d activite, de paiement et d abonnement sont traitees pour fournir les services C2P.',
-    'Les actions premium sont conditionnees par un abonnement actif ou par un essai gratuit limite.',
-    'Pendant l essai gratuit, certaines fonctions avancees restent limitees : analytics, financement avance, communaute premium et options de visibilite payantes.',
-    'Les paiements, factures, commissions et historiques peuvent etre conserves pour les obligations legales, de securite et de support.',
-    'Vous pouvez modifier votre profil, gerer vos preferences et demander la suppression de votre compte depuis vos parametres.',
+    'Vos données de compte, de profil public, d’activité, de paiement et d’abonnement sont traitées pour fournir les services C2P.',
+    'Les actions premium sont conditionnées par un abonnement actif ou par un essai gratuit limite.',
+    'Pendant l’essai gratuit, certaines fonctions avancées restent limitées : analytics, financement avance, communauté premium et options de visibilité payantes.',
+    'Les paiements, factures, commissions et historiques peuvent être conservés pour les obligations légales, de sécurité et de support.',
+    'Vous pouvez modifier votre profil, gérer vos préférences et demander la suppression de votre compte depuis vos paramètres.',
   ], []);
 
   if (isLoading) return null;
@@ -37,7 +37,7 @@ export default function OnboardingClausesPage() {
       targetParams.set('next', next);
       navigate(`/auth/onboarding/abonnement?${targetParams.toString()}`);
     } catch {
-      error('Validation impossible', 'Les clauses n ont pas pu etre enregistrees. Reessayez.');
+      error('Validation impossible', 'Les clauses n’ont pas pu être enregistrées. Réessayez.');
     } finally {
       setSubmitting(false);
     }
@@ -50,11 +50,11 @@ export default function OnboardingClausesPage() {
           <div className="mb-6">
             <div className="flex max-w-[270px] gap-1.5" aria-hidden="true">
               {Array.from({ length: 4 }, (_, item) => (
-                <span key={item} className={`h-1.5 flex-1 rounded-full ${item < 3 ? 'bg-[#4d7f16]' : 'bg-[#e2e8f0]'}`} />
+                <span key={item} className={`h-1.5 flex-1 rounded-full ${item < 3 ? 'bg-[#1a9a96]' : 'bg-[#e2e8f0]'}`} />
               ))}
             </div>
             <div className="mt-3 flex items-center gap-2 text-xs font-bold text-[#64748b]">
-              <span className="rounded-full bg-[#e8f5d8] px-2.5 py-1 text-[#4d7f16]">Étape 3/4</span>
+              <span className="rounded-full bg-[#e8f5d8] px-2.5 py-1 text-[#1a9a96]">Étape 3/4</span>
               <span>Clauses {content.shortLabel.toLowerCase()}</span>
             </div>
           </div>

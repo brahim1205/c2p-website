@@ -7,6 +7,7 @@ import {
 } from './formateurDashboardModel';
 import { MetricTile } from './FormateurDashboardShared';
 
+import { plural } from '@/lib/formatters';
 export function EvaluationsPanel({
   loading,
   examsWithInsights,
@@ -71,7 +72,7 @@ function ExamInsightCard({ exam }: { exam: ExamWithInsights }) {
           </div>
           <p className="text-sm text-gray-600">{exam.course_name || 'Formation'}</p>
         </div>
-        <span className="text-sm font-semibold text-gray-900">{exam.submitted || 0} soumission(s)</span>
+        <span className="text-sm font-semibold text-gray-900">{plural(exam.submitted || 0, 'soumission(s)')}</span>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">

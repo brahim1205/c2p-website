@@ -74,7 +74,7 @@ export function useQuizBuilderActions({
     }
     if (!selectedQuizExam) return;
     if (!newQuestionDraft.prompt.trim()) {
-      error('Question invalide', 'L intitule de la question est obligatoire.');
+      error('Question invalide', 'L’intitule de la question est obligatoire.');
       return;
     }
 
@@ -94,7 +94,7 @@ export function useQuizBuilderActions({
       await Promise.all([refreshQuizStructure(selectedQuizExam.id), refreshEvaluations()]);
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      error('Erreur', 'Impossible d ajouter la question.');
+      error('Erreur', 'Impossible d’ajouter la question.');
       console.error(err);
     }
   };
@@ -107,7 +107,7 @@ export function useQuizBuilderActions({
     if (!selectedQuizExam) return;
     const draft = questionDrafts[String(question.id)];
     if (!draft || !draft.prompt.trim()) {
-      error('Question invalide', 'L intitule de la question est obligatoire.');
+      error('Question invalide', 'L’intitule de la question est obligatoire.');
       return;
     }
 
@@ -156,7 +156,7 @@ export function useQuizBuilderActions({
       await refreshQuizStructure(selectedQuizExam.id);
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      error('Erreur', 'Impossible de reordonner les questions.');
+      error('Erreur', 'Impossible de réordonner les questions.');
       console.error(err);
     }
   };
@@ -199,7 +199,7 @@ export function useQuizBuilderActions({
       await Promise.all([refreshQuizStructure(selectedQuizExam.id), refreshEvaluations()]);
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      error('Erreur', 'Impossible d ajouter le choix.');
+      error('Erreur', 'Impossible d’ajouter le choix.');
       console.error(err);
     }
   };
@@ -273,7 +273,7 @@ export function useQuizBuilderActions({
       await refreshQuizStructure(selectedQuizExam.id);
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      error('Erreur', 'Impossible de reordonner les choix.');
+      error('Erreur', 'Impossible de réordonner les choix.');
       console.error(err);
     }
   };

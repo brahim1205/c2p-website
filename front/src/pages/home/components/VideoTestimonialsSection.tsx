@@ -7,7 +7,7 @@ const testimonials = [
     name: 'Aminata Diallo',
     role: 'Apprenante – Formation Développement Web',
     text: 'Grâce à C2P, j\'ai obtenu ma certification et trouvé un emploi en freelance en moins de 3 mois. La qualité des formateurs est exceptionnelle.',
-    avatar: '/images/brand/image6.jpeg',
+    avatar: '/images/brand/image6.webp',
     stars: 5,
   },
   {
@@ -23,7 +23,7 @@ const testimonials = [
     name: 'Fatou Ndiaye',
     role: 'Prestataire – AlloPresta Design',
     text: 'AlloPresta m\'a donné accès à des clients que je n\'aurais jamais pu atteindre seule. La plateforme est fluide et les paiements sont sécurisés.',
-    avatar: '/images/brand/image8.jpeg',
+    avatar: '/images/brand/image8.webp',
     stars: 5,
   },
   {
@@ -31,7 +31,7 @@ const testimonials = [
     name: 'Ibrahim Sow',
     role: 'Formateur – C2P Espace Numérique',
     text: 'J\'ai formé plus de 800 apprenants à travers la plateforme. Les outils pédagogiques sont modernes et les évaluations bien structurées.',
-    avatar: '/images/brand/images9.jpeg',
+    avatar: '/images/brand/images9.webp',
     stars: 5,
   },
   {
@@ -39,7 +39,7 @@ const testimonials = [
     name: 'Marième Faye',
     role: 'Directrice RH – ECOBANK',
     text: 'Nous recrutons régulièrement des talents formés par C2P. Les compétences sont au niveau des standards internationaux.',
-    avatar: '/images/brand/images10.jpeg',
+    avatar: '/images/brand/images10.webp',
     stars: 5,
   },
 ];

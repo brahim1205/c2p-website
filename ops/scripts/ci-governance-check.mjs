@@ -254,6 +254,7 @@ function main() {
     'npm run data:legacy-mode:test',
     'npm test',
     'npm run state:check',
+    'npm run design:check',
     'npm run http:checks',
     'npm run bundle:budget',
     'npm run smoke:test',

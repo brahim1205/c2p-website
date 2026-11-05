@@ -10,7 +10,7 @@ export type AdminSettingsSnapshot = {
 
 export const adminSettingsTabs: Array<{ id: AdminSettingsTab; label: string; icon: string }> = [
   { id: 'categories', label: 'Categories', icon: 'ri-folder-line' },
-  { id: 'rules', label: 'Regles & Commissions', icon: 'ri-settings-4-line' },
+  { id: 'rules', label: 'Règles & Commissions', icon: 'ri-settings-4-line' },
   { id: 'integrations', label: 'Integrations', icon: 'ri-plug-line' },
 ];
 

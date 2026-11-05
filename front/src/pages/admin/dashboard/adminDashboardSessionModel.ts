@@ -9,16 +9,17 @@ import type {
 } from '@/lib/adminApi';
 import { formatPercent, formatShortCurrency } from '@/lib/formatters';
 import type { DexPayStatus } from '@/lib/paymentsApi';
-import type {
-  BreakdownItem,
-  FinanceProviderSignal,
-  KpiCard,
-  PendingAction,
-  ProviderRuntimeBadge,
-  QuickAccessItem,
-  RecentRegistrationItem,
-  RevenueBar,
-  TimeRange,
+import {
+  countHighlight,
+  type BreakdownItem,
+  type FinanceProviderSignal,
+  type KpiCard,
+  type PendingAction,
+  type ProviderRuntimeBadge,
+  type QuickAccessItem,
+  type RecentRegistrationItem,
+  type RevenueBar,
+  type TimeRange,
 } from './adminDashboardContentModel';
 
 export interface ProviderHealthSummary {
@@ -100,9 +101,9 @@ export function createPendingActions(input: {
   )).length || courses.filter((course) => course.status === 'review').length;
   const pendingCertificates = certificates.filter((certificate) => ['ready', 'pending', 'review'].includes(String(certificate.status ?? '').toLowerCase())).length;
   return [
-    { label: 'Comptes a valider', count: users.filter((entry) => entry.status === 'pending').length, link: '/admin/users', color: 'bg-orange-500', icon: 'ri-user-follow-line' },
-    { label: 'Demandes a assigner', count: bookings.filter((booking) => booking.status === 'pending' && !booking.provider_id).length, link: '/admin/dashboard', color: 'bg-[#5fa6f3]', icon: 'ri-file-list-3-line' },
-    { label: 'Services a valider', count: pendingServices, link: '/admin/operations', color: 'bg-emerald-500', icon: 'ri-briefcase-line' },
+    { label: 'Comptes à valider', count: users.filter((entry) => entry.status === 'pending').length, link: '/admin/users', color: 'bg-orange-500', icon: 'ri-user-follow-line' },
+    { label: 'Demandes à assigner', count: bookings.filter((booking) => booking.status === 'pending' && !booking.provider_id).length, link: '/admin/dashboard', color: 'bg-[#5fa6f3]', icon: 'ri-file-list-3-line' },
+    { label: 'Services à valider', count: pendingServices, link: '/admin/operations', color: 'bg-emerald-500', icon: 'ri-briefcase-line' },
     { label: 'Formations en revue', count: pendingCourses, link: '/admin/content', color: 'bg-blue-500', icon: 'ri-book-open-line' },
     { label: 'Certifications', count: pendingCertificates, link: '/admin/dashboard', color: 'bg-purple-500', icon: 'ri-award-line' },
     { label: 'Projets en incubation', count: projects.filter((project) => project.status === 'incubation').length, link: '/admin/project-financing', color: 'bg-amber-500', icon: 'ri-lightbulb-line' },
@@ -148,7 +149,7 @@ export function createKpis(input: {
       label: 'Recettes suivies',
       value: formatShortCurrency(scopedRevenue),
       detail: `${filteredBookings.length} flux`,
-      trend: `+${Math.max(1, filteredBookings.filter((booking) => booking.status === 'completed').length)}`,
+      highlight: countHighlight(filteredBookings.filter((booking) => booking.status === 'completed').length, 'réglé', 'réglés'),
       icon: 'ri-money-dollar-circle-line',
       surface: 'bg-emerald-50 text-emerald-700',
     },
@@ -156,7 +157,7 @@ export function createKpis(input: {
       label: 'Transactions',
       value: String(filteredBookings.length),
       detail: `${pendingAssignments} en attente`,
-      trend: `+${Math.max(1, filteredBookings.filter((booking) => booking.status === 'confirmed').length)}`,
+      highlight: countHighlight(filteredBookings.filter((booking) => booking.status === 'confirmed').length, 'confirmée', 'confirmées'),
       icon: 'ri-file-list-3-line',
       surface: 'bg-cyan-50 text-cyan-700',
     },
@@ -164,7 +165,7 @@ export function createKpis(input: {
       label: 'Utilisateurs',
       value: String(totalUsers),
       detail: `${activeUsers} actifs · ${pendingUsers} à valider`,
-      trend: `+${Math.max(0, newUsers)} récents`,
+      highlight: newUsers > 0 ? { text: `+${newUsers} ${newUsers > 1 ? 'nouveaux' : 'nouveau'}`, positive: true } : undefined,
       icon: 'ri-team-line',
       surface: 'bg-sky-50 text-sky-700',
     },
@@ -172,7 +173,6 @@ export function createKpis(input: {
       label: 'Taux de modération',
       value: formatPercent(moderationRate),
       detail: `${publishedCourses} cours publiés`,
-      trend: `+${Math.max(1, Math.round(moderationRate / 10))}%`,
       icon: 'ri-pie-chart-2-line',
       surface: 'bg-amber-50 text-amber-700',
     },

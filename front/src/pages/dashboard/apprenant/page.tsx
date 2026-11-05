@@ -14,6 +14,7 @@ import {
 } from '@/lib/apprenantDashboardApi';
 import { queryKeys } from '@/lib/queryKeys';
 
+import { plural } from '@/lib/formatters';
 export default function ApprenantDashboardPage() {
   const { user } = useAuth();
   const { success } = useToast();
@@ -76,7 +77,7 @@ export default function ApprenantDashboardPage() {
         ) : (
           <section className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
             {[
-              { label: 'Formations en cours', value: String(inProgressCount), detail: `${totalEnrolled} inscription(s)`, icon: 'ri-book-open-line', surface: 'bg-teal-50 text-teal-700' },
+              { label: 'Formations en cours', value: String(inProgressCount), detail: `${plural(totalEnrolled, 'inscription(s)')}`, icon: 'ri-book-open-line', surface: 'bg-teal-50 text-teal-700' },
               { label: 'Formations terminées', value: String(completedCount), detail: `${averageProgress}% de progression moyenne`, icon: 'ri-checkbox-circle-line', surface: 'bg-emerald-50 text-emerald-700' },
               { label: 'Certificats obtenus', value: String(certificates.length), detail: 'disponibles au téléchargement', icon: 'ri-award-line', surface: 'bg-amber-50 text-amber-700' },
               { label: "Heures d'apprentissage", value: String(totalHours), detail: 'estimées sur vos cours', icon: 'ri-time-line', surface: 'bg-sky-50 text-sky-700' },

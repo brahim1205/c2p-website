@@ -16,7 +16,7 @@ import {
   type ProjectFundingCommitment,
   type ProjectRecord,
 } from '@/lib/projectApi';
-import { formatCurrency, formatShortCurrency } from '@/lib/formatters';
+import { formatCurrency, formatShortCurrency, plural } from '@/lib/formatters';
 import { queryKeys } from '@/lib/queryKeys';
 import CreateFundingRoundModal, { type FundingRoundDraft } from './CreateFundingRoundModal';
 
@@ -84,7 +84,7 @@ export default function PorteurFinancementsPage() {
   const formatStatus = (status: string) => {
     if (status === 'termine') return 'Terminee';
     if (status === 'en_cours') return 'En cours';
-    return status || 'Non renseigne';
+    return status || 'Non renseigné';
   };
 
   const getProgress = (round: FundingRound) => {
@@ -114,13 +114,13 @@ export default function PorteurFinancementsPage() {
         deadline: newRound.deadline,
         description: newRound.description,
       });
-      success('Levee creee', 'La nouvelle levee de fonds est visible dans votre portefeuille projet.');
+      success('Levée créée', 'La nouvelle levée de fonds est visible dans votre portefeuille projet.');
       setShowCreateModal(false);
       setNewRound({ projectId: '', type: 'amorcage', targetAmount: '', deadline: '', description: '' });
       await queryClient.invalidateQueries({ queryKey: queryKeys.porteur.root(user.id) });
     } catch (err) {
       console.error(err);
-      error('Erreur', 'Impossible de creer la levee de fonds.');
+      error('Erreur', 'Impossible de créer la levée de fonds.');
     }
   };
 
@@ -139,7 +139,7 @@ export default function PorteurFinancementsPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-gray-900">{formatShortCurrency(stats.totalTarget)}</p><p className="text-sm text-gray-600">Objectif total</p></div>
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-green-600">{formatShortCurrency(stats.totalRaised)}</p><p className="text-sm text-gray-600">Montant leve</p></div>
           <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-blue-600">{stats.successRate}%</p><p className="text-sm text-gray-600">Taux d atteinte</p></div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-purple-600">{stats.investors}</p><p className="text-sm text-gray-600">Investisseur(s)</p></div>
+          <div className="bg-white rounded-xl border border-gray-200 p-5"><p className="text-2xl font-bold text-purple-600">{stats.investors}</p><p className="text-sm text-gray-600">{plural(stats.investors, 'Investisseur(s)', { withCount: false })}</p></div>
         </div>
 
         <section className="mb-8 rounded-2xl border border-gray-200 bg-white p-5">
@@ -162,7 +162,7 @@ export default function PorteurFinancementsPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
-              placeholder="Rechercher une levee..."
+              placeholder="Rechercher une levée..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"

@@ -98,7 +98,7 @@ export function validateLessonEditors(sections: SectionDraft[]) {
 export function validateExams(exams: ExamDraft[], deliveryMode: CourseDeliveryMode) {
   for (const exam of exams) {
     if (!isExamTypeAllowedForDelivery(exam.type, deliveryMode)) {
-      return getExamDeliveryRestrictionMessage(deliveryMode) ?? `Le type "${EXAM_TYPE_LABELS[exam.type]}" n est pas disponible pour ce format.`;
+      return getExamDeliveryRestrictionMessage(deliveryMode) ?? `Le type "${EXAM_TYPE_LABELS[exam.type]}" n’est pas disponible pour ce format.`;
     }
     if (!exam.title.trim()) {
       return 'Chaque évaluation doit avoir un titre.';

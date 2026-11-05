@@ -42,9 +42,9 @@ export const monetizedRoleContent: Record<
   formateur: {
     label: 'Formateurs',
     shortLabel: 'Formateur',
-    summary: 'Lancer des cours, des classes virtuelles et des evaluations dans l espace numerique.',
-    purpose: 'L abonnement sert a gerer votre offre pedagogique et vos outils de suivi avances.',
-    unlocks: ['Publication des cours', 'Classes virtuelles', 'Evaluations et analytics'],
+    summary: 'Lancer des cours, des classes virtuelles et des évaluations dans l’espace numérique.',
+    purpose: 'L’abonnement sert à gérer votre offre pédagogique et vos outils de suivi avances.',
+    unlocks: ['Publication des cours', 'Classes virtuelles', 'Évaluations et analytics'],
     gateLabel: 'Un plan actif est requis pour publier vos formations et piloter vos cohortes.',
   },
   partenaire: {
@@ -61,17 +61,17 @@ export const publicAccessRoles = [
   {
     role: 'client',
     label: 'Clients',
-    description: 'Aucun abonnement plateforme requis pour chercher un service, publier un besoin, reserver ou payer une prestation.',
+    description: 'Aucun abonnement plateforme requis pour chercher un service, publier un besoin, réserver ou payer une prestation.',
   },
   {
     role: 'apprenant',
     label: 'Apprenants',
-    description: 'Pas d abonnement C2P requis : vous achetez les cours ou services utiles a la demande.',
+    description: 'Pas d’abonnement C2P requis : vous achetez les cours ou services utiles à la demande.',
   },
   {
     role: 'parent',
     label: 'Parents',
-    description: 'Pas de plan public dedie pour l instant. Le suivi parent se rattache au dossier apprenant pilote par C2P.',
+    description: 'Pas de plan public dédié pour l’instant. Le suivi parent se rattache au dossier apprenant piloté par C2P.',
   },
   {
     role: 'porteur',

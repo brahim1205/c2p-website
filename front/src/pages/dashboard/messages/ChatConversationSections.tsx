@@ -2,6 +2,7 @@ import type { Conversation } from '@/hooks/useBackendMessaging';
 import { emojiCategories } from './chatConversationModel';
 import type { useChatConversationSession } from './useChatConversationSession';
 
+import { plural } from '@/lib/formatters';
 export type ChatConversationSession = ReturnType<typeof useChatConversationSession>;
 
 interface ChatHeaderProps {
@@ -159,7 +160,7 @@ function ConversationSearchPanel({ session }: { session: ChatConversationSession
         placeholder="Rechercher un mot, un auteur ou une phrase..."
         className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-[#5fa6f3] focus:outline-none"
       />
-      <p className="text-xs text-gray-500">{session.visibleMessages.length} message(s) correspondant(s).</p>
+      <p className="text-xs text-gray-500">{plural(session.visibleMessages.length, 'message(s) correspondant(s)')}.</p>
     </div>
   );
 }

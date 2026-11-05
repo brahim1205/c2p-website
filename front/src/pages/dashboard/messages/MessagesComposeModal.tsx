@@ -84,7 +84,7 @@ export default function MessagesComposeModal({
                   <p className="text-sm font-medium text-gray-900">{contact.firstName} {contact.lastName}</p>
                   <p className="text-xs text-gray-500">
                     {contact.publicTitle || contact.role}
-                    {contact.expertVerified ? ' • Verifie' : ''}
+                    {contact.expertVerified ? ' • Vérifié' : ''}
                   </p>
                 </div>
               </div>
