@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -403,7 +404,7 @@ export class AuthService {
   requireRole(request: AuthenticatedRequest, allowedRoles: Role[]) {
     const actor = this.getActor(request);
     if (!allowedRoles.includes(actor.role)) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     return actor;
   }
@@ -468,7 +469,7 @@ export class AuthService {
     }
 
     if (!granted) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
 
     return actor;
@@ -495,7 +496,7 @@ export class AuthService {
   requireSelfOrAdmin(request: AuthenticatedRequest, userId: string) {
     const actor = this.getActor(request);
     if (!isAdminRole(actor) && actor.id !== userId) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     return actor;
   }
@@ -503,7 +504,7 @@ export class AuthService {
   requireSelf(request: AuthenticatedRequest, userId: string) {
     const actor = this.getActor(request);
     if (actor.id !== userId) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     return actor;
   }

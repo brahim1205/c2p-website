@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { findUserById, isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import type { Row } from './mock-store.js';
 import { clone, findRow, store } from './data-app-store.js';
@@ -53,7 +53,7 @@ export function sanitizePayoutAccountRecord(row: Row, user: AuthUser) {
     : user.id;
 
   if (!isAdminRole(user) && existing && String(existing.user_id) !== user.id) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   normalized.user_id = targetUserId;
@@ -82,7 +82,7 @@ export function sanitizePayoutRequestRecord(row: Row, user: AuthUser) {
     : user.id;
 
   if (!isAdminRole(user) && existing && String(existing.user_id) !== user.id) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   normalized.user_id = targetUserId;
@@ -137,7 +137,7 @@ export function sanitizeUserSubscriptionRecord(row: Row, user: AuthUser) {
     : user.id;
 
   if (!isAdminRole(user) && existing && String(existing.user_id) !== user.id) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   const targetUser = findUserById(String(targetUserId)) ?? findRow('auth_users', targetUserId);
@@ -154,7 +154,7 @@ export function sanitizeUserSubscriptionRecord(row: Row, user: AuthUser) {
   }
 
   if (!isAdminRole(user) && String(plan.role) !== targetUser.role) {
-    throw new UnauthorizedException('Ce plan ne correspond pas a votre role.');
+    throw new ForbiddenException('Ce plan ne correspond pas a votre role.');
   }
 
   const nowIso = new Date().toISOString();

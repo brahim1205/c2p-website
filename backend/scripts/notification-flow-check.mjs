@@ -96,7 +96,7 @@ async function main() {
       message: 'Ceci ne doit pas passer.',
     }),
   });
-  assert(spoofedNotification.status === 401, `expected 401 on foreign notification create, got ${spoofedNotification.status}`);
+  assert(spoofedNotification.status === 403, `expected 403 on foreign notification create, got ${spoofedNotification.status}`);
 
   const forbiddenMessageNotification = await request('/notifications', {
     method: 'POST',
@@ -112,7 +112,7 @@ async function main() {
       message: 'Ceci ne doit pas ouvrir un canal direct.',
     }),
   });
-  assert(forbiddenMessageNotification.status === 401, `expected 401 on forbidden direct message notification, got ${forbiddenMessageNotification.status}`);
+  assert(forbiddenMessageNotification.status === 403, `expected 403 on forbidden direct message notification, got ${forbiddenMessageNotification.status}`);
 
   const title = `smoke-notification-${Date.now()}`;
   const createdNotification = await readJson('/notifications', {
@@ -169,8 +169,8 @@ async function main() {
     }),
   });
   assert(
-    forbiddenClientSystemNotification.status === 401,
-    `expected 401 on client -> prestataire system notification, got ${forbiddenClientSystemNotification.status}`,
+    forbiddenClientSystemNotification.status === 403,
+    `expected 403 on client -> prestataire system notification, got ${forbiddenClientSystemNotification.status}`,
   );
 
   const allowedClientReviewNotification = await readJson('/notifications', {

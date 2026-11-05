@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import { findRow } from './data-app-store.js';
 import { requireIdentifier } from './data-normalizers.js';
@@ -12,7 +12,7 @@ export function resolveInstructorCourse(courseId: unknown, user: AuthUser) {
   }
 
   if (!isAdminRole(user) && String(course.instructor_id) !== user.id) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   return { course, parsedCourseId };

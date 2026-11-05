@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import type { AuthUser } from '../auth/auth.store.js';
 import type { Row } from '../data/mock-store.js';
@@ -32,13 +32,13 @@ export function getLatestSubscription(userId: string) {
 
 export function assertMonetizedRole(actor: AuthUser) {
   if (!new Set(['prestataire', 'formateur', 'porteur', 'partenaire']).has(actor.role)) {
-    throw new UnauthorizedException('Ce role ne peut pas utiliser cette commande.');
+    throw new ForbiddenException('Ce role ne peut pas utiliser cette commande.');
   }
 }
 
 export function assertPrestataireRole(actor: AuthUser) {
   if (actor.role !== 'prestataire') {
-    throw new UnauthorizedException('Seuls les prestataires peuvent acheter un billet SenPresta.');
+    throw new ForbiddenException('Seuls les prestataires peuvent acheter un billet SenPresta.');
   }
 }
 

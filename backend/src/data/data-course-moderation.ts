@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { findUserById, isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import { store } from './data-app-store.js';
 import { toNumber, trimText } from './data-normalizers.js';
@@ -39,7 +39,7 @@ export function assertCourseStatusChangeAllowed(currentStatus: string | null, ne
 
   if (currentStatus === null) {
     if (!new Set(['draft', 'review']).has(nextStatus)) {
-      throw new UnauthorizedException('Le formateur ne peut creer une formation qu en brouillon ou en revision.');
+      throw new ForbiddenException('Le formateur ne peut creer une formation qu en brouillon ou en revision.');
     }
     return;
   }
@@ -49,11 +49,11 @@ export function assertCourseStatusChangeAllowed(currentStatus: string | null, ne
   }
 
   if (nextStatus === 'published' || nextStatus === 'rejected') {
-    throw new UnauthorizedException('Seul un administrateur peut publier ou rejeter une formation.');
+    throw new ForbiddenException('Seul un administrateur peut publier ou rejeter une formation.');
   }
 
   if (!new Set(['draft', 'review', 'archived']).has(nextStatus)) {
-    throw new UnauthorizedException('Transition de statut invalide pour cette formation.');
+    throw new ForbiddenException('Transition de statut invalide pour cette formation.');
   }
 }
 

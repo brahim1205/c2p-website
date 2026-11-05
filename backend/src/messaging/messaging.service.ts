@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service.js';
 import { findUserById, type AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
@@ -86,7 +86,7 @@ export class MessagingService {
       : [actor.id, ...requestedParticipants];
     const normalized = sanitizeConversationParticipants(actor, participantPayload, findUserById);
     if (!normalized) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     const now = new Date().toISOString();
     await syncAppStoreFromDatabase(this.prisma);
@@ -192,7 +192,7 @@ export class MessagingService {
     await syncAppStoreFromDatabase(this.prisma);
     const conversation = this.findConversation(conversationId);
     if (!this.isParticipant(conversation, actor.id)) {
-      throw new UnauthorizedException('Acces conversation refuse.');
+      throw new ForbiddenException('Acces conversation refuse.');
     }
   }
 

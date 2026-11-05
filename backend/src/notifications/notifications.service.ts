@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service.js';
 import type { AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
@@ -53,7 +53,7 @@ export class NotificationsService {
     const notificationType = normalizeNotificationType(input.type);
     await syncAppStoreFromDatabase(this.prisma);
     if (!canNotifyUser(actor, userId, notificationType)) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     const now = new Date().toISOString();
     const row = withId({

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -223,7 +224,7 @@ export class AuthOAuthService {
       headers: provider === 'google' ? { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' } : { Accept: 'application/json' },
     });
     if (!response.ok) {
-      throw new UnauthorizedException('Profil social inaccessible.');
+      throw new ForbiddenException('Profil social inaccessible.');
     }
     const profile = await response.json() as {
       email?: string;

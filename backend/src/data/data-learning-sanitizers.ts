@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import type { Row } from './mock-store.js';
 import {
@@ -60,13 +60,13 @@ export function sanitizeLessonCommentRecord(row: Row, user: AuthUser) {
   const isModerator = isAdminRole(user) || (user.role === 'formateur' && String(course.instructor_id) === user.id);
   const isStudentOnCourse = user.role === 'apprenant' && getStudentCourseIds(user.id).includes(String(parsedCourseId));
   if (!isModerator && !isStudentOnCourse && !(existing && String(existing.user_id) === user.id)) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   if (existing) {
     const isOwner = String(existing.user_id) === user.id;
     if (!isOwner && !isModerator) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
   }
 
@@ -119,10 +119,10 @@ export function sanitizeLessonProgressRecord(row: Row, user: AuthUser) {
   const targetStudentId = requireIdentifier(normalized.student_id ?? existing?.student_id ?? user.id, 'L apprenant associe est invalide.');
   if (!isAdminRole(user)) {
     if (user.role !== 'apprenant') {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     if (targetStudentId !== user.id) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     if (!getStudentCourseIds(user.id).includes(parsedCourseId)) {
       throw new UnauthorizedException('Inscription requise.');
@@ -170,13 +170,13 @@ export function sanitizeCourseReviewRecord(row: Row, user: AuthUser) {
   const targetStudentId = requireIdentifier(normalized.student_id ?? existing?.student_id ?? user.id, 'L apprenant associe est invalide.');
   if (!isAdminRole(user)) {
     if (user.role !== 'apprenant') {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     if (targetStudentId !== user.id) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     if (existing && String(existing.student_id) !== user.id) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     const enrollment = (store.course_enrollments ?? []).find(
       (entry) =>
@@ -526,7 +526,7 @@ export function sanitizeSubmissionRecord(row: Row, user: AuthUser) {
     (enrollment) => String(enrollment.course_id) === String(exam.course_id) && String(enrollment.student_id) === String(user.id),
   );
   if (!enrolled) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   normalized.exam_id = examId;
@@ -656,7 +656,7 @@ export function sanitizeSubmissionRecord(row: Row, user: AuthUser) {
 
 export function sanitizeSubmissionUpdateRecord(existingRow: Row, payload: Row, user: AuthUser) {
   if (user.role !== 'formateur' && !isAdminRole(user)) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   const exam = findRow('exams', existingRow.exam_id);
@@ -668,7 +668,7 @@ export function sanitizeSubmissionUpdateRecord(existingRow: Row, payload: Row, u
     const courseIds = getInstructorCourseIds(user.id);
     const ownsExam = String(exam.instructor_id) === user.id || courseIds.includes(String(exam.course_id));
     if (!ownsExam) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
   }
 

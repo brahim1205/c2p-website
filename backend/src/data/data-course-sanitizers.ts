@@ -1,6 +1,6 @@
 import {
   BadRequestException,
-  UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import type { Row } from './mock-store.js';
@@ -32,7 +32,7 @@ import {
 
 export function sanitizeAdminContentItemRecord(row: Row, user: AuthUser) {
   if (!isAdminRole(user)) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   const normalized = clone(row);
@@ -145,7 +145,7 @@ export function sanitizeCourseRecord(row: Row, user: AuthUser) {
   if (!isAdminRole(user)) {
     const requestedInstructorId = trimText(normalized.instructor_id);
     if (requestedInstructorId && requestedInstructorId !== user.id) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     normalized.instructor_id = user.id;
   }

@@ -3,13 +3,13 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
   Post,
   Query,
   Req,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
@@ -198,7 +198,7 @@ export class DataController {
     const matchedIds = new Set(rows.filter((row) => matches(row, query)).map((row) => String(row.id)));
     const accessibleMatched = actorRows.filter((row) => matches(row, query));
     if (matchedIds.size > 0 && accessibleMatched.length === 0) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     assertMutationRowBudget('PATCH', accessibleMatched.length);
     const user = request.auth?.user;
@@ -278,7 +278,7 @@ export class DataController {
     const matchedIds = new Set(rows.filter((row) => matches(row, query)).map((row) => String(row.id)));
     const removed = rows.filter((row) => matches(row, query) && actorRowIds.has(String(row.id)));
     if (matchedIds.size > 0 && removed.length === 0) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     assertMutationRowBudget('DELETE', removed.length);
     store[table] = rows.filter((row) => !(matches(row, query) && actorRowIds.has(String(row.id))));

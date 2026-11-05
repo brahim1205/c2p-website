@@ -1722,10 +1722,10 @@ async function main() {
       headers: { Cookie: clientCookies },
     });
     assert(
-      sensitiveRows.response.ok || sensitiveRows.response.status === 401,
-      `expected 200 filtered or 401 on finance read ${path}, got ${sensitiveRows.response.status}`,
+      sensitiveRows.response.ok || sensitiveRows.response.status === 403,
+      `expected 200 filtered or 403 on finance read ${path}, got ${sensitiveRows.response.status}`,
     );
-    if (sensitiveRows.response.status === 401) {
+    if (sensitiveRows.response.status === 403) {
       continue;
     }
     assert(

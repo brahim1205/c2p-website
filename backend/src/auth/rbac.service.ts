@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import type { AuthUser } from './auth.store.js';
 import {
@@ -187,7 +187,7 @@ export class RbacService {
     const effective = await this.getEffectivePermissions(actor);
     const missing = permissions.filter((permission) => !effective.has(permission));
     if (missing.length > 0) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     return actor;
   }

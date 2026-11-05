@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../auth/auth.service.js';
 import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import {
@@ -45,7 +45,7 @@ export async function assertTableAccess(
     return;
   }
   if (!isAdminRole(user) && ADMIN_ONLY_TABLES.has(table)) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
   if (!user && method !== 'GET') {
     throw new UnauthorizedException('Authentification requise.');

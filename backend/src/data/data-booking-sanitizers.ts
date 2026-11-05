@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import { findRow } from './data-app-store.js';
 import { getProviderIdsForUser } from './data-actor-scope.js';
@@ -16,7 +16,7 @@ import type { Row } from './mock-store.js';
 
 export function sanitizeBookingCreateRecord(row: Row, user: AuthUser) {
   if (user.role !== 'client' || String(row.client_id ?? user.id) !== user.id) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   const bookingDate = requireText(row.booking_date, 'La date souhaitee est obligatoire.');
@@ -64,10 +64,10 @@ export function sanitizeBookingUpdateRecord(existingRow: Row, payload: Row, user
 
   if (user.role === 'client') {
     if (String(existingRow.client_id) !== user.id) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     if (nextStatus !== 'cancelled') {
-      throw new UnauthorizedException('Le client ne peut qu annuler sa demande.');
+      throw new ForbiddenException('Le client ne peut qu annuler sa demande.');
     }
     if (!new Set(['pending', 'confirmed']).has(currentStatus)) {
       throw new BadRequestException('Cette demande ne peut plus etre annulee.');
@@ -83,7 +83,7 @@ export function sanitizeBookingUpdateRecord(existingRow: Row, payload: Row, user
     const currentProviderId = String(existingRow.provider_id ?? '');
     const providerIds = getProviderIdsForUser(user.id);
     if (!providerIds.includes(currentProviderId)) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
 
     const allowedTransitions = new Map<string, string[]>([
@@ -146,5 +146,5 @@ export function sanitizeBookingUpdateRecord(existingRow: Row, payload: Row, user
     };
   }
 
-  throw new UnauthorizedException('Acces refuse.');
+  throw new ForbiddenException('Acces refuse.');
 }

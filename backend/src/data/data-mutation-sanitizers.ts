@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { findUserById, isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import type { Row } from './mock-store.js';
 import { clone, compareValues, findRow, store } from './data-app-store.js';
@@ -69,10 +69,10 @@ function sanitizeProviderVerificationRequestRecord(row: Row, user: AuthUser) {
 
   if (!isAdminRole(user)) {
     if (user.role !== 'prestataire' || ownerUserId !== user.id) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
     if (existing && String(existing.user_id ?? '') !== user.id) {
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
     }
   }
 
@@ -150,7 +150,7 @@ function sanitizeProviderVerificationRequestRecord(row: Row, user: AuthUser) {
 
 function sanitizeEscrowCaseRecord(row: Row, user: AuthUser) {
   if (!isAdminRole(user)) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   const normalized = clone(row);
@@ -207,7 +207,7 @@ function sanitizeEscrowCaseRecord(row: Row, user: AuthUser) {
 function sanitizeConversationCreateRecord(row: Row, user: AuthUser) {
   const normalized = sanitizeConversationParticipants(user, row.participants, findUserById);
   if (!normalized) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   return {
@@ -222,12 +222,12 @@ function sanitizeConversationCreateRecord(row: Row, user: AuthUser) {
 
 function sanitizeMessageCreateRecord(row: Row, user: AuthUser) {
   if (String(row.sender_id) !== user.id) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   const conversation = findRow('conversations', row.conversation_id);
   if (!conversation || !isConversationAllowedForActor(user, conversation.participants, findUserById)) {
-    throw new UnauthorizedException('Acces refuse.');
+    throw new ForbiddenException('Acces refuse.');
   }
 
   const attachments = Array.isArray(row.attachments) ? row.attachments : [];
@@ -290,17 +290,17 @@ export function sanitizeUpdatePayload(table: string, existingRow: Row, payload: 
       return sanitizeSubmissionUpdateRecord(existingRow, payload, user);
     case 'conversations':
       if (!isConversationAllowedForActor(user, existingRow.participants, findUserById)) {
-        throw new UnauthorizedException('Acces refuse.');
+        throw new ForbiddenException('Acces refuse.');
       }
       return {
         updated_at: payload.updated_at ?? new Date().toISOString(),
       };
     case 'messages':
       if (!isConversationAllowedForActor(user, findRow('conversations', existingRow.conversation_id)?.participants, findUserById)) {
-        throw new UnauthorizedException('Acces refuse.');
+        throw new ForbiddenException('Acces refuse.');
       }
       if (String(existingRow.sender_id) === user.id) {
-        throw new UnauthorizedException('Acces refuse.');
+        throw new ForbiddenException('Acces refuse.');
       }
       return {
         read: payload.read === true,
@@ -320,61 +320,61 @@ export function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
 
   switch (table) {
     case 'courses':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeCourseRecord(row, user);
     case 'course_sections':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeCourseSectionRecord(row, user);
     case 'course_lessons':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeCourseLessonRecord(row, user);
     case 'lesson_assets':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeLessonAssetRecord(row, user);
     case 'virtual_classes':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeVirtualClassRecord(row, user);
     case 'exams':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeExamRecord(row, user);
     case 'quiz_questions':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeQuizQuestionRecord(row, user);
     case 'quiz_choices':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeQuizChoiceRecord(row, user);
     case 'payout_accounts':
-      if (!isAdminRole(user) && !new Set(['formateur', 'prestataire', 'porteur']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && !new Set(['formateur', 'prestataire', 'porteur']).has(user.role)) throw new ForbiddenException('Acces refuse.');
       return sanitizePayoutAccountRecord(row, user);
     case 'payout_requests':
-      if (!isAdminRole(user) && !new Set(['formateur', 'prestataire', 'porteur']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && !new Set(['formateur', 'prestataire', 'porteur']).has(user.role)) throw new ForbiddenException('Acces refuse.');
       return sanitizePayoutRequestRecord(row, user);
     case 'user_subscriptions':
-      if (!isAdminRole(user) && !new Set(['formateur', 'prestataire', 'porteur', 'partenaire']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && !new Set(['formateur', 'prestataire', 'porteur', 'partenaire']).has(user.role)) throw new ForbiddenException('Acces refuse.');
       return sanitizeUserSubscriptionRecord(row, user);
     case 'provider_verification_requests':
-      if (!isAdminRole(user) && user.role !== 'prestataire') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'prestataire') throw new ForbiddenException('Acces refuse.');
       return sanitizeProviderVerificationRequestRecord(row, user);
     case 'escrow_cases':
-      if (!isAdminRole(user)) throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user)) throw new ForbiddenException('Acces refuse.');
       return sanitizeEscrowCaseRecord(row, user);
     case 'lesson_comments':
-      if (!new Set(['admin', 'formateur', 'apprenant']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      if (!new Set(['admin', 'formateur', 'apprenant']).has(user.role)) throw new ForbiddenException('Acces refuse.');
       return sanitizeLessonCommentRecord(row, user);
     case 'lesson_progress':
-      if (!new Set(['admin', 'apprenant']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      if (!new Set(['admin', 'apprenant']).has(user.role)) throw new ForbiddenException('Acces refuse.');
       return sanitizeLessonProgressRecord(row, user);
     case 'course_reviews':
-      if (!new Set(['admin', 'apprenant']).has(user.role)) throw new UnauthorizedException('Acces refuse.');
+      if (!new Set(['admin', 'apprenant']).has(user.role)) throw new ForbiddenException('Acces refuse.');
       return sanitizeCourseReviewRecord(row, user);
     case 'course_faq_items':
-      if (!isAdminRole(user) && user.role !== 'formateur') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'formateur') throw new ForbiddenException('Acces refuse.');
       return sanitizeCourseFaqRecord(row, user);
     case 'notifications': {
       const targetUserId = String(row.user_id ?? '');
       const notificationType = normalizeNotificationType(row.type);
       if (!canNotifyUser(user, targetUserId, notificationType)) {
-        throw new UnauthorizedException('Acces refuse.');
+        throw new ForbiddenException('Acces refuse.');
       }
       return {
         ...row,
@@ -389,19 +389,19 @@ export function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
     case 'payment_transactions':
     case 'wallet_accounts':
     case 'invoices':
-      if (String(row.user_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
+      if (String(row.user_id) !== user.id) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'bookings':
       return sanitizeBookingCreateRecord(row, user);
     case 'client_orders':
     case 'client_favorites':
-      if (user.role !== 'client' || String(row.client_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'client' || String(row.client_id) !== user.id) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'provider_reviews':
-      if (user.role !== 'client' || String(row.client_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'client' || String(row.client_id) !== user.id) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'admin_reports':
-      if (!isAdminRole(user) && user.role !== 'client') throw new UnauthorizedException('Acces refuse.');
+      if (!isAdminRole(user) && user.role !== 'client') throw new ForbiddenException('Acces refuse.');
       return {
         reporter: `${user.firstName} ${user.lastName}`.trim(),
         reporter_id: user.id,
@@ -418,45 +418,45 @@ export function sanitizeCreatePayload(table: string, row: Row, user: AuthUser) {
         source: 'client_dashboard',
       };
     case 'provider_services':
-      if (user.role !== 'prestataire' || !providerIds.includes(String(row.provider_id))) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'prestataire' || !providerIds.includes(String(row.provider_id))) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'course_enrollments':
-      if (user.role !== 'apprenant' || String(row.student_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'apprenant' || String(row.student_id) !== user.id) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'submissions':
-      if (user.role !== 'apprenant' || String(row.student_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'apprenant' || String(row.student_id) !== user.id) throw new ForbiddenException('Acces refuse.');
       return sanitizeSubmissionRecord(row, user);
     case 'certificates':
-      if (user.role !== 'formateur' || !courseIds.includes(String(row.course_id))) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'formateur' || !courseIds.includes(String(row.course_id))) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'conversations':
       return sanitizeConversationCreateRecord(row, user);
     case 'messages':
       return sanitizeMessageCreateRecord(row, user);
     case 'projects':
-      if (user.role !== 'porteur' || String(row.owner_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'porteur' || String(row.owner_id) !== user.id) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'project_milestones':
     case 'project_documents':
     case 'project_history':
     case 'project_partnerships':
     case 'project_funding_rounds':
-      if (user.role !== 'porteur' || !ownerProjectIds.includes(String(row.project_id))) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'porteur' || !ownerProjectIds.includes(String(row.project_id))) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'project_tracking':
     case 'project_collaborations':
-      if (user.role !== 'partenaire' || String(row.partner_id) !== user.id) throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'partenaire' || String(row.partner_id) !== user.id) throw new ForbiddenException('Acces refuse.');
       return row;
     case 'funding_investors': {
-      if (user.role !== 'porteur') throw new UnauthorizedException('Acces refuse.');
+      if (user.role !== 'porteur') throw new ForbiddenException('Acces refuse.');
       const round = findRow('project_funding_rounds', row.funding_round_id);
-      if (!round || !ownerProjectIds.includes(String(round.project_id))) throw new UnauthorizedException('Acces refuse.');
+      if (!round || !ownerProjectIds.includes(String(round.project_id))) throw new ForbiddenException('Acces refuse.');
       return row;
     }
     default:
       if (isAdminRole(user)) {
         return row;
       }
-      throw new UnauthorizedException('Acces refuse.');
+      throw new ForbiddenException('Acces refuse.');
   }
 }

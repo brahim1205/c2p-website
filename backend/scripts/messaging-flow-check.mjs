@@ -107,7 +107,7 @@ async function main() {
       members: 2,
     }),
   });
-  assert(spoofConversation.status === 401, `expected 401 on conversation spoof, got ${spoofConversation.status}`);
+  assert(spoofConversation.status === 403, `expected 403 on conversation spoof, got ${spoofConversation.status}`);
 
   const { cookieJar: clientCookies, csrfToken: clientCsrf } = await loginAs('client@c2p.sn');
   assert(clientCsrf, 'missing csrf cookie for client');
@@ -143,7 +143,7 @@ async function main() {
       members: 2,
     }),
   });
-  assert(forbiddenClientConversation.status === 401, `expected 401 on client direct conversation, got ${forbiddenClientConversation.status}`);
+  assert(forbiddenClientConversation.status === 403, `expected 403 on client direct conversation, got ${forbiddenClientConversation.status}`);
 
   const { cookieJar: prestataireCookies, csrfToken: prestataireCsrf } = await loginAs('prestataire@c2p.sn');
   assert(prestataireCsrf, 'missing csrf cookie for prestataire');
@@ -179,7 +179,7 @@ async function main() {
       members: 2,
     }),
   });
-  assert(forbiddenPrestataireConversation.status === 401, `expected 401 on prestataire direct conversation, got ${forbiddenPrestataireConversation.status}`);
+  assert(forbiddenPrestataireConversation.status === 403, `expected 403 on prestataire direct conversation, got ${forbiddenPrestataireConversation.status}`);
 
   const apprenantMessages = await readJson(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
     headers: { Cookie: apprenantCookies },
@@ -199,7 +199,7 @@ async function main() {
     },
     body: JSON.stringify({ content: 'message invalide' }),
   });
-  assert(clientConversationIntrusion.status === 401, `expected 401 on non participant message, got ${clientConversationIntrusion.status}`);
+  assert(clientConversationIntrusion.status === 403, `expected 403 on non participant message, got ${clientConversationIntrusion.status}`);
 
   const spoofMessage = await readJson(`/messaging/conversations/${encodeURIComponent(String(targetConversation.id))}/messages`, {
     method: 'POST',

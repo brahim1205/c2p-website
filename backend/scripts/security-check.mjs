@@ -112,12 +112,12 @@ async function main() {
   const forbiddenUsers = await request('/auth/users', {
     headers: { Cookie: cookieJar },
   });
-  assert(forbiddenUsers.status === 401, `expected 401 on /auth/users, got ${forbiddenUsers.status}`);
+  assert(forbiddenUsers.status === 403, `expected 403 on /auth/users, got ${forbiddenUsers.status}`);
 
   const forbiddenLegacyUserRead = await request('/users/usr-admin', {
     headers: { Cookie: cookieJar },
   });
-  assert(forbiddenLegacyUserRead.status === 401, `expected 401 on /users/:id, got ${forbiddenLegacyUserRead.status}`);
+  assert(forbiddenLegacyUserRead.status === 403, `expected 403 on /users/:id, got ${forbiddenLegacyUserRead.status}`);
 
   const forbiddenLegacyUserCreate = await request('/users', {
     method: 'POST',
@@ -132,7 +132,7 @@ async function main() {
       lastName: 'User',
     }),
   });
-  assert(forbiddenLegacyUserCreate.status === 401, `expected 401 on POST /users, got ${forbiddenLegacyUserCreate.status}`);
+  assert(forbiddenLegacyUserCreate.status === 403, `expected 403 on POST /users, got ${forbiddenLegacyUserCreate.status}`);
 
   const adminPasswordHijack = await request('/auth/change-password', {
     method: 'POST',
@@ -147,7 +147,7 @@ async function main() {
       newPassword: 'Password!789',
     }),
   });
-  assert(adminPasswordHijack.status === 401, `expected 401 on cross-user password change attempt, got ${adminPasswordHijack.status}`);
+  assert(adminPasswordHijack.status === 403, `expected 403 on cross-user password change attempt, got ${adminPasswordHijack.status}`);
 
   const directoryResponse = await request('/auth/directory', {
     headers: { Cookie: cookieJar },
@@ -186,7 +186,7 @@ async function main() {
   const forbiddenExportResponse = await request('/auth/profile/usr-client/export', {
     headers: { Cookie: prestataireCookieJar },
   });
-  assert(forbiddenExportResponse.status === 401, `expected 401 on cross-user data export, got ${forbiddenExportResponse.status}`);
+  assert(forbiddenExportResponse.status === 403, `expected 403 on cross-user data export, got ${forbiddenExportResponse.status}`);
 
   const selfEscalationAttempt = await request('/auth/profile/usr-client', {
     method: 'PATCH',
@@ -212,7 +212,7 @@ async function main() {
   const forbiddenSecurity = await request('/auth/security/usr-admin', {
     headers: { Cookie: cookieJar },
   });
-  assert(forbiddenSecurity.status === 401, `expected 401 on чужой security endpoint, got ${forbiddenSecurity.status}`);
+  assert(forbiddenSecurity.status === 403, `expected 403 on чужой security endpoint, got ${forbiddenSecurity.status}`);
 
   const scopedPayments = await request('/data/payment_transactions?eq_user_id=usr-admin', {
     headers: { Cookie: cookieJar },
@@ -225,12 +225,12 @@ async function main() {
   const forbiddenAdminOverview = await request('/payments/admin/overview', {
     headers: { Cookie: cookieJar },
   });
-  assert(forbiddenAdminOverview.status === 401, `expected 401 on /payments/admin/overview for client, got ${forbiddenAdminOverview.status}`);
+  assert(forbiddenAdminOverview.status === 403, `expected 403 on /payments/admin/overview for client, got ${forbiddenAdminOverview.status}`);
 
   const forbiddenDexPayAdmin = await request('/payments/admin/providers/dexpay/reconciliation-jobs', {
     headers: { Cookie: cookieJar },
   });
-  assert(forbiddenDexPayAdmin.status === 401, `expected 401 on DexPay admin route for client, got ${forbiddenDexPayAdmin.status}`);
+  assert(forbiddenDexPayAdmin.status === 403, `expected 403 on DexPay admin route for client, got ${forbiddenDexPayAdmin.status}`);
 
   const missingCsrfMutation = await request('/data/bookings', {
     method: 'POST',
@@ -550,7 +550,7 @@ async function main() {
   const adminDexPayJobs = await request('/payments/admin/providers/dexpay/reconciliation-jobs', {
     headers: { Cookie: adminCookies },
   });
-  assert(adminDexPayJobs.status === 401, `expected 401 on DexPay provider jobs for admin, got ${adminDexPayJobs.status}`);
+  assert(adminDexPayJobs.status === 403, `expected 403 on DexPay provider jobs for admin, got ${adminDexPayJobs.status}`);
 
   const { cookieJar: superadminCookies } = await loginAs('superadmin@c2p.sn');
   const superadminDexPayJobs = await request('/payments/admin/providers/dexpay/reconciliation-jobs', {
@@ -561,12 +561,12 @@ async function main() {
   const forbiddenOutboxMetrics = await request('/outbox/metrics', {
     headers: { Cookie: cookieJar },
   });
-  assert(forbiddenOutboxMetrics.status === 401, `expected 401 on outbox metrics for client, got ${forbiddenOutboxMetrics.status}`);
+  assert(forbiddenOutboxMetrics.status === 403, `expected 403 on outbox metrics for client, got ${forbiddenOutboxMetrics.status}`);
 
   const adminOutboxMetrics = await request('/outbox/metrics', {
     headers: { Cookie: adminCookies },
   });
-  assert(adminOutboxMetrics.status === 401, `expected 401 on outbox metrics for admin, got ${adminOutboxMetrics.status}`);
+  assert(adminOutboxMetrics.status === 403, `expected 403 on outbox metrics for admin, got ${adminOutboxMetrics.status}`);
 
   const superadminOutboxMetrics = await request('/outbox/metrics', {
     headers: { Cookie: superadminCookies },
