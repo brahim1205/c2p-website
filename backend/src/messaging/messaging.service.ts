@@ -12,6 +12,13 @@ import {
   withId,
 } from '../data/data-app-store.js';
 import { sanitizeConversationParticipants } from '../data/data-messaging-policy.js';
+import {
+  conversationViewFor,
+  findIndividualConversation,
+  isUnreadMessageNotification,
+  participantIds,
+  sanitizeMessageAttachments,
+} from './messaging-conversation-view.js';
 import type { Row } from '../data/mock-store.js';
 import { createAppNotificationRow } from '../notifications/notification-payloads.js';
 
@@ -34,9 +41,9 @@ export class MessagingService {
       .filter((conversation) => this.isParticipant(conversation, actor.id))
       .sort((left, right) => Date.parse(String(right.updated_at ?? right.created_at ?? '')) - Date.parse(String(left.updated_at ?? left.created_at ?? '')));
     const conversationIds = new Set(conversations.map((conversation) => String(conversation.id)));
-    const messages = summaryOnly && (actor.role === 'admin' || actor.role === 'superadmin')
-      ? []
-      : clone(store.messages ?? []).filter((message) => conversationIds.has(String(message.conversation_id)));
+    // Previews and unread counters are always computed server-side; summaryOnly is kept for API compatibility.
+    void summaryOnly;
+    const messages = (store.messages ?? []).filter((message) => conversationIds.has(String(message.conversation_id)));
 
     return conversations.map((conversation) => {
       const ownMessages = messages
@@ -48,9 +55,7 @@ export class MessagingService {
       ).length;
       return {
         id: String(conversation.id),
-        name: conversation.name,
-        avatar: conversation.avatar,
-        role: conversation.role ?? 'Conversation',
+        ...conversationViewFor(conversation, actor.id, findUserById),
         lastMessage: this.getMessagePreview(lastMessage),
         lastMessageAt: lastMessage?.created_at ?? conversation.updated_at ?? conversation.created_at,
         unreadCount,
@@ -90,6 +95,9 @@ export class MessagingService {
     }
     const now = new Date().toISOString();
     await syncAppStoreFromDatabase(this.prisma);
+    // One thread per pair of people, like any direct-messaging inbox.
+    const existing = findIndividualConversation(store.conversations ?? [], normalized.participants);
+    if (existing) return this.toConversationDto(existing, actor.id);
     const row = withId({
       name: normalized.conversationName,
       role: normalized.conversationRole,
@@ -113,7 +121,7 @@ export class MessagingService {
     await this.assertConversationParticipant(actor, conversationId, 'data.messaging.write', 'messaging:message:create');
     const input = this.requireObject(payload);
     const content = String(input.content ?? '').trim();
-    const attachments = Array.isArray(input.attachments) ? input.attachments : [];
+    const attachments = sanitizeMessageAttachments(input.attachments);
     if (!content && attachments.length === 0) {
       throw new BadRequestException('Message vide.');
     }
@@ -131,11 +139,9 @@ export class MessagingService {
       created_at: now,
       updated_at: now,
     });
-    const notifications = this.buildMessageNotifications(conversation, message, actor, now);
     const created = appendAppRows('messages', [message]);
-    if (notifications.length > 0) {
-      appendAppRows('notifications', notifications);
-    }
+    const notificationChanges = this.applyMessageNotifications(conversation, message, actor, now);
+    const notifications = [...notificationChanges.created, ...notificationChanges.updated];
     const updatedConversations = patchAppRows('conversations', (row) => String(row.id) === String(conversation.id), {
       updated_at: now,
     });
@@ -146,6 +152,7 @@ export class MessagingService {
     }, {
       actorId: actor.id,
       reason: 'messaging:message:create',
+      ...(notificationChanges.previous.length > 0 ? { beforeRowsByTable: { notifications: notificationChanges.previous } } : {}),
       afterRowsByTable: {
         messages: [message],
         conversations: updatedConversations,
@@ -169,11 +176,27 @@ export class MessagingService {
       && message.read !== true, {
       read: true,
     });
-    await this.platformPersistenceService.persistRows({ messages: updated }, {
+    // Reading the thread also clears its "new message" notifications in the bell.
+    const isThreadNotification = (notification: Row) =>
+      isUnreadMessageNotification(notification, actor.id, conversationId);
+    const previousNotifications = clone(store.notifications ?? []).filter(isThreadNotification);
+    const readNotifications = previousNotifications.length > 0
+      ? patchAppRows('notifications', isThreadNotification, { is_read: true })
+      : [];
+    await this.platformPersistenceService.persistRows({
+      messages: updated,
+      ...(readNotifications.length > 0 ? { notifications: readNotifications } : {}),
+    }, {
       actorId: actor.id,
       reason: 'messaging:conversation:read',
-      beforeRowsByTable: { messages: previousRows },
-      afterRowsByTable: { messages: updated },
+      beforeRowsByTable: {
+        messages: previousRows,
+        ...(previousNotifications.length > 0 ? { notifications: previousNotifications } : {}),
+      },
+      afterRowsByTable: {
+        messages: updated,
+        ...(readNotifications.length > 0 ? { notifications: readNotifications } : {}),
+      },
     });
     return updated.map((message) => this.toMessageDto(message));
   }
@@ -217,9 +240,7 @@ export class MessagingService {
     const lastMessage = conversationMessages[conversationMessages.length - 1];
     return {
       id: String(conversation.id),
-      name: conversation.name,
-      avatar: conversation.avatar,
-      role: conversation.role ?? 'Conversation',
+      ...conversationViewFor(conversation, actorId, findUserById),
       lastMessage: this.getMessagePreview(lastMessage),
       lastMessageAt: lastMessage?.created_at ?? conversation.updated_at ?? conversation.created_at,
       unreadCount: conversationMessages.filter((message) =>
@@ -257,35 +278,55 @@ export class MessagingService {
     return 'Nouveau message';
   }
 
-  private buildMessageNotifications(conversation: Row, message: Row, actor: AuthUser, createdAt: string) {
-    const participants = Array.isArray(conversation.participants)
-      ? Array.from(new Set(conversation.participants.map((participant) => String(participant))))
-      : [];
-    const recipients = participants.filter((participantId) => participantId !== String(actor.id));
+  /**
+   * One notification per conversation and recipient: while the previous one is
+   * still unread it is refreshed (latest preview, counter) instead of piling up.
+   */
+  private applyMessageNotifications(conversation: Row, message: Row, actor: AuthUser, createdAt: string) {
+    const recipients = participantIds(conversation).filter((participantId) => participantId !== String(actor.id));
     const senderName = `${actor.firstName} ${actor.lastName}`.trim() || 'C2P';
     const rawContent = typeof message.content === 'string' || typeof message.content === 'number'
       ? String(message.content).trim()
       : '';
-    const preview = rawContent
-      ? rawContent.slice(0, 120)
-      : 'Vous avez reçu une pièce jointe.';
+    const preview = rawContent ? rawContent.slice(0, 120) : 'Vous avez reçu une pièce jointe.';
+    const metadata = {
+      channel: 'messaging',
+      conversation_id: conversation.id,
+      message_id: message.id,
+      sender_id: actor.id,
+      sender_role: actor.role,
+      avatar: actor.avatar ?? null,
+    };
+    const created: Row[] = [];
+    const updated: Row[] = [];
+    const previous: Row[] = [];
 
-    return recipients.map((recipientId) => createAppNotificationRow({
-      userId: recipientId,
-      title: `Nouveau message de ${senderName}`,
-      message: preview,
-      type: 'message',
-      link: `/dashboard/messages?conversation=${encodeURIComponent(String(conversation.id))}`,
-      createdAt,
-      metadata: {
-        channel: 'messaging',
-        conversation_id: conversation.id,
-        message_id: message.id,
-        sender_id: actor.id,
-        sender_role: actor.role,
-        avatar: actor.avatar ?? null,
-      },
-    }));
+    for (const recipientId of recipients) {
+      const matches = (notification: Row) => isUnreadMessageNotification(notification, recipientId, String(conversation.id));
+      const existing = (store.notifications ?? []).find(matches);
+      if (!existing) {
+        created.push(createAppNotificationRow({
+          userId: recipientId,
+          title: `Nouveau message de ${senderName}`,
+          message: preview,
+          type: 'message',
+          link: `/dashboard/messages?conversation=${encodeURIComponent(String(conversation.id))}`,
+          createdAt,
+          metadata: { ...metadata, unread_messages: 1 },
+        }));
+        continue;
+      }
+      const count = Number(((existing.metadata ?? {}) as Row).unread_messages ?? 1) + 1;
+      previous.push(clone(existing));
+      updated.push(...patchAppRows('notifications', (notification) => String(notification.id) === String(existing.id), {
+        title: `${count} nouveaux messages de ${senderName}`,
+        message: preview,
+        created_at: createdAt,
+        metadata: { ...((existing.metadata ?? {}) as Row), ...metadata, unread_messages: count },
+      }));
+    }
+    if (created.length > 0) appendAppRows('notifications', created);
+    return { created, updated, previous };
   }
 
   private requireObject(payload: unknown): Row {

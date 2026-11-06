@@ -103,16 +103,25 @@ export function sanitizeConversationParticipants(
     return null;
   }
 
+  const identity = conversationIdentityFor(targetUser);
   return {
     participants: participantIds,
     targetUser,
     targetUserId,
-    conversationName: targetUser.role === 'admin'
-      ? 'Support C2P'
-      : `${targetUser.firstName} ${targetUser.lastName}`.trim(),
-    conversationRole: targetUser.role === 'admin'
-      ? 'Support'
-      : (targetUser.publicTitle?.trim() || getConversationRoleLabel(targetUser.role)),
-    conversationAvatar: targetUser.role === 'admin' ? null : (targetUser.avatar ?? null),
+    conversationName: identity.name,
+    conversationRole: identity.role,
+    conversationAvatar: identity.avatar,
+  };
+}
+
+/** How the other participant of a conversation is shown (name, role label, avatar). */
+export function conversationIdentityFor(user: AuthUser) {
+  if (user.role === 'admin' || user.role === 'superadmin') {
+    return { name: 'Support C2P', role: 'Support', avatar: null as string | null };
+  }
+  return {
+    name: `${user.firstName} ${user.lastName}`.trim() || 'Contact',
+    role: user.publicTitle?.trim() || getConversationRoleLabel(user.role),
+    avatar: user.avatar ?? null,
   };
 }

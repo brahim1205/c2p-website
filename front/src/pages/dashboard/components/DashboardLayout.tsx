@@ -117,18 +117,12 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         >
           <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {navItems.some((item) => item.group) ? null : (
-              <p className="px-3 pb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Navigation</p>
-            )}
+            <p className="px-3 pb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Navigation</p>
             <ul className={`flex min-h-[calc(100%-1.75rem)] flex-col ${navGapClass}`}>
-              {navItems.map((item, index) => {
+              {navItems.map((item) => {
                 const isActive = activeNavPath === item.path;
-                const startsGroup = Boolean(item.group) && item.group !== navItems[index - 1]?.group;
                 return (
                   <li key={item.path}>
-                    {startsGroup ? (
-                      <p className="px-3 pb-1.5 pt-4 text-xs font-semibold uppercase tracking-wider text-gray-400">{item.group}</p>
-                    ) : null}
                     <Link
                       to={item.path}
                       onClick={() => setSidebarOpen(false)}
@@ -151,18 +145,6 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
             </ul>
           </nav>
 
-          {/* Sidebar footer */}
-          <div className="shrink-0 border-t border-gray-200/60 bg-white/95 p-3">
-            <button
-              onClick={handleLogout}
-              className="group flex min-h-11 w-full items-center space-x-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-red-600 transition-all duration-300 hover:bg-red-50/80 active:bg-red-100 cursor-pointer"
-            >
-              <div className="w-5 h-5 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-1">
-                <i className="ri-logout-box-line text-base"></i>
-              </div>
-              <span>Se déconnecter</span>
-            </button>
-          </div>
         </aside>
 
         {/* Main content */}

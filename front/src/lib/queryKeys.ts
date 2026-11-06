@@ -8,6 +8,7 @@ export const queryKeys = {
     access: (userId: QueryKeyId, role: QueryKeyId) => ['subscriptions', 'access', userId, role] as const,
   },
   notifications: {
+    all: () => ['notifications'] as const,
     mine: (userId: QueryKeyId, limit: QueryKeyId) => ['notifications', 'mine', userId, limit] as const,
   },
   finance: {
@@ -20,7 +21,8 @@ export const queryKeys = {
     security: (userId: QueryKeyId) => ['account', 'security', userId] as const,
   },
   messaging: {
-    conversations: (userId: QueryKeyId, summaryOnly: boolean) => ['messaging', userId, summaryOnly ? 'summary' : 'full'] as const,
+    conversations: (userId: QueryKeyId) => ['messaging', userId, 'conversations'] as const,
+    thread: (userId: QueryKeyId, conversationId: QueryKeyId) => ['messaging', userId, 'thread', conversationId] as const,
     directory: (userId: QueryKeyId) => ['messaging', 'directory', userId] as const,
   },
   apprenant: {

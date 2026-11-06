@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { queryKeys } from '@/lib/queryKeys';
@@ -60,10 +60,8 @@ interface UseBackendMessagingOptions {
   summaryOnly?: boolean;
 }
 
-interface MessagingSnapshot {
-  conversations: Conversation[];
-  messages: Record<string, Message[]>;
-}
+const CONVERSATIONS_REFRESH_MS = 10_000;
+const THREAD_REFRESH_MS = 4_000;
 
 function moveConversationToTop(
   conversations: Conversation[],
@@ -86,78 +84,75 @@ function isIgnorableTransportError(error: unknown) {
   return code === 'NETWORK_ERROR' || code === 'REQUEST_TIMEOUT' || message === 'Failed to fetch';
 }
 
+const retryUnlessOffline = (failureCount: number, error: unknown) => !isIgnorableTransportError(error) && failureCount < 2;
+
+/**
+ * Inbox data. The conversation list is shared by every caller (layouts, pages)
+ * and polled only while the tab is visible; messages are loaded for the open
+ * conversation alone, which is refreshed more often.
+ */
 export function useBackendMessaging(options: UseBackendMessagingOptions = {}) {
   const { summaryOnly = false } = options;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const conversationsKey = useMemo(() => queryKeys.messaging.conversations(user?.id), [user?.id]);
+  const threadKey = useCallback((conversationId: string) => queryKeys.messaging.thread(user?.id, conversationId), [user?.id]);
 
-  const messagingQueryKey = useMemo(() => queryKeys.messaging.conversations(user?.id, summaryOnly), [summaryOnly, user?.id]);
-  const {
-    data,
-    isLoading: loading,
-  } = useQuery({
-    queryKey: messagingQueryKey,
-    queryFn: async () => {
-      const convs = await fetchConversations(summaryOnly);
-      const messagesMap: Record<string, Message[]> = {};
-
-      if (!summaryOnly) {
-        await Promise.all(
-          convs.map(async (conversation) => {
-            messagesMap[conversation.id] = await fetchConversationMessages(conversation.id);
-          }),
-        );
-      }
-
-      return {
-        conversations: convs,
-        messages: messagesMap,
-      } satisfies MessagingSnapshot;
-    },
+  const conversationsQuery = useQuery({
+    queryKey: conversationsKey,
+    queryFn: () => fetchConversations(true),
     enabled: Boolean(user),
-    refetchInterval: 20000,
-    retry: (failureCount, queryError) => !isIgnorableTransportError(queryError) && failureCount < 2,
+    refetchInterval: CONVERSATIONS_REFRESH_MS,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    retry: retryUnlessOffline,
   });
 
-  const conversations = useMemo(() => data?.conversations || [], [data?.conversations]);
-  const messages = useMemo(() => data?.messages || {}, [data?.messages]);
+  const threadQuery = useQuery({
+    queryKey: threadKey(activeConversationId ?? ''),
+    queryFn: () => fetchConversationMessages(activeConversationId as string),
+    enabled: Boolean(user) && !summaryOnly && Boolean(activeConversationId),
+    refetchInterval: THREAD_REFRESH_MS,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    retry: retryUnlessOffline,
+  });
 
-  const updateMessagingCache = useCallback((updater: (current: MessagingSnapshot) => MessagingSnapshot) => {
-    queryClient.setQueryData<MessagingSnapshot>(messagingQueryKey, (current) => updater(current || { conversations: [], messages: {} }));
-  }, [messagingQueryKey, queryClient]);
+  const conversations = useMemo(() => conversationsQuery.data || [], [conversationsQuery.data]);
+  const activeMessages = useMemo(() => threadQuery.data || [], [threadQuery.data]);
+  const messages = useMemo<Record<string, Message[]>>(
+    () => (activeConversationId ? { [activeConversationId]: activeMessages } : {}),
+    [activeConversationId, activeMessages],
+  );
+
+  const updateConversations = useCallback((updater: (current: Conversation[]) => Conversation[]) => {
+    queryClient.setQueryData<Conversation[]>(conversationsKey, (current) => updater(current || []));
+  }, [conversationsKey, queryClient]);
+
+  const updateThread = useCallback((conversationId: string, updater: (current: Message[]) => Message[]) => {
+    queryClient.setQueryData<Message[]>(threadKey(conversationId), (current) => updater(current || []));
+  }, [queryClient, threadKey]);
 
   const getConversationMessages = useCallback((conversationId: string): Message[] => {
-    return messages[conversationId] || [];
-  }, [messages]);
+    if (conversationId === activeConversationId) return activeMessages;
+    return queryClient.getQueryData<Message[]>(threadKey(conversationId)) || [];
+  }, [activeConversationId, activeMessages, queryClient, threadKey]);
 
+  /** Throws when the message could not be sent, so the composer can keep the text. */
   const sendMessage = useCallback(async (conversationId: string, content: string, attachments?: Attachment[]) => {
     if (!user || (!content.trim() && (!attachments || attachments.length === 0))) return;
 
-    try {
-      const createdMessage = await sendConversationMessage(conversationId, content.trim(), attachments);
-      updateMessagingCache((current) => {
-        const existing = current.messages[conversationId] || [];
-        const nextMessages = existing.find((message) => message.id === createdMessage.id)
-          ? existing
-          : [...existing, createdMessage];
-        return {
-          conversations: moveConversationToTop(current.conversations, conversationId, (conversation) => ({
-            ...conversation,
-            lastMessage: createdMessage.content || (createdMessage.attachments?.length ? 'Pièce jointe' : 'Nouveau message'),
-            lastMessageAt: createdMessage.timestamp,
-          })),
-          messages: {
-            ...current.messages,
-            [conversationId]: nextMessages,
-          },
-        };
-      });
-    } catch (error) {
-      console.error('Error sending message:', error);
-      return;
-    }
-  }, [updateMessagingCache, user]);
+    const createdMessage = await sendConversationMessage(conversationId, content.trim(), attachments);
+    updateThread(conversationId, (existing) => (
+      existing.some((message) => message.id === createdMessage.id) ? existing : [...existing, createdMessage]
+    ));
+    updateConversations((current) => moveConversationToTop(current, conversationId, (conversation) => ({
+      ...conversation,
+      lastMessage: createdMessage.content || (createdMessage.attachments?.length ? 'Pièce jointe' : 'Nouveau message'),
+      lastMessageAt: createdMessage.timestamp,
+    })));
+  }, [updateConversations, updateThread, user]);
 
   const createConversation = useCallback(async (payload: CreateConversationPayload) => {
     if (!user) return null;
@@ -169,20 +164,18 @@ export function useBackendMessaging(options: UseBackendMessagingOptions = {}) {
         type: payload.type ?? 'individual',
         members: payload.members ?? payload.participants.length,
       });
-      updateMessagingCache((current) => ({
-        conversations: [createdConversation, ...current.conversations.filter((item) => item.id !== createdConversation.id)],
-        messages: {
-          ...current.messages,
-          [createdConversation.id]: current.messages[createdConversation.id] || [],
-        },
-      }));
+      // The API returns the existing thread when the two people already talk.
+      updateConversations((current) => [
+        createdConversation,
+        ...current.filter((item) => item.id !== createdConversation.id),
+      ]);
       setActiveConversationId(createdConversation.id);
       return createdConversation;
     } catch (error) {
       console.error('Error creating conversation:', error);
       return null;
     }
-  }, [updateMessagingCache, user]);
+  }, [updateConversations, user]);
 
   const markAsRead = useCallback(async (conversationId: string) => {
     if (!user) return;
@@ -194,19 +187,26 @@ export function useBackendMessaging(options: UseBackendMessagingOptions = {}) {
       return;
     }
 
-    updateMessagingCache((current) => {
-      const convMessages = current.messages[conversationId] || [];
-      return {
-        conversations: current.conversations.map((conversation) => (
-          conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
-        )),
-        messages: {
-          ...current.messages,
-          [conversationId]: convMessages.map((message) => ({ ...message, read: true })),
-        },
-      };
+    updateConversations((current) => current.map((conversation) => (
+      conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+    )));
+    updateThread(conversationId, (current) => current.map((message) => ({ ...message, read: true })));
+    // The server also cleared this thread's notifications: refresh the bell.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all() });
+  }, [queryClient, updateConversations, updateThread, user]);
+
+  // Messages that arrive while the conversation is open are read right away.
+  const markingRef = useRef(false);
+  useEffect(() => {
+    if (summaryOnly || !activeConversationId || !user || markingRef.current) return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    const hasUnread = activeMessages.some((message) => !message.read && message.senderId !== String(user.id));
+    if (!hasUnread) return;
+    markingRef.current = true;
+    void markAsRead(activeConversationId).finally(() => {
+      markingRef.current = false;
     });
-  }, [updateMessagingCache, user]);
+  }, [activeConversationId, activeMessages, markAsRead, summaryOnly, user]);
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
@@ -220,6 +220,6 @@ export function useBackendMessaging(options: UseBackendMessagingOptions = {}) {
     createConversation,
     markAsRead,
     totalUnread,
-    loading
+    loading: conversationsQuery.isLoading,
   };
 }

@@ -208,10 +208,16 @@ export function useMessagesPageSession() {
     if (existingConversation) {
       setArchivedConversationIds((prev) => prev.filter((item) => item !== existingConversation.id));
       setActiveConversationId(existingConversation.id);
-      closeComposeModal();
       if (composeMessage.trim()) {
-        await sendMessage(existingConversation.id, composeMessage.trim());
+        try {
+          await sendMessage(existingConversation.id, composeMessage.trim());
+        } catch (sendError) {
+          console.error(sendError);
+          error('Envoi impossible', 'Le message n\'a pas été envoyé. Votre texte est conservé, réessayez.');
+          return;
+        }
       }
+      closeComposeModal();
       setComposeMessage('');
       success('Conversation ouverte', `Conversation avec ${contact.firstName} ${contact.lastName}.`);
       return;

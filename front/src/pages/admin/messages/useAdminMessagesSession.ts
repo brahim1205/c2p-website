@@ -135,7 +135,13 @@ export function useAdminMessagesSession() {
 
   const handleReply = async () => {
     if (!currentConversation || !replyText.trim()) return;
-    await sendMessage(currentConversation.id, replyText.trim());
+    try {
+      await sendMessage(currentConversation.id, replyText.trim());
+    } catch (sendError) {
+      console.error(sendError);
+      error('Envoi impossible', 'Le message n\'a pas été envoyé. Votre texte est conservé, réessayez.');
+      return;
+    }
     setReplyText('');
     success('Réponse envoyée', 'Le message a été transmis.');
   };

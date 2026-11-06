@@ -77,10 +77,15 @@ export function useChatConversationSession({
   }, []);
 
   const handleSendMessage = () => {
-    if (messageText.trim() && !uploadingAttachment) {
-      void onSendMessage(conversation.id, messageText.trim());
-      setMessageText('');
-    }
+    const text = messageText.trim();
+    if (!text || uploadingAttachment) return;
+    // Clear right away for a snappy composer, but give the text back if sending fails.
+    setMessageText('');
+    void Promise.resolve(onSendMessage(conversation.id, text)).catch((sendError: unknown) => {
+      console.error(sendError);
+      setMessageText((current) => current || text);
+      error('Envoi impossible', 'Le message n\'a pas été envoyé. Vérifiez votre connexion et réessayez.');
+    });
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {

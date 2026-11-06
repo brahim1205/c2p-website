@@ -14,7 +14,7 @@ import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
-import { enrollmentPairsForCourses } from '../data/data-certification.js';
+import { buildCertificateNumber, enrollmentPairsForCourses } from '../data/data-certification.js';
 import { LearningCertificationService } from './learning-certification.service.js';
 
 @Injectable()
@@ -51,7 +51,7 @@ export class FormateurLearnersService {
     const certificate = this.getInstructorCertificate(certId, actor);
     const previous = clone(certificate);
     const issuedAt = new Date().toISOString();
-    const certificateId = this.buildCertificateId(certificate);
+    const certificateId = this.buildCertificateId(certificate, issuedAt);
     const updated = patchAppRows('certificates', (row) => String(row.id) === String(certificate.id), {
       status: 'issued',
       certificate_id: certificateId,
@@ -200,19 +200,10 @@ export class FormateurLearnersService {
     return certificate;
   }
 
-  private buildCertificateId(certificate: Row) {
+  private buildCertificateId(certificate: Row, issuedAt: string) {
     const existing = String(certificate.certificate_id ?? certificate.certificate_number ?? '').trim();
     if (existing) return existing;
-    const slug = String(certificate.course_name ?? certificate.title ?? 'CERT')
-      .normalize('NFKD')
-      .replace(/[^\w\s-]/g, '')
-      .trim()
-      .toUpperCase()
-      .split(/\s+/)
-      .slice(0, 2)
-      .join('-')
-      .slice(0, 16) || 'CERT';
-    return `C2P-${new Date().getFullYear()}-${slug}-${String(certificate.id).padStart(3, '0')}`;
+    return buildCertificateNumber(certificate.course_id, certificate.student_id ?? certificate.user_id, issuedAt);
   }
 
   private courseRelation(course: Row) {

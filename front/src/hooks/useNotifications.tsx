@@ -38,8 +38,8 @@ export function useNotifications() {
       return data.map(mapNotificationRecord);
     },
     enabled: Boolean(user?.id),
-    refetchInterval: 5000,
-    refetchIntervalInBackground: true,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 

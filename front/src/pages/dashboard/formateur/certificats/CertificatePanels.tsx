@@ -2,6 +2,7 @@ import { SkeletonList } from '@/components/base/Skeleton';
 import CertificateRequirements from '@/components/feature/CertificateRequirements';
 import CertificateSurface from '@/pages/dashboard/profile/components/CertificateSurface';
 import { useCertificateBranding } from '@/hooks/useCertificateBranding';
+import { CertificateNumberCell } from './CertificateNumberCell';
 import {
   certificateFilters,
   certificateProgressLabel,
@@ -195,9 +196,9 @@ function CertificateRow({
       <td className="px-4 py-3 text-sm text-gray-700">{cert.course_name || '-'}</td>
       <td className="px-4 py-3 text-sm text-gray-600">{cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('fr-FR') : '-'}</td>
       <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatCertificateGrade(cert.final_grade)}</td>
-      <td className="px-4 py-3 font-mono text-sm text-gray-600">{cert.certificate_number || cert.certificate_id || '-'}</td>
+      <td className="px-4 py-3"><CertificateNumberCell value={cert.certificate_number || cert.certificate_id} /></td>
       <td className="px-4 py-3">
-        <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusMeta.style}`}>{statusMeta.label}</span>
+        <span className={`inline-block whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${statusMeta.style}`}>{statusMeta.label}</span>
         {cert.status !== 'issued' && cert.status !== 'revoked' && certificateProgressLabel(cert) ? (
           <span className="mt-1 block text-xs text-gray-500">{certificateProgressLabel(cert)}</span>
         ) : null}

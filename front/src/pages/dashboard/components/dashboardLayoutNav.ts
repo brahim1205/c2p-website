@@ -2,8 +2,6 @@ export type DashboardNavItem = {
   label: string;
   icon: string;
   path: string;
-  /** Optional section heading (instructor menu is grouped like Udemy's). */
-  group?: string;
 };
 
 export const baseNavItems: DashboardNavItem[] = [
@@ -35,19 +33,16 @@ export const roleNavOverrides: Record<string, DashboardNavItem[]> = {
   ],
   formateur: [
     { label: 'Tableau de bord', icon: 'ri-dashboard-line', path: '/dashboard/formateur' },
-    { group: 'Cours', label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/formateur/mes-cours' },
-    { group: 'Cours', label: 'Classes virtuelles', icon: 'ri-video-line', path: '/dashboard/formateur/classes-virtuelles' },
-    { group: 'Cours', label: 'Évaluations', icon: 'ri-file-list-3-line', path: '/dashboard/formateur/evaluations' },
-    { group: 'Cours', label: 'Certificats', icon: 'ri-award-line', path: '/dashboard/formateur/certificats' },
-    { group: 'Communication', label: 'Questions et FAQ', icon: 'ri-question-answer-line', path: '/dashboard/formateur/communaute' },
-    { group: 'Communication', label: 'Annonces', icon: 'ri-megaphone-line', path: '/dashboard/formateur/annonces' },
-    { group: 'Communication', label: 'Messages', icon: 'ri-message-3-line', path: '/dashboard/messages' },
-    { group: 'Performances', label: 'Vue d’ensemble', icon: 'ri-line-chart-line', path: '/dashboard/formateur/analytics' },
-    { group: 'Performances', label: 'Apprenants', icon: 'ri-group-line', path: '/dashboard/formateur/apprenants' },
-    { group: 'Performances', label: 'Avis', icon: 'ri-star-line', path: '/dashboard/formateur/avis' },
-    { group: 'Performances', label: 'Revenus', icon: 'ri-money-dollar-circle-line', path: '/dashboard/formateur/revenus' },
-    { group: 'Compte', label: 'Paiements', icon: 'ri-wallet-3-line', path: '/dashboard/paiements' },
-    { group: 'Compte', label: 'Profil et paramètres', icon: 'ri-settings-3-line', path: '/dashboard/parametres' },
+    { label: 'Mes formations', icon: 'ri-book-open-line', path: '/dashboard/formateur/mes-cours' },
+    { label: 'Classes virtuelles', icon: 'ri-video-line', path: '/dashboard/formateur/classes-virtuelles' },
+    { label: 'Évaluations', icon: 'ri-file-list-3-line', path: '/dashboard/formateur/evaluations' },
+    { label: 'Certificats', icon: 'ri-award-line', path: '/dashboard/formateur/certificats' },
+    { label: 'Questions et FAQ', icon: 'ri-question-answer-line', path: '/dashboard/formateur/communaute' },
+    { label: 'Annonces', icon: 'ri-megaphone-line', path: '/dashboard/formateur/annonces' },
+    { label: 'Vue d’ensemble', icon: 'ri-line-chart-line', path: '/dashboard/formateur/analytics' },
+    { label: 'Apprenants', icon: 'ri-group-line', path: '/dashboard/formateur/apprenants' },
+    { label: 'Avis', icon: 'ri-star-line', path: '/dashboard/formateur/avis' },
+    { label: 'Revenus', icon: 'ri-money-dollar-circle-line', path: '/dashboard/formateur/revenus' },
   ],
   apprenant: [
     { label: 'Mon dashboard', icon: 'ri-dashboard-line', path: '/dashboard/apprenant' },
