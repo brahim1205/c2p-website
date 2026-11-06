@@ -73,11 +73,16 @@ jobs:
 
       - name: Install backend dependencies
         working-directory: backend
-        run: npm ci
+        # Lifecycle scripts are disabled, then run only for the packages that need them.
+        run: |
+          npm ci --ignore-scripts
+          npm rebuild prisma @prisma/engines @prisma/client argon2
 
       - name: Install frontend dependencies
         working-directory: front
-        run: npm ci
+        run: |
+          npm ci --ignore-scripts
+          npm rebuild esbuild @swc/core
 
       - name: Install Playwright Chromium
         working-directory: front
@@ -147,7 +152,7 @@ jobs:
 
       - name: Prepare PostgreSQL schema
         working-directory: backend
-        run: npx prisma db push --skip-generate
+        run: ./node_modules/.bin/prisma db push --skip-generate
 
       - name: Apply database hardening checks
         working-directory: backend

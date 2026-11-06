@@ -8,7 +8,7 @@ const DIRECT_MESSAGE_ROLE_PAIRS = new Set([
 ]);
 
 function pairKey(actorRole: UserRole, targetRole: UserRole) {
-  return [actorRole, targetRole].sort().join(':');
+  return [actorRole, targetRole].sort((left, right) => left.localeCompare(right)).join(':');
 }
 
 export function canMessageRole(actorRole: UserRole, targetRole: UserRole) {

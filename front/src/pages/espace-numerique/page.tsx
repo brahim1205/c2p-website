@@ -56,7 +56,7 @@ export default function EspaceNumeriquePage() {
         setLoading(false);
       }
     };
-    fetchCourses();
+    fetchCourses().catch((error: unknown) => console.error(error));
   }, []);
 
   useEffect(() => {

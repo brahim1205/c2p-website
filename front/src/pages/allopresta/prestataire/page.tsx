@@ -98,7 +98,7 @@ export default function PrestataireDetailPage() {
         setLoading(false);
       }
     };
-    if (providerId) fetchData();
+    if (providerId) fetchData().catch((error: unknown) => console.error(error));
   }, [providerId]);
 
   const handleReservationSubmit = async (e: React.FormEvent) => {

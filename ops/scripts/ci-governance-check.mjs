@@ -242,7 +242,7 @@ function main() {
     'npm run production:postdeploy --',
     '--skip-upload-temp-cleanup',
     'npm run prisma:validate',
-    'npx prisma db push --skip-generate',
+    './node_modules/.bin/prisma db push --skip-generate',
     'npm run db:ledger-immutability:local',
     'npm run db:seed:local',
     'npm run learning:prisma-consistency:check',

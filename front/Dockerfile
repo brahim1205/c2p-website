@@ -14,7 +14,8 @@ COPY auto-imports.d.ts ./auto-imports.d.ts
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 
-RUN npm ci
+RUN npm ci --ignore-scripts \
+    && npm rebuild esbuild @swc/core
 RUN npm run build
 
 FROM ${NGINX_UNPRIVILEGED_BASE}

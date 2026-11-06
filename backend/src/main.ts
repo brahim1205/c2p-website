@@ -311,4 +311,7 @@ async function bootstrap() {
   }));
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  console.error('Echec du demarrage du serveur', error);
+  process.exit(1);
+});

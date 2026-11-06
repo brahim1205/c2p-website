@@ -39,7 +39,7 @@ export default function NotificationBell() {
   };
 
   const unreadNotifications = notifications.filter((n) => !n.read);
-  const filtered = activeTab === 'unread' ? unreadNotifications : unreadNotifications;
+  const filtered = activeTab === 'unread' ? unreadNotifications : notifications;
   const recent = filtered.slice(0, 6);
 
   return (

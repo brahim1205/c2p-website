@@ -56,7 +56,7 @@ export default function AlloPrestPage() {
         setLoading(false);
       }
     };
-    fetchProviders();
+    fetchProviders().catch((error: unknown) => console.error(error));
   }, []);
 
   const filteredPrestataires = useMemo(() => {

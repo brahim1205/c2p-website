@@ -77,7 +77,7 @@ export default function LiveNotifications({ notifications, loading = false }: Li
     newNotifications.forEach((notification) => {
       lastNotifiedIds.current.add(notification.id);
       info(notification.title, notification.message);
-      playNotificationSound();
+      void playNotificationSound().catch(() => undefined);
     });
   }, [notifications, info, loading]);
 

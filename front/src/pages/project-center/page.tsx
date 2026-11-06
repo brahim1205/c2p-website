@@ -46,7 +46,7 @@ export default function ProjectCenterPage() {
       }
     };
 
-    fetchProjects();
+    fetchProjects().catch((error: unknown) => console.error(error));
 
     return () => {
       isMounted = false;

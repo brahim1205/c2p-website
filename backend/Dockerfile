@@ -6,7 +6,9 @@ RUN apk add --no-cache openssl
 
 COPY package.json package-lock.json tsconfig.json tsconfig.build.json ./
 COPY prisma ./prisma
-RUN npm ci
+# Lifecycle scripts only for the packages that need them (Prisma engines/client, argon2).
+RUN npm ci --ignore-scripts \
+    && npm rebuild prisma @prisma/engines @prisma/client argon2
 
 COPY src ./src
 RUN npm run build
@@ -14,7 +16,7 @@ RUN npm run build
 FROM builder AS migrator
 ENV NODE_ENV=production
 USER node
-CMD ["npx", "prisma", "migrate", "deploy"]
+CMD ["/usr/src/app/node_modules/.bin/prisma", "migrate", "deploy"]
 
 FROM ${NODE_ALPINE_BASE} AS runner
 WORKDIR /usr/src/app
