@@ -147,6 +147,9 @@ fi
 log "Build des images"
 compose build --pull
 
+log "Réseau partagé avec le proxy frontal du serveur"
+docker network inspect edge >/dev/null 2>&1 || docker network create edge >/dev/null
+
 log "Démarrage / mise à jour de la stack"
 compose up -d --remove-orphans
 
