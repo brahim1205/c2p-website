@@ -5,18 +5,24 @@ services:
     depends_on:
       - frontend
       - backend
+    # Par défaut c2p publie 80/443. Derrière le proxy frontal partagé du serveur (/opt/edge),
+    # ops/env/compose.production.env fixe C2P_HTTP_PUBLISH=127.0.0.1:8880 et
+    # C2P_HTTPS_PUBLISH=127.0.0.1:8843 : le trafic public arrive alors par le réseau `edge`.
     ports:
-      - "80:8080"
-      - "443:8443"
+      - "${C2P_HTTP_PUBLISH:-80}:8080"
+      - "${C2P_HTTPS_PUBLISH:-443}:8443"
     volumes:
       - ./ops/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ops/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./ops/nginx/certs:/etc/nginx/certs:ro
       - ./ops/certbot/www:/var/www/certbot:ro
     networks:
-      - edge
-      - app
-      - sonar
+      edge:
+      app:
+      sonar:
+      shared-edge:
+        aliases:
+          - c2p-proxy
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -322,6 +328,10 @@ services:
 
 networks:
   edge:
+  # Réseau du proxy frontal partagé du serveur (créé par ops/scripts/deploy-production.sh s'il manque).
+  shared-edge:
+    external: true
+    name: edge
   app:
     internal: true
   monitoring:
