@@ -18,7 +18,8 @@ CMD ["npx", "prisma", "migrate", "deploy"]
 
 FROM ${NODE_ALPINE_BASE} AS runner
 WORKDIR /usr/src/app
-RUN apk add --no-cache \
+RUN apk upgrade --no-cache \
+    && apk add --no-cache \
     openssl \
     wget
 
