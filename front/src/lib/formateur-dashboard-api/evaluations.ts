@@ -66,6 +66,7 @@ export async function createFormateurExam(userId: string, payload: {
   max_grade: number;
   passing_grade?: number | null;
   max_attempts?: number;
+  timer_minutes?: number;
 }) {
   void userId;
   return apiRequest<FormateurExam>('/learning/formateur/exams', {
@@ -189,4 +190,20 @@ export async function reorderFormateurQuizChoice(userId: string, examId: string 
       body: JSON.stringify({ currentId: current.id, targetId: target.id }),
     },
   );
+}
+
+/** Edit an existing exam (title, deadline, grading, quiz attempts and time limit...). */
+export async function updateFormateurExam(examId: string | number, patch: Record<string, unknown>) {
+  return apiRequest<FormateurExam>(`/learning/formateur/exams/${encodeURIComponent(String(examId))}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+/** Open (`ongoing`), close (`closed`) or unpublish (`upcoming`) an exam. Opening notifies learners. */
+export async function changeFormateurExamStatus(examId: string | number, status: 'ongoing' | 'closed' | 'upcoming') {
+  return apiRequest<FormateurExam>(`/learning/formateur/exams/${encodeURIComponent(String(examId))}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
 }

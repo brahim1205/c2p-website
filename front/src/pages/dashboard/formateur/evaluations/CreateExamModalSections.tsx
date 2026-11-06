@@ -199,6 +199,21 @@ export function ExamMainInfoSection({
               <p className="mt-1 text-xs text-gray-500">Un quiz échoué peut être repassé jusqu’à cette limite.</p>
             </div>
           ) : null}
+          {(newExam.type || 'quiz') === 'quiz' ? (
+            <div>
+              <label htmlFor="new-exam-timer" className="mb-1 block text-sm font-medium text-gray-700">Durée limite (minutes)</label>
+              <input
+                id="new-exam-timer"
+                type="number"
+                min={0}
+                max={300}
+                value={newExam.timer_minutes ?? 0}
+                onChange={(event) => updateNewExam('timer_minutes', Math.max(0, Math.min(300, parseInt(event.target.value, 10) || 0)))}
+                className={getFieldClass(false)}
+              />
+              <p className="mt-1 text-xs text-gray-500">0 = sans limite. Le chronomètre démarre quand l’apprenant ouvre le quiz.</p>
+            </div>
+          ) : null}
           <div>
             <label htmlFor="new-exam-participants" className="mb-1 block text-sm font-medium text-gray-700">Participants</label>
             <input

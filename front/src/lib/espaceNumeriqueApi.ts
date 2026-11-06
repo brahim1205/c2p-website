@@ -205,3 +205,11 @@ export async function createEspaceLessonComment(lessonId: string | number, conte
     body: JSON.stringify({ content }),
   });
 }
+
+/** Records the learner's attendance when they join a live session (ignored for other roles). */
+export async function checkInVirtualClass(classId: string | number) {
+  return apiRequest<{ recorded: boolean; present?: boolean; reason?: string }>(
+    `/learning/apprenant/virtual-classes/${encodeURIComponent(String(classId))}/attendance`,
+    { method: 'POST' },
+  );
+}

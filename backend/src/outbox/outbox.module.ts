@@ -8,6 +8,7 @@ import { EmailSendOutboxHandler } from './handlers/email-send.handler.js';
 import { NotificationDispatchOutboxHandler } from './handlers/notification-dispatch.handler.js';
 import { SmsSendOutboxHandler } from './handlers/sms-send.handler.js';
 import { WebhookDispatchOutboxHandler } from './handlers/webhook-dispatch.handler.js';
+import { OutboxAutoProcessorService } from './outbox-auto-processor.service.js';
 import { OutboxDeliveryLogService } from './outbox-delivery-log.service.js';
 import { OutboxHandlerRegistryService } from './outbox-handler-registry.service.js';
 import { OutboxNotificationService } from './outbox-notification.service.js';
@@ -20,6 +21,7 @@ import { OutboxService } from './outbox.service.js';
   providers: [
     OutboxService,
     OutboxProcessorService,
+    OutboxAutoProcessorService,
     OutboxNotificationService,
     OutboxDeliveryLogService,
     OutboxHandlerRegistryService,

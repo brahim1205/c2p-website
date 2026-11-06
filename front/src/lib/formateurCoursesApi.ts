@@ -128,10 +128,13 @@ export async function saveFormateurCourseLesson(
     is_preview: boolean;
     status: FormateurCourseLesson['status'];
     position?: number;
+    /** Quiz lesson: the quiz exam it opens. */
+    exam_id?: string | null;
   },
 ) {
   void userId;
   const payload = {
+    ...(input.exam_id !== undefined ? { exam_id: input.exam_id } : {}),
     section_id: input.section_id,
     title: input.title.trim(),
     description: input.description.trim(),

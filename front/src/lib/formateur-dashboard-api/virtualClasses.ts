@@ -67,3 +67,21 @@ export async function deleteFormateurVirtualClass(userId: string, classId: strin
     { method: 'DELETE' },
   );
 }
+
+export interface VirtualClassAttendanceSheet {
+  class_id: string | number;
+  title: string;
+  learners: Array<{ student_id: string; student_name: string; present: boolean; source: 'self' | 'instructor' | null; checked_in_at: string | null }>;
+}
+
+export async function fetchVirtualClassAttendance(classId: string | number) {
+  return apiRequest<VirtualClassAttendanceSheet>(`/learning/formateur/virtual-classes/${encodeURIComponent(String(classId))}/attendance`);
+}
+
+/** Instructor marks a learner present or absent (on-site sessions, corrections). */
+export async function markVirtualClassAttendance(classId: string | number, studentId: string, present: boolean) {
+  return apiRequest<{ recorded: boolean; present: boolean }>(`/learning/formateur/virtual-classes/${encodeURIComponent(String(classId))}/attendance`, {
+    method: 'PATCH',
+    body: JSON.stringify({ student_id: studentId, present }),
+  });
+}

@@ -12,9 +12,18 @@ interface ExamsTableProps {
   loading: boolean;
   onConfigureQuiz: (exam: Exam) => void;
   onDeleteExam: (exam: Exam) => void;
+  onEditExam: (exam: Exam) => void;
+  onChangeStatus: (exam: Exam, status: 'ongoing' | 'closed') => void;
 }
 
-export function ExamsTable({ exams, loading, onConfigureQuiz, onDeleteExam }: ExamsTableProps) {
+const STATUS_ACTION: Record<string, { label: string; next: 'ongoing' | 'closed'; tone: string }> = {
+  upcoming: { label: 'Ouvrir', next: 'ongoing', tone: 'bg-teal-600 text-white hover:bg-teal-700' },
+  ongoing: { label: 'Fermer', next: 'closed', tone: 'border border-gray-200 text-gray-700 hover:bg-gray-50' },
+  closed: { label: 'Rouvrir', next: 'ongoing', tone: 'border border-teal-200 text-teal-700 hover:bg-teal-50' },
+  graded: { label: 'Rouvrir', next: 'ongoing', tone: 'border border-teal-200 text-teal-700 hover:bg-teal-50' },
+};
+
+export function ExamsTable({ exams, loading, onConfigureQuiz, onDeleteExam, onEditExam, onChangeStatus }: ExamsTableProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {loading ? (
@@ -56,7 +65,7 @@ export function ExamsTable({ exams, loading, onConfigureQuiz, onDeleteExam }: Ex
                       {getExamTypeLabel(exam.type)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{exam.exam_date || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{exam.exam_date && !Number.isNaN(Date.parse(exam.exam_date)) ? new Date(exam.exam_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : exam.exam_date || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">
                     {exam.submitted}/{exam.participants}
                   </td>
@@ -68,6 +77,24 @@ export function ExamsTable({ exams, loading, onConfigureQuiz, onDeleteExam }: Ex
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {STATUS_ACTION[exam.status] ? (
+                        <button
+                          type="button"
+                          onClick={() => onChangeStatus(exam, STATUS_ACTION[exam.status].next)}
+                          className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${STATUS_ACTION[exam.status].tone}`}
+                        >
+                          {STATUS_ACTION[exam.status].label}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        title="Modifier l'examen"
+                        aria-label={`Modifier l'examen ${exam.title}`}
+                        onClick={() => onEditExam(exam)}
+                        className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <i className="ri-pencil-line text-gray-600 text-sm"></i>
+                      </button>
                       {exam.type === 'quiz' && (
                         <button
                           title="Configurer le quiz"
@@ -171,6 +198,9 @@ export function SubmissionsTable({ submissions, exams, loading, onGrade }: Submi
                     </td>
                     <td className="px-4 py-3">
                       <EvaluationStatusBadge status={submission.status} kind="submission" />
+                      {submission.attempt && submission.attempt > 1 ? <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">Tentative {submission.attempt}</span> : null}
+                      {submission.late ? <span className="ml-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">Rendu en retard</span> : null}
+                      {submission.time_exceeded ? <span className="ml-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Temps dépassé</span> : null}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button

@@ -11,6 +11,7 @@ import {
   type QuizAnswerDraft,
 } from './examensModel';
 import { QuizAnswerForm } from './QuizAnswerForm';
+import QuizCountdown from './QuizCountdown';
 
 export interface ExamSubmitModalProps {
   exam: Exam;
@@ -26,6 +27,9 @@ export interface ExamSubmitModalProps {
   answerFileInputRef: RefObject<HTMLInputElement | null>;
   onClose: () => void;
   onSubmit: (event: React.FormEvent) => void;
+  /** Deadline of a timed quiz (null = no countdown). */
+  deadline: string | null;
+  onTimeUp: () => void;
   onAnswerTextChange: (value: string) => void;
   onAnswerFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemoveAnswerFile: () => void;
@@ -48,6 +52,8 @@ export function ExamSubmitModal({
   answerFileInputRef,
   onClose,
   onSubmit,
+  deadline,
+  onTimeUp,
   onAnswerTextChange,
   onAnswerFileChange,
   onRemoveAnswerFile,
@@ -64,8 +70,11 @@ export function ExamSubmitModal({
             <i className="ri-close-line text-xl"></i>
           </button>
         </div>
+        {deadline ? <QuizCountdown deadline={deadline} onTimeUp={onTimeUp} /> : null}
         <p className="text-sm text-gray-600 mb-4">
           Type : {getTypeLabel(exam.type)} | Note max : {exam.max_grade}
+          {exam.pass_grade != null ? ` | À valider : ${exam.pass_grade}/${exam.max_grade}` : ''}
+          {exam.timer_minutes ? ` | Durée : ${exam.timer_minutes} min` : ''}
         </p>
         {exam.instructions ? (
           <div className="mb-5 rounded-xl border border-teal-100 bg-teal-50/60 p-4">

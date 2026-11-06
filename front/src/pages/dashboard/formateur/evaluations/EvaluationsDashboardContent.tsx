@@ -14,6 +14,8 @@ interface EvaluationsDashboardContentProps {
   onCreateExam: () => void;
   onConfigureQuiz: (exam: Exam) => void;
   onDeleteExam: (exam: Exam) => void;
+  onEditExam: (exam: Exam) => void;
+  onChangeStatus: (exam: Exam, status: 'ongoing' | 'closed') => void;
   onGrade: (submission: Submission) => void;
 }
 
@@ -29,6 +31,8 @@ export default function EvaluationsDashboardContent({
   onCreateExam,
   onConfigureQuiz,
   onDeleteExam,
+  onEditExam,
+  onChangeStatus,
   onGrade,
 }: EvaluationsDashboardContentProps) {
   return (
@@ -64,6 +68,8 @@ export default function EvaluationsDashboardContent({
           loading={loading}
           onConfigureQuiz={onConfigureQuiz}
           onDeleteExam={onDeleteExam}
+          onEditExam={onEditExam}
+          onChangeStatus={onChangeStatus}
         />
       )}
 

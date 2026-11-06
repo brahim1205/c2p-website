@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
+import { useCertificateBranding } from '@/hooks/useCertificateBranding';
 import { downloadCertificatePdf } from '@/lib/downloads';
 import { queryKeys } from '@/lib/queryKeys';
 import {
@@ -28,6 +29,7 @@ export default function FormateurCertificatsPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
   const queryClient = useQueryClient();
+  const branding = useCertificateBranding();
   const [filter, setFilter] = useState<CertificateFilter>('all');
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -80,23 +82,28 @@ export default function FormateurCertificatsPage() {
       return;
     }
 
-    const data = toCertificateData(cert);
+    const data = toCertificateData(cert, branding);
     downloadCertificatePdf(`certificat-${data.certificateId}.pdf`, data);
     success('Téléchargement', `Le certificat ${cert.certificate_id ?? cert.id} a été généré.`);
   };
 
   const handleDelete = async (cert: Certificate) => {
-    const action = cert.status === 'issued' ? 'révoquer' : 'supprimer';
-    if (!window.confirm(`Voulez-vous vraiment ${action} le certificat de ${cert.student_name} ?${cert.status === 'issued' ? ' Sa vérification publique ne fonctionnera plus.' : ''}`)) return;
+    const reason = window.prompt(`Révoquer le certificat de ${cert.student_name} ? Indiquez le motif (affiché sur la page de vérification) :`);
+    if (reason === null) return;
+    if (!reason.trim()) {
+      error('Motif requis', 'Indiquez pourquoi ce certificat est révoqué.');
+      return;
+    }
     try {
-      await deleteFormateurCertificate(cert.id);
-      success('Supprimé', `Le certificat de ${cert.student_name} a été supprimé.`);
+      await deleteFormateurCertificate(cert.id, reason.trim());
+      success('Certificat révoqué', `Le certificat de ${cert.student_name} n’est plus valide.`);
       await refreshCerts();
     } catch (err: unknown) {
-      error('Erreur', 'Impossible de supprimer le certificat.');
+      error('Erreur', 'Impossible de révoquer le certificat.');
       console.error(err);
     }
   };
+
 
   const closePreview = () => {
     setShowPreviewModal(false);

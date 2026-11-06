@@ -8,6 +8,11 @@ export async function fetchPublicSubscriptionPlans(role?: string) {
 
 export interface PublicCertificateVerification {
   valid: boolean;
+  revoked?: boolean;
+  revokedAt?: string | null;
+  revokedReason?: string | null;
+  instructorName?: string | null;
+  finalGrade?: number | null;
   certificateId: string;
   studentName?: string | null;
   courseName?: string | null;

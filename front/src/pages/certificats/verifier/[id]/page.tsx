@@ -33,16 +33,18 @@ export default function CertificateVerificationPage() {
         </div>
 
         <div className="mt-6 text-center">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-700">C2P Academy</p>
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-700">Groupe C2P Consulting L&amp;M</p>
           <h1 className="mt-3 text-3xl font-extrabold text-slate-900">
-            {loading ? 'Vérification du certificat' : certificate?.valid ? 'Certificat authentique' : 'Certificat introuvable'}
+            {loading ? 'Vérification du certificat' : certificate?.valid ? 'Certificat authentique' : certificate?.revoked ? 'Certificat révoqué' : 'Certificat introuvable'}
           </h1>
           <p className="mt-3 text-slate-600">
             {loading
               ? 'Contrôle de l’identifiant de certification en cours.'
               : certificate?.valid
-                ? 'Ce certificat a bien été émis par C2P Academy.'
-                : 'Cet identifiant ne correspond a aucun certificat émis.'}
+                ? 'Ce certificat a bien été délivré par C2P.'
+                : certificate?.revoked
+                  ? `Ce certificat${certificate.studentName ? ` de ${certificate.studentName}` : ''} a été révoqué${certificate.revokedAt ? ` le ${formatDate(certificate.revokedAt)}` : ''}${certificate.revokedReason ? ` : ${certificate.revokedReason}` : '.'}`
+                  : 'Cet identifiant ne correspond à aucun certificat délivré.'}
           </p>
         </div>
 
@@ -56,9 +58,15 @@ export default function CertificateVerificationPage() {
               <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">Formation</dt>
               <dd className="mt-1 font-semibold text-slate-900">{certificate.courseName || 'Formation C2P'}</dd>
             </div>
+            {certificate.instructorName ? (
+              <div>
+                <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">Responsable pédagogique</dt>
+                <dd className="mt-1 font-semibold text-slate-900">{certificate.instructorName}{certificate.finalGrade != null ? ` · note finale ${String(certificate.finalGrade).replace('.', ',')}/20` : ''}</dd>
+              </div>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">Emetteur</dt>
+                <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">Émetteur</dt>
                 <dd className="mt-1 font-semibold text-slate-900">{certificate.issuer || 'C2P Academy'}</dd>
               </div>
               <div>

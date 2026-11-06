@@ -1,6 +1,6 @@
 import { type AdminCategory, type AdminIntegration, type AdminRule } from '@/lib/adminApi';
 
-export type AdminSettingsTab = 'categories' | 'rules' | 'integrations';
+export type AdminSettingsTab = 'categories' | 'rules' | 'integrations' | 'certificates';
 
 export type AdminSettingsSnapshot = {
   categories: AdminCategory[];
@@ -12,6 +12,7 @@ export const adminSettingsTabs: Array<{ id: AdminSettingsTab; label: string; ico
   { id: 'categories', label: 'Categories', icon: 'ri-folder-line' },
   { id: 'rules', label: 'Règles & Commissions', icon: 'ri-settings-4-line' },
   { id: 'integrations', label: 'Integrations', icon: 'ri-plug-line' },
+  { id: 'certificates', label: 'Certificats', icon: 'ri-award-line' },
 ];
 
 export function getAdminCategoryTypeLabel(type: AdminCategory['type']) {

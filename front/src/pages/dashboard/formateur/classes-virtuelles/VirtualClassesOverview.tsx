@@ -4,6 +4,7 @@ import {
   getStatusLabel,
   type VirtualClass,
 } from './virtualClassModel';
+import AttendanceButton from './AttendanceButton';
 
 type ClassFilter = 'all' | 'scheduled' | 'live' | 'ended';
 
@@ -77,7 +78,8 @@ function ClassActions({
       {virtualClass.status === 'ended' && virtualClass.recording_url && (
         <button onClick={() => window.open(virtualClass.recording_url!, '_blank', 'noopener,noreferrer')} className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"><i className="ri-play-circle-line text-sm" />Replay</button>
       )}
-      <button onClick={() => onDelete(virtualClass)} className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-red-50"><i className="ri-delete-bin-line text-red-500" /></button>
+      {virtualClass.status === 'live' || virtualClass.status === 'ended' ? <AttendanceButton classId={virtualClass.id} title={virtualClass.title} /> : null}
+      <button onClick={() => onDelete(virtualClass)} aria-label={`Supprimer ${virtualClass.title}`} className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-red-50"><i className="ri-delete-bin-line text-red-500" /></button>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 type QueryKeyId = string | number | null | undefined;
 
 export const queryKeys = {
+  certificates: {
+    branding: () => ['certificates', 'branding'] as const,
+  },
   subscriptions: {
     access: (userId: QueryKeyId, role: QueryKeyId) => ['subscriptions', 'access', userId, role] as const,
   },
@@ -46,6 +49,7 @@ export const queryKeys = {
     analytics: (userId: QueryKeyId) => [...queryKeys.formateur.root(userId), 'analytics'] as const,
     reviews: (userId: QueryKeyId) => [...queryKeys.formateur.root(userId), 'reviews'] as const,
     announcements: (userId: QueryKeyId) => [...queryKeys.formateur.root(userId), 'announcements'] as const,
+    attendance: (userId: QueryKeyId, classId: QueryKeyId) => [...queryKeys.formateur.root(userId), 'attendance', classId] as const,
   },
   client: {
     root: (userId: QueryKeyId) => ['client', userId] as const,

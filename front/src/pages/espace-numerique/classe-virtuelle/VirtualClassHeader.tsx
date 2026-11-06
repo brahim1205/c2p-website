@@ -1,3 +1,6 @@
+import { useAuth } from '@/hooks/useAuth';
+import { downloadIcs } from '@/lib/calendar';
+import { checkInVirtualClass } from '@/lib/espaceNumeriqueApi';
 import type { Course, VirtualClass } from './classeVirtuelleTypes';
 
 interface VirtualClassHeaderProps {
@@ -9,6 +12,20 @@ interface VirtualClassHeaderProps {
 }
 
 export default function VirtualClassHeader({ course, isEnded, isLive, isScheduled, vclass }: VirtualClassHeaderProps) {
+  const { user } = useAuth();
+  // Joining the room counts as attendance (used for hybrid / on-site certificates).
+  const join = () => {
+    if (user?.role === 'apprenant') void checkInVirtualClass(vclass.id).catch(() => undefined);
+  };
+  const addToCalendar = () => downloadIcs(`live-${vclass.id}.ics`, {
+    uid: `virtual-class-${vclass.id}`,
+    title: `${vclass.title} — C2P`,
+    description: `${vclass.course_name || course?.title || 'Formation C2P'}\n${window.location.href}`,
+    date: String(vclass.class_date).slice(0, 10),
+    time: vclass.class_time,
+    duration: vclass.duration,
+    url: window.location.href,
+  });
   return (
     <div className="bg-gray-800 border-b border-gray-700 px-4 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-3">
@@ -46,8 +63,13 @@ export default function VirtualClassHeader({ course, isEnded, isLive, isSchedule
               <i className="ri-calendar-check-line"></i> Programmée
             </span>
           )}
+          {isScheduled && (
+            <button type="button" onClick={addToCalendar} className="px-4 py-2 border border-gray-600 text-gray-200 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors whitespace-nowrap">
+              <i className="ri-calendar-event-line mr-1"></i> Ajouter à mon agenda
+            </button>
+          )}
           {vclass.room_link && (isLive || isScheduled) && (
-            <a href={vclass.room_link} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap">
+            <a href={vclass.room_link} onClick={join} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors whitespace-nowrap">
               <i className="ri-video-line mr-1"></i> Rejoindre
             </a>
           )}
@@ -64,9 +86,8 @@ export default function VirtualClassHeader({ course, isEnded, isLive, isSchedule
         </div>
       ) : null}
       <div className="mt-3 rounded-lg border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-sm text-teal-100">
-        Cette page reste un <strong>viewer enrichi</strong> : acces au direct ou au replay, lecture du programme,
-        progression de lecon cote serveur et questions asynchrones. Le chat temps reel, la presence live et la
-        synchronisation de session en direct ne sont pas encore branches.
+        Rejoignez la salle depuis le bouton « Rejoindre » : votre présence est enregistrée automatiquement (à partir de
+        15 minutes avant le début). Vous recevez un rappel la veille et une heure avant chaque séance.
       </div>
     </div>
   );

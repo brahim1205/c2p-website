@@ -22,6 +22,8 @@ export interface Lesson {
   chapters?: Chapter[];
   thumbnail?: string;
   videoUrl?: string;
+  /** Quiz lesson: the quiz exam to take in "Mes examens". */
+  examId?: string | null;
   quizRequired?: boolean;
   contentBlocks?: LessonContentBlock[];
   resources?: Resource[];

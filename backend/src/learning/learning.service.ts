@@ -25,6 +25,7 @@ import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import { LearningAssessmentsCommandService } from './learning-assessments-command.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
+import { ExamLifecycleService } from './exam-lifecycle.service.js';
 import { LearningCertificationService } from './learning-certification.service.js';
 type ProgressPayload = { progress?: unknown; completedLessons?: unknown; completedLessonIds?: unknown };
 @Injectable()
@@ -64,7 +65,7 @@ export class LearningService {
     return {
       exams: snapshot.exams.map((exam) => {
         const source = examById.get(String(exam.id)) ?? exam;
-        return { ...exam, pass_grade: passGrade(source), max_attempts: toNumber(source.max_attempts) ?? 3 };
+        return { ...exam, pass_grade: passGrade(source), max_attempts: toNumber(source.max_attempts) ?? 3, timer_minutes: toNumber(source.timer_minutes) ?? 0 };
       }),
       submissions: snapshot.submissions.map((submission) => {
         const exam = examById.get(String(submission.exam_id));
@@ -197,6 +198,11 @@ export class LearningService {
       student_id: actor.id,
       student_name: `${actor.firstName} ${actor.lastName}`.trim() || actor.id,
     }, actor);
+    // Late work (after the exam date) and over-time quizzes are accepted but flagged.
+    const attemptNumber = existing ? (toNumber(existing.attempt) ?? 1) + 1 : 1;
+    const flags = ExamLifecycleService.submissionFlags(exam, String(actor.id), attemptNumber);
+    Object.assign(sanitized, flags);
+    if (flags.late && String(sanitized.status) === 'pending') sanitized.status = 'late';
     let submission: Row;
     let createdSubmissions: Row[];
     const beforeRowsByTable: Record<string, Row[]> = {};

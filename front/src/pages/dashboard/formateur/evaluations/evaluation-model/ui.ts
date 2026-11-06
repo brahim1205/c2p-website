@@ -45,10 +45,10 @@ export function getExamStatusMeta(status: string) {
     closed: 'bg-gray-100 text-gray-700',
   };
   const labels: Record<string, string> = {
-    upcoming: 'À venir',
-    ongoing: 'En cours',
+    upcoming: 'Planifiée (masquée)',
+    ongoing: 'Ouverte',
     graded: 'Noté',
-    closed: 'Clôturé',
+    closed: 'Fermée',
   };
   return {
     className: styles[status] || 'bg-gray-100 text-gray-700',

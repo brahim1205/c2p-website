@@ -387,6 +387,8 @@ export function sanitizeExamRecord(row: Row, user: AuthUser) {
     : requireNumberInRange(normalized.passing_grade, 0, Number(normalized.max_grade), 'La note de passage doit etre comprise entre 0 et la note maximale.');
   // Attempts allowed for an automatically graded quiz (a failed attempt can be retried).
   normalized.max_attempts = requireNumberInRange(normalized.max_attempts ?? 3, 1, 10, 'Le nombre de tentatives doit etre compris entre 1 et 10.');
+  // Time limit of a quiz in minutes (0 = no limit). The countdown starts when the learner opens it.
+  normalized.timer_minutes = requireNumberInRange(normalized.timer_minutes ?? 0, 0, 300, 'La duree du quiz doit etre comprise entre 0 et 300 minutes.');
   normalized.instructions = trimText(normalized.instructions);
   if (normalized.instructions && String(normalized.instructions).length > 1500) {
     throw new BadRequestException('La consigne ne peut pas depasser 1500 caracteres.');
@@ -552,6 +554,9 @@ export function sanitizeSubmissionRecord(row: Row, user: AuthUser) {
   }
   normalized.status = status === 'late' ? 'late' : 'pending';
 
+  // Auto-submitted when the countdown ended: unanswered questions simply score 0.
+  const timedOut = normalized.timed_out === true;
+  delete normalized.timed_out;
   if (String(exam.type) === 'quiz') {
     const questions = (store.quiz_questions ?? [])
       .filter((question) => String(question.exam_id) === examId)
@@ -572,7 +577,7 @@ export function sanitizeSubmissionRecord(row: Row, user: AuthUser) {
 
       if (questionType === 'open') {
         const answerText = trimText(rawAnswer?.answer_text);
-        if (required && !answerText) {
+        if (required && !answerText && !timedOut) {
           throw new BadRequestException('Toutes les questions obligatoires du quiz doivent etre renseignees.');
         }
         return {
@@ -595,7 +600,7 @@ export function sanitizeSubmissionRecord(row: Row, user: AuthUser) {
           ? [String(rawAnswer.selected_choice_id)]
           : [];
 
-      if (required && selectedChoiceIds.length === 0) {
+      if (required && selectedChoiceIds.length === 0 && !timedOut) {
         throw new BadRequestException('Toutes les questions obligatoires du quiz doivent etre renseignees.');
       }
 

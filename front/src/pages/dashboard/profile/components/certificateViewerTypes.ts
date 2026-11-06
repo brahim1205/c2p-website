@@ -12,4 +12,10 @@ export interface CertificateData {
   duration?: string | null;
   /** Final grade out of 20, when the course has graded exams. */
   finalGrade?: number | null;
+  /** Scanned signatures and official stamp (generated ones are used when missing). */
+  instructorSignatureUrl?: string | null;
+  directorSignatureUrl?: string | null;
+  directorName?: string | null;
+  directorTitle?: string | null;
+  stampUrl?: string | null;
 }

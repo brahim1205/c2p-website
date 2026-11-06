@@ -24,6 +24,8 @@ export interface StudioCourse {
   promotion_percentage: number;
   certificate_enabled?: boolean;
   certificate_pass_percentage?: number;
+  certificate_min_attendance?: number;
+  instructor_signature_url?: string | null;
   objectives?: string[];
   prerequisites?: string[];
   target_audience?: string[];
@@ -54,6 +56,7 @@ export interface StudioLesson {
   position: number;
   is_preview: boolean;
   status: 'draft' | 'published';
+  exam_id?: string | null;
 }
 
 export interface StudioAsset {
@@ -117,6 +120,7 @@ export const CURRICULUM_ITEM_TYPES: Array<{ id: StudioLessonType; label: string;
   { id: 'pdf', label: 'Document', icon: 'ri-file-pdf-2-line', hint: 'Un PDF ou des slides à consulter' },
   { id: 'practice', label: 'Exercice pratique', icon: 'ri-pencil-ruler-2-line', hint: 'Des consignes à réaliser' },
   { id: 'coding', label: 'Exercice de code', icon: 'ri-code-s-slash-line', hint: 'Un énoncé et un code de départ' },
+  { id: 'quiz', label: 'Quiz', icon: 'ri-questionnaire-line', hint: 'Des questions corrigées automatiquement' },
 ];
 
 export function curriculumItemMeta(type: StudioLessonType) {

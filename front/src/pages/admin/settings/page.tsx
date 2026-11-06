@@ -14,6 +14,7 @@ import {
   RulesPanel,
 } from './AdminSettingsPanels';
 import { type AdminSettingsSnapshot, type AdminSettingsTab } from './adminSettingsModel';
+import CertificateBrandingPanel from './CertificateBrandingPanel';
 
 export default function AdminSettingsPage() {
   const { success, error } = useToast();
@@ -222,6 +223,8 @@ export default function AdminSettingsPage() {
             onToggle={(integration) => void handleToggleIntegration(integration)}
           />
         )}
+
+        {activeTab === 'certificates' && <CertificateBrandingPanel />}
 
         {showAddCategory && (
           <AddCategoryModal

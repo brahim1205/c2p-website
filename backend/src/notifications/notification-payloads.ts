@@ -16,7 +16,7 @@ type NotificationRecipient = {
   user_id: string;
 };
 
-type VirtualClassNotificationEvent = 'live-scheduled' | 'live-updated' | 'live-started' | 'live-ended' | 'replay-ready';
+type VirtualClassNotificationEvent = 'live-scheduled' | 'live-updated' | 'live-started' | 'live-ended' | 'replay-ready' | 'live-cancelled' | 'live-reminder';
 
 type VirtualClassLike = {
   id?: string | number | null;
@@ -92,6 +92,14 @@ export function createVirtualClassNotifications(input: {
     'replay-ready': {
       notificationTitle: 'Replay disponible',
       notificationMessage: `Le replay du live "${title}" est disponible.`,
+    },
+    'live-cancelled': {
+      notificationTitle: 'Live annule',
+      notificationMessage: `Le live "${title}" prevu le ${scheduleLabel} est annule.`,
+    },
+    'live-reminder': {
+      notificationTitle: 'Rappel : live bientot',
+      notificationMessage: `Rappel : le live "${title}" commence le ${scheduleLabel}. Ajoutez-le a votre agenda et rejoignez la salle a l heure.`,
     },
   }[eventType];
 

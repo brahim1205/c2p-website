@@ -29,6 +29,7 @@ const OUTBOX_EVENT_ALIASES: Record<string, OutboxEventType> = {
   'virtual_class.live_ended': 'virtual_class.ended',
   'virtual_class.live_started': 'virtual_class.started',
   'virtual_class.live_updated': 'virtual_class.updated',
+  'virtual_class.live_cancelled': 'virtual_class.updated',
 };
 
 const OUTBOX_EVENT_VALUES = Object.keys(OUTBOX_EVENT_CATALOG) as [OutboxEventType, ...OutboxEventType[]];

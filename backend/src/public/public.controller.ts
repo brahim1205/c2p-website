@@ -106,6 +106,17 @@ export class PublicController {
       String(row.certificate_number ?? row.certificate_id ?? row.id) === normalizedId
     ));
 
+    if (certificate?.status === 'revoked') {
+      return {
+        valid: false,
+        revoked: true,
+        certificateId: normalizedId,
+        studentName: certificate.student_name ?? null,
+        courseName: certificate.course_name ?? certificate.title ?? null,
+        revokedAt: certificate.revoked_at ?? null,
+        revokedReason: certificate.revoked_reason ?? null,
+      };
+    }
     if (!certificate || certificate.status !== 'issued') {
       return {
         valid: false,
@@ -120,7 +131,9 @@ export class PublicController {
       courseName: certificate.course_name ?? certificate.title ?? null,
       issuedAt: certificate.issued_at ?? null,
       completionDate: certificate.completion_date ?? null,
-      issuer: 'C2P Academy',
+      instructorName: certificate.instructor_name ?? null,
+      finalGrade: certificate.final_grade ?? null,
+      issuer: 'Groupe C2P Consulting L&M',
     };
   }
 

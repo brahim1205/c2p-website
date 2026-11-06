@@ -1,5 +1,8 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui';
+import { useToast } from '@/hooks/useToast';
+import { changeFormateurExamStatus } from '@/lib/formateurDashboardApi';
 import type { CourseStudio } from '../useCourseStudio';
 import { AutosaveText } from '../StudioFields';
 import type { StudioAsset, StudioLesson } from '../studioModel';
@@ -132,6 +135,38 @@ function Resources({ studio, lesson, resources }: { studio: CourseStudio; lesson
   );
 }
 
+/** A quiz lesson opens a quiz exam: questions are written in Évaluations, then the quiz is opened. */
+function QuizSlot({ lesson }: { lesson: StudioLesson }) {
+  const { success, error } = useToast();
+  const [busy, setBusy] = useState(false);
+  if (!lesson.exam_id) {
+    return <p className="rounded-xl bg-c2p-warning-soft px-4 py-3 text-sm text-c2p-text">Ce quiz n’est lié à aucune évaluation. Supprimez-le et recréez-le depuis « Élément du programme ».</p>;
+  }
+  const open = async () => {
+    setBusy(true);
+    try {
+      await changeFormateurExamStatus(lesson.exam_id as string, 'ongoing');
+      success('Quiz ouvert', 'Les inscrits peuvent le passer et sont notifiés.');
+    } catch (reason) {
+      error('Ouverture impossible', reason && typeof reason === 'object' && 'message' in reason ? String(reason.message) : undefined);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-3 rounded-xl border border-c2p-border bg-c2p-surface p-4">
+      <p className="text-sm text-c2p-text">
+        Ce quiz est une évaluation de votre formation : questions corrigées automatiquement, note de passage, tentatives et chronomètre.
+        Il compte pour le certificat.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Link to="/dashboard/formateur/evaluations" className="c2p-btn-secondary h-9 px-3.5 text-sm"><i className="ri-list-check-3" aria-hidden="true" /> Écrire les questions</Link>
+        <Button size="sm" loading={busy} onClick={() => void open()}>Ouvrir le quiz aux apprenants</Button>
+      </div>
+    </div>
+  );
+}
+
 export default function LessonEditor({ studio, lesson, assets }: LessonEditorProps) {
   const video = assets.find((asset) => asset.asset_type === 'video');
   const resources = assets.filter((asset) => asset !== video);
@@ -140,6 +175,7 @@ export default function LessonEditor({ studio, lesson, assets }: LessonEditorPro
   return (
     <div className="space-y-5 border-t border-c2p-border bg-c2p-surface-soft px-4 py-5 sm:px-6">
       {lesson.type === 'video' ? <VideoSlot studio={studio} lesson={lesson} video={video} /> : null}
+      {lesson.type === 'quiz' ? <QuizSlot lesson={lesson} /> : null}
       {lesson.type === 'article' ? (
         <AutosaveText label="Contenu de l'article" multiline rows={10} value={lesson.content} onSave={(content) => save({ content })}
           placeholder="Rédigez votre leçon. Les retours à la ligne sont conservés." />

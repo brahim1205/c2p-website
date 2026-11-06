@@ -8,13 +8,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { formatDate } from '@/lib/formatters';
 import { downloadCertificatePdf } from '@/lib/downloads';
-import { buildCertificateVerificationUrl } from '@/lib/certificateVerification';
+import { buildCertificateVerificationUrl, buildLinkedInCertificationUrl, withCertificateBranding, type CertificateBranding } from '@/lib/certificateVerification';
+import { useCertificateBranding } from '@/hooks/useCertificateBranding';
 import CertificateViewer, { type CertificateData } from '../../profile/components/CertificateViewer';
 import { fetchApprenantCertificates, type ApprenantCertificate as Certificate } from '@/lib/apprenantDashboardApi';
 import { queryKeys } from '@/lib/queryKeys';
 
-function toCertificateData(certificate: Certificate): CertificateData {
-  return {
+function toCertificateData(certificate: Certificate, branding: CertificateBranding | null): CertificateData {
+  return withCertificateBranding({
     studentName: certificate.student_name?.trim() || 'Apprenant C2P',
     courseTitle: certificate.course_name || certificate.title || 'Formation C2P',
     instructor: certificate.instructor_name || 'Formateur C2P',
@@ -22,13 +23,15 @@ function toCertificateData(certificate: Certificate): CertificateData {
     certificateId: String(certificate.certificate_number || certificate.certificate_id),
     duration: certificate.course_duration ?? null,
     finalGrade: certificate.final_grade ?? certificate.grade ?? null,
-  };
+    instructorSignatureUrl: certificate.instructor_signature_url ?? null,
+  }, branding);
 }
 
 export default function ApprenantCertificatsPage() {
   const { user } = useAuth();
   const { success, error } = useToast();
   const [viewerData, setViewerData] = useState<CertificateData | null>(null);
+  const branding = useCertificateBranding();
 
   const { data: certificates = [], isError, isLoading } = useQuery<Certificate[]>({
     queryKey: queryKeys.apprenant.certificates(user?.id),
@@ -42,10 +45,11 @@ export default function ApprenantCertificatsPage() {
 
   // Only certificates delivered by C2P (status "issued") are documents; the others show progress.
   const issued = useMemo(() => certificates.filter((certificate) => certificate.status === 'issued'), [certificates]);
-  const inProgress = useMemo(() => certificates.filter((certificate) => certificate.status !== 'issued'), [certificates]);
+  const inProgress = useMemo(() => certificates.filter((certificate) => certificate.status !== 'issued' && certificate.status !== 'revoked'), [certificates]);
+  const revoked = useMemo(() => certificates.filter((certificate) => certificate.status === 'revoked'), [certificates]);
 
   const download = (certificate: Certificate) => {
-    const data = toCertificateData(certificate);
+    const data = toCertificateData(certificate, branding);
     downloadCertificatePdf(`certificat-${data.certificateId}.pdf`, data);
     success('Certificat prêt', 'La version imprimable s’ouvre : choisissez « Enregistrer en PDF ».');
   };
@@ -98,7 +102,15 @@ export default function ApprenantCertificatsPage() {
                       <button type="button" onClick={() => void copyLink(certificate)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                         <i className="ri-link mr-1" aria-hidden="true" />Lien de vérification
                       </button>
-                      <button type="button" onClick={() => setViewerData(toCertificateData(certificate))} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                      <a
+                        href={buildLinkedInCertificationUrl({ name: String(certificate.course_name || certificate.title), certificateId: String(certificate.certificate_number || certificate.certificate_id), issuedAt: certificate.issued_at })}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-gray-50"
+                      >
+                        <i className="ri-linkedin-box-fill mr-1" aria-hidden="true" />LinkedIn
+                      </a>
+                      <button type="button" onClick={() => setViewerData(toCertificateData(certificate, branding))} className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                         Voir
                       </button>
                       <button type="button" onClick={() => download(certificate)} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
@@ -138,6 +150,20 @@ export default function ApprenantCertificatsPage() {
                 </article>
               ))}
             </div>
+          </section>
+        ) : null}
+
+        {!isLoading && revoked.length ? (
+          <section className="mt-10">
+            <h2 className="mb-4 text-lg font-bold text-gray-900">Révoqués <span className="text-gray-400">({revoked.length})</span></h2>
+            <ul className="space-y-2">
+              {revoked.map((certificate) => (
+                <li key={String(certificate.id)} className="rounded-2xl border border-red-100 bg-red-50/60 px-5 py-3 text-sm">
+                  <p className="font-semibold text-gray-900">{certificate.course_name || certificate.title}</p>
+                  <p className="text-gray-600">{certificate.revoked_reason || 'Révoqué par le formateur.'}</p>
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
 

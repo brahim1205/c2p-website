@@ -49,6 +49,15 @@ export function buildCertificatePrintHtml(data: CertificateData) {
     `Délivré le ${date}`,
   ].filter(Boolean).join('<span class="dot">•</span>');
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://c2p.sn';
+  const absolute = (url: string) => (url.startsWith('http') ? url : `${origin}${url}`);
+  const signature = (url: string | null | undefined, fallback: string) => (url
+    ? `<div class="signimg"><img src="${escapeText(absolute(url))}" alt="Signature" /></div>`
+    : `<div class="script">${fallback}</div>`);
+  const directorName = escapeText(data.directorName || 'La Direction');
+  const directorTitle = escapeText(data.directorTitle || ISSUER);
+  const stamp = data.stampUrl
+    ? `<img class="stamp stampimg" src="${escapeText(absolute(data.stampUrl))}" alt="Cachet ${escapeText(ISSUER)}" />`
+    : stampSvg(data.date);
 
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Certificat - ${course}</title>
   <style>
@@ -78,6 +87,9 @@ export function buildCertificatePrintHtml(data: CertificateData) {
   .sign{text-align:center;font-size:3.4mm;color:#33475b}
   .sign .script{font:italic 400 7mm "Brush Script MT","Segoe Script",cursive;color:#1a3d6b;height:9mm;line-height:9mm;white-space:nowrap;overflow:hidden}
   .sign .line{border-top:.35mm solid #0f1c35;margin:1mm 4mm 1.5mm}
+  .sign .signimg{height:14mm;display:flex;align-items:flex-end;justify-content:center}
+  .sign .signimg img{max-height:14mm;max-width:100%;object-fit:contain}
+  .stampimg{object-fit:contain;transform:rotate(-8deg)}
   .sign strong{display:block;color:#0f1c35;font-size:3.6mm}
   .stamp{width:42mm;height:42mm;opacity:.88;transform:rotate(-12deg);justify-self:center;margin-bottom:-4mm}
   .qr{text-align:center;font-size:2.5mm;color:#5b6b7f;line-height:1.35}
@@ -98,9 +110,9 @@ export function buildCertificatePrintHtml(data: CertificateData) {
     <div class="details">${details}</div>
   </section>
   <footer class="foot">
-    <div class="sign"><div class="script">${instructor}</div><div class="line"></div><strong>${instructor}</strong>Responsable pédagogique</div>
-    ${stampSvg(data.date)}
-    <div class="sign"><div class="script">C2P Consulting</div><div class="line"></div><strong>La Direction</strong>${escapeText(ISSUER)}</div>
+    <div class="sign">${signature(data.instructorSignatureUrl, instructor)}<div class="line"></div><strong>${instructor}</strong>Responsable pédagogique</div>
+    ${stamp}
+    <div class="sign">${signature(data.directorSignatureUrl, 'C2P Consulting')}<div class="line"></div><strong>${directorName}</strong>${directorTitle}</div>
     <div class="qr">${buildQrSvgMarkup(verificationUrl, { title: 'QR code de vérification du certificat' })}Vérifier l’authenticité<br/>c2p.sn/certificats/verifier</div>
   </footer>
   </main></body></html>`;

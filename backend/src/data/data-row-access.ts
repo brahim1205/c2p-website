@@ -106,6 +106,8 @@ export function filterRowsForActor(
       return [];
     case 'lesson_progress':
     case 'course_quiz_attempts':
+    case 'exam_sessions':
+    case 'class_attendance':
       if (user.role === 'apprenant') {
         return rows.filter((row) => String(row.student_id) === user.id);
       }

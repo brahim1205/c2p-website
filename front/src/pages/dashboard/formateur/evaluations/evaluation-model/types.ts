@@ -35,6 +35,7 @@ export interface Exam {
   pass_grade?: number;
   passing_grade?: number | null;
   max_attempts?: number;
+  timer_minutes?: number;
   created_at: string;
 }
 
@@ -83,6 +84,11 @@ export interface Submission {
   file_name: string | null;
   file_url: string | null;
   answers?: QuizAnswer[] | null;
+  attempt?: number;
+  /** Submitted after the exam date. */
+  late?: boolean;
+  /** Quiz submitted after its countdown (plus a short grace period). */
+  time_exceeded?: boolean;
 }
 
 export interface CourseOption {

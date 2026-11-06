@@ -25,12 +25,16 @@ export class OutboxProcessorService {
     private readonly auditLogService: AuditLogService,
   ) {}
 
-  async processPendingBatch(limit = 25) {
+  /**
+   * Processes due events. `filter` restricts the batch (event types, creation date): the
+   * in-process auto processor only handles recent in-app notification events.
+   */
+  async processPendingBatch(limit = 25, filter: { eventTypes?: string[]; createdAfter?: Date } = {}) {
     if (!this.prisma.isConnected) {
       return { claimed: 0, processed: 0, failed: 0, dead: 0 };
     }
 
-    const events = await this.claimPending(limit);
+    const events = await this.claimPending(limit, filter);
     let processed = 0;
     let failed = 0;
     let dead = 0;
@@ -264,12 +268,14 @@ export class OutboxProcessorService {
     return { replayEventId: replayed.id, eventType: replayed.eventType };
   }
 
-  private async claimPending(limit: number) {
+  private async claimPending(limit: number, filter: { eventTypes?: string[]; createdAfter?: Date } = {}) {
     const now = new Date();
     const candidates = await this.prisma.outboxEvent.findMany({
       where: {
         status: { in: ['pending', 'failed'] },
         processedAt: null,
+        ...(filter.eventTypes ? { eventType: { in: filter.eventTypes } } : {}),
+        ...(filter.createdAfter ? { createdAt: { gte: filter.createdAfter } } : {}),
         OR: [
           { nextRetryAt: { lte: now } },
           { nextRetryAt: null, availableAt: { lte: now } },

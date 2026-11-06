@@ -67,6 +67,9 @@ export default function GradeSubmissionModal({
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <EvaluationStatusBadge status={submission.status} kind="submission" />
+                      {submission.attempt && submission.attempt > 1 ? <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">Tentative {submission.attempt}</span> : null}
+                      {submission.late ? <span className="ml-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">Rendu en retard</span> : null}
+                      {submission.time_exceeded ? <span className="ml-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Temps dépassé</span> : null}
               <span className="text-xs text-gray-500">
                 Soumis le {new Date(submission.submitted_at).toLocaleString('fr-FR')}
               </span>

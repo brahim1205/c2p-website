@@ -13,8 +13,10 @@ export async function issueFormateurCertificate(cert: Pick<FormateurCertificate,
   );
 }
 
-export async function deleteFormateurCertificate(certId: number) {
-  return apiRequest<FormateurCertificate>(`/learning/formateur/certificates/${encodeURIComponent(String(certId))}`, {
+/** Revokes a certificate (kept on record with the reason; its public verification shows "revoked"). */
+export async function deleteFormateurCertificate(certId: number, reason?: string) {
+  const query = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+  return apiRequest<FormateurCertificate>(`/learning/formateur/certificates/${encodeURIComponent(String(certId))}${query}`, {
     method: 'DELETE',
   });
 }

@@ -1,5 +1,6 @@
 import type { CertificateRequirements } from '@/lib/apprenantDashboardApi';
 import type { CertificateData } from '@/pages/dashboard/profile/components/certificateViewerTypes';
+import { withCertificateBranding, type CertificateBranding } from '@/lib/certificateVerification';
 
 export interface Certificate {
   id: number;
@@ -17,6 +18,8 @@ export interface Certificate {
   instructor_name?: string | null;
   course_duration?: string | null;
   requirements?: CertificateRequirements | null;
+  instructor_signature_url?: string | null;
+  revoked_reason?: string | null;
 }
 
 /** "2/3 étapes" for an in-progress certificate. */
@@ -27,7 +30,7 @@ export function certificateProgressLabel(cert: Certificate) {
   return `${done}/${1 + requirements.exams.length} étapes`;
 }
 
-export const certificateFilters = ['all', 'in_progress', 'issued'] as const;
+export const certificateFilters = ['all', 'in_progress', 'issued', 'revoked'] as const;
 export type CertificateFilter = typeof certificateFilters[number];
 
 export function formatCertificateGrade(value: number | null) {
@@ -48,7 +51,7 @@ export function getCertificateStats(certs: Certificate[]) {
       icon: 'ri-check-double-line',
       color: 'bg-green-500',
     },
-    { label: 'En cours', value: String(certs.filter((cert) => cert.status !== 'issued').length), icon: 'ri-time-line', color: 'bg-amber-500' },
+    { label: 'En cours', value: String(certs.filter((cert) => cert.status !== 'issued' && cert.status !== 'revoked').length), icon: 'ri-time-line', color: 'bg-amber-500' },
     { label: 'Délivrés au total', value: String(certs.filter((cert) => cert.status === 'issued').length), icon: 'ri-award-fill', color: 'bg-blue-500' },
   ];
 }
@@ -56,11 +59,13 @@ export function getCertificateStats(certs: Certificate[]) {
 export function getCertificateStatusMeta(status: string) {
   const styles: Record<string, string> = {
     in_progress: 'bg-blue-100 text-blue-700',
+    revoked: 'bg-red-100 text-red-700',
     issued: 'bg-teal-100 text-teal-700',
     pending: 'bg-amber-100 text-amber-700',
   };
   const labels: Record<string, string> = {
     in_progress: 'En cours',
+    revoked: 'Révoqué',
     issued: 'Délivré',
     pending: 'En attente',
   };
@@ -73,12 +78,13 @@ export function getCertificateStatusMeta(status: string) {
 export function getCertificateFilterLabel(filter: CertificateFilter) {
   if (filter === 'all') return 'Tous';
   if (filter === 'issued') return 'Délivrés';
+  if (filter === 'revoked') return 'Révoqués';
   return 'En cours';
 }
 
 /** Data printed on the certificate document. */
-export function toCertificateData(cert: Certificate): CertificateData {
-  return {
+export function toCertificateData(cert: Certificate, branding: CertificateBranding | null = null): CertificateData {
+  return withCertificateBranding({
     studentName: cert.student_name,
     courseTitle: cert.course_name || 'Formation C2P',
     instructor: cert.instructor_name || 'Formateur C2P',
@@ -86,5 +92,6 @@ export function toCertificateData(cert: Certificate): CertificateData {
     certificateId: String(cert.certificate_number || cert.certificate_id || cert.id),
     duration: cert.course_duration ?? null,
     finalGrade: cert.final_grade ?? null,
-  };
+    instructorSignatureUrl: cert.instructor_signature_url ?? null,
+  }, branding);
 }

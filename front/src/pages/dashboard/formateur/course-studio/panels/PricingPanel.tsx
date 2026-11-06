@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { formatCount } from '@/lib/formatters';
 import type { CourseStudio } from '../useCourseStudio';
 import { ChoiceCard } from '../StudioFields';
 import type { StudioCourse } from '../studioModel';
+import { IMAGE_ACCEPT, uploadCourseFile } from '../studioUploads';
 import { PanelHeader } from './PanelHeader';
 
 function NumberField({ label, suffix, value, min, max, onSave, hint }: {
@@ -82,13 +83,63 @@ export default function PricingPanel({ studio, course }: { studio: CourseStudio;
           </span>
         </label>
         {course.certificate_enabled !== false ? (
-          <div className="max-w-xs">
-            <NumberField label="Seuil de réussite des évaluations" suffix="%" value={course.certificate_pass_percentage ?? 50} min={1} max={100}
-              hint="Note minimale à chaque évaluation (sauf si l’évaluation fixe sa propre note de passage)."
-              onSave={(value) => studio.patchCourse({ certificate_pass_percentage: value })} />
-          </div>
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <NumberField label="Seuil de réussite des évaluations" suffix="%" value={course.certificate_pass_percentage ?? 50} min={1} max={100}
+                hint="Note minimale à chaque évaluation (sauf si l’évaluation fixe sa propre note de passage)."
+                onSave={(value) => studio.patchCourse({ certificate_pass_percentage: value })} />
+              {course.delivery_mode !== 'online' ? (
+                <NumberField label="Présence minimale aux séances" suffix="%" value={course.certificate_min_attendance ?? 0} min={0} max={100}
+                  hint="Part des séances tenues (en direct ou en présentiel) à suivre. 0 = non exigé."
+                  onSave={(value) => studio.patchCourse({ certificate_min_attendance: value })} />
+              ) : null}
+            </div>
+            <SignatureField course={course} onSave={(url) => studio.patchCourse({ instructor_signature_url: url })} />
+          </>
         ) : null}
       </section>
+    </div>
+  );
+}
+
+/** Instructor's scanned signature printed on the certificates of this course (transparent PNG ideally). */
+function SignatureField({ course, onSave }: { course: StudioCourse; onSave: (url: string | null) => unknown }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex h-20 w-56 shrink-0 items-center justify-center rounded-xl border border-dashed border-c2p-border-strong bg-white">
+        {course.instructor_signature_url
+          ? <img src={course.instructor_signature_url} alt="Votre signature" className="max-h-16 max-w-[13rem] object-contain" />
+          : <span className="text-xs text-c2p-soft">Signature écrite générée</span>}
+      </div>
+      <div className="space-y-2 text-sm">
+        <p className="font-bold text-c2p-text">Votre signature sur les certificats</p>
+        <p className="text-xs text-c2p-muted">Signez sur une feuille blanche, photographiez-la (PNG ou JPG). Sans image, votre nom est écrit à la main automatiquement.</p>
+        <input ref={input} type="file" accept={IMAGE_ACCEPT} className="hidden" onChange={async (event) => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          if (!file) return;
+          setBusy(true);
+          setFailure(null);
+          try {
+            const uploaded = await uploadCourseFile(file, { courseId: course.id, kind: 'cover' });
+            await onSave(uploaded.url);
+          } catch {
+            setFailure('L’envoi de la signature a échoué.');
+          } finally {
+            setBusy(false);
+          }
+        }} />
+        <div className="flex gap-3">
+          <button type="button" disabled={busy} onClick={() => input.current?.click()} className="font-semibold text-c2p-primary hover:underline disabled:opacity-50">
+            {busy ? 'Envoi…' : course.instructor_signature_url ? 'Remplacer' : 'Ajouter ma signature'}
+          </button>
+          {course.instructor_signature_url ? <button type="button" onClick={() => void onSave(null)} className="font-semibold text-c2p-danger hover:underline">Retirer</button> : null}
+        </div>
+        {failure ? <p className="text-xs text-c2p-danger" role="alert">{failure}</p> : null}
+      </div>
     </div>
   );
 }

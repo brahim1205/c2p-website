@@ -19,6 +19,7 @@ export const PUBLIC_READ_TABLES = new Set([
 ]);
 
 export const ADMIN_ONLY_TABLES = new Set([
+  'certificate_branding',
   'admin_accreditations',
   'admin_content_items',
   'admin_campaigns',
@@ -55,6 +56,8 @@ export const COMMAND_ONLY_WRITE_TABLES = new Set([
   'client_favorites',
   'client_orders',
   'course_announcements',
+  'exam_sessions',
+  'class_attendance',
   'course_enrollments',
   'course_faq_items',
   'course_lessons',
@@ -168,6 +171,8 @@ const LEARNING_TABLES = new Set([
   'lesson_comments',
   'course_faq_items',
   'course_announcements',
+  'exam_sessions',
+  'class_attendance',
 ]);
 
 const MESSAGING_TABLES = new Set([

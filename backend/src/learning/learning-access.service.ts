@@ -194,6 +194,7 @@ export class LearningAccessService {
         title: text(lesson.title, 'Leçon'),
         duration: text(lesson.duration, '0 min'),
         type: mapLessonType(lesson.type),
+        examId: lesson.exam_id ? String(lesson.exam_id) : null,
         completed: completedLessonIds.has(String(lesson.id)),
         bookmarked: Boolean(progressByLessonId.get(String(lesson.id))?.bookmarked),
         note: text(progressByLessonId.get(String(lesson.id))?.note),

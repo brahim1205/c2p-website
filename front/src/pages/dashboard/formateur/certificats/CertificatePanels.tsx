@@ -1,6 +1,7 @@
 import { SkeletonList } from '@/components/base/Skeleton';
 import CertificateRequirements from '@/components/feature/CertificateRequirements';
 import CertificateSurface from '@/pages/dashboard/profile/components/CertificateSurface';
+import { useCertificateBranding } from '@/hooks/useCertificateBranding';
 import {
   certificateFilters,
   certificateProgressLabel,
@@ -122,6 +123,7 @@ export function CertificatePreviewModal({
   onIssue: (cert: Certificate) => void;
 }) {
   const issued = cert.status === 'issued';
+  const branding = useCertificateBranding();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label={`Certificat de ${cert.student_name}`}>
       <div className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
@@ -135,7 +137,9 @@ export function CertificatePreviewModal({
           </button>
         </div>
         {issued ? (
-          <CertificateSurface data={toCertificateData(cert)} />
+          <CertificateSurface data={toCertificateData(cert, branding)} />
+        ) : cert.status === 'revoked' ? (
+          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">Certificat révoqué : {cert.revoked_reason || 'sans motif précisé'}.</p>
         ) : (
           <div className="rounded-xl border border-gray-200 p-5">
             <p className="mb-3 text-sm font-semibold text-gray-900">Le certificat sera délivré automatiquement quand toutes les étapes seront validées :</p>
@@ -194,7 +198,7 @@ function CertificateRow({
       <td className="px-4 py-3 font-mono text-sm text-gray-600">{cert.certificate_number || cert.certificate_id || '-'}</td>
       <td className="px-4 py-3">
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusMeta.style}`}>{statusMeta.label}</span>
-        {cert.status !== 'issued' && certificateProgressLabel(cert) ? (
+        {cert.status !== 'issued' && cert.status !== 'revoked' && certificateProgressLabel(cert) ? (
           <span className="mt-1 block text-xs text-gray-500">{certificateProgressLabel(cert)}</span>
         ) : null}
       </td>
@@ -208,9 +212,11 @@ function CertificateRow({
               <i className="ri-download-line text-sm text-teal-600"></i>
             </button>
           ) : null}
-          <button onClick={() => onDelete(cert)} title={cert.status === 'issued' ? 'Révoquer le certificat' : 'Supprimer'} aria-label={cert.status === 'issued' ? 'Révoquer le certificat' : 'Supprimer'} className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-red-50">
-            <i className="ri-delete-bin-line text-sm text-red-500"></i>
-          </button>
+          {cert.status === 'issued' ? (
+            <button onClick={() => onDelete(cert)} title="Révoquer le certificat" aria-label="Révoquer le certificat" className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-red-50">
+              <i className="ri-forbid-line text-sm text-red-500"></i>
+            </button>
+          ) : null}
         </div>
       </td>
     </tr>

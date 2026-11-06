@@ -184,6 +184,17 @@ export default function LessonsTab({
           </div>
         )}
 
+        {activeLesson.type === 'quiz' && activeLesson.examId ? (
+          <div className="mx-6 mb-6 flex flex-col items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-5 sm:flex-row sm:items-center">
+            <i className="ri-questionnaire-line text-3xl text-teal-600" aria-hidden="true" />
+            <div className="flex-1">
+              <p className="font-semibold text-gray-900">Quiz de validation</p>
+              <p className="text-sm text-gray-600">Il compte pour votre certificat. Selon les réglages du formateur, il peut être chronométré et repassé.</p>
+            </div>
+            <a href="/dashboard/apprenant/examens" className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">Passer le quiz</a>
+          </div>
+        ) : null}
+
         <LessonResources resources={lessonResources} />
 
         {activeLesson.type === 'exercise' && (

@@ -149,6 +149,20 @@ export function sanitizeCourseRecord(row: Row, user: AuthUser) {
     100,
     'Le seuil de reussite du certificat doit etre compris entre 1 et 100 %.',
   );
+  // Instructor's scanned signature printed on certificates (uploaded image).
+  normalized.instructor_signature_url = trimText(normalized.instructor_signature_url);
+  if (normalized.instructor_signature_url
+    && !String(normalized.instructor_signature_url).startsWith('/uploads/')
+    && !isValidAbsoluteUrl(String(normalized.instructor_signature_url))) {
+    throw new BadRequestException('La signature doit etre une image envoyee sur C2P.');
+  }
+  // Minimum attendance to the live / on-site sessions (0 = not required).
+  normalized.certificate_min_attendance = requireNumberInRange(
+    normalized.certificate_min_attendance ?? 0,
+    0,
+    100,
+    'Le taux de presence minimum doit etre compris entre 0 et 100 %.',
+  );
   normalized.modules = requireInteger(normalized.modules, 1, 200, 'Le nombre de modules doit etre compris entre 1 et 200.');
   normalized.level = normalizeCourseLevel(normalized.level);
   if (!normalized.level) {
@@ -256,6 +270,14 @@ export function sanitizeCourseLessonRecord(row: Row, user: AuthUser) {
   }
   normalized.type = type;
   normalized.content = trimText(normalized.content) ?? '';
+  // A quiz lesson points to a quiz exam of the same course (Udemy-style quiz in the curriculum).
+  normalized.exam_id = trimText(normalized.exam_id);
+  if (normalized.exam_id) {
+    const exam = findRow('exams', normalized.exam_id);
+    if (!exam || String(exam.course_id) !== String(normalized.course_id) || String(exam.type) !== 'quiz') {
+      throw new BadRequestException('Le quiz lie doit etre un quiz de cette formation.');
+    }
+  }
   normalized.code_language = trimText(normalized.code_language) ?? 'text';
   normalized.code_sample = trimText(normalized.code_sample) ?? '';
   normalized.exercise_instructions = trimText(normalized.exercise_instructions) ?? '';

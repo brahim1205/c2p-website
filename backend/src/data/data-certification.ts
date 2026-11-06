@@ -29,6 +29,8 @@ export interface CertificationRequirements {
     max_grade: number;
     pass_grade: number;
   }>;
+  /** Live / on-site sessions attendance (only when the course requires a minimum). */
+  attendance: { required_percent: number; attended: number; total: number; met: boolean } | null;
   pass_percentage: number;
   ready: boolean;
 }
@@ -57,6 +59,17 @@ function courseQuizBestPercent(courseId: string, studentId: string) {
       const total = toNumber(attempt.total) ?? 0;
       return total > 0 ? Math.max(best, ((toNumber(attempt.score) ?? 0) / total) * 100) : best;
     }, -1);
+}
+
+/** Minimum share of the course's held sessions (status "ended") the learner attended. */
+function attendanceRequirement(course: Row, studentId: string) {
+  const required = toNumber(course.certificate_min_attendance) ?? 0;
+  if (required <= 0) return null;
+  const sessions = (store.virtual_classes ?? []).filter((row) => String(row.course_id) === String(course.id) && String(row.status) === 'ended');
+  const attended = sessions.filter((session) => (store.class_attendance ?? []).some((row) =>
+    String(row.class_id) === String(session.id) && String(row.student_id) === studentId && Boolean(row.present))).length;
+  const met = sessions.length === 0 ? false : (attended / sessions.length) * 100 >= required;
+  return { required_percent: required, attended, total: sessions.length, met };
 }
 
 export function computeCertificationRequirements(course: Row, studentId: string): CertificationRequirements {
@@ -89,11 +102,13 @@ export function computeCertificationRequirements(course: Row, studentId: string)
       return { exam_id: String(exam.id), title: String(exam.title ?? 'Évaluation'), status, grade: best, max_grade: maxGrade, pass_grade: passGrade };
     });
 
+  const attendance = attendanceRequirement(course, studentId);
   return {
     lessons: { completed: lessonsCompleted, progress },
     exams,
+    attendance,
     pass_percentage: passPercentage,
-    ready: lessonsCompleted && exams.every((exam) => exam.status === 'passed'),
+    ready: lessonsCompleted && exams.every((exam) => exam.status === 'passed') && (attendance?.met ?? true),
   };
 }
 
@@ -151,6 +166,7 @@ export function syncCourseCertificate(courseId: unknown, studentId: unknown): Ce
     title: String(course.title ?? 'Formation C2P'),
     instructor_id: course.instructor_id ?? null,
     instructor_name: instructorName(course),
+    instructor_signature_url: trimText(course.instructor_signature_url),
     course_duration: trimText(course.duration),
   };
   const existing = (store.certificates ?? []).find((row) =>
@@ -176,7 +192,8 @@ export function syncCourseCertificate(courseId: unknown, studentId: unknown): Ce
     return requirements.ready ? syncCourseCertificate(course.id, student) : { rows: [created], before: [], issued: null };
   }
 
-  if (String(existing.status) === 'issued') return empty;
+  // Delivered or revoked certificates are final: only an explicit instructor action changes them.
+  if (String(existing.status) === 'issued' || String(existing.status) === 'revoked') return empty;
   const before = clone(existing);
   // Legacy statuses ("pending", "ready") join the single in-progress state until delivered.
   const patch: Row = { requirements, progress_percent: requirements.lessons.progress, status: 'in_progress', updated_at: now };

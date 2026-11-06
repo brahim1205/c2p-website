@@ -85,19 +85,30 @@ export class FormateurLearnersService {
     return { certificateId, issuedAt, certificate: prismaCertificate ?? updated[0] ?? null };
   }
 
-  async deleteCertificate(certId: string, user: AuthUser | null) {
+  /**
+   * Revokes a certificate (it stays on record, status "revoked", with the reason): its public
+   * verification then reports it as revoked, and it is never re-delivered automatically.
+   * The instructor can deliver it again explicitly.
+   */
+  async deleteCertificate(certId: string, user: AuthUser | null, reason?: unknown) {
     const actor = this.requireFormateurActor(user);
     await syncAppStoreFromDatabase(this.prisma);
     const certificate = this.getInstructorCertificate(certId, actor);
-    store.certificates = (store.certificates ?? []).filter((row) => String(row.id) !== String(certificate.id));
-    recomputeDerivedData();
-    await this.platformPersistenceService.deleteRows({ certificates: [String(certificate.id)] }, {
-      actorId: actor.id,
-      reason: 'learning:formateur:certificate:delete',
-      beforeRowsByTable: { certificates: [certificate] },
+    const text = String(reason ?? '').trim().slice(0, 300) || 'Revoque par le formateur.';
+    const previous = clone(certificate);
+    const updated = patchAppRows('certificates', (row) => String(row.id) === String(certificate.id), {
+      status: 'revoked',
+      revoked_at: new Date().toISOString(),
+      revoked_reason: text,
+      revoked_by: actor.id,
     });
-    await this.learningAssessmentsReadService.assertCertificateDeleted(String(certificate.id));
-    return certificate;
+    await this.platformPersistenceService.persistRows({ certificates: updated }, {
+      actorId: actor.id,
+      reason: 'learning:formateur:certificate:revoke',
+      beforeRowsByTable: { certificates: [previous] },
+      afterRowsByTable: { certificates: updated },
+    });
+    return updated[0] ?? certificate;
   }
 
   async getLearners(user: AuthUser | null) {

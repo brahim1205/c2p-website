@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/useToast';
 import {
   fetchApprenantExamensSnapshot,
   fetchApprenantQuizStructure,
+  startApprenantExam,
   submitApprenantExamAnswer,
   type ApprenantExam as Exam,
   type ApprenantQuizAnswerPayload as QuizAnswerPayload,
@@ -113,12 +114,21 @@ export function useApprenantExamensSession() {
     resetQuizDrafts();
   }, [resetQuizDrafts]);
 
+  const [deadline, setDeadline] = useState<string | null>(null);
+
   const openSubmit = (exam: Exam) => {
     if (exam.type === 'quiz' && (exam.questions_count ?? 0) === 0) {
       toastError('Quiz indisponible', 'Ce quiz n’est pas encore configure par le formateur.');
       return;
     }
 
+    setDeadline(null);
+    if (exam.type === 'quiz' && (exam.timer_minutes ?? 0) > 0) {
+      // The server fixes the deadline at the first opening (reloading does not restart it).
+      void startApprenantExam(exam.id)
+        .then((session) => setDeadline(session.deadline))
+        .catch(() => toastError('Chronomètre indisponible', 'Le quiz reste accessible, mais le temps n’a pas pu être démarré.'));
+    }
     setSelectedExam(exam);
     setShowSubmitModal(true);
     setAnswerText('');
@@ -150,7 +160,7 @@ export function useApprenantExamensSession() {
 
   const latestSubmissions = useMemo(() => submissions.slice(0, 4), [submissions]);
 
-  const handleSubmitExam = async (event: FormEvent) => {
+  const handleSubmitExam = async (event: FormEvent, options: { timedOut?: boolean } = {}) => {
     event.preventDefault();
     if (!selectedExam) return;
     if (!studentId || !studentName) {
@@ -183,7 +193,7 @@ export function useApprenantExamensSession() {
           : draft.selected_choice_ids.length === 0;
       });
 
-      if (hasInvalidRequiredAnswer) {
+      if (hasInvalidRequiredAnswer && !options.timedOut) {
         toastError('Réponses incomplètes', 'Veuillez répondre à toutes les questions obligatoires avant de soumettre.');
         return;
       }
@@ -194,6 +204,7 @@ export function useApprenantExamensSession() {
         student_name: studentName,
         status: 'pending',
         answers,
+        ...(options.timedOut ? { timed_out: true } : {}),
       };
     } else {
       if (!answerText.trim() && !answerFile) {
@@ -268,6 +279,11 @@ export function useApprenantExamensSession() {
       quizAnswerDrafts,
       answerFileInputRef,
       onClose: resetSubmitState,
+      deadline,
+      onTimeUp: () => {
+        toastError('Temps écoulé', 'Vos réponses sont envoyées automatiquement.');
+        void handleSubmitExam({ preventDefault() {} } as FormEvent, { timedOut: true });
+      },
       onSubmit: (event) => {
         void handleSubmitExam(event);
       },

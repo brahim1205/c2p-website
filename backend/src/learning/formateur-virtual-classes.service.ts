@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { isAdminRole, type AuthUser } from '../auth/auth.store.js';
 import { PlatformPersistenceService } from '../database/platform-persistence.service.js';
 import { PrismaService } from '../database/prisma.service.js';
-import { appendVirtualClassCreateEvents, appendVirtualClassUpdateEvents } from '../data/data-virtual-class-events.js';
+import { appendVirtualClassCreateEvents, appendVirtualClassUpdateEvents, buildVirtualClassNotificationRows } from '../data/data-virtual-class-events.js';
 import {
   appendAppRows,
   clone,
@@ -18,12 +18,15 @@ import { ensureConstraints, prepareInsert, recomputeDerivedData } from '../data/
 import { hydrateRows } from '../data/data-row-hydration.js';
 import type { Row } from '../data/mock-store.js';
 import type { OutboxEventInput } from '../outbox/outbox.types.js';
+import { enrollmentPairsForCourses } from '../data/data-certification.js';
+import { LearningCertificationService } from './learning-certification.service.js';
 
 @Injectable()
 export class FormateurVirtualClassesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly platformPersistenceService: PlatformPersistenceService,
+    private readonly learningCertificationService: LearningCertificationService,
   ) {}
 
   async getSnapshot(user: AuthUser | null) {
@@ -91,11 +94,15 @@ export class FormateurVirtualClassesService {
     const updated = patchAppRows('virtual_classes', (row) => String(row.id) === String(virtualClass.id), sanitized);
     const outboxEvents: OutboxEventInput[] = [];
     appendVirtualClassUpdateEvents(this.eventsContext(), [previous], updated, outboxEvents, actor.id);
-    await this.platformPersistenceService.persistRows({ virtual_classes: updated }, {
+    // A session that ends changes the attendance ratio used by the certificates of the course.
+    const certification = String(previous.status) !== 'ended' && String(updated[0]?.status) === 'ended'
+      ? this.learningCertificationService.collect(enrollmentPairsForCourses([String(virtualClass.course_id)]))
+      : { rowsByTable: {}, beforeRowsByTable: {} };
+    await this.platformPersistenceService.persistRows({ virtual_classes: updated, ...certification.rowsByTable }, {
       actorId: actor.id,
       reason: 'learning:formateur:virtual-class:update',
-      beforeRowsByTable: { virtual_classes: [previous] },
-      afterRowsByTable: { virtual_classes: updated },
+      beforeRowsByTable: { virtual_classes: [previous], ...certification.beforeRowsByTable },
+      afterRowsByTable: { virtual_classes: updated, ...certification.rowsByTable },
       outboxEvents,
     });
     return updated[0] ?? sanitized;
@@ -114,6 +121,18 @@ export class FormateurVirtualClassesService {
     const actor = this.requireFormateurActor(user);
     await syncAppStoreFromDatabase(this.prisma);
     const virtualClass = this.getInstructorVirtualClass(classId, actor);
+    // Learners expecting this session are told it no longer takes place.
+    if (String(virtualClass.status) === 'scheduled') {
+      const cancelled = buildVirtualClassNotificationRows(this.eventsContext(), virtualClass, 'live-cancelled');
+      if (cancelled.length) {
+        const rows = appendAppRows('notifications', cancelled.map((row) => withId(prepareInsert('notifications', row))));
+        await this.platformPersistenceService.persistRows({ notifications: rows }, {
+          actorId: actor.id,
+          reason: 'learning:formateur:virtual-class:cancel-notify',
+          afterRowsByTable: { notifications: rows },
+        });
+      }
+    }
     store.virtual_classes = (store.virtual_classes ?? []).filter((row) => String(row.id) !== String(virtualClass.id));
     recomputeDerivedData();
     await this.platformPersistenceService.deleteRows({ virtual_classes: [String(virtualClass.id)] }, {

@@ -3,13 +3,13 @@ import { createVirtualClassNotifications, type AppNotificationRow } from '../not
 import type { OutboxEventInput } from '../outbox/outbox.types.js';
 import type { Row } from './mock-store.js';
 
-type VirtualClassNotificationEvent = 'live-scheduled' | 'live-updated' | 'live-started' | 'live-ended' | 'replay-ready';
+type VirtualClassNotificationEvent = 'live-scheduled' | 'live-updated' | 'live-started' | 'live-ended' | 'replay-ready' | 'live-cancelled' | 'live-reminder';
 
 interface VirtualClassEventsContext {
   getCourseEnrollments: (courseId: string) => Array<{ user_id: string; student_name: string }>;
 }
 
-function buildVirtualClassNotificationRows(
+export function buildVirtualClassNotificationRows(
   ctx: VirtualClassEventsContext,
   vclass: Row,
   eventType: VirtualClassNotificationEvent,
@@ -56,6 +56,9 @@ export function appendVirtualClassUpdateEvents(
       }
       if (String(row.status) === 'ended') {
         return buildVirtualClassNotificationRows(ctx, row, row.recording_url ? 'replay-ready' : 'live-ended');
+      }
+      if (String(row.status) === 'cancelled') {
+        return buildVirtualClassNotificationRows(ctx, row, 'live-cancelled');
       }
     }
 

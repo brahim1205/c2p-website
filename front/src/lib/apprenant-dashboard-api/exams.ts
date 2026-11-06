@@ -21,3 +21,11 @@ export async function submitApprenantExamAnswer(input: {
     },
   );
 }
+
+/** Starts (or resumes) a quiz attempt; for a timed quiz the server fixes the deadline. */
+export async function startApprenantExam(examId: string | number) {
+  return apiRequest<{ timer_minutes: number; started_at: string | null; deadline: string | null; attempt: number }>(
+    `/learning/apprenant/exams/${encodeURIComponent(String(examId))}/start`,
+    { method: 'POST' },
+  );
+}

@@ -464,8 +464,9 @@ export class LearningController {
   deleteFormateurCertificate(
     @Req() request: AuthenticatedRequest,
     @Param('certId') certId: string,
+    @Query('reason') reason?: string,
   ) {
-    return this.formateurLearnersService.deleteCertificate(certId, request.auth?.user ?? null);
+    return this.formateurLearnersService.deleteCertificate(certId, request.auth?.user ?? null, reason);
   }
 
   @Get('formateur/learners')

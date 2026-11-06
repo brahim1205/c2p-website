@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { store } from './data-app-store.js';
 import { examPassGrade, syncCourseCertificate } from './data-certification.js';
 
-const TABLES = ['courses', 'course_enrollments', 'exams', 'submissions', 'certificates', 'course_quiz_attempts'] as const;
+const TABLES = ['courses', 'course_enrollments', 'exams', 'submissions', 'certificates', 'course_quiz_attempts', 'virtual_classes', 'class_attendance'] as const;
 let saved: Record<string, unknown> = {};
 
 function setup(course: Record<string, unknown> = {}) {
@@ -16,6 +16,8 @@ function setup(course: Record<string, unknown> = {}) {
   store.submissions = [];
   store.certificates = [];
   store.course_quiz_attempts = [];
+  store.virtual_classes = [];
+  store.class_attendance = [];
 }
 
 function certificate() {
@@ -82,6 +84,22 @@ describe('course certification', () => {
     store.certificates = [{ id: 'old', course_id: 'c-spec', student_id: 's-spec', status: 'pending' }];
     syncCourseCertificate('c-spec', 's-spec');
     assert.equal(certificate()?.status, 'in_progress');
+  });
+
+  it('requires the minimum attendance to held sessions when the course sets one', () => {
+    setup({ certificate_min_attendance: 50 });
+    store.exams = [];
+    store.course_enrollments[0].progress = 100;
+    store.virtual_classes = [
+      { id: 'v1', course_id: 'c-spec', status: 'ended' },
+      { id: 'v2', course_id: 'c-spec', status: 'ended' },
+      { id: 'v3', course_id: 'c-spec', status: 'scheduled' },
+    ];
+    syncCourseCertificate('c-spec', 's-spec');
+    assert.equal(certificate()?.status, 'in_progress', 'no attendance yet');
+    store.class_attendance = [{ id: 'a1', class_id: 'v1', student_id: 's-spec', present: true }];
+    syncCourseCertificate('c-spec', 's-spec');
+    assert.equal(certificate()?.status, 'issued', '1 of 2 held sessions = 50 %');
   });
 
   it('uses the course percentage when an exam has no explicit pass mark', () => {

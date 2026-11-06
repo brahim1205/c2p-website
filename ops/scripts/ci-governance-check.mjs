@@ -494,7 +494,7 @@ function main() {
   assertContains(formateurCourseProgramService, 'backend/src/learning/formateur-course-program.service.ts', 'sanitizeLessonAssetRecord', failures);
   assertContains(formateurCourseProgramService, 'backend/src/learning/formateur-course-program.service.ts', 'applyDataDeleteCascade', failures);
   assertContains(formateurLearnersService, 'backend/src/learning/formateur-learners.service.ts', 'learning:formateur:certificate:issue', failures);
-  assertContains(formateurLearnersService, 'backend/src/learning/formateur-learners.service.ts', 'learning:formateur:certificate:delete', failures);
+  assertContains(formateurLearnersService, 'backend/src/learning/formateur-learners.service.ts', 'learning:formateur:certificate:revoke', failures);
   assertContains(formateurLearnersService, 'backend/src/learning/formateur-learners.service.ts', 'getLearners', failures);
   assertContains(formateurLearnersService, 'backend/src/learning/formateur-learners.service.ts', 'getLearnerDetail', failures);
   assertContains(formateurLearnersService, 'backend/src/learning/formateur-learners.service.ts', 'filterRowsForActor', failures);
@@ -584,7 +584,7 @@ function main() {
   assertContains(formateurDashboardApi, 'front/src/lib/formateurDashboardApi.ts', '`/learning/formateur/courses/${encodeURIComponent(String(courseId))}/program`', failures);
   assertContains(formateurDashboardApi, 'front/src/lib/formateurDashboardApi.ts', "'/learning/formateur/certificates'", failures);
   assertContains(formateurDashboardApi, 'front/src/lib/formateurDashboardApi.ts', '`/learning/formateur/certificates/${encodeURIComponent(String(cert.id))}/issue`', failures);
-  assertContains(formateurDashboardApi, 'front/src/lib/formateurDashboardApi.ts', '`/learning/formateur/certificates/${encodeURIComponent(String(certId))}`', failures);
+  assertContains(formateurDashboardApi, 'front/src/lib/formateurDashboardApi.ts', '`/learning/formateur/certificates/${encodeURIComponent(String(certId))}${query}`', failures);
   assertContains(formateurDashboardApi, 'front/src/lib/formateurDashboardApi.ts', "'/learning/formateur/learners'", failures);
   assertContains(formateurDashboardApi, 'front/src/lib/formateurDashboardApi.ts', '`/learning/formateur/learners/${encodeURIComponent(studentId)}`', failures);
   assertContains(formateurDashboardApi, 'front/src/lib/formateurDashboardApi.ts', "'/learning/formateur/virtual-classes'", failures);

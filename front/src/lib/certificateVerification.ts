@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import { apiRequest } from './api';
 
 export interface QrMatrix {
   size: number;
@@ -58,4 +59,42 @@ export function buildQrPdfRectCommands(value: string, input: { x: number; y: num
 
   commands.push('Q');
   return commands;
+}
+
+export interface CertificateBranding {
+  stamp_url: string | null;
+  director_signature_url: string | null;
+  director_name: string | null;
+  director_title: string | null;
+}
+
+/** Official stamp and management signature set by the C2P administrators. */
+export async function fetchCertificateBranding(): Promise<CertificateBranding> {
+  return apiRequest<CertificateBranding>('/learning/public/certificate-branding');
+}
+
+/** "Add to profile" link of LinkedIn's certification form. */
+export function buildLinkedInCertificationUrl(input: { name: string; certificateId: string; issuedAt: string | null }) {
+  const issued = input.issuedAt ? new Date(input.issuedAt) : new Date();
+  const params = new URLSearchParams({
+    startTask: 'CERTIFICATION_NAME',
+    name: input.name,
+    organizationName: 'Groupe C2P Consulting L&M',
+    issueYear: String(issued.getFullYear()),
+    issueMonth: String(issued.getMonth() + 1),
+    certUrl: buildCertificateVerificationUrl(input.certificateId),
+    certId: input.certificateId,
+  });
+  return `https://www.linkedin.com/profile/add?${params.toString()}`;
+}
+
+/** Applies the C2P branding (stamp, management signature) to the data printed on a certificate. */
+export function withCertificateBranding<T extends object>(data: T, branding: CertificateBranding | null | undefined) {
+  return {
+    ...data,
+    stampUrl: branding?.stamp_url ?? null,
+    directorSignatureUrl: branding?.director_signature_url ?? null,
+    directorName: branding?.director_name ?? null,
+    directorTitle: branding?.director_title ?? null,
+  };
 }

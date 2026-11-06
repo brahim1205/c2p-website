@@ -131,6 +131,7 @@ export function useCreateExamSession({
         max_grade: newExam.max_grade || 20,
         passing_grade: newExam.passing_grade ?? null,
         max_attempts: newExam.max_attempts ?? 3,
+        timer_minutes: newExam.timer_minutes ?? 0,
       });
       if (!isMountedRef.current) return;
 

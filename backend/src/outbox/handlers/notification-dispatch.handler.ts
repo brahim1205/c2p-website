@@ -3,7 +3,7 @@ import { OutboxDeliveryLogService } from '../outbox-delivery-log.service.js';
 import { OutboxNotificationService } from '../outbox-notification.service.js';
 import type { OutboxEventDescriptor, OutboxEventHandler } from '../outbox.types.js';
 
-const SUPPORTED_NOTIFICATION_EVENTS = new Set([
+export const SUPPORTED_NOTIFICATION_EVENTS = new Set([
   'communications.notification.dispatch',
   'support.contact_submitted',
   'payout.requested',

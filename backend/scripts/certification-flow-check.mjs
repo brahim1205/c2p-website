@@ -159,6 +159,59 @@ async function main() {
       const formateurView = expectOk(await call(formateur, 'GET', '/learning/formateur/certificates'), 'formateur certificates');
       expect((formateurView ?? []).some((row) => String(row.id) === String(certificate.id) && row.status === 'issued'), 'certificat absent cote formateur');
     });
+
+    await step('revocation : definitive, motif public, jamais redelivree automatiquement', async () => {
+      const certificate = await learnerCertificate();
+      const revoked = expectOk(await call(formateur, 'DELETE', `/learning/formateur/certificates/${enc(certificate.id)}?reason=${enc('Plagiat constate')}`), 'revoke');
+      expect(revoked.status === 'revoked', `revocation = ${JSON.stringify(revoked)}`);
+      const verify = expectOk(await call(null, 'GET', `/public/certificates/${enc(certificate.certificate_number)}/verify`), 'verify revoked');
+      expect(verify.valid === false && verify.revoked === true && verify.revokedReason === 'Plagiat constate', `verification = ${JSON.stringify(verify)}`);
+      expectOk(await call(formateur, 'GET', '/learning/formateur/certificates'), 'sync after revoke');
+      const again = await learnerCertificate();
+      expect(again?.status === 'revoked', `certificat recree ou redelivre : ${again?.status}`);
+    });
+
+    await step('evaluation : modification, ouverture, chronometre, fermeture', async () => {
+      const quiz = expectOk(await call(formateur, 'POST', '/learning/formateur/exams', {
+        course_id: state.courseId, title: `Quiz chrono ${RUN_ID}`, type: 'quiz', exam_date: '2027-06-01',
+        participants: 1, submitted: 0, status: 'upcoming', max_grade: 20, timer_minutes: 10, instructions: 'x', attachments: [],
+      }), 'POST quiz');
+      const edited = expectOk(await call(formateur, 'PATCH', `/learning/formateur/exams/${enc(quiz.id)}`, { title: `Quiz chrono modifie ${RUN_ID}`, passing_grade: 14 }), 'PATCH exam');
+      expect(edited.title.includes('modifie') && Number(edited.passing_grade) === 14, `modification = ${JSON.stringify(edited)}`);
+      const empty = await call(formateur, 'PATCH', `/learning/formateur/exams/${enc(quiz.id)}/status`, { status: 'ongoing' });
+      expect(empty.status === 400, `ouverture d un quiz sans question -> ${empty.status}`);
+      const question = expectOk(await call(formateur, 'POST', `/learning/formateur/exams/${enc(quiz.id)}/quiz/questions`, { prompt: 'Q', type: 'single_choice', points: 20, explanation: '', required: true }), 'question');
+      const choice = expectOk(await call(formateur, 'POST', `/learning/formateur/exams/${enc(quiz.id)}/quiz/choices`, { questionId: question.id, label: 'A', value: 'a', is_correct: true }), 'choice');
+      expectOk(await call(formateur, 'PATCH', `/learning/formateur/exams/${enc(quiz.id)}/status`, { status: 'ongoing' }), 'open');
+      const session = expectOk(await call(apprenant, 'POST', `/learning/apprenant/exams/${enc(quiz.id)}/start`), 'start');
+      expect(session.timer_minutes === 10 && session.deadline, `session = ${JSON.stringify(session)}`);
+      const resumed = expectOk(await call(apprenant, 'POST', `/learning/apprenant/exams/${enc(quiz.id)}/start`), 'resume');
+      expect(resumed.deadline === session.deadline, 'le chronometre a ete relance');
+      expectOk(await call(formateur, 'PATCH', `/learning/formateur/exams/${enc(quiz.id)}/status`, { status: 'closed' }), 'close');
+      const closed = await call(apprenant, 'POST', `/learning/apprenant/exams/${enc(quiz.id)}/submissions`, {
+        answers: [{ question_id: question.id, question_prompt: 'Q', question_type: 'single_choice', answer_text: null, selected_choice_ids: [String(choice.id)] }],
+      });
+      expect(!closed.ok, `soumission acceptee sur un quiz ferme (${closed.status})`);
+    });
+
+    await step('presence aux seances : auto-pointage et feuille du formateur', async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const vclass = expectOk(await call(formateur, 'POST', '/learning/formateur/virtual-classes', {
+        course_id: state.courseId, title: `Live ${RUN_ID}`, class_date: '2027-06-01', class_time: '18:00', duration: '1h',
+        max_students: 30, provider: 'jitsi', status: 'scheduled', recording_enabled: false,
+      }), 'POST class');
+      expect(vclass.id, 'classe non creee');
+      expectOk(await call(formateur, 'PATCH', `/learning/formateur/virtual-classes/${enc(vclass.id)}/status`, { status: 'live' }), 'live');
+      const checkin = expectOk(await call(apprenant, 'POST', `/learning/apprenant/virtual-classes/${enc(vclass.id)}/attendance`), 'check-in');
+      expect(checkin.recorded === true, `pointage = ${JSON.stringify(checkin)} (${today})`);
+      const sheet = expectOk(await call(formateur, 'GET', `/learning/formateur/virtual-classes/${enc(vclass.id)}/attendance`), 'sheet');
+      const me = sheet.learners.find((row) => row.present);
+      expect(me && me.source === 'self', `feuille = ${JSON.stringify(sheet)}`);
+      expectOk(await call(formateur, 'PATCH', `/learning/formateur/virtual-classes/${enc(vclass.id)}/attendance`, { student_id: me.student_id, present: false }), 'mark absent');
+      const after = expectOk(await call(formateur, 'GET', `/learning/formateur/virtual-classes/${enc(vclass.id)}/attendance`), 'sheet after');
+      expect(!after.learners.find((row) => row.student_id === me.student_id)?.present, 'absence non enregistree');
+      await call(formateur, 'DELETE', `/learning/formateur/virtual-classes/${enc(vclass.id)}`);
+    });
   } catch {
     // failure already recorded by step()
   } finally {

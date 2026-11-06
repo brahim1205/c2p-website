@@ -46,7 +46,10 @@ export interface ApprenantCertificate {
   completion_date?: string | null;
   course_id?: number | string;
   instructor_name?: string | null;
+  instructor_signature_url?: string | null;
   course_duration?: string | null;
+  revoked_at?: string | null;
+  revoked_reason?: string | null;
   progress_percent?: number;
   /** Server-computed progress towards the certificate (status `in_progress`). */
   requirements?: CertificateRequirements | null;
@@ -108,6 +111,8 @@ export interface ApprenantExam {
   questions_count?: number;
   pass_grade?: number;
   max_attempts?: number;
+  /** Quiz time limit in minutes (0 = none). */
+  timer_minutes?: number;
   created_at: string;
 }
 

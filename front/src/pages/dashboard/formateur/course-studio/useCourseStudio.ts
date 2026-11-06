@@ -5,6 +5,7 @@ import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import { useToast } from '@/hooks/useToast';
 import {
   applyFormateurCurriculumOrder,
+  createFormateurExam,
   deleteFormateurCourseLesson,
   deleteFormateurCourseSection,
   deleteFormateurLessonAsset,
@@ -51,6 +52,7 @@ function lessonPayload(lesson: StudioLesson, patch: Partial<StudioLesson> = {}) 
     is_preview: Boolean(next.is_preview),
     status: 'published' as const,
     position: next.position,
+    exam_id: next.exam_id ?? null,
   };
 }
 
@@ -153,16 +155,32 @@ export function useCourseStudio(courseId: string | undefined) {
 
   const addLesson = (sectionId: EntityId, type: StudioLessonType, title: string) => {
     const siblings = (program?.lessons ?? []).filter((lesson) => String(lesson.section_id) === String(sectionId));
-    return run(
-      () => saveFormateurCourseLesson(userId, courseId ?? '', {
+    return run(async () => {
+      // Udemy-style quiz in the curriculum: a quiz exam (kept hidden until you open it) + its lesson.
+      let examId: string | null = null;
+      if (type === 'quiz' && program) {
+        const exam = await createFormateurExam(userId, {
+          course_id: courseId ?? '',
+          course_name: program.course.title,
+          title,
+          type: 'quiz',
+          exam_date: new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10),
+          participants: 0,
+          submitted: 0,
+          status: 'upcoming',
+          max_grade: 20,
+          attachments: [],
+        });
+        examId = String(exam.id);
+      }
+      return saveFormateurCourseLesson(userId, courseId ?? '', {
         ...lessonPayload({
           id: '', course_id: courseId ?? '', section_id: sectionId, title, description: '', type,
-          duration: '', position: siblings.length + 1, is_preview: false, status: 'published',
+          duration: '', position: siblings.length + 1, is_preview: false, status: 'published', exam_id: examId,
         }),
         id: undefined,
-      }) as unknown as Promise<StudioLesson>,
-      'Impossible d’ajouter la leçon.',
-    );
+      }) as unknown as Promise<StudioLesson>;
+    }, 'Impossible d’ajouter la leçon.');
   };
 
   const updateLesson = (lesson: StudioLesson, patch: Partial<StudioLesson>) => {
