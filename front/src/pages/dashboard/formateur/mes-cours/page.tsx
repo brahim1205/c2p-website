@@ -3,10 +3,10 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import SubscriptionRequiredBanner from '@/components/feature/SubscriptionRequiredBanner';
 import { getInstructorWorkflowAction } from '@/lib/courseWorkflow';
+import { EmptyCoursesState } from './EmptyCoursesState';
 import {
   CourseFilters,
   CoursesGrid,
-  EmptyCoursesState,
   WorkflowModal,
 } from './FormateurCoursesPanels';
 import { useFormateurCoursesSession } from './useFormateurCoursesSession';

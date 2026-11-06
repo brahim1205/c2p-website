@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import Breadcrumb from '@/components/base/Breadcrumb';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,7 +27,8 @@ import {
   SettingsHeader,
   SettingsSidebar,
 } from './ParametresPanels';
-import { SETTINGS_TAB_PARAM, settingsTabsFor, type AccountSettingsForm, type PasswordSettingsForm, type SettingsTab } from './parametresModel';
+import type { AccountSettingsForm, PasswordSettingsForm } from './parametresModel';
+import { useSettingsTab } from './useSettingsTab';
 
 // Instructor-only tab: loaded on demand so other roles do not download the profile editor.
 const FormateurPublicProfileSection = lazy(() => import('../formateur/profil-public/FormateurPublicProfileSection'));
@@ -48,19 +49,7 @@ export default function ParametresPage() {
   const navigate = useNavigate();
   const { user, updateUser, logout } = useAuth();
   const { success, info, error } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tabs = useMemo(() => settingsTabsFor(user?.role), [user?.role]);
-  const requestedTab = SETTINGS_TAB_PARAM[searchParams.get('onglet') ?? ''];
-  const [selectedTab, setSelectedTab] = useState<SettingsTab>(requestedTab ?? 'account');
-  useEffect(() => {
-    if (requestedTab) setSelectedTab(requestedTab);
-  }, [requestedTab]);
-  const activeTab: SettingsTab = tabs.some((tab) => tab.id === selectedTab) ? selectedTab : 'account';
-  const setActiveTab = (tab: SettingsTab) => {
-    setSelectedTab(tab);
-    const param = Object.entries(SETTINGS_TAB_PARAM).find(([, value]) => value === tab)?.[0];
-    setSearchParams(param ? { onglet: param } : {}, { replace: true });
-  };
+  const { tabs, activeTab, setActiveTab } = useSettingsTab(user?.role);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);

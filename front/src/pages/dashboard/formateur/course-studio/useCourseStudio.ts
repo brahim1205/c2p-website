@@ -30,31 +30,13 @@ import {
   type StudioLesson,
   type StudioLessonType,
   type StudioProgram,
+  lessonPayload,
 } from './studioModel';
 import { assetTypeForFile, readVideoDurationSeconds, uploadCourseFile } from './studioUploads';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 export type CurriculumOrder = Array<{ id: string; lesson_ids: string[] }>;
 
-function lessonPayload(lesson: StudioLesson, patch: Partial<StudioLesson> = {}) {
-  const next = { ...lesson, ...patch };
-  return {
-    id: next.id,
-    section_id: String(next.section_id),
-    title: next.title,
-    description: next.description ?? '',
-    type: next.type,
-    duration: next.duration ?? '',
-    content: next.content ?? '',
-    code_language: next.code_language ?? '',
-    code_sample: next.code_sample ?? '',
-    exercise_instructions: next.exercise_instructions ?? '',
-    is_preview: Boolean(next.is_preview),
-    status: 'published' as const,
-    position: next.position,
-    exam_id: next.exam_id ?? null,
-  };
-}
 
 export function useCourseStudio(courseId: string | undefined) {
   const { user } = useAuth();

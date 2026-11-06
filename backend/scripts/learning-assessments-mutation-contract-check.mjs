@@ -86,7 +86,8 @@ function main() {
 
   for (const [mutationMethod, readbackMethod] of [
     ['issueCertificate', 'getCertificateById'],
-    ['deleteCertificate', 'assertCertificateDeleted'],
+    // Certificates are revoked (kept on record), not deleted: read the revoked row back.
+    ['deleteCertificate', 'getCertificateById'],
   ]) {
     const body = methodBody(formateurLearnersSource, mutationMethod);
     if (!body) {

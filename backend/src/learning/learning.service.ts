@@ -26,6 +26,7 @@ import type { Row } from '../data/mock-store.js';
 import { LearningAssessmentsCommandService } from './learning-assessments-command.service.js';
 import { LearningAssessmentsReadService } from './learning-assessments-read.service.js';
 import { ExamLifecycleService } from './exam-lifecycle.service.js';
+import { canRetry, mergeRows, withAttemptRules, withPassGrades } from './learning-attempt-rules.js';
 import { LearningCertificationService } from './learning-certification.service.js';
 type ProgressPayload = { progress?: unknown; completedLessons?: unknown; completedLessonIds?: unknown };
 @Injectable()
@@ -45,7 +46,7 @@ export class LearningService {
     }
     const prismaSnapshot = await this.learningAssessmentsReadService.getApprenantExamsSnapshot(actor);
     await syncAppStoreFromDatabase(this.prisma);
-    if (prismaSnapshot) return this.withAttemptRules(prismaSnapshot);
+    if (prismaSnapshot) return withAttemptRules(prismaSnapshot);
     const enrollments = this.accessibleRows('course_enrollments', actor);
     const courseIds = new Set(enrollments.map((enrollment) => String(enrollment.course_id)));
     const exams = this.accessibleRows('exams', actor)
@@ -53,30 +54,10 @@ export class LearningService {
       .sort((left, right) => this.compareDatesDesc(left.exam_date ?? left.created_at, right.exam_date ?? right.created_at));
     const submissions = this.accessibleRows('submissions', actor)
       .sort((left, right) => this.compareDatesDesc(left.submitted_at ?? left.created_at, right.submitted_at ?? right.created_at));
-    return this.withAttemptRules({
+    return withAttemptRules({
       exams: exams.map((exam) => this.toApprenantExam(exam)),
       submissions,
     });
-  }
-  /** Adds each exam's pass mark and whether the learner may submit again (new version / quiz retry). */
-  private withAttemptRules(snapshot: { exams: Row[]; submissions: Row[] }) {
-    const examById = new Map((store.exams ?? []).map((exam) => [String(exam.id), exam]));
-    const passGrade = (exam: Row) => examPassGrade(exam, findRow('courses', exam.course_id));
-    return {
-      exams: snapshot.exams.map((exam) => {
-        const source = examById.get(String(exam.id)) ?? exam;
-        return { ...exam, pass_grade: passGrade(source), max_attempts: toNumber(source.max_attempts) ?? 3, timer_minutes: toNumber(source.timer_minutes) ?? 0 };
-      }),
-      submissions: snapshot.submissions.map((submission) => {
-        const exam = examById.get(String(submission.exam_id));
-        return {
-          ...submission,
-          attempt: toNumber(submission.attempt) ?? 1,
-          pass_grade: exam ? passGrade(exam) : null,
-          can_retry: exam ? this.canRetry(submission, exam) : false,
-        };
-      }),
-    };
   }
   async getApprenantEnrollments(user: AuthUser | null, options: { limit?: unknown } = {}) {
     const actor = this.requireApprenantReadActor(user);
@@ -183,7 +164,7 @@ export class LearningService {
     const existing = (store.submissions ?? []).find((submission) =>
       String(submission.exam_id) === String(exam.id) && String(submission.student_id) === String(actor.id),
     );
-    if (existing && !this.canRetry(existing, exam)) {
+    if (existing && !canRetry(existing, exam)) {
       throw new ConflictException(String(exam.type) === 'quiz' && String(existing.status) === 'graded'
         ? 'Vous avez utilise toutes vos tentatives pour ce quiz.'
         : 'Cette evaluation a deja ete soumise.');
@@ -241,7 +222,7 @@ export class LearningService {
       rowsToPersist.notifications = appendAppRows('notifications', [notification]);
     }
     const certification = this.learningCertificationService.collect([{ courseId: exam.course_id, studentId: actor.id }]);
-    Object.assign(rowsToPersist, this.mergeRows(rowsToPersist, certification.rowsByTable));
+    Object.assign(rowsToPersist, mergeRows(rowsToPersist, certification.rowsByTable));
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
       reason: existing ? 'learning:apprenant:exam:resubmit' : 'learning:apprenant:exam:submit',
@@ -254,7 +235,7 @@ export class LearningService {
     const actor = this.requireFormateurActor(user);
     const prismaSnapshot = await this.learningAssessmentsReadService.getFormateurEvaluationsSnapshot(actor);
     await syncAppStoreFromDatabase(this.prisma);
-    if (prismaSnapshot) return this.withPassGrades(prismaSnapshot);
+    if (prismaSnapshot) return withPassGrades(prismaSnapshot);
     const courses = this.getInstructorCourses(actor)
       .sort((left, right) => this.compareDatesDesc(left.updated_at ?? left.created_at, right.updated_at ?? right.created_at));
     const courseIds = new Set(courses.map((course) => String(course.id)));
@@ -265,7 +246,7 @@ export class LearningService {
     const submissions = hydrateRows('submissions', this.accessibleRows('submissions', actor))
       .filter((submission) => examIds.has(String(submission.exam_id)))
       .sort((left, right) => this.compareDatesDesc(left.submitted_at ?? left.created_at, right.submitted_at ?? right.created_at));
-    return this.withPassGrades({
+    return withPassGrades({
       exams,
       submissions,
       courses: courses.map((course) => ({
@@ -274,17 +255,6 @@ export class LearningService {
         delivery_mode: course.delivery_mode,
       })),
     });
-  }
-  /** Effective pass mark of each exam (its own, or the course certificate percentage). */
-  private withPassGrades<T extends { exams: Row[] }>(snapshot: T): T {
-    const examById = new Map((store.exams ?? []).map((exam) => [String(exam.id), exam]));
-    return {
-      ...snapshot,
-      exams: snapshot.exams.map((exam) => {
-        const source = examById.get(String(exam.id)) ?? exam;
-        return { ...exam, pass_grade: examPassGrade(source, findRow('courses', source.course_id)), passing_grade: source.passing_grade ?? null, max_attempts: toNumber(source.max_attempts) ?? 3 };
-      }),
-    };
   }
   async createFormateurExam(payload: unknown, user: AuthUser | null) {
     return this.learningAssessmentsCommandService.createFormateurExam(payload, user);
@@ -363,7 +333,7 @@ export class LearningService {
       })));
       rowsToPersist.notifications = appendAppRows('notifications', [notification]);
     }
-    Object.assign(rowsToPersist, this.mergeRows(rowsToPersist, certification.rowsByTable));
+    Object.assign(rowsToPersist, mergeRows(rowsToPersist, certification.rowsByTable));
     await this.platformPersistenceService.persistRows(rowsToPersist, {
       actorId: actor.id,
       reason: 'learning:formateur:submission:grade',
@@ -400,7 +370,7 @@ export class LearningService {
     const rowsToPersist: Record<string, Row[]> = { submissions: updated };
     this.includeDerivedExam(rowsToPersist, submission.exam_id);
     const certification = this.learningCertificationService.collect([{ courseId: exam.course_id, studentId: submission.student_id }]);
-    Object.assign(rowsToPersist, this.mergeRows(rowsToPersist, certification.rowsByTable));
+    Object.assign(rowsToPersist, mergeRows(rowsToPersist, certification.rowsByTable));
     if (submission.student_id) {
       const notification = withId(prepareInsert('notifications', createAppNotificationRow({
         userId: String(submission.student_id),
@@ -419,23 +389,6 @@ export class LearningService {
       afterRowsByTable: rowsToPersist,
     });
     return await this.learningAssessmentsReadService.getSubmissionById(String(submission.id), actor) ?? updated[0];
-  }
-  /** A new attempt is allowed after a "new version" request, or for a failed quiz with attempts left. */
-  private canRetry(submission: Row, exam: Row) {
-    if (String(submission.status) === 'resubmit') return true;
-    if (String(exam.type) !== 'quiz' || String(submission.status) !== 'graded') return false;
-    const course = findRow('courses', exam.course_id);
-    const passed = (toNumber(submission.grade) ?? 0) >= examPassGrade(exam, course);
-    const attempts = toNumber(submission.attempt) ?? 1;
-    return !passed && attempts < (toNumber(exam.max_attempts) ?? 3);
-  }
-  /** Concatenates rows per table (e.g. notifications produced by two different steps). */
-  private mergeRows(target: Record<string, Row[]>, extra: Record<string, Row[]>) {
-    const merged: Record<string, Row[]> = {};
-    for (const [table, rows] of Object.entries(extra)) {
-      merged[table] = [...(target[table] ?? []), ...rows];
-    }
-    return merged;
   }
   private requireLearningActor(user: AuthUser | null) {
     if (!user) {

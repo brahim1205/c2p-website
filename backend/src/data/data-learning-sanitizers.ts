@@ -381,13 +381,10 @@ export function sanitizeExamRecord(row: Row, user: AuthUser) {
   normalized.participants = participants;
   normalized.submitted = submitted;
   normalized.max_grade = requireNumberInRange(normalized.max_grade ?? 20, 1, 100, 'La note maximale doit etre comprise entre 1 et 100.');
-  // Pass mark (out of max_grade) used by the certificate; empty = the course percentage.
-  normalized.passing_grade = normalized.passing_grade === undefined || normalized.passing_grade === null || normalized.passing_grade === ''
-    ? null
-    : requireNumberInRange(normalized.passing_grade, 0, Number(normalized.max_grade), 'La note de passage doit etre comprise entre 0 et la note maximale.');
-  // Attempts allowed for an automatically graded quiz (a failed attempt can be retried).
+  // Certificate pass mark (empty = course %), quiz attempts and time limit in minutes (0 = none).
+  const pass = normalized.passing_grade;
+  normalized.passing_grade = pass === undefined || pass === null || pass === '' ? null : requireNumberInRange(pass, 0, Number(normalized.max_grade), 'La note de passage doit etre comprise entre 0 et la note maximale.');
   normalized.max_attempts = requireNumberInRange(normalized.max_attempts ?? 3, 1, 10, 'Le nombre de tentatives doit etre compris entre 1 et 10.');
-  // Time limit of a quiz in minutes (0 = no limit). The countdown starts when the learner opens it.
   normalized.timer_minutes = requireNumberInRange(normalized.timer_minutes ?? 0, 0, 300, 'La duree du quiz doit etre comprise entre 0 et 300 minutes.');
   normalized.instructions = trimText(normalized.instructions);
   if (normalized.instructions && String(normalized.instructions).length > 1500) {
@@ -541,11 +538,8 @@ export function sanitizeSubmissionRecord(row: Row, user: AuthUser) {
   normalized.student_id = user.id;
   normalized.student_name = trimText(normalized.student_name) ?? normalized.student_name ?? user.id;
   normalized.student_avatar = trimText(normalized.student_avatar);
-  // Grade, feedback and the "graded" status never come from the learner: only the instructor
-  // (or the automatic quiz correction below) sets them.
-  normalized.feedback = null;
-  normalized.grade = null;
-  normalized.graded_at = null;
+  // Grade, feedback and "graded" never come from the learner (instructor or automatic quiz correction only).
+  Object.assign(normalized, { feedback: null, grade: null, graded_at: null });
   normalized.submitted_at = new Date().toISOString();
 
   const status = trimText(normalized.status) ?? 'pending';

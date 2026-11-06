@@ -464,12 +464,7 @@ export class FormateurCourseProgramService {
     return this.swapPositions('course_lessons', current, target, actor, 'learning:formateur:course-lesson:reorder');
   }
 
-  /**
-   * Applies the full curriculum order in one write (drag & drop in the course studio):
-   * `{ sections: [{ id, lesson_ids: [...] }, ...] }`. Every section and lesson of the course
-   * must appear exactly once, so a stale client can never silently drop or duplicate items.
-   * Lessons may change section; their assets follow them.
-   */
+  /** Full curriculum order in one write (studio drag & drop): every section / lesson exactly once; assets follow moved lessons. */
   async applyCurriculumOrder(courseId: string, payload: unknown, user: AuthUser | null) {
     const actor = this.requireFormateurActor(user);
     const input = this.requireObject(payload, 'Ordre du programme invalide.');

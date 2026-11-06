@@ -20,6 +20,9 @@ import {
   orderByPosition,
   type ExamFilter,
   type ExamWithStatus,
+  computeExamStats,
+  filterExams,
+  withMyStatus,
 } from './examensModel';
 import type { ExamSubmitModalProps } from './ExamSubmitModal';
 import { useExamQuizDrafts } from './useExamQuizDrafts';
@@ -79,20 +82,7 @@ export function useApprenantExamensSession() {
     showSubmitModal,
   });
 
-  const exams = useMemo<ExamWithStatus[]>(() => {
-    return (examensSnapshot?.exams || []).map((exam) => {
-      const mySubmission = submissions.find((submission: Submission) => String(submission.exam_id) === String(exam.id));
-      return {
-        ...exam,
-        submitted: !!mySubmission,
-        myGrade: mySubmission?.grade ?? null,
-        myStatus: mySubmission?.status ?? null,
-        canRetry: Boolean(mySubmission?.can_retry),
-        attempt: mySubmission?.attempt ?? (mySubmission ? 1 : 0),
-        myFeedback: mySubmission?.feedback ?? null,
-      };
-    });
-  }, [examensSnapshot?.exams, submissions]);
+  const exams = useMemo<ExamWithStatus[]>(() => withMyStatus(examensSnapshot?.exams || [], submissions), [examensSnapshot?.exams, submissions]);
 
   const quizChoicesByQuestion = useMemo(() => {
     const grouped = new Map<string, QuizChoice[]>();
@@ -122,13 +112,9 @@ export function useApprenantExamensSession() {
       return;
     }
 
+    // Timed quiz: the server fixes the deadline at the first opening (reloading does not restart it).
     setDeadline(null);
-    if (exam.type === 'quiz' && (exam.timer_minutes ?? 0) > 0) {
-      // The server fixes the deadline at the first opening (reloading does not restart it).
-      void startApprenantExam(exam.id)
-        .then((session) => setDeadline(session.deadline))
-        .catch(() => toastError('Chronomètre indisponible', 'Le quiz reste accessible, mais le temps n’a pas pu être démarré.'));
-    }
+    if (exam.type === 'quiz' && (exam.timer_minutes ?? 0) > 0) void startApprenantExam(exam.id).then((session) => setDeadline(session.deadline)).catch(() => toastError('Chronomètre indisponible', 'Le temps n’a pas pu être démarré.'));
     setSelectedExam(exam);
     setShowSubmitModal(true);
     setAnswerText('');
@@ -144,19 +130,8 @@ export function useApprenantExamensSession() {
     event.target.value = '';
   };
 
-  const examStats = useMemo(() => {
-    const todo = exams.filter((exam) => !exam.submitted || exam.canRetry).length;
-    const pending = submissions.filter((submission) => submission.status === 'pending').length;
-    const graded = submissions.filter((submission) => submission.status === 'graded').length;
-    return { total: exams.length, todo, pending, graded };
-  }, [exams, submissions]);
-
-  const filteredExams = useMemo(() => {
-    if (filter === 'todo') return exams.filter((exam) => !exam.submitted || exam.canRetry);
-    if (filter === 'pending') return exams.filter((exam) => exam.myStatus === 'pending');
-    if (filter === 'graded') return exams.filter((exam) => exam.myStatus === 'graded');
-    return exams;
-  }, [exams, filter]);
+  const examStats = useMemo(() => computeExamStats(exams, submissions), [exams, submissions]);
+  const filteredExams = useMemo(() => filterExams(exams, filter), [exams, filter]);
 
   const latestSubmissions = useMemo(() => submissions.slice(0, 4), [submissions]);
 

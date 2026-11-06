@@ -81,7 +81,15 @@ jobs:
 
       - name: Install Playwright Chromium
         working-directory: front
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 15
+        # The browser download occasionally hangs on the runner: bounded attempts instead of a 30 min stall.
+        run: |
+          for attempt in 1 2 3; do
+            timeout 240 npx playwright install --with-deps chromium && exit 0
+            echo "Playwright install attempt $attempt failed, retrying..."
+            sleep 10
+          done
+          exit 1
 
       - name: Backend dependency audit
         working-directory: backend

@@ -55,6 +55,7 @@ export const COMMAND_ONLY_WRITE_TABLES = new Set([
   'certificates',
   'client_favorites',
   'client_orders',
+  'certificate_branding',
   'course_announcements',
   'exam_sessions',
   'class_attendance',

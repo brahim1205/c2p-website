@@ -5,6 +5,7 @@ import { RequirePermission } from '../auth/require-permission.decorator.js';
 import type { AuthenticatedRequest } from '../common/http/request-context.js';
 import { CertificateBrandingService } from './certificate-branding.service.js';
 import { ExamLifecycleService } from './exam-lifecycle.service.js';
+import { FormateurCourseProgramService } from './formateur-course-program.service.js';
 import { VirtualClassEngagementService } from './virtual-class-engagement.service.js';
 
 /** Exam lifecycle (edit, open / close, timed start) and live-session attendance. */
@@ -15,7 +16,16 @@ export class LearningLifecycleController {
     private readonly examLifecycleService: ExamLifecycleService,
     private readonly virtualClassEngagementService: VirtualClassEngagementService,
     private readonly certificateBrandingService: CertificateBrandingService,
+    private readonly formateurCourseProgramService: FormateurCourseProgramService,
   ) {}
+
+  /** Course studio drag & drop: applies the full curriculum order in one write. */
+  @Put('formateur/courses/:courseId/curriculum/order')
+  @UseGuards(PermissionGuard)
+  @RequirePermission('data.learning.write')
+  applyFormateurCurriculumOrder(@Req() request: AuthenticatedRequest, @Param('courseId') courseId: string, @Body() payload: unknown) {
+    return this.formateurCourseProgramService.applyCurriculumOrder(courseId, payload, request.auth?.user ?? null);
+  }
 
   /** Stamp and management signature printed on certificates (public: needed to render them). */
   @Get('public/certificate-branding')

@@ -1,5 +1,6 @@
 import type {
   ApprenantExam as Exam,
+  ApprenantSubmission,
   ApprenantExamType as ExamType,
   ApprenantQuestionType as QuestionType,
 } from '@/lib/apprenantDashboardApi';
@@ -78,4 +79,37 @@ export function orderByPosition<T extends { position?: number }>(items: T[]) {
 
 export function isSingleAnswerType(type: QuestionType) {
   return type === 'single_choice' || type === 'true_false';
+}
+
+/** Counters of the learner's exams page (an exam awaiting a new attempt counts as "to do"). */
+export function computeExamStats(exams: ExamWithStatus[], submissions: Array<{ status: string }>) {
+  return {
+    total: exams.length,
+    todo: exams.filter((exam) => !exam.submitted || exam.canRetry).length,
+    pending: submissions.filter((submission) => submission.status === 'pending').length,
+    graded: submissions.filter((submission) => submission.status === 'graded').length,
+  };
+}
+
+export function filterExams(exams: ExamWithStatus[], filter: ExamFilter) {
+  if (filter === 'todo') return exams.filter((exam) => !exam.submitted || exam.canRetry);
+  if (filter === 'pending') return exams.filter((exam) => exam.myStatus === 'pending');
+  if (filter === 'graded') return exams.filter((exam) => exam.myStatus === 'graded');
+  return exams;
+}
+
+/** Each exam with the learner's own submission state (status, grade, retry rights...). */
+export function withMyStatus(exams: Exam[], submissions: ApprenantSubmission[]): ExamWithStatus[] {
+  return exams.map((exam) => {
+    const mine = submissions.find((submission) => String(submission.exam_id) === String(exam.id));
+    return {
+      ...exam,
+      submitted: Boolean(mine),
+      myGrade: mine?.grade ?? null,
+      myStatus: mine?.status ?? null,
+      canRetry: Boolean(mine?.can_retry),
+      attempt: mine?.attempt ?? (mine ? 1 : 0),
+      myFeedback: mine?.feedback ?? null,
+    };
+  });
 }

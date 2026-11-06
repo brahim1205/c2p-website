@@ -108,7 +108,7 @@ export class FormateurLearnersService {
       beforeRowsByTable: { certificates: [previous] },
       afterRowsByTable: { certificates: updated },
     });
-    return updated[0] ?? certificate;
+    return await this.learningAssessmentsReadService.getCertificateById(String(certificate.id), actor) ?? updated[0] ?? certificate;
   }
 
   async getLearners(user: AuthUser | null) {

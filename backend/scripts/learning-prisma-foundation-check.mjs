@@ -246,7 +246,8 @@ function main() {
       failures.push(`LearningService doit tenter le reader Prisma avant AppRow: ${runtimeSwitch}.`);
     }
   }
-  if (!learningAssessmentsReadServiceSource.includes('async getCertificateById') || !learningAssessmentsReadServiceSource.includes('async assertCertificateDeleted') || !formateurLearnersServiceSource.includes('learningAssessmentsReadService.getCertificateById') || !formateurLearnersServiceSource.includes('learningAssessmentsReadService.assertCertificateDeleted')) {
+  if (!learningAssessmentsReadServiceSource.includes('async getCertificateById') || !learningAssessmentsReadServiceSource.includes('async assertCertificateDeleted') || !formateurLearnersServiceSource.includes('learningAssessmentsReadService.getCertificateById')) {
+    // Certificates are revoked (status "revoked", kept on record) and read back, no longer deleted.
     failures.push('Les mutations certificats Learning doivent relire/verifier la projection Prisma.');
   }
   for (const assessmentMutationGuard of ['getExamById', 'getQuestionById', 'getChoiceById', 'assertExamDeleted', 'assertQuestionDeleted', 'assertChoiceDeleted']) {

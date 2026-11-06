@@ -7,6 +7,7 @@ import BrandLogo from '@/components/base/BrandLogo';
 import AvatarUpload from '@/components/base/AvatarUpload';
 import { DashboardMessagesMenu } from './DashboardMessagesMenu';
 import NotificationBell from './NotificationBell';
+import DashboardUserMenu from './DashboardUserMenu';
 import {
   baseNavItems,
   getActiveNavPath,
@@ -47,7 +48,10 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
     ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
     : '?';
   const isApprenant = user?.role === 'apprenant';
-  const profileTarget = isApprenant ? '/dashboard/parametres' : '/dashboard/profile';
+  // Formateurs edit their public profile inside the settings page.
+  const profileTarget = user?.role === 'formateur'
+    ? '/dashboard/parametres?onglet=profil-public'
+    : isApprenant ? '/dashboard/parametres' : '/dashboard/profile';
   const recentConversations = messageConversations.slice(0, 5);
 
   // Desktop sidebar width
@@ -90,21 +94,8 @@ export default function DashboardLayout({ children, hideMainScrollbar = false }:
             {/* Notifications */}
             <NotificationBell />
 
-            {/* User profile */}
-            <Link to={profileTarget} className="ml-0.5 flex items-center space-x-1 rounded-xl p-1 transition-all duration-200 hover:bg-gray-100/80 active:scale-95 sm:space-x-2 sm:p-1.5 sm:ml-1">
-              <AvatarUpload
-                src={user?.avatar ?? null}
-                initials={userInitials}
-                size="sm"
-                editable={false}
-              />
-              {user && (
-                <div className="hidden sm:block text-sm">
-                  <p className="font-medium text-gray-900">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-gray-500">{ROLE_LABELS[user.role]}</p>
-                </div>
-              )}
-            </Link>
+            {/* User menu: Mon profil / Paramètres / Déconnexion */}
+            <DashboardUserMenu user={user} initials={userInitials} profilePath={profileTarget} onLogout={() => void handleLogout()} />
           </div>
         </div>
       </header>

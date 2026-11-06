@@ -216,7 +216,6 @@ export default function FormateurAnalyticsPage() {
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                {/* Courses are separate categories: grouped bars, not a line joining unrelated courses. */}
                 <BarChart data={coursePerformance} layout="vertical" barGap={2} margin={{ left: 8, right: 16 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" unit="%" domain={[0, 100]} />
