@@ -9,7 +9,7 @@ Ce runbook suppose :
 - PostgreSQL heberge sur le VPS via Docker Compose
 - les acces DexPay et SendText disponibles cote metier
 
-Ce runbook n'expose pas Grafana, Prometheus, Alertmanager ou Loki publiquement. L'acces se fait par tunnel SSH. C'est le choix le plus propre pour un premier niveau enterprise sur VPS.
+Ce runbook n'expose pas Prometheus ni Alertmanager publiquement. L'acces se fait par tunnel SSH. C'est le choix le plus propre pour un premier niveau enterprise sur VPS.
 
 ## 0. Preparer les DNS
 
@@ -179,7 +179,7 @@ Tu vas utiliser ces valeurs au minimum pour :
 - `GF_SECURITY_ADMIN_PASSWORD`
 - toute cle fournisseur DexPay / SendText que tu dois regenerer
 
-Tous les anciens secrets de base de donnees, Redis, DexPay, SendText, Cloudinary et Grafana doivent etre rotes avant prod si leur valeur a circule hors coffre.
+Tous les anciens secrets de base de donnees, Redis, DexPay, SendText et Cloudinary doivent etre rotes avant prod si leur valeur a circule hors coffre.
 
 ## 10. Creer les fichiers d'environnement de production
 
@@ -295,7 +295,7 @@ chmod 600 /srv/c2p/ops/nginx/certs/privkey.pem
 
 ## 12. Verifier la configuration compose
 
-Important : la stack lit des variables pour Redis et Grafana. Il faut toujours utiliser `--env-file`.
+Important : la stack lit des variables pour Postgres et Redis. Il faut toujours utiliser `--env-file`.
 
 ```bash
 cd /srv/c2p
@@ -321,22 +321,18 @@ Services attendus :
 - `redis`
 - `prometheus`
 - `alertmanager`
-- `grafana`
-- `loki`
-- `promtail`
 - `node-exporter`
-- `cadvisor`
+
+La qualite du code est suivie par SonarCloud (analyse automatique sur GitHub) : aucun SonarQube n'est heberge sur le VPS.
 
 ## 14. Verifications immediates
 
 Depuis le VPS :
 
 ```bash
-curl -I http://127.0.0.1:3004
 docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml exec -T postgres pg_isready -U c2p -d c2p
 curl -fsS http://127.0.0.1:9090/-/healthy
 curl -fsS http://127.0.0.1:9093/-/healthy
-curl -fsS http://127.0.0.1:3100/ready
 curl -fsS https://c2p.sn/api/healthz
 curl -fsSI https://c2p.sn | grep -Ei 'strict-transport-security|content-security-policy|x-frame-options|x-content-type-options|referrer-policy|permissions-policy'
 ```
@@ -345,46 +341,29 @@ Verifier aussi les logs :
 
 ```bash
 docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml logs --tail=100 reverse-proxy backend postgres
-docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml logs --tail=100 grafana prometheus alertmanager loki promtail
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml logs --tail=100 prometheus alertmanager node-exporter
 ```
 
-## 15. Acceder a Grafana, Prometheus, Alertmanager et Loki
+## 15. Acceder a Prometheus et Alertmanager
 
 Depuis ta machine locale, ouvre un tunnel SSH :
 
 ```bash
-ssh -L 3004:127.0.0.1:3004 -L 9090:127.0.0.1:9090 -L 9093:127.0.0.1:9093 -L 3100:127.0.0.1:3100 deploy@c2p.sn
+ssh -L 9090:127.0.0.1:9090 -L 9093:127.0.0.1:9093 deploy@c2p.sn
 ```
 
 Ensuite ouvre :
 
-- Grafana : `http://127.0.0.1:3004`
-- Prometheus : `http://127.0.0.1:9090`
+- Prometheus : `http://127.0.0.1:9090` (onglet `Alerts` pour les alertes actives)
 - Alertmanager : `http://127.0.0.1:9093`
-- Loki readiness : `http://127.0.0.1:3100/ready`
 
-Identifiants Grafana :
+## 16. Consulter les logs
 
-- login : `GF_SECURITY_ADMIN_USER`
-- mot de passe : `GF_SECURITY_ADMIN_PASSWORD`
+Les logs des conteneurs se lisent directement avec Docker :
 
-## 16. Configurer Grafana
-
-Une fois connecte :
-
-1. Va dans `Dashboards`
-2. Ouvre le dossier `C2P`
-3. Ouvre `C2P Overview`
-4. Verifie que la datasource `Prometheus` repond
-5. Va dans `Explore`
-6. Choisis la datasource `Loki`
-7. Lance une requete :
-
-```txt
-{job="docker"}
+```bash
+docker compose --env-file ops/env/compose.production.env -f docker-compose.production.yml logs --since=1h backend
 ```
-
-Si tu vois les logs des conteneurs, Loki + Promtail sont bien en place.
 
 ## 17. Configurer Alertmanager
 
@@ -424,7 +403,6 @@ Ouvre `http://127.0.0.1:9090/targets` et controle que les targets suivantes sont
 
 - `c2p-backend`
 - `node-exporter`
-- `cadvisor`
 
 Avant le `up -d`, remplace aussi la valeur placeholder dans :
 
@@ -693,9 +671,7 @@ Le deploiement est propre si :
 - les headers de securite sont presents
 - `docker compose ps` ne montre aucun service en boucle
 - une sauvegarde `.sql.gz` recente existe dans `/srv/c2p/backups/postgres`
-- Grafana affiche `C2P Overview`
 - Prometheus montre les targets `UP`
-- Loki remonte les logs Docker
 - Alertmanager repond et a un receiver configure
 - la connexion admin fonctionne
 - le dashboard Paiements ouvre DexPay

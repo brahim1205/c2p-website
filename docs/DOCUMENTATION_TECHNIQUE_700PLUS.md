@@ -47,8 +47,8 @@
 ### 1.5 Infra / déploiement
 - Docker Compose
 - Nginx reverse proxy
-- Monitoring/alerting : Prometheus + Grafana + Alertmanager
-- Logs : Loki + Promtail
+- Monitoring/alerting : Prometheus + Alertmanager + node-exporter
+- Logs : `docker compose logs` sur le VPS
 
 ---
 
@@ -144,7 +144,7 @@ Les pages sont organisées par rôles :
 ### 3.4 `ops/`
 - `env/` : fichiers env production (exemples)
 - `nginx/` : config reverse proxy
-- `monitoring/` : dashboards/datasources/loki config
+- `monitoring/` : configuration Prometheus (alertes) et Alertmanager
 - `scripts/` : scripts de préflight/readiness/runtime checks
 
 ---

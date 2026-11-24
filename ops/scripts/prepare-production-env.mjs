@@ -111,7 +111,6 @@ function main() {
 
   const postgresPassword = randomSecret();
   const redisPassword = randomSecret();
-  const grafanaPassword = randomSecret();
   const metricsToken = randomSecret(40);
   const dexpayWebhookSecret = randomSecret(40);
 
@@ -126,7 +125,6 @@ function main() {
 
   compose = replaceLine(compose, 'POSTGRES_PASSWORD', postgresPassword);
   compose = replaceLine(compose, 'REDIS_PASSWORD', redisPassword);
-  compose = replaceLine(compose, 'GF_SECURITY_ADMIN_PASSWORD', grafanaPassword);
 
   writeSecretFile(backendEnvPath, backend, force);
   writeSecretFile(composeEnvPath, compose, force);

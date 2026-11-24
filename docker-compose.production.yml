@@ -19,7 +19,6 @@ services:
     networks:
       edge:
       app:
-      sonar:
       shared-edge:
         aliases:
           - c2p-proxy
@@ -191,56 +190,6 @@ services:
     ports:
       - "127.0.0.1:9093:9093"
 
-  grafana:
-    image: grafana/grafana:11.6.1
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-change-me-now}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_AUTH_ANONYMOUS_ENABLED: "false"
-      GF_SERVER_ROOT_URL: ${GF_SERVER_ROOT_URL:-http://localhost:3004}
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./ops/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./ops/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    restart: unless-stopped
-    expose:
-      - "3000"
-    networks:
-      - monitoring
-      - host-access
-    ports:
-      - "127.0.0.1:3004:3000"
-
-  loki:
-    image: grafana/loki:3.0.0
-    user: "0:0"
-    command:
-      - -config.file=/etc/loki/local-config.yaml
-    volumes:
-      - ./ops/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
-      - loki-data:/loki
-    restart: unless-stopped
-    expose:
-      - "3100"
-    networks:
-      - monitoring
-      - host-access
-    ports:
-      - "127.0.0.1:3100:3100"
-
-  promtail:
-    image: grafana/promtail:3.0.0
-    command:
-      - -config.file=/etc/promtail/config.yml
-    volumes:
-      - ./ops/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: unless-stopped
-    networks:
-      - monitoring
-
   node-exporter:
     image: prom/node-exporter:v1.8.2
     command:
@@ -254,78 +203,6 @@ services:
     networks:
       - monitoring
 
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.2
-    privileged: true
-    restart: unless-stopped
-    expose:
-      - "8080"
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    networks:
-      - monitoring
-
-  sonar-postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${SONAR_POSTGRES_DB:?SONAR_POSTGRES_DB is required}
-      POSTGRES_USER: ${SONAR_POSTGRES_USER:?SONAR_POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${SONAR_POSTGRES_PASSWORD:?SONAR_POSTGRES_PASSWORD is required}
-    restart: unless-stopped
-    expose:
-      - "5432"
-    networks:
-      - sonar
-    volumes:
-      - sonar-postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${SONAR_POSTGRES_USER} -d ${SONAR_POSTGRES_DB}"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-    tmpfs:
-      - /tmp
-    security_opt:
-      - no-new-privileges:true
-
-  sonarqube:
-    image: sonarqube:25.5.0.107428-community
-    depends_on:
-      sonar-postgres:
-        condition: service_healthy
-    environment:
-      SONAR_JDBC_URL: jdbc:postgresql://sonar-postgres:5432/${SONAR_POSTGRES_DB:?SONAR_POSTGRES_DB is required}
-      SONAR_JDBC_USERNAME: ${SONAR_POSTGRES_USER:?SONAR_POSTGRES_USER is required}
-      SONAR_JDBC_PASSWORD: ${SONAR_POSTGRES_PASSWORD:?SONAR_POSTGRES_PASSWORD is required}
-      SONAR_WEB_JAVAOPTS: ${SONAR_WEB_JAVAOPTS:--Xms128m -Xmx512m}
-      SONAR_CE_JAVAOPTS: ${SONAR_CE_JAVAOPTS:--Xms128m -Xmx512m}
-      SONAR_SEARCH_JAVAOPTS: ${SONAR_SEARCH_JAVAOPTS:--Xms512m -Xmx512m}
-      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "false"
-    restart: unless-stopped
-    expose:
-      - "9000"
-    networks:
-      - sonar
-      - host-access
-    ports:
-      - "127.0.0.1:9000:9000"
-    volumes:
-      - sonarqube-data:/opt/sonarqube/data
-      - sonarqube-extensions:/opt/sonarqube/extensions
-      - sonarqube-logs:/opt/sonarqube/logs
-    ulimits:
-      nofile:
-        soft: 131072
-        hard: 131072
-      nproc:
-        soft: 8192
-        hard: 8192
-    security_opt:
-      - no-new-privileges:true
-
 networks:
   edge:
   # Réseau du proxy frontal partagé du serveur (créé par ops/scripts/deploy-production.sh s'il manque).
@@ -336,19 +213,11 @@ networks:
     internal: true
   monitoring:
     internal: true
-  sonar:
-    internal: true
   egress:
   host-access:
 
 volumes:
   prometheus-data:
   alertmanager-data:
-  grafana-data:
-  loki-data:
   postgres-data:
   redis-data:
-  sonar-postgres-data:
-  sonarqube-data:
-  sonarqube-extensions:
-  sonarqube-logs:
